@@ -427,6 +427,11 @@ public:
     PseudoProbeDecoder = Decoder;
   }
 
+  /// Release the pseudo probe decoder once probes have been updated, freeing
+  /// its (potentially large) address-to-probe maps before later, memory-heavy
+  /// phases such as debug info rewriting.
+  void resetPseudoProbeDecoder() { PseudoProbeDecoder.reset(); }
+
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
   ///
@@ -564,7 +569,14 @@ public:
   }
 
   /// Return functions meant for the output in a sorted order.
-  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+  const BinaryFunctionListType &getOutputBinaryFunctions() const {
+    return OutputFunctions;
+  }
+
+  /// Update output function list.
+  void updateOutputBinaryFunctions(BinaryFunctionListType &&Functions) {
+    OutputFunctions.swap(Functions);
+  }
 
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
@@ -581,6 +593,9 @@ public:
   createInstructionPatch(uint64_t Address,
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
+
+  /// Create a binary function with a base \p Name.
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
 
   BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;

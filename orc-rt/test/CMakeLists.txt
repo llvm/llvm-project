@@ -14,6 +14,7 @@ if (ORC_RT_LLVM_TOOLS_AVAILABLE)
   list(APPEND ORC_RT_TEST_DEPS
     ogre
     orc-rt-log-check
+    orc-rt-process-info-check
     orc-rt-smoke-check
   )
 
@@ -46,4 +47,3 @@ add_lit_testsuite(check-orc-rt-unit "Running orc-rt unittest suites"
   ${CMAKE_CURRENT_BINARY_DIR}/unit
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS OrcRTUnitTests)
-

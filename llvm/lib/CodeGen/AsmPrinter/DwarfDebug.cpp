@@ -1094,6 +1094,34 @@ void DwarfDebug::addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const {
   U.addFlag(D, dwarf::DW_AT_GNU_pubnames);
 }
 
+static bool isLangCaseSensitive(const DISourceLanguageName &Lang) {
+  if (Lang.hasVersionedName()) {
+    switch (Lang.getName()) {
+    case dwarf::DW_LNAME_Fortran:
+    case dwarf::DW_LNAME_Cobol:
+    case dwarf::DW_LNAME_Pascal:
+      return false;
+    default:
+      return true;
+    }
+  }
+  switch (Lang.getName()) {
+  case dwarf::DW_LANG_Cobol74:
+  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LANG_Fortran77:
+  case dwarf::DW_LANG_Fortran90:
+  case dwarf::DW_LANG_Fortran95:
+  case dwarf::DW_LANG_Fortran03:
+  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LANG_Fortran18:
+  case dwarf::DW_LANG_Fortran23:
+  case dwarf::DW_LANG_Pascal83:
+    return false;
+  default:
+    return true;
+  }
+}
+
 void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
                                       DwarfCompileUnit &NewCU) {
   DIE &Die = NewCU.getUnitDie();
@@ -1119,6 +1147,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
                   Lang.getName());
   }
 
+  if (!isLangCaseSensitive(DIUnit->getSourceLanguage()))
+    NewCU.addUInt(Die, dwarf::DW_AT_identifier_case, dwarf::DW_FORM_data1,
+                  dwarf::DW_ID_case_insensitive);
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
 
   finishTargetUnitAttributes(*DIUnit, NewCU);
@@ -1295,19 +1326,7 @@ void DwarfDebug::beginModule(Module *M) {
         CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
       continue;
 
-    DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
-
-    for (auto *Ty : CUNode->getEnumTypes()) {
-      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
-             "Unexpected function-local entity in 'enums' CU field.");
-      CU.getOrCreateTypeDIE(cast<DIType>(Ty));
-    }
-
-    for (auto *Ty : CUNode->getRetainedTypes()) {
-      if (DIType *RT = dyn_cast<DIType>(Ty))
-        // There is no point in force-emitting a forward declaration.
-        CU.getOrCreateTypeDIE(RT);
-    }
+    getOrCreateDwarfCompileUnit(CUNode);
   }
 }
 
@@ -1440,28 +1459,23 @@ void DwarfDebug::finalizeModuleInfo() {
     // If compile Unit has macros, emit "DW_AT_macro_info/DW_AT_macros"
     // attribute.
     if (CUNode->getMacros()) {
+      DwarfCompileUnit &CompileUnit = useSplitDwarf() ? TheCU : U;
       if (UseDebugMacroSection) {
-        if (useSplitDwarf())
-          TheCU.addSectionDelta(
-              TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
-              TLOF.getDwarfMacroDWOSection()->getBeginSymbol());
-        else {
-          dwarf::Attribute MacrosAttr = getDwarfVersion() >= 5
-                                            ? dwarf::DW_AT_macros
-                                            : dwarf::DW_AT_GNU_macros;
-          U.addSectionLabel(U.getUnitDie(), MacrosAttr, U.getMacroLabelBegin(),
-                            TLOF.getDwarfMacroSection()->getBeginSymbol());
-        }
+        const MCSymbol *Section =
+            useSplitDwarf() ? TLOF.getDwarfMacroDWOSection()->getBeginSymbol()
+                            : TLOF.getDwarfMacroSection()->getBeginSymbol();
+        dwarf::Attribute MacrosAttr = getDwarfVersion() >= 5 || useSplitDwarf()
+                                          ? dwarf::DW_AT_macros
+                                          : dwarf::DW_AT_GNU_macros;
+        CompileUnit.addSectionLabel(CompileUnit.getUnitDie(), MacrosAttr,
+                                    U.getMacroLabelBegin(), Section);
       } else {
-        if (useSplitDwarf())
-          TheCU.addSectionDelta(
-              TheCU.getUnitDie(), dwarf::DW_AT_macro_info,
-              U.getMacroLabelBegin(),
-              TLOF.getDwarfMacinfoDWOSection()->getBeginSymbol());
-        else
-          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macro_info,
-                            U.getMacroLabelBegin(),
-                            TLOF.getDwarfMacinfoSection()->getBeginSymbol());
+        const MCSymbol *Section =
+            useSplitDwarf() ? TLOF.getDwarfMacinfoDWOSection()->getBeginSymbol()
+                            : TLOF.getDwarfMacinfoSection()->getBeginSymbol();
+        CompileUnit.addSectionLabel(CompileUnit.getUnitDie(),
+                                    dwarf::DW_AT_macro_info,
+                                    U.getMacroLabelBegin(), Section);
       }
     }
   }
@@ -1526,6 +1540,20 @@ void DwarfDebug::endModule() {
              "Unexpected function-local entity in 'globals' CU field.");
       if (Processed.insert(GV).second)
         CU->getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
+    }
+
+    // Emit types.
+    for (auto *Ty : CUNode->getEnumTypes()) {
+      assert(!isa_and_nonnull<DILocalScope>(Ty->getScope()) &&
+             "Unexpected function-local entity in 'enums' CU field.");
+      CU->getOrCreateTypeDIE(cast<DIType>(Ty));
+    }
+
+    for (auto *Ty : CUNode->getRetainedTypes()) {
+      if (DIType *RT = dyn_cast<DIType>(Ty)) {
+        // There is no point in force-emitting a forward declaration.
+        CU->getOrCreateTypeDIE(RT);
+      }
     }
 
     // Emit imported entities.

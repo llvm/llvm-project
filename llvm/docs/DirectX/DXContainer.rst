@@ -2,8 +2,6 @@
 DirectX Container
 =================
 
-.. contents::
-   :local:
 
 .. toctree::
    :hidden:

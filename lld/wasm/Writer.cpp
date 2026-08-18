@@ -85,7 +85,7 @@ private:
   void calculateTypes();
   void createOutputSegments();
   OutputSegment *createOutputSegment(StringRef name);
-  void combineOutputSegments();
+  void combineActiveOutputSegments();
   void layoutMemory();
   void createHeader();
 
@@ -1092,16 +1092,20 @@ void Writer::createOutputSegments() {
     }
   }
 
-  // Sort segments by type, placing .bss last
+  // Sort segments by type, placing .bss last. Note that one requirement of
+  // this sort is that all eventually-active segments must come first in
+  // case `combineActiveOutputSegments` is used. When combined the relative
+  // address of the data segment must be 0 (to be compatible with PIC and a
+  // lack of extended-const).
   llvm::stable_sort(segments,
                     [](const OutputSegment *a, const OutputSegment *b) {
                       auto order = [](StringRef name) {
                         return StringSwitch<int>(name)
-                            .StartsWith(".tdata", 0)
-                            .StartsWith(".rodata", 1)
-                            .StartsWith(".data", 2)
+                            .StartsWith(".rodata", 0)
+                            .StartsWith(".data", 1)
+                            .StartsWith(".tdata", 3)
                             .StartsWith(".bss", 4)
-                            .Default(3);
+                            .Default(2);
                       };
                       return order(a->name) < order(b->name);
                     });
@@ -1115,24 +1119,28 @@ void Writer::createOutputSegments() {
     seg->finalizeInputSegments();
 }
 
-void Writer::combineOutputSegments() {
+void Writer::combineActiveOutputSegments() {
   // With PIC code we currently only support a single active data segment since
   // we only have a single __memory_base to use as our base address.  This pass
-  // combines all data segments into a single .data segment.
+  // combines all active data segments into a single .data segment.
   // This restriction does not apply when the extended const extension is
   // available: https://github.com/WebAssembly/extended-const
   assert(!ctx.arg.extendedConst);
-  assert(ctx.isPic && !ctx.arg.isMultithreaded());
-  if (segments.size() <= 1)
+  assert(ctx.isPic);
+  auto isActive = [](const OutputSegment *s) {
+    return s->requiredInBinary() && s->isActive();
+  };
+  if (llvm::count_if(segments, isActive) <= 1)
     return;
   OutputSegment *combined = make<OutputSegment>(".data");
-  combined->startVA = segments[0]->startVA;
   std::vector<OutputSegment *> newSegments = {combined};
   for (OutputSegment *s : segments) {
-    if (!s->requiredInBinary()) {
+    if (!isActive(s)) {
       newSegments.push_back(s);
       continue;
     }
+    if (combined->inputSegments.empty())
+      combined->startVA = s->startVA;
     bool first = true;
     for (InputChunk *inSeg : s->inputSegments) {
       if (first)
@@ -1152,6 +1160,10 @@ void Writer::combineOutputSegments() {
   }
 
   segments = std::move(newSegments);
+
+  // Fixup indices for any segments that have moved around.
+  for (size_t i = 0; i < segments.size(); ++i)
+    segments[i]->index = i;
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1170,7 +1182,7 @@ bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
   // (via memory.fill) during `__wasm_init_memory`.
   if (ctx.arg.memoryImport.has_value() && !segment->requiredInBinary())
     return true;
-  return segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE;
+  return segment->isPassive();
 }
 
 bool Writer::hasPassiveInitializedSegments() {
@@ -1315,29 +1327,48 @@ void Writer::createInitMemoryFunction() {
     //    (i32.const $__init_memory_flag)
     //    (i32.const 1)
 
+    // First figure out what locals need to be emitted for this function. Locals
+    // aren't always needed, though. Map them out here where they're allocated
+    // based on the same conditions that they're used in various situations
+    // below. For now all locals have the same type which makes the declaration
+    // side a bit simpler, and this'll have to get fancier if multiple types of
+    // locals are ever needed in the future.
+    unsigned numAddressLocals = 0;
+    unsigned tlsAddressLocal = -1;
+    unsigned flagAddressLocal = -1;
+    if (ctx.isPic && ctx.arg.sharedMemory)
+      flagAddressLocal = numAddressLocals++;
+    bool needsTLSAddressLocal =
+        ctx.isPic && ctx.arg.isMultithreaded() &&
+        llvm::any_of(segments, [this](const OutputSegment *s) {
+          return s->isTLS() && needsPassiveInitialization(s);
+        });
+    if (needsTLSAddressLocal)
+      tlsAddressLocal = numAddressLocals++;
+    writeUleb128(os, numAddressLocals ? 1 : 0, "num local groups");
+    if (numAddressLocals > 0) {
+      writeUleb128(os, numAddressLocals, "num address locals");
+      writeU8(os, is64 ? WASM_TYPE_I64 : WASM_TYPE_I32, "address type");
+    }
+
     auto writeGetFlagAddress = [&]() {
       if (ctx.isPic) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
-        writeUleb128(os, 0, "local 0");
+        writeUleb128(os, flagAddressLocal, "flag address local index");
       } else {
         writePtrConst(os, flagAddress, is64, "flag address");
       }
     };
 
     if (ctx.arg.sharedMemory) {
-      // With PIC code we cache the flag address in local 0
+      // With PIC code we cache the flag address in a local.
       if (ctx.isPic) {
-        writeUleb128(os, 1, "num local decls");
-        writeUleb128(os, 2, "local count");
-        writeU8(os, is64 ? WASM_TYPE_I64 : WASM_TYPE_I32, "address type");
         writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "memory_base");
         writePtrConst(os, flagAddress, is64, "flag address");
         writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
         writeU8(os, WASM_OPCODE_LOCAL_SET, "local.set");
-        writeUleb128(os, 0, "local 0");
-      } else {
-        writeUleb128(os, 0, "num locals");
+        writeUleb128(os, flagAddressLocal, "flag address local index");
       }
 
       // Set up destination blocks
@@ -1365,8 +1396,6 @@ void Writer::createInitMemoryFunction() {
 
       // Initialize passive data segments
       writeU8(os, WASM_OPCODE_END, "end $init");
-    } else {
-      writeUleb128(os, 0, "num local decls");
     }
 
     for (const OutputSegment *s : segments) {
@@ -1387,18 +1416,34 @@ void Writer::createInitMemoryFunction() {
         // When we initialize the TLS segment we also set the TLS base.
         // This allows the runtime to use this static copy of the TLS data
         // for the first/main thread.
+        //
+        // Note that for `--cooperative-threading` this additionally configures
+        // the `__init_tls_base` global which is the initial TLS value that can
+        // be used for all new component model tasks. For non-PIC builds this
+        // global's statically known value is now calculated, so it's updated
+        // here. For PIC builds the result of the address computation above is
+        // what's stored into the global.
         if (ctx.arg.isMultithreaded() && s->isTLS()) {
           if (ctx.isPic) {
-            // Cache the result of the addionion in local 0
+            // Cache the result of the addition in the TLS address local
             writeU8(os, WASM_OPCODE_LOCAL_TEE, "local.tee");
-            writeUleb128(os, 1, "local 1");
+            writeUleb128(os, tlsAddressLocal, "tls address local");
+            if (ctx.arg.libcallThreadContext) {
+              writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+              writeUleb128(os, tlsAddressLocal, "tls address local");
+              writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
+              writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(),
+                           "__init_tls_base");
+            }
           } else {
             writePtrConst(os, s->startVA, is64, "destination address");
+            if (ctx.arg.libcallThreadContext)
+              ctx.sym.tlsBase->global->setPointerValue(s->startVA);
           }
           writeSetTLSBase(ctx, os);
           if (ctx.isPic) {
-            writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
-            writeUleb128(os, 1, "local 1");
+            writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+            writeUleb128(os, tlsAddressLocal, "tls address local");
           }
         }
 
@@ -1799,11 +1844,9 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (ctx.isPic && !ctx.arg.extendedConst && !ctx.arg.isMultithreaded()) {
-    // In multithreaded modes (shared or cooperative), data segments may be
-    // passive and must not be combined into a single active segment.
-    log("-- combineOutputSegments");
-    combineOutputSegments();
+  if (ctx.isPic && !ctx.arg.extendedConst) {
+    log("-- combineActiveOutputSegments");
+    combineActiveOutputSegments();
   }
 
   log("-- createSyntheticSectionsPostLayout");
