@@ -304,6 +304,48 @@ feature and the API tests in the `objc-gnustep` category are enabled; without
 them those tests are skipped. Foundation is not required: the tests run
 against libobjc2 alone.
 
+On Windows the runtime can be built for either ABI, and which one it is
+decides how the tests have to be built and what the debugger can do. An MSVC
+libobjc2 installs `lib/objc.dll` and raises a native SEH exception, so there
+is no symbol at which to stop when a handler is entered and catch breakpoints
+are unavailable. A MinGW one installs `libobjc.dll`, possibly versioned, and
+unwinds through the Itanium ABI, so catch breakpoints work. Neither is
+selected by hand: the test suite reads the runtime's export table and enables
+the `objc-gnustep-catch` feature only when the entry point is really there.
+
+To test against a MinGW runtime, name the triple and the sysroot it belongs
+to. LLDB itself does not need rebuilding for it:
+
+```
+-DLLDB_TEST_TRIPLE=x86_64-w64-windows-gnu
+-DLLDB_TEST_SYSROOT=C:/msys64/ucrt64
+```
+
+The sysroot has to be one whose C++ runtime the compiler expects, since
+Objective-C inferiors are linked with the C++ driver: for `windows-gnu` that
+is libstdc++ and libgcc, so MSYS2's UCRT64 and MINGW64 work while its CLANG64,
+which ships libc++ and libunwind under the same triple, does not.
+
+`LLDB_TEST_TRIPLE` is what test inferiors are built for. The API suite applies
+it to every inferior; the Shell suite applies it only where a test asks, with
+the `%inferior_target` substitution, because most of that suite debugs
+binaries that only make sense in the host environment. A Shell test that
+debugs a Windows inferior also states its ABI with `%inferior_abi`, since a PE
+records nothing that says which one it was built for.
+
+When debugging a MinGW binary by hand, tell LLDB which ABI the PE uses. It
+cannot tell from the file, and assumes the one LLDB itself was built for -
+which for an MSVC-built LLDB is the wrong answer for a MinGW program, giving
+it Microsoft C++ record layout and a 64-bit `long double`:
+
+```
+settings set plugin.object-file.pe-coff.abi gnu
+```
+
+This has to be set **before** the target is created, so pass it with `-O`
+rather than `-o`, or put it in `.lldbinit`. Set afterwards it is accepted and
+silently has no effect.
+
 #### Windows
 
 On Windows the LLDB test suite requires lld. Either add `lld` to
