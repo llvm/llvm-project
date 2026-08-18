@@ -4184,6 +4184,13 @@ bool Sema::InstantiateClassTemplateSpecialization(
   if (!Pattern.isUsable())
     return Pattern.isInvalid();
 
+  // Deduction has picked the pattern this specialization will be instantiated
+  // from, which may be a declaration an external AST source has yet to define.
+  if (!Pattern.get()->isCompleteDefinition() &&
+      Pattern.get()->hasExternalLexicalStorage())
+    if (ExternalASTSource *Source = Context.getExternalSource())
+      Source->CompleteType(Pattern.get());
+
   bool Err = InstantiateClassImpl(
       PointOfInstantiation, ClassTemplateSpec, Pattern.get(),
       getTemplateInstantiationArgs(ClassTemplateSpec), TSK, Complain);

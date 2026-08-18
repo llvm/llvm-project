@@ -79,7 +79,7 @@ union ContainsEmptyUnion { struct E e; };
 // CIR-DAG: !rec_ContainsEmptyUnion = !cir.union<"ContainsEmptyUnion" {empty !rec_E}>
 
 struct AlignedTail { char c; int i __attribute__((aligned(8))); };
-// CIR-DAG: !rec_AlignedTail = !cir.struct<"AlignedTail" padded {data !s8i, pad !cir.array<!u8i x 7>, data !s32i, pad !cir.array<!u8i x 4>}>
+// CIR-DAG: !rec_AlignedTail = !cir.struct<"AlignedTail" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i, pad !cir.array<!u8i x 4>}>
 // LLVM-DAG: %struct.AlignedTail = type { i8, [7 x i8], i32, [4 x i8] }
 
 // Name every record so that its CIR type reaches the output.

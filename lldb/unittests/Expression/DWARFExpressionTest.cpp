@@ -27,6 +27,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -229,6 +230,24 @@ public:
 private:
   RegisterInfo m_reg_info{};
   RegisterValue m_reg_value{};
+};
+
+class MockStackFrame : public StackFrame {
+public:
+  MockStackFrame(const lldb::ThreadSP &thread_sp, Scalar frame_base)
+      : StackFrame(thread_sp, /*frame_idx=*/0, /*concrete_frame_idx=*/0,
+                   /*cfa=*/0, /*cfa_is_valid=*/true, /*pc=*/0,
+                   StackFrame::Kind::Regular, /*artificial=*/false,
+                   /*behaves_like_zeroth_frame=*/true, /*sc_ptr=*/nullptr),
+        m_frame_base(std::move(frame_base)) {}
+
+  llvm::Error GetFrameBaseValue(Scalar &value) override {
+    value = m_frame_base;
+    return llvm::Error::success();
+  }
+
+private:
+  Scalar m_frame_base;
 };
 } // namespace
 
@@ -1371,6 +1390,23 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_bregx_address_size) {
       Evaluate({DW_OP_bregx, 0x40, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
                 DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
                {}, {}, &exe_ctx, ctx.reg_ctx_sp.get());
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_fbreg_address_size) {
+  TestContext ctx;
+  ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux"));
+  lldb::StackFrameSP frame_sp =
+      std::make_shared<MockStackFrame>(ctx.thread_sp, Scalar(uint32_t{0x2a}));
+  ExecutionContext exe_ctx(frame_sp);
+
+  // Address arithmetic wraps at the target address size. In particular,
+  // 0xffffffff + 1 is zero on this 32-bit target.
+  auto result =
+      Evaluate({DW_OP_fbreg, 0x7f, DW_OP_const4u, 0xff, 0xff, 0xff, 0xff,
+                DW_OP_plus, DW_OP_lit1, DW_OP_plus, DW_OP_stack_value},
+               {}, {}, &exe_ctx);
   ASSERT_THAT_EXPECTED(result, ExpectScalar(32, 0x29, false));
   EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 32u);
 }
