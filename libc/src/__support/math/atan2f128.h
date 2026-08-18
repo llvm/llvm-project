@@ -150,8 +150,7 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
       DFloat128 r = EXCEPTS[y_except][x_except][x_sign];
       if (y_sign)
         r.sign = r.sign.negate();
-      return r.template as<Float128, /*ShouldSignalExceptions=*/false>();
-      (r);
+      return r.template as<Float128, /*ShouldSignalExceptions=*/true>();
     }
   }
 
@@ -165,8 +164,7 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
     DFloat128 result = quick_add(const_term, quotient);
     if (final_sign)
       result.sign = result.sign.negate();
-    return result.template as<Float128, /*ShouldSignalExceptions=*/false>();
-    (result);
+    return result.template as<Float128, /*ShouldSignalExceptions=*/true>();
   }
 
   // Take 24 leading bits of num and den to convert to float for fast division.
@@ -204,8 +202,7 @@ LIBC_INLINE Float128 atan2f128(Float128 y, Float128 x) {
   if (final_sign)
     r.sign = r.sign.negate();
 
-  return r.template as<Float128, /*ShouldSignalExceptions=*/false>();
-  (r);
+  return r.template as<Float128, /*ShouldSignalExceptions=*/true>();
 }
 
 } // namespace math
