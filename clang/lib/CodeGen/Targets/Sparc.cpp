@@ -306,6 +306,11 @@ private:
           break;
         }
       }
+
+      // Zero-sized structs gets the inreg flag; they are treated specially.
+      unsigned Size = DL.getTypeSizeInBits(StrTy).getKnownMinValue();
+      if (!Size)
+        InReg = true;
     }
 
     // Check if Ty is a usable substitute for the coercion type.
@@ -420,12 +425,11 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   CoerceBuilder CB(VMContext, getDataLayout(), IsVarArg);
   CB.addStruct(0, StrTy);
+
   // All structs, even empty ones, should take up a register argument slot,
   // so pin the minimum struct size to one bit.
-  CB.pad(llvm::alignTo(
-      std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
-      64));
-  RegOffset += PaddingSlots + CB.Size / 64;
+  uint64_t ActualSize = CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue();
+  CB.pad(llvm::alignTo(std::max(ActualSize, uint64_t(1)), 64));
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();

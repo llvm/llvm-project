@@ -21,7 +21,7 @@ char f_int_4(char x) { return x; }
 // CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 noundef %x)
 long double f_ld(long double x) { return x; }
 
-// Zero-sized structs reserves an argument register slot if passed directly.
+// Zero-sized structs will be coerced into `i64 inreg`s.
 struct empty {};
 struct emptyarr { struct empty a[10]; };
 
@@ -31,11 +31,16 @@ struct align16_int { _Alignas(16) int x; };
 struct align16_mixed { _Alignas(16) int x; double y; };
 struct align16_longdouble { long double x; };
 
-// CHECK-LABEL: define{{.*}} i64 @f_empty(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} i64 @f_empty(i64 inreg %x.coerce)
 struct empty f_empty(struct empty x) { return x; }
 
-// CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} i64 @f_emptyarr(i64 inreg %x.coerce)
 struct empty f_emptyarr(struct emptyarr x) { return x.a[0]; }
+
+// CHECK-LABEL: define{{.*}} i64 @f_emptystackarg(i64 inreg %a0.coerce, i64 inreg %a1.coerce, i64 inreg %a2.coerce, i64 inreg %a3.coerce, i64 inreg %a4.coerce, i64 inreg %a5.coerce, i64 inreg %a6.coerce, i64 inreg %a7.coerce)
+struct empty f_emptystackarg(struct empty a0, struct empty a1, struct empty a2, struct empty a3, struct empty a4, struct empty a5, struct empty a6, struct empty a7) {
+    return a7;
+}
 
 // CHECK-LABEL: define{{.*}} void @f_aligncaller(i64 %a.coerce0, i64 %a.coerce1)
 // CHECK-LABEL: declare{{.*}} void @f_aligncallee(i32 noundef signext, i64, i64, i64)
@@ -98,7 +103,7 @@ long f_emptyvar(unsigned count, ...) {
 }
 
 // If the zero-sized struct is contained in a non-zero-sized struct,
-// though, it doesn't reserve any registers.
+// though, it disappears completely.
 struct emptymixed { struct empty a; long b; };
 struct emptyflex { unsigned count; struct empty data[10]; };
 
