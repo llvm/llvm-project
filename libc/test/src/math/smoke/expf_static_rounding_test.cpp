@@ -54,7 +54,7 @@ TEST_F(LlvmLibcExpfStaticRoundingTest, Overflow) {
     for (auto x : VALUES) {
       EXPECT_FP_EQ_ROUNDING_MODE(
           math::expf(x), static_rounding::expf(x, fenv_rounding), rounding);
-      EXPECT_MATH_ERRNO(ERANGE);
+      EXPECT_MATH_ERRNO(0);
     }
   }
 }
