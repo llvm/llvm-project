@@ -16,6 +16,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
@@ -445,24 +446,24 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
 // ================
 
 static bool
-runCombiner(MachineFunction &MF, GISelValueTracking *VT,
+runCombiner(MachineFunction &MF, GISelValueTracking *VT, GISelCSEInfo *CSEInfo,
             MachineDominatorTree *MDT,
             const AMDGPUPostLegalizerCombinerImplRuleConfig &RuleConfig,
             bool EnableOpt) {
   const Function &F = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const AMDGPULegalizerInfo *LI =
-      static_cast<const AMDGPULegalizerInfo *>(ST.getLegalizerInfo());
+  const LegalizerInfo *LI = ST.getLegalizerInfo();
 
-  CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
-                     LI, EnableOpt, F.hasOptSize(), F.hasMinSize());
+  CombinerInfo CInfo(/*AllowIllegalOps=*/false,
+                     /*ShouldLegalizeIllegal=*/true, LI, EnableOpt,
+                     F.hasOptSize(), F.hasMinSize());
   // Disable fixed-point iteration to reduce compile-time
   CInfo.MaxIterations = 1;
   CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
   // Legalizer performs DCE, so a full DCE pass is unnecessary.
   CInfo.EnableFullDCE = false;
-  AMDGPUPostLegalizerCombinerImpl Impl(MF, CInfo, *VT, /*CSEInfo*/ nullptr,
-                                       RuleConfig, ST, MDT, LI);
+  AMDGPUPostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, ST,
+                                       MDT, LI);
   return Impl.combineMachineInstrs();
 }
 
@@ -492,6 +493,8 @@ void AMDGPUPostLegalizerCombinerLegacy::getAnalysisUsage(
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
   }
@@ -515,11 +518,15 @@ bool AMDGPUPostLegalizerCombinerLegacy::runOnMachineFunction(
 
   GISelValueTracking *VT =
       &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  GISelCSEInfo *CSEInfo =
+      &Wrapper.get(getStandardCSEConfigForOpt(MF.getTarget().getOptLevel()));
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr
                 : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-  return runCombiner(MF, VT, MDT, RuleConfig, EnableOpt);
+  return runCombiner(MF, VT, CSEInfo, MDT, RuleConfig, EnableOpt);
 }
 
 char AMDGPUPostLegalizerCombinerLegacy::ID = 0;
@@ -527,6 +534,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
+INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs after legalization", false,
                     false)
@@ -548,14 +556,17 @@ AMDGPUPostLegalizerCombinerPass::run(MachineFunction &MF,
   bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
+  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
 
-  if (!runCombiner(MF, &VT, MDT, RuleConfig, /*EnableOpt=*/!IsOptNone))
+  if (!runCombiner(MF, &VT, CSEInfo, MDT, RuleConfig,
+                   /*EnableOpt=*/!IsOptNone))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelValueTrackingAnalysis>();
+  PA.preserve<GISelCSEAnalysis>();
   return PA;
 }
