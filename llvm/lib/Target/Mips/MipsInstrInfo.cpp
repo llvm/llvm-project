@@ -710,7 +710,7 @@ unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     if (MI.hasDelaySlot()) {
       // instr + 1 nop
-      return 8;
+      return MI.getDesc().getSize() + 4;
     }
     return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM:
