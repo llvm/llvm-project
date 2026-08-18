@@ -11819,9 +11819,8 @@ public:
                                 const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult CheckVarOrConceptTemplateTemplateId(
-      const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-      TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
-      const TemplateArgumentListInfo *TemplateArgs);
+      const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
+      SourceLocation TemplateLoc, const TemplateArgumentListInfo *TemplateArgs);
 
   ExprResult
   CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,

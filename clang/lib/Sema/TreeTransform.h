@@ -16543,8 +16543,8 @@ ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
     return ExprError();
 
   TemplateDecl *TD = Name.getAsTemplateDecl();
-  if (!TD)
-    return ExprError();
+
+  assert(TD && "A dependent template id always refers to a template decl");
 
   TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
   if (getDerived().TransformTemplateArguments(

@@ -1238,9 +1238,10 @@ static ExprResult formImmediatelyDeclaredConstraint(
   }
   // We have a template template parameter
   else {
+    assert(SS.isEmpty() && "template parameter with a scope specifier?");
     auto *CDT = dyn_cast<TemplateTemplateParmDecl>(NamedConcept);
     ImmediatelyDeclaredConstraint = S.CheckVarOrConceptTemplateTemplateId(
-        SS, NameInfo, CDT, SourceLocation(), &ConstraintArgs);
+        NameInfo, CDT, SourceLocation(), &ConstraintArgs);
   }
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
@@ -4830,9 +4831,8 @@ ExprResult Sema::CheckVarTemplateId(
 }
 
 ExprResult Sema::CheckVarOrConceptTemplateTemplateId(
-    const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
-    TemplateTemplateParmDecl *Template, SourceLocation TemplateLoc,
-    const TemplateArgumentListInfo *TemplateArgs) {
+    const DeclarationNameInfo &NameInfo, TemplateTemplateParmDecl *Template,
+    SourceLocation TemplateLoc, const TemplateArgumentListInfo *TemplateArgs) {
   assert(Template && "A variable template id without template?");
 
   if (Template->templateParameterKind() != TemplateNameKind::TNK_Var_template &&
@@ -4991,10 +4991,12 @@ ExprResult Sema::BuildTemplateIdExpr(const CXXScopeSpec &SS,
   // Check variable template ids (C++17) and concept template parameters
   // (C++26).
   UnresolvedLookupExpr *ULE;
-  if (R.getAsSingle<TemplateTemplateParmDecl>())
+  if (R.getAsSingle<TemplateTemplateParmDecl>()) {
+    assert(SS.isEmpty() && "template parameter with a scope specifier?");
     return CheckVarOrConceptTemplateTemplateId(
-        SS, R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
+        R.getLookupNameInfo(), R.getAsSingle<TemplateTemplateParmDecl>(),
         TemplateKWLoc, TemplateArgs);
+  }
 
   // Function templates
   ULE = UnresolvedLookupExpr::Create(
