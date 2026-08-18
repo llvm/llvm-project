@@ -240,3 +240,22 @@ define i32 @scale2_no_base(ptr %p) {
   %r = sub i32 64, %s
   ret i32 %r
 }
+
+@g = dso_local global [64 x i8] zeroinitializer
+
+; No shift to fold. The RHS is a single-use CopyFromReg, and that still counts
+; against the fold even though the symbolic displacement would otherwise pay
+; for it: NEG clobbers a live-in argument. Folding would give neg + a baseless
+; leaq - the same two instructions, but 11 bytes against 8, since that LEA needs
+; a SIB and a disp32. This mainly pins the boundary; the shape is common enough
+; in real code that acting on the fold is a measurable loss.
+define i64 @no_shift_copyfromreg(i64 %n) {
+; CHECK-LABEL: no_shift_copyfromreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $g+56, %eax
+; CHECK-NEXT:    subq %rdi, %rax
+; CHECK-NEXT:    retq
+  %q = ptrtoint ptr getelementptr (i8, ptr @g, i64 56) to i64
+  %r = sub i64 %q, %n
+  ret i64 %r
+}
