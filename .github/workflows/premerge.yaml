@@ -36,8 +36,8 @@ jobs:
             runs-on: depot-ubuntu-24.04-arm-16
           - name: llvm-premerge-linux-runners
             runs-on:
-              group: llvm-premerge-linux-runners
-              labels: llvm-premerge-cluster-us-west
+              labels: llvm-premerge-linux-runners
+              group: llvm-premerge-cluster-us-west
     runs-on: ${{ matrix.runs-on }}
     container:
       # The llvm-premerge agents are already containers and running the
