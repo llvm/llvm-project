@@ -1,222 +1,207 @@
-===========================
-How to Extend the Framework
-===========================
+# How to Extend the Framework
 
-.. WARNING:: The framework is rapidly evolving.
-  The documentation might be out-of-sync with the implementation.
-  The purpose of this documentation is to give context for upcoming reviews.
+:::{WARNING}
+The framework is rapidly evolving.
+The documentation might be out-of-sync with the implementation.
+The purpose of this documentation is to give context for upcoming reviews.
+:::
 
 SSAF is designed to be extensible with new **summary extractors** and **serialization formats**.
 Extensions can be added in three ways:
 
-#. **Statically, in-tree** — built as part of the upstream LLVM/Clang tree.
-#. **Statically, out-of-tree (downstream)** — built in a downstream fork or project that links ``clangScalableStaticAnalysisCore`` as a static library.
-#. **Dynamically, via plugins** — loaded at runtime as shared objects.
+1. **Statically, in-tree** — built as part of the upstream LLVM/Clang tree.
+2. **Statically, out-of-tree (downstream)** — built in a downstream fork or project that links `clangScalableStaticAnalysisCore` as a static library.
+3. **Dynamically, via plugins** — loaded at runtime as shared objects.
 
-All three approaches use the same ``llvm::Registry``-based registration mechanism.
+All three approaches use the same `llvm::Registry`-based registration mechanism.
 The key difference is how the linker sees the registration:
-static libraries need :doc:`force-linker anchors <ForceLinkerHeaders>` to prevent dead-stripping, while shared libraries do not.
+static libraries need {doc}`force-linker anchors <ForceLinkerHeaders>` to prevent dead-stripping, while shared libraries do not.
 
-Adding a summary extractor
-**************************
+## Adding a summary extractor
 
-A summary extractor is an ``ASTConsumer`` that inspects the AST and populates a ``TUSummary`` via the ``TUSummaryBuilder`` interface.
+A summary extractor is an `ASTConsumer` that inspects the AST and populates a `TUSummary` via the `TUSummaryBuilder` interface.
 
-Step 1: Implement the extractor
-===============================
+### Step 1: Implement the extractor
 
-.. code-block:: c++
+```c++
+//--- MyExtractor.h
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
 
-  //--- MyExtractor.h
-  #include "clang/ScalableStaticAnalysis/Core/TUSummary/TUSummaryExtractor.h"
+namespace clang::ssaf {
 
-  namespace clang::ssaf {
+class MyExtractor : public TUSummaryExtractor {
+public:
+  using TUSummaryExtractor::TUSummaryExtractor;
 
-  class MyExtractor : public TUSummaryExtractor {
-  public:
-    using TUSummaryExtractor::TUSummaryExtractor;
+  // Override HandleTranslationUnit or any other virtual functions of an ASTConsumer...
+  // Use the SummaryBuilder to populate the summary while walking the AST.
+};
 
-    // Override HandleTranslationUnit or any other virtual functions of an ASTConsumer...
-    // Use the SummaryBuilder to populate the summary while walking the AST.
-  };
+} // namespace clang::ssaf
+```
 
-  } // namespace clang::ssaf
+### Step 2: Register the extractor
 
-Step 2: Register the extractor
-==============================
+```c++
+//--- MyExtractor.cpp
+#include "MyExtractor.h"
+#include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
 
-.. code-block:: c++
+using namespace clang::ssaf;
 
-  //--- MyExtractor.cpp
-  #include "MyExtractor.h"
-  #include "clang/ScalableStaticAnalysis/Core/TUSummary/ExtractorRegistry.h"
+namespace clang::ssaf {
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int MyExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
-  using namespace clang::ssaf;
+static TUSummaryExtractorRegistry::Add<MyExtractor>
+    RegisterExtractor("MyExtractor", "My awesome summary extractor");
+```
 
-  namespace clang::ssaf {
-  // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int MyExtractorAnchorSource = 0;
-  } // namespace clang::ssaf
+The `"MyExtractor"` string is the name users pass to `--ssaf-extract-summaries=MyExtractor`.
 
-  static TUSummaryExtractorRegistry::Add<MyExtractor>
-      RegisterExtractor("MyExtractor", "My awesome summary extractor");
+### Step 3: Add the force-linker anchor
 
-The ``"MyExtractor"`` string is the name users pass to ``--ssaf-extract-summaries=MyExtractor``.
-
-Step 3: Add the force-linker anchor
-===================================
-
-See :doc:`ForceLinkerHeaders` for a full explanation of why this is needed.
+See {doc}`ForceLinkerHeaders` for a full explanation of why this is needed.
 
 For **in-tree** additions, add one line to
-``clang/include/clang/ScalableStaticAnalysis/BuiltinAnchorSources.def``
+`clang/include/clang/ScalableStaticAnalysis/BuiltinAnchorSources.def`
 (in alphabetical order):
 
-.. code-block:: c++
+```c++
+ANCHOR(MyExtractorAnchorSource)
+```
 
-  ANCHOR(MyExtractorAnchorSource)
-
-``SSAFBuiltinForceLinker.h`` includes this ``.def`` file automatically — no
+`SSAFBuiltinForceLinker.h` includes this `.def` file automatically — no
 need to edit it directly.
 
-For **downstream** additions, see `Out-of-tree (downstream) extensions`_ below.
+For **downstream** additions, see [Out-of-tree (downstream) extensions](#out-of-tree-downstream-extensions) below.
 
+## Adding a serialization format
 
-Adding a serialization format
-*****************************
+A serialization format controls how the `TUSummary` is written to (and read from) disk.
+This involves more boilerplate than an extractor because each format has a per-analysis `FormatInfo` sub-registry.
 
-A serialization format controls how the ``TUSummary`` is written to (and read from) disk.
-This involves more boilerplate than an extractor because each format has a per-analysis ``FormatInfo`` sub-registry.
+### Step 1: Define the format class
 
-Step 1: Define the format class
-===============================
+Your format class must inherit from `SerializationFormat` and define a `FormatInfo` type alias:
 
-Your format class must inherit from ``SerializationFormat`` and define a ``FormatInfo`` type alias:
+```c++
+//--- MyFormat.h
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormat.h"
+#include "clang/Support/Compiler.h"
+#include "llvm/Support/Registry.h"
 
-.. code-block:: c++
+namespace clang::ssaf {
 
-  //--- MyFormat.h
-  #include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormat.h"
-  #include "clang/Support/Compiler.h"
-  #include "llvm/Support/Registry.h"
+class MyFormat : public SerializationFormat {
+public:
+  // Define the type aliases: SerializerFn, DeserializerFn
+  using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
 
-  namespace clang::ssaf {
+  // Override readTUSummaryEncoding, writeTUSummary, etc.
+};
 
-  class MyFormat : public SerializationFormat {
-  public:
-    // Define the type aliases: SerializerFn, DeserializerFn
-    using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
+} // namespace clang::ssaf
 
-    // Override readTUSummaryEncoding, writeTUSummary, etc.
-  };
+LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+```
 
-  } // namespace clang::ssaf
+### Step 2: Register the format
 
-  LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+```c++
+//--- MyFormat.cpp
+#include "MyFormat.h"
+#include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
 
-Step 2: Register the format
-===========================
+using namespace clang::ssaf;
 
-.. code-block:: c++
+namespace clang::ssaf {
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int MyFormatAnchorSource = 0;
+} // namespace clang::ssaf
 
-  //--- MyFormat.cpp
-  #include "MyFormat.h"
-  #include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
+static SerializationFormatRegistry::Add<MyFormat>
+    RegisterFormat("myformat", "My awesome serialization format");
 
-  using namespace clang::ssaf;
+LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+```
 
-  namespace clang::ssaf {
-  // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int MyFormatAnchorSource = 0;
-  } // namespace clang::ssaf
+The format name (`"myformat"`) is matched against the file extension in `--ssaf-tu-summary-file=output.myformat`.
 
-  static SerializationFormatRegistry::Add<MyFormat>
-      RegisterFormat("myformat", "My awesome serialization format");
+### Step 3: Register per-analysis FormatInfo entries
 
-  LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+For each analysis that should be serializable in your format, register a `FormatInfo` entry.
+`FormatInfo` must be implemented for any of the summaries that wants to support `myformat`:
 
-The format name (``"myformat"``) is matched against the file extension in ``--ssaf-tu-summary-file=output.myformat``.
+```c++
+namespace {
+using FormatInfo = MyFormat::FormatInfo;
+struct MyAnalysisFormatInfo final : FormatInfo {
+  MyAnalysisFormatInfo() : FormatInfo{
+              SummaryName("MyAnalysis"),
+              serializeMyAnalysis,
+              deserializeMyAnalysis,
+          } {}
+};
+} // namespace
 
-Step 3: Register per-analysis FormatInfo entries
-================================================
+static llvm::Registry<FormatInfo>::Add<MyAnalysisFormatInfo>
+    RegisterFormatInfo("MyAnalysisFormatInfo",
+                       "MyFormat format info for MyAnalysis");
+```
 
-For each analysis that should be serializable in your format, register a ``FormatInfo`` entry.
-``FormatInfo`` must be implemented for any of the summaries that wants to support ``myformat``:
+### Step 4: Add the force-linker anchor
 
-.. code-block:: c++
+Same pattern as for extractors — add the anchor to `BuiltinAnchorSources.def`
+(in alphabetical order). See [Adding a summary extractor](#adding-a-summary-extractor) Step 3,
+and {doc}`ForceLinkerHeaders`.
 
-  namespace {
-  using FormatInfo = MyFormat::FormatInfo;
-  struct MyAnalysisFormatInfo final : FormatInfo {
-    MyAnalysisFormatInfo() : FormatInfo{
-                SummaryName("MyAnalysis"),
-                serializeMyAnalysis,
-                deserializeMyAnalysis,
-            } {}
-  };
-  } // namespace
+## Static extensibility
 
-  static llvm::Registry<FormatInfo>::Add<MyAnalysisFormatInfo>
-      RegisterFormatInfo("MyAnalysisFormatInfo",
-                         "MyFormat format info for MyAnalysis");
-
-Step 4: Add the force-linker anchor
-===================================
-
-Same pattern as for extractors — add the anchor to ``BuiltinAnchorSources.def``
-(in alphabetical order). See `Adding a summary extractor`_ Step 3,
-and :doc:`ForceLinkerHeaders`.
-
-
-Static extensibility
-********************
-
-In-tree extensions
-==================
+### In-tree extensions
 
 For extensions that are part of the upstream LLVM/Clang tree:
 
-#. Add the anchor to ``clang/include/clang/ScalableStaticAnalysis/BuiltinAnchorSources.def`` (in alphabetical order).
-#. Add the source files to the ``clangScalableStaticAnalysisCore`` CMake library target.
-#. That's it — the ``SSAFForceLinker.h`` umbrella includes ``SSAFBuiltinForceLinker.h``
+1. Add the anchor to `clang/include/clang/ScalableStaticAnalysis/BuiltinAnchorSources.def` (in alphabetical order).
+2. Add the source files to the `clangScalableStaticAnalysisCore` CMake library target.
+3. That's it — the `SSAFForceLinker.h` umbrella includes `SSAFBuiltinForceLinker.h`
    transitively, so any binary that includes the umbrella will pull in the registration.
 
-Out-of-tree (downstream) extensions
-===================================
+### Out-of-tree (downstream) extensions
 
 Downstream projects that maintain a fork can add their own extensions without
 modifying upstream files — reducing the risk of merge-conflicts:
 
-#. Create a downstream force-linker header, e.g. ``SSAFDownstreamForceLinker.h``,
+1. Create a downstream force-linker header, e.g. `SSAFDownstreamForceLinker.h`,
    containing the anchor references for downstream-only extractors and formats.
-#. Include it from ``SSAFForceLinker.h`` (the umbrella):
 
-   .. code-block:: c++
+2. Include it from `SSAFForceLinker.h` (the umbrella):
 
-     // In SSAFForceLinker.h
-     #include "SSAFBuiltinForceLinker.h"        // IWYU pragma: keep
-     #include "SSAFDownstreamForceLinker.h"     // IWYU pragma: keep
+   ```c++
+   // In SSAFForceLinker.h
+   #include "SSAFBuiltinForceLinker.h"        // IWYU pragma: keep
+   #include "SSAFDownstreamForceLinker.h"     // IWYU pragma: keep
+   ```
 
    This is a single-line addition per downstream project, minimizing conflicts with upstream changes.
    Upstream will try to avoid modifying this umbrella header, making it a stable static extension point.
 
-#. Add the downstream source files to the build system as usual.
+3. Add the downstream source files to the build system as usual.
 
+## Dynamic extensibility (plugins)
 
-Dynamic extensibility (plugins)
-*******************************
-
-Shared libraries loaded at runtime — via ``dlopen`` / ``LoadLibrary`` or the
+Shared libraries loaded at runtime — via `dlopen` / `LoadLibrary` or the
 Clang plugin mechanism — do **not** need force-linker anchors, but having them also does not hurt.
 
-When a shared object (``.so`` / ``.dylib``) is loaded, the dynamic linker runs all global constructors in that library unconditionally.
-This means the ``llvm::Registry::Add<>`` objects execute their constructors and register themselves automatically.
+When a shared object (`.so` / `.dylib`) is loaded, the dynamic linker runs all global constructors in that library unconditionally.
+This means the `llvm::Registry::Add<>` objects execute their constructors and register themselves automatically.
 
 To use a plugin:
 
-#. Build your extractor or format as a shared library.
-#. Load it with the Clang plugin mechanism (``-fplugin=`` or ``-load``).
-#. Pass the extractor name to ``--ssaf-extract-summaries=`` as usual.
+1. Build your extractor or format as a shared library.
+2. Load it with the Clang plugin mechanism (`-fplugin=` or `-load`).
+3. Pass the extractor name to `--ssaf-extract-summaries=` as usual.
 
 No changes to any force-linker header are required.
-The ``llvm::Registry`` infrastructure handles everything once the shared object is loaded.
+The `llvm::Registry` infrastructure handles everything once the shared object is loaded.
