@@ -1563,8 +1563,8 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
 
       The CIR representation of the struct `S` might look like:
       ```
-        !rec_S = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                                                       !cir.array<!u8i x 2>}>
+        !rec_S = !cir.struct<"S" packed {!u64i, !u16i,
+                                         pad !cir.array<!u8i x 2>}>
       ```
       And the bitfield info attribute for member `a` would be:
       ```
@@ -1959,7 +1959,7 @@ def CIR_UsualDeleteParamsAttr
 
   let parameters = (ins
     DefaultValuedParameter<"bool", "false">:$size,
-    DefaultValuedParameter<"bool", "false">:$alignment,
+    OptionalParameter<"std::optional<uint64_t>">:$alignment,
     DefaultValuedParameter<"bool", "false">:$type_aware_delete,
     DefaultValuedParameter<"bool", "false">:$destroying_delete
   );
