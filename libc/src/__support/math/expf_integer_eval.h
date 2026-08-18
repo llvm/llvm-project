@@ -57,7 +57,7 @@ LIBC_INLINE_VAR constexpr Frac64 EXPF_COEFFS[] = {
 
 // Statically rounded, no except implementation of expf using integer-only
 // arithmetic.
-LIBC_INLINE float expf(float x, int rounding) {
+LIBC_INLINE float expf(float x, [[maybe_unused]] int rounding) {
   using FPBits = typename fputil::FPBits<float>;
   using FPBounds = LIBC_NAMESPACE::math::check::exp_internal::Bounds<float>;
   FPBits xbits(x);
@@ -108,16 +108,22 @@ LIBC_INLINE float expf(float x, int rounding) {
 
     // Large finite positive
     if (!is_neg) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
         return FPBits::max_normal().get_val();
 
       return FPBits::inf().get_val();
+#else
+      return FPBits::inf().get_val();
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // x < log(2^-150) or NaN (NaN is already handled above)
     if (xbits.uintval() >= 0xc2cf'f1b5U) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (rounding == FE_UPWARD)
         return FPBits::min_subnormal().get_val();
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
       return 0.0f;
     }
@@ -160,6 +166,17 @@ LIBC_INLINE float expf(float x, int rounding) {
   uint64_t e_y, l2y_r;
   uint32_t e_y_unbiased;
 
+  // As Frac64 can't store the sign, we need to handle the sign separately:
+  // - Both branches are computing floor(x * log2(e)).
+  // - For negative x, we round up to the next multiple of 2^54, then clear the
+  // last 54 bits.
+  // - For positive x, we round down (just clear) the last 54 bits.
+  //
+  // Then, l2y_r is the remainder of x * log2(e) after removing the integer
+  // part, which is used to compute 2^l2y_r_frac - 1.
+  //
+  // e_y_unbiased is biased exponent field, but already bit-positioned to the
+  // exponent field of the float representation.
   if (LIBC_UNLIKELY(is_neg)) {
     e_y = (x_ln2_bit + FRAC_MASK) & ~FRAC_MASK;
     l2y_r = e_y - x_ln2_bit;
@@ -175,7 +192,9 @@ LIBC_INLINE float expf(float x, int rounding) {
 
   // d >= 24 --> k >= 151
   // --> guaranteed to below 2^-150
-  if (LIBC_UNLIKELY(is_neg && d >= 24)) { // underflow
+  //
+  // underflow
+  if (LIBC_UNLIKELY(is_neg && d >= 24)) {
     return 0.0f;
   }
 
@@ -192,10 +211,28 @@ LIBC_INLINE float expf(float x, int rounding) {
   uint32_t shift_length = 40;
   uint32_t leading_one = 0;
 
-  if (LIBC_UNLIKELY(is_neg && d >= 0)) { // subnormal
+  // We're computing with errors < worst-cast errors, so tie-rounding never
+  // happens. Hence, round-to-nearest, tie-to-even is equivalent to
+  // round-to-nearest, tie-to-away. Which is what we're implementing below
+  // in the following order:
+  //
+  // 1. Shift so that the rounding bit is at bit-0
+  // 2. Add 1 for rounding
+  // 3. Perform another shift by 1
+  // 4. Depending on the rounding modes, adjust accoringly:
+  //  a. Add 1 if rounding-up (0 if not)
+  //  b. Add e_y_unbiased to the result (0 if the result is subnormal)
+
+  // subnormal
+  if (LIBC_UNLIKELY(is_neg && d >= 0)) {
     e_y_unbiased = 0;
     leading_one = 1 << (23 - d);
 
+    // In the below shifts, we're shifting by (shift_length + 1) at max, while
+    // shift_length is already 40, and if d = 23 --> shift_length + d = 63, and
+    // we'll shift by whole 64 bits, which is undefined behavior in C++.
+    //
+    // So, we'll truncate the last 2 bits.
     if (d >= 22) {
       d -= 2;
       p.val[0] >>= 2;
@@ -221,20 +258,15 @@ LIBC_INLINE float expf(float x, int rounding) {
     return cpp::bit_cast<float>(result);
   }
 
+  uint32_t should_round_up = 0;
+
   if (LIBC_UNLIKELY(rounding == FE_UPWARD)) {
     uint64_t round_up_mask = (uint64_t(1) << (shift_length + 1)) - 1;
-    uint32_t should_round_up =
-        static_cast<uint32_t>((p.val[0] & round_up_mask) != 0);
-
-    uint32_t result = (static_cast<uint32_t>(p.val[0] >> (shift_length + 1)) +
-                       should_round_up + (leading_one >> 1));
-    result += e_y_unbiased;
-
-    return cpp::bit_cast<float>(result);
+    should_round_up = static_cast<uint32_t>((p.val[0] & round_up_mask) != 0);
   }
 
   uint32_t result = (static_cast<uint32_t>(p.val[0] >> (shift_length + 1)) +
-                     (leading_one >> 1));
+                     should_round_up + (leading_one >> 1));
   result += e_y_unbiased;
 
   return cpp::bit_cast<float>(result);
