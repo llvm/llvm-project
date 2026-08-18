@@ -416,18 +416,11 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
+                                  std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
-        DL));
-  }
-
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+        Opcode, Op, ResultTy,
+        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -470,7 +463,7 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+  VPValue *createScalarFreeze(VPValue *Op, DebugLoc DL) {
     return tryInsertInstruction(
         new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
   }
