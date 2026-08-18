@@ -20,7 +20,15 @@ inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} 
 
 exclusive_or_expression = and_expression {"^" and_expression} ;
 
-and_expression = shift_expression {"&" shift_expression} ;
+and_expression = equality_expression {"&" equality_expression} ;
+
+equality_expression = relational_expression {"==" relational_expression}
+                    | relational_expression {"!=" relational_expression} ;
+
+relational_expression = shift_expression {"<" shift_expression}
+                      | shift_expression {">" shift_expression}
+                      | shift_expression {"<=" shift_expression}
+                      | shift_expression {">=" shift_expression} ;
 
 shift_expression = additive_expression {"<<" additive_expression}
                  | additive_expression {">>" additive_expression} ;

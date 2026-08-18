@@ -7,6 +7,8 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr [[ARG1]], i64 [[ARG2]]
 ; CHECK-NEXT:    [[GETELEMENTPTR4:%.*]] = getelementptr i8, ptr null, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> <ptr null, ptr poison>, ptr [[ARG3]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, <2 x ptr> [[TMP2]], <2 x i64> <i64 -32, i64 -432>
 ; CHECK-NEXT:    [[GETELEMENTPTR5:%.*]] = getelementptr i8, ptr null, i64 -32
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i8, ptr [[ARG3]], i64 -440
 ; CHECK-NEXT:    [[GETELEMENTPTR7:%.*]] = getelementptr i8, ptr [[ARG1]], i64 0
@@ -28,8 +30,8 @@ define i1 @test(ptr %arg, ptr %arg1, i64 %arg2, ptr %arg3) {
 ; CHECK-NEXT:    [[AND25:%.*]] = and i1 false, [[ICMP24]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, ptr [[ARG]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP0]], ptr [[GETELEMENTPTR7]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, ptr [[GETELEMENTPTR5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP2]], ptr [[GETELEMENTPTR8]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x ptr> <ptr poison, ptr poison, ptr null, ptr null>, <4 x ptr> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp ult <4 x ptr> [[TMP19]], [[TMP7]]
 ; CHECK-NEXT:    [[ICMP58:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null
 ; CHECK-NEXT:    [[ICMP62:%.*]] = icmp ult ptr [[GETELEMENTPTR]], null

@@ -494,7 +494,7 @@ bool ARMPassConfig::addInstSelector() {
 }
 
 bool ARMPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
