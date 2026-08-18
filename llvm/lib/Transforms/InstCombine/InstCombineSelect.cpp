@@ -5381,13 +5381,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     auto *LoadInst = cast<IntrinsicInst>(TrueVal);
     // Keep the load at its original position to avoid crossing writes. The new
     // passthrough must therefore be available there.
-    // TODO: Sink the load when the passthrough is unavailable but no
-    // intervening instruction can modify memory.
     if (DT.dominates(FalseVal, LoadInst)) {
       Builder.SetInsertPoint(LoadInst);
-      // SetInsertPoint() took the debug location from the old load, but the new
-      // load replaces the select, so restore the select's location.
-      Builder.SetCurrentDebugLocation(SI.getDebugLoc());
       Instruction *In = Builder.CreateMaskedLoad(
           TrueVal->getType(), MaskedLoadPtr,
           LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
