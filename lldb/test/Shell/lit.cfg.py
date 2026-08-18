@@ -157,6 +157,47 @@ if config.lldb_system_debugserver:
 if config.have_lldb_server:
     config.available_features.add("lldb-server")
 
+def runtime_exports(directory, symbol):
+    """Whether a libobjc2 under `directory` exports `symbol`."""
+
+    def tool(name):
+        return shutil.which(name, path=config.llvm_tools_dir) or shutil.which(name)
+
+    for subdir in ("lib", "bin"):
+        subdir_path = os.path.join(directory, subdir)
+        if not os.path.isdir(subdir_path):
+            continue
+        for entry in os.listdir(subdir_path):
+            root, ext = os.path.splitext(entry)
+            is_pe = ext.lower() == ".dll"
+            is_unix_shared = ext.lower() in (".so", ".dylib") or ".so." in entry
+            if not (is_pe or is_unix_shared):
+                continue
+            if not re.match(r"(lib)?objc([.-]|$)", root, re.IGNORECASE):
+                continue
+            path = os.path.join(subdir_path, entry)
+            # The export/dynamic table, not the symbol table: a stripped
+            # library still exports.
+            if is_pe:
+                argv = [tool("llvm-readobj"), "--coff-exports", path]
+            else:
+                argv = [tool("llvm-nm"), "--dynamic", "--defined-only", path]
+            if not argv[0]:
+                lit_config.warning("no tool to read exports from " + path)
+                continue
+            try:
+                probe = subprocess.run(argv, capture_output=True, text=True, timeout=60)
+            except (OSError, subprocess.SubprocessError) as e:
+                lit_config.warning("could not read exports from %s: %s" % (path, e))
+                continue
+            if probe.returncode != 0:
+                lit_config.warning("could not read exports from " + path)
+                continue
+            if symbol in probe.stdout:
+                return True
+    return False
+
+
 if config.objc_gnustep_dir:
     config.available_features.add("objc-gnustep")
     if platform.system() == "Windows":
@@ -167,6 +208,12 @@ if config.objc_gnustep_dir:
                 config.environment.get("PATH", ""),
             )
         )
+
+    # Catch breakpoints need an entry point for entering a handler. libobjc2
+    # exports one only where exceptions unwind through the Itanium ABI: a
+    # property of how the configured runtime was built, not of any triple.
+    if runtime_exports(config.objc_gnustep_dir, "objc_begin_catch"):
+        config.available_features.add("objc-gnustep-catch")
 
 if config.have_dia_sdk:
     config.available_features.add("diasdk")

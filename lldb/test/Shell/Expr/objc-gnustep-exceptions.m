@@ -96,3 +96,15 @@ int main() {
 // CAUGHT: (lldb) po caught
 // CAUGHT: <Boom: thrown>
 // CAUGHT-NOT: warning: `po` was unsuccessful
+
+// Unlike Apple's runtime, libobjc2 has an entry point for entering a handler,
+// so catch breakpoints are real, but only where exceptions unwind through
+// the Itanium ABI, which its MSVC build does not.
+//
+// RUN: %if objc-gnustep-catch %{ %lldb -b -o "breakpoint set -E objc --on-catch true --on-throw false" -o "run" -o "bt" -- %t | FileCheck %s --check-prefix=CATCH %}
+//
+// CATCH: stop reason = breakpoint
+// objc_begin_catch, or __cxa_begin_catch where clang routes @catch through
+// the C++ ABI.
+// CATCH: frame #0: {{.*}}{{(objc|__cxa)_begin_catch}}
+// CATCH: frame #1: {{.*}}main at objc-gnustep-exceptions.m:
