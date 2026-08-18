@@ -673,7 +673,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
-  initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
+  initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(*PR);
   initializeAMDGPURegBankSelectPass(*PR);
   initializeAMDGPURegBankLegalizePass(*PR);
   initializeSILowerWWMCopiesLegacyPass(*PR);
@@ -997,16 +997,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-
-  // TODO: Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(AMDGPUAsmPrinterBeginPass::name(),
-                            "amdgpu-asm-printer-begin");
-    PIC->addClassToPassName(AMDGPUAsmPrinterPass::name(), "amdgpu-asm-printer");
-    PIC->addClassToPassName(AMDGPUAsmPrinterEndPass::name(),
-                            "amdgpu-asm-printer-end");
-  }
 
   PB.registerPipelineParsingCallback(
       [this](StringRef Name, CGSCCPassManager &PM,

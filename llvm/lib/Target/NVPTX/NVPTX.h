@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class SelectionDAGISelPass;
 class FunctionPass;
 class MachineFunctionPass;
 class NVPTXTargetMachine;
@@ -49,7 +50,7 @@ ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVPTXAtomicLowerLegacyPass();
 FunctionPass *createNVVMIntrRangePass();
 ModulePass *createNVVMReflectPass(unsigned int SmVersion);
-MachineFunctionPass *createNVPTXPrologEpilogPass();
+MachineFunctionPass *createNVPTXPrologEpilogLegacyPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesLegacyPass();
 FunctionPass *createNVPTXImageOptimizerLegacyPass();
 ModulePass *createNVPTXLowerArgsPass();
@@ -63,7 +64,7 @@ FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
 FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeepholeLegacyPass();
-MachineFunctionPass *createNVPTXProxyRegErasurePass();
+MachineFunctionPass *createNVPTXProxyRegErasureLegacyPass();
 MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
 MachineFunctionPass *createNVPTXAddressFolderLegacyPass();
 
@@ -79,7 +80,7 @@ void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerUnreachableLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
-void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+void initializeNVPTXProxyRegErasureLegacyPassPass(PassRegistry &);
 void initializeNVPTXForwardParamsLegacyPassPass(PassRegistry &);
 void initializeNVPTXAddressFolderLegacyPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
@@ -90,29 +91,54 @@ void initializeNVPTXPeepholeLegacyPassPass(PassRegistry &);
 void initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
 void initializeNVPTXIRPeepholePass(PassRegistry &);
-void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
+void initializeNVPTXPrologEpilogLegacyPassPass(PassRegistry &);
 
-struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-struct NVPTXIRPeepholePass : OptionalPassInfoMixin<NVPTXIRPeepholePass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-class NVPTXPeepholePass : public OptionalPassInfoMixin<NVPTXPeepholePass> {
+// Module passes
+class GenericToNVVMPass : public RequiredPassInfoMixin<GenericToNVVMPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {
+class NVPTXAssignValidGlobalNamesPass
+    : public RequiredPassInfoMixin<NVPTXAssignValidGlobalNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXCtorDtorLoweringPass
+    : public RequiredPassInfoMixin<NVPTXCtorDtorLoweringPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXLowerArgsPass : public RequiredPassInfoMixin<NVPTXLowerArgsPass> {
+  TargetMachine &TM;
+
+public:
+  NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXPromoteParamAlignPass
+    : public OptionalPassInfoMixin<NVPTXPromoteParamAlignPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVVMReflectPass : public RequiredPassInfoMixin<NVVMReflectPass> {
+  unsigned SmVersion;
+
+public:
   NVVMReflectPass() : SmVersion(0) {}
   NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
-  PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
 
-private:
-  unsigned SmVersion;
+// Function passes
+class NVPTXAllocaHoistingPass
+    : public RequiredPassInfoMixin<NVPTXAllocaHoistingPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class NVPTXAtomicLowerPass
@@ -121,8 +147,10 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-struct GenericToNVVMPass : OptionalPassInfoMixin<GenericToNVVMPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+class NVPTXCopyByValArgsPass
+    : public OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class NVPTXImageOptimizerPass
@@ -131,8 +159,9 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+class NVPTXIRPeepholePass : public OptionalPassInfoMixin<NVPTXIRPeepholePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class NVPTXLowerAggrCopiesPass
@@ -141,9 +170,10 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-struct NVPTXPromoteParamAlignPass
-    : OptionalPassInfoMixin<NVPTXPromoteParamAlignPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+class NVPTXLowerAllocaPass
+    : public RequiredPassInfoMixin<NVPTXLowerAllocaPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class NVPTXLowerUnreachablePass
@@ -158,34 +188,33 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class NVPTXReplaceImageHandlesPass
-    : public RequiredPassInfoMixin<NVPTXReplaceImageHandlesPass> {
+class NVPTXMarkKernelPtrsGlobalPass
+    : public OptionalPassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class NVPTXTagInvariantLoadsPass
+    : public OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+class NVVMIntrRangePass : public OptionalPassInfoMixin<NVVMIntrRangePass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+// Machine function passes
+class NVPTXAddressFolderPass
+    : public OptionalPassInfoMixin<NVPTXAddressFolderPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {
-private:
-  TargetMachine &TM;
-
-public:
-  NVPTXLowerArgsPass(TargetMachine &TM) : TM(TM) {};
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
-struct NVPTXMarkKernelPtrsGlobalPass
-    : OptionalPassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-struct NVPTXTagInvariantLoadsPass
-    : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-};
-
-class NVPTXAddressFolderPass
-    : public OptionalPassInfoMixin<NVPTXAddressFolderPass> {
+class NVPTXForwardParamsPass
+    : public RequiredPassInfoMixin<NVPTXForwardParamsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -196,29 +225,31 @@ public:
   NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
-class NVPTXForwardParamsPass
-    : public RequiredPassInfoMixin<NVPTXForwardParamsPass> {
+class NVPTXPeepholePass : public OptionalPassInfoMixin<NVPTXPeepholePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-class NVPTXAssignValidGlobalNamesPass
-    : public RequiredPassInfoMixin<NVPTXAssignValidGlobalNamesPass> {
+class NVPTXPrologEpilogPass
+    : public RequiredPassInfoMixin<NVPTXPrologEpilogPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
-class NVPTXLowerAllocaPass
-    : public RequiredPassInfoMixin<NVPTXLowerAllocaPass> {
+class NVPTXProxyRegErasurePass
+    : public RequiredPassInfoMixin<NVPTXProxyRegErasurePass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
-class NVPTXAllocaHoistingPass
-    : public RequiredPassInfoMixin<NVPTXAllocaHoistingPass> {
+class NVPTXReplaceImageHandlesPass
+    : public RequiredPassInfoMixin<NVPTXReplaceImageHandlesPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 namespace NVPTX {

@@ -206,9 +206,7 @@ public:
   void removeIfStoredOpaqueValue(const Scope::Local &Local) {
     if (const auto *OVE =
             llvm::dyn_cast_if_present<OpaqueValueExpr>(Local.Desc->asExpr())) {
-      if (auto It = this->Ctx->OpaqueExprs.find(OVE);
-          It != this->Ctx->OpaqueExprs.end())
-        this->Ctx->OpaqueExprs.erase(It);
+      this->Ctx->OpaqueExprs.erase(OVE);
     };
   }
 
@@ -6977,7 +6975,7 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
       }
     }
   } else {
-    for (auto LI : LabelInfoStack) {
+    for (const auto &LI : LabelInfoStack) {
       if (LI.Name == TargetLoop) {
         TargetLabel = *LI.BreakLabel;
         BreakScope = LI.BreakOrContinueScope;
@@ -7025,7 +7023,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   }
-  assert(TargetLabel);
+
+  if (!TargetLabel)
+    return false;
 
   for (VariableScope<Emitter> *C = VarScope; C != ContinueScope;
        C = C->getParent()) {

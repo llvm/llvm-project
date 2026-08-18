@@ -5,159 +5,186 @@ source_filename = "external/libaom/av1/encoder/tx_search.c"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-android10000"
 
-define fastcc void @search_tx_type() #0 {
+define fastcc i16 @search_tx_type() #0 {
 ; CHECK-LABEL: search_tx_type:
 ; CHECK:       # %bb.0: # %._crit_edge.i
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    lbu a1, 0(zero)
-; CHECK-NEXT:    lh a2, 0(zero)
-; CHECK-NEXT:    lw a0, 0(zero)
-; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    andi a2, a1, 1
-; CHECK-NEXT:    srai a3, a0, 63
+; CHECK-NEXT:    lbu a0, 0(zero)
+; CHECK-NEXT:    lhu a2, 0(zero)
+; CHECK-NEXT:    lw a1, 0(zero)
+; CHECK-NEXT:    seqz a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    andi a2, a0, 1
+; CHECK-NEXT:    srai a3, a1, 63
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    or a3, a3, a0
+; CHECK-NEXT:    or a3, a3, a1
 ; CHECK-NEXT:    or a2, a2, a3
 ; CHECK-NEXT:    bgez a2, .LBB0_3
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    bexti a3, a1, 1
+; CHECK-NEXT:    bexti a3, a0, 1
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a2, a3
 ; CHECK-NEXT:  .LBB0_3: # %bb
-; CHECK-NEXT:    andi a4, a1, 4
+; CHECK-NEXT:    andi a4, a0, 4
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    beqz a4, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %bb
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_5: # %bb
-; CHECK-NEXT:    blt a2, a0, .LBB0_7
+; CHECK-NEXT:    blt a2, a1, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_7: # %bb
-; CHECK-NEXT:    andi a5, a1, 8
+; CHECK-NEXT:    andi a5, a0, 8
 ; CHECK-NEXT:    sext.w a4, a3
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    beqz a5, .LBB0_9
 ; CHECK-NEXT:  # %bb.8: # %bb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB0_9: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_11
+; CHECK-NEXT:    blt a4, a1, .LBB0_11
 ; CHECK-NEXT:  # %bb.10: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_11: # %bb
-; CHECK-NEXT:    andi a5, a1, 16
+; CHECK-NEXT:    andi a5, a0, 16
 ; CHECK-NEXT:    sext.w a4, a2
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    beqz a5, .LBB0_13
 ; CHECK-NEXT:  # %bb.12: # %bb
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_13: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_15
+; CHECK-NEXT:    blt a4, a1, .LBB0_15
 ; CHECK-NEXT:  # %bb.14: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_15: # %bb
-; CHECK-NEXT:    andi a5, a1, 32
+; CHECK-NEXT:    andi a5, a0, 32
 ; CHECK-NEXT:    sext.w a4, a3
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    beqz a5, .LBB0_17
 ; CHECK-NEXT:  # %bb.16: # %bb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB0_17: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_19
+; CHECK-NEXT:    blt a4, a1, .LBB0_19
 ; CHECK-NEXT:  # %bb.18: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_19: # %bb
-; CHECK-NEXT:    andi a5, a1, 64
+; CHECK-NEXT:    andi a5, a0, 64
 ; CHECK-NEXT:    sext.w a4, a2
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    beqz a5, .LBB0_21
 ; CHECK-NEXT:  # %bb.20: # %bb
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_21: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_23
+; CHECK-NEXT:    blt a4, a1, .LBB0_23
 ; CHECK-NEXT:  # %bb.22: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_23: # %bb
-; CHECK-NEXT:    andi a5, a1, 128
+; CHECK-NEXT:    andi a5, a0, 128
 ; CHECK-NEXT:    sext.w a4, a3
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    beqz a5, .LBB0_25
 ; CHECK-NEXT:  # %bb.24: # %bb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB0_25: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_27
+; CHECK-NEXT:    blt a4, a1, .LBB0_27
 ; CHECK-NEXT:  # %bb.26: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_27: # %bb
-; CHECK-NEXT:    andi a5, a1, 256
+; CHECK-NEXT:    andi a5, a0, 256
 ; CHECK-NEXT:    sext.w a4, a2
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    beqz a5, .LBB0_29
 ; CHECK-NEXT:  # %bb.28: # %bb
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_29: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_31
+; CHECK-NEXT:    blt a4, a1, .LBB0_31
 ; CHECK-NEXT:  # %bb.30: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_31: # %bb
-; CHECK-NEXT:    andi a5, a1, 512
+; CHECK-NEXT:    andi a5, a0, 512
 ; CHECK-NEXT:    sext.w a4, a3
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    beqz a5, .LBB0_33
 ; CHECK-NEXT:  # %bb.32: # %bb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB0_33: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_35
+; CHECK-NEXT:    blt a4, a1, .LBB0_35
 ; CHECK-NEXT:  # %bb.34: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_35: # %bb
-; CHECK-NEXT:    andi a5, a1, 1024
+; CHECK-NEXT:    andi a5, a0, 1024
 ; CHECK-NEXT:    sext.w a4, a2
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    beqz a5, .LBB0_37
 ; CHECK-NEXT:  # %bb.36: # %bb
-; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_37: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_39
+; CHECK-NEXT:    blt a4, a1, .LBB0_39
 ; CHECK-NEXT:  # %bb.38: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_39: # %bb
-; CHECK-NEXT:    slli a5, a1, 52
+; CHECK-NEXT:    slli a5, a0, 52
 ; CHECK-NEXT:    sext.w a4, a3
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:    bgez a5, .LBB0_41
 ; CHECK-NEXT:  # %bb.40: # %bb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB0_41: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_43
+; CHECK-NEXT:    blt a4, a1, .LBB0_43
 ; CHECK-NEXT:  # %bb.42: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_43: # %bb
-; CHECK-NEXT:    slli a4, a1, 51
-; CHECK-NEXT:    sext.w a3, a2
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:    bltz a4, .LBB0_49
+; CHECK-NEXT:    slli a5, a0, 51
+; CHECK-NEXT:    sext.w a4, a2
+; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    bgez a5, .LBB0_45
 ; CHECK-NEXT:  # %bb.44: # %bb
-; CHECK-NEXT:    bge a3, a0, .LBB0_50
+; CHECK-NEXT:    mv a3, a1
 ; CHECK-NEXT:  .LBB0_45: # %bb
-; CHECK-NEXT:    sext.w a2, a1
-; CHECK-NEXT:    blt a2, a0, .LBB0_47
-; CHECK-NEXT:  .LBB0_46: # %bb
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    blt a4, a1, .LBB0_47
+; CHECK-NEXT:  # %bb.46: # %bb
+; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_47: # %bb
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:  # %bb.48: # %get_tx_mask.exit
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    sext.w a2, a3
+; CHECK-NEXT:    mv a4, a1
+; CHECK-NEXT:    blt a2, a1, .LBB0_49
+; CHECK-NEXT:  # %bb.48: # %bb
+; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB0_49: # %bb
-; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:    blt a3, a0, .LBB0_45
-; CHECK-NEXT:  .LBB0_50: # %bb
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:    sext.w a2, a2
-; CHECK-NEXT:    bge a2, a0, .LBB0_46
-; CHECK-NEXT:    j .LBB0_47
+; CHECK-NEXT:    sext.w a4, a4
+; CHECK-NEXT:    bgez a4, .LBB0_51
+; CHECK-NEXT:  # %bb.50: # %bb
+; CHECK-NEXT:    li a2, 14
+; CHECK-NEXT:    j .LBB0_52
+; CHECK-NEXT:  .LBB0_51:
+; CHECK-NEXT:    slt a2, a2, a1
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    andi a2, a2, 13
+; CHECK-NEXT:  .LBB0_52: # %bb
+; CHECK-NEXT:    sgtz a1, a1
+; CHECK-NEXT:    slli a1, a1, 15
+; CHECK-NEXT:    bset a3, zero, a2
+; CHECK-NEXT:    and a4, a3, a1
+; CHECK-NEXT:    lui a3, 16
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    bnez a4, .LBB0_54
+; CHECK-NEXT:  # %bb.53: # %bb
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    j .LBB0_55
+; CHECK-NEXT:  .LBB0_54:
+; CHECK-NEXT:    li a4, -2
+; CHECK-NEXT:    rol a2, a4, a2
+; CHECK-NEXT:  .LBB0_55: # %bb
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    xor a1, a1, a3
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:  # %bb.56: # %get_tx_mask.exit
+; CHECK-NEXT:    seqz a1, a0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
 ._crit_edge.i:
   %.in196.i = load i16, ptr null, align 2
   %i2 = load i16, ptr null, align 2
@@ -273,7 +300,7 @@ get_tx_mask.exit:                                 ; preds = %._crit_edge.i, %bb
   %.1261.i = phi i16 [ %i97, %bb ], [ 0, %._crit_edge.i ]
   %i99 = icmp eq i16 %.1261.i, 0
   %.2262.i = select i1 %i99, i16 0, i16 %.1261.i
-  ret void
+  ret i16 %.2262.i
 }
 
 attributes #0 = { noimplicitfloat nounwind sspstrong uwtable vscale_range(2,1024) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic-rv64" "target-features"="+64bit,+a,+b,+c,+d,+f,+m,+relax,+unaligned-scalar-mem,+unaligned-vector-mem,+v,+zaamo,+zalrsc,+zba,+zbb,+zbs,+zca,+zcd,+zicsr,+zifencei,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b,-e,-experimental-p,-smctr,-ssctr,-experimental-svukte,-xqccmp,-xqcia,-xqciac,-xqcibi,-xqcibm,-xqcicli,-xqcicm,-xqcics,-xqcicsr,-xqciint,-xqciio,-xqcilb,-xqcili,-xqcilia,-xqcilo,-xqcilsm,-xqcisim,-xqcisls,-xqcisync,-experimental-xsfmclic,-experimental-xsfsclic,-zalasr,-experimental-zicfilp,-experimental-zicfiss,-experimental-zvbc32e,-experimental-zvkgs,-experimental-zvdot4a8i,-h,-q,-sdext,-sdtrig,-sha,-shcounterenw,-shgatpa,-shlcofideleg,-shtvala,-shvsatpa,-shvstvala,-shvstvecd,-smaia,-smcdeleg,-smcntrpmf,-smcsrind,-smdbltrp,-smepmp,-smmpm,-smnpm,-smrnmi,-smstateen,-ssaia,-ssccfg,-ssccptr,-sscofpmf,-sscounterenw,-sscsrind,-ssdbltrp,-ssnpm,-sspm,-ssqosid,-ssstateen,-ssstrict,-sstc,-sstvala,-sstvecd,-ssu64xl,-supm,-svade,-svadu,-svbare,-svinval,-svnapot,-svpbmt,-svvptc,-xandesperf,-xandesvbfhcvt,-xandesvdot,-xandesvpackfph,-xcvalu,-xcvbi,-xcvbitmanip,-xcvelw,-xcvmac,-xcvmem,-xcvsimd,-xmipscmov,-xmipslsp,-xsfcease,-xsfmm128t,-xsfmm16t,-xsfmm32a16f,-xsfmm32a32f,-xsfmm32a8f,-xsfmm32a8i,-xsfmm32t,-xsfmm64a64f,-xsfmm64t,-xsfmmbase,-xsfvcp,-xsfvfnrclipxfqf,-xsfvfwmaccqqq,-xsfvqmaccdod,-xsfvqmaccqoq,-xsifivecdiscarddlone,-xsifivecflushdlone,-xtheadba,-xtheadbb,-xtheadbs,-xtheadcmo,-xtheadcondmov,-xtheadfmemidx,-xtheadmac,-xtheadmemidx,-xtheadmempair,-xtheadsync,-xtheadvdot,-xventanacondops,-xwchc,-za128rs,-za64rs,-zabha,-zacas,-zama16b,-zawrs,-zbc,-zbkb,-zbkc,-zbkx,-zcb,-zce,-zcf,-zclsd,-zcmop,-zcmp,-zcmt,-zdinx,-zfa,-zfbfmin,-zfh,-zfhmin,-zfinx,-zhinx,-zhinxmin,-zic64b,-zicbom,-zicbop,-zicboz,-ziccamoa,-ziccamoc,-ziccif,-zicclsm,-ziccrse,-zicntr,-zicond,-zihintntl,-zihintpause,-zihpm,-zilsd,-zimop,-zk,-zkn,-zknd,-zkne,-zknh,-zkr,-zks,-zksed,-zksh,-zkt,-ztso,-zvbb,-zvbc,-zvfbfmin,-zvfbfwma,-zvfh,-zvfhmin,-zvkb,-zvkg,-zvkn,-zvknc,-zvkned,-zvkng,-zvknha,-zvknhb,-zvks,-zvksc,-zvksed,-zvksg,-zvksh,-zvkt,-zvl1024b,-zvl16384b,-zvl2048b,-zvl256b,-zvl32768b,-zvl4096b,-zvl512b,-zvl65536b,-zvl8192b" }

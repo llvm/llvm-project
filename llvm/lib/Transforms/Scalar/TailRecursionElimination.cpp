@@ -114,10 +114,6 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
   if (CB && CB->isMustTailCall())
     return false;
 
-  if (CB && (CB->hasFnAttr(Attribute::Cold) ||
-             CB->getCallingConv() == CallingConv::Cold))
-    return true;
-
   if (Caller && (Caller->hasFnAttribute(Attribute::Cold) ||
                  Caller->getCallingConv() == CallingConv::Cold))
     return true;
@@ -125,9 +121,22 @@ static bool shouldDisableTailCallsForCold(const CallBase *CB,
   if (!PSI || !PSI->hasProfileSummary())
     return false;
 
-  if (CB && BFI &&
-      (PSI->isColdCallSite(*CB, BFI) || PSI->isColdBlock(CB->getParent(), BFI)))
-    return true;
+  // We require both the function entry and the call site/block/callee to be
+  // cold.
+  // 1. Checking that the function entry is cold ensures we don't disable tail
+  //    call elimination in hot functions (with calls on cold conditional
+  //    paths), which would force stack frame setup and teardown on hot paths.
+  // 2. Checking that the call site/block/callee is also cold ensures that if a
+  //    function has a cold entry count but contains a hot loop, we don't
+  //    disable tail call elimination for calls within that hot loop.
+  if (Caller && PSI->isFunctionEntryCold(Caller) && CB) {
+    if (CB->hasFnAttr(Attribute::Cold) ||
+        CB->getCallingConv() == CallingConv::Cold)
+      return true;
+    if (BFI && (PSI->isColdCallSite(*CB, BFI) ||
+                PSI->isColdBlock(CB->getParent(), BFI)))
+      return true;
+  }
 
   return false;
 }
