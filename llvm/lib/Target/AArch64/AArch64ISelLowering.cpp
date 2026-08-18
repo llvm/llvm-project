@@ -11542,7 +11542,10 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
     // add   x0, x0, :tprel_lo12:a
     SDValue Var = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF);
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, ThreadBase, Var);
+    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, ThreadBase,
+                                      Var,
+                                      DAG.getTargetConstant(0, DL, MVT::i32)),
+                   0);
   }
 
   case 24: {
@@ -11558,10 +11561,9 @@ SDValue AArch64TargetLowering::LowerELFTLSLocalExec(const GlobalValue *GV,
                                       HiVar,
                                       DAG.getTargetConstant(0, DL, MVT::i32)),
                    0);
-    // Emit the low part as an ADDlow so that it can be folded into the
-    // addressing mode of a following load or store, turning the add into a
-    // :tprel_lo12_nc: relocation on the memory access itself.
-    return DAG.getNode(AArch64ISD::ADDlow, DL, PtrVT, Addr, LoVar);
+    return SDValue(DAG.getMachineNode(AArch64::ADDXri, DL, PtrVT, Addr, LoVar,
+                                      DAG.getTargetConstant(0, DL, MVT::i32)),
+                   0);
   }
 
   case 32: {
@@ -28010,8 +28012,6 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   auto *MemN = cast<MemSDNode>(N);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Pred;
     if (IsMasked) {
       Pred = getNarrowMaskForInterleavedOps(DAG, DL, Mask, NumParts);
@@ -28022,8 +28022,18 @@ performInterleavedStoreCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       Pred = DAG.getConstant(1, DL, PredVT);
     }
 
-    const Intrinsic::ID IID =
-        NumParts == 2 ? Intrinsic::aarch64_sve_st2 : Intrinsic::aarch64_sve_st4;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_st2;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_st3;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_st4;
+      break;
+    }
     SmallVector<SDValue, 8> Ops;
     Ops.append({Chain, DAG.getConstant(IID, DL, MVT::i32)});
     Ops.append(ValueInterleaveOps);
@@ -31123,8 +31133,6 @@ static SDValue performVectorDeinterleaveCombine(
   SDValue Res;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    if (NumParts == 3)
-      return SDValue();
     SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
@@ -31158,8 +31166,18 @@ static SDValue performVectorDeinterleaveCombine(
       BasePtr = Load->getBasePtr();
     }
 
-    const Intrinsic::ID IID = NumParts == 2 ? Intrinsic::aarch64_sve_ld2_sret
-                                            : Intrinsic::aarch64_sve_ld4_sret;
+    Intrinsic::ID IID;
+    switch (NumParts) {
+    case 2:
+      IID = Intrinsic::aarch64_sve_ld2_sret;
+      break;
+    case 3:
+      IID = Intrinsic::aarch64_sve_ld3_sret;
+      break;
+    case 4:
+      IID = Intrinsic::aarch64_sve_ld4_sret;
+      break;
+    }
     SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
                           BasePtr};
     Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,

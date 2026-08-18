@@ -366,6 +366,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/sysmacros.h entrypoints
+    libc.src.sys.sysmacros.makedev
+    libc.src.sys.sysmacros.major
+    libc.src.sys.sysmacros.minor
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -1204,6 +1209,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
+    libc.src.stdio.freopen
     libc.src.stdio.fopencookie
     libc.src.stdio.fputc
     libc.src.stdio.fputs
@@ -1241,6 +1247,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.system
     libc.src.stdlib.unsetenv
     libc.src.stdlib.quick_exit
 
