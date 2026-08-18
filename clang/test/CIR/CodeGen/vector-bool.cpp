@@ -149,3 +149,34 @@ void vec_bool_5_load_store_with_padding_needed() {
 // SHARED: %[[INSERT_VEC:.*]] = shufflevector <5 x i1> %[[EXTRACT_VEC]], <5 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 poison>
 // SHARED: %[[RESULT:.*]] = bitcast <8 x i1> %[[INSERT_VEC]] to i8
 // SHARED: store i8 %[[RESULT]], ptr %[[A_ADDR]], align 1
+
+void vec_bool_ternary_expr() {
+  v8b a;
+  v8b b;
+  v8b c;
+  v8b d = a ? b : c;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.vector<8 x !cir.bool>>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_ADDR]] : !cir.ptr<!cir.vector<8 x !cir.bool>>, !cir.vector<8 x !cir.bool>
+// CIR: %[[RESULT:.*]] = cir.vec.ternary(%[[TMP_A]], %[[TMP_B]], %[[TMP_C]]) : !cir.vector<8 x !cir.bool>, !cir.vector<8 x !cir.bool>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[D_ADDR]] : !cir.vector<8 x !cir.bool>, !cir.ptr<!cir.vector<8 x !cir.bool>>
+
+// SHARED: %[[A_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[B_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[C_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[D_ADDR:.*]] = alloca i8, align 1
+// SHARED: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
+// SHARED: %[[TMP_A_I8:.*]] = bitcast i8 %[[TMP_A]] to <8 x i1>
+// SHARED: %[[TMP_B:.*]] = load i8, ptr %[[B_ADDR]], align 1
+// SHARED: %[[TMP_B_I8:.*]] = bitcast i8 %[[TMP_B]] to <8 x i1>
+// SHARED: %[[TMP_C:.*]] = load i8, ptr %[[C_ADDR]], align 1
+// SHARED: %[[TMP_C_I8:.*]] = bitcast i8 %[[TMP_C]] to <8 x i1>
+// SHARED: %[[RESULT:.*]] = select <8 x i1> %[[TMP_A_I8]], <8 x i1> %[[TMP_B_I8]], <8 x i1> %[[TMP_C_I8]]
+// SHARED: %[[RESULT_I8:.*]] = bitcast <8 x i1> %[[RESULT]] to i8
+// SHARED: store i8 %[[RESULT_I8]], ptr %[[D_ADDR]], align 1
