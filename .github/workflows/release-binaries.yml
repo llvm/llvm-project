@@ -293,6 +293,7 @@ jobs:
         $newPath = $currentPath + ";$(Join-Path -Path $env:WIX -ChildPath "bin")"
         [Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
         Update-Environment
+        Get-ChildItem -Path C:\ -Filter candle.exe -Recurse
 
     - name: Build Windows
       id: build-windows
