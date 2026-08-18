@@ -181,7 +181,7 @@ void InProcessControllerAccess::connect(BootstrapInfo BI) {
     // C->Disconnect(C) then it might have acquired responsibility for calling
     // InProcessControllerAccess::onDisconnect. In this case control may return
     // from disconnect below early, potentially causing us to return from
-    // 'connect' before notifyDisconnect is called. This may lead to confusing
+    // 'connect' before notifyDisconnected is called. This may lead to confusing
     // logs (since reportError will log error but connect will appear to
     // succeed), however onDisconnect will still be called eventually, and the
     // Session will detach as if the remote had initiated the action after a

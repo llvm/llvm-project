@@ -1708,22 +1708,23 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
              (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
+// The condition codes that can be compressed to c.beqz/c.bnez.
+def CompressibleCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
-
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
-                          (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
-                                                 (NegImm simm12_lo:$Constant))),
-                                   (XLenVT X0),
-                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
 let Predicates = [HasStdExtZca, OptForMinSize] in {
-  def : SelectCompressOpt<SETEQ>;
-  def : SelectCompressOpt<SETNE>;
+  def  : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, CompressibleCond:$cc,
+                             (XLenVT GPR:$truev), GPR:$falsev),
+             (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                    (NegImm simm12_lo:$Constant))),
+                                      (XLenVT X0),
+                                      (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 }
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {

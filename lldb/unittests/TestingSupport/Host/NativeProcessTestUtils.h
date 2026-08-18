@@ -70,8 +70,9 @@ public:
 
   // Redirect base class Read/Write Memory methods to functions whose signatures
   // are more mock-friendly.
-  Status ReadMemory(addr_t Addr, void *Buf, size_t Size,
+  Status ReadMemory(const ProcessAddress &process_addr, void *Buf, size_t Size,
                     size_t &BytesRead) /*override*/ {
+    addr_t Addr = process_addr.GetValue();
     auto ExpectedMemory = this->ReadMemory(Addr, Size);
     if (!ExpectedMemory) {
       BytesRead = 0;

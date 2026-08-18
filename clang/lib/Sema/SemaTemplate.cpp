@@ -13,6 +13,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -8504,12 +8505,20 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass())
+
+      // Trace the outer context chain, bypassing nested records and OpenMP
+      // captured regions, to determine if the class in defined inside a
+      // function or method.
+      const DeclContext *OutCtx = RD->getDeclContext();
+      while (isa_and_nonnull<CapturedDecl, CXXRecordDecl>(OutCtx))
+        OutCtx = OutCtx->getParent();
+
+      if (OutCtx && OutCtx->isFunctionOrMethod())
         return Diag(TemplateParams->getTemplateLoc(),
                     diag::err_template_inside_local_class)
-          << TemplateParams->getSourceRange();
-      else
-        return false;
+               << TemplateParams->getSourceRange();
+
+      return false;
     }
   }
 

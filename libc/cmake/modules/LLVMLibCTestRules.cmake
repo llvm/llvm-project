@@ -355,13 +355,7 @@ function(create_libc_unittest fq_target_name)
 
   set(link_libraries ${link_object_files})
   # Test object files will depend on LINK_LIBRARIES passed down from `add_fp_unittest`
-  foreach(lib IN LISTS LIBC_UNITTEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.unit)
-      list(APPEND link_libraries ${lib}.unit)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
+  list(APPEND link_libraries ${LIBC_UNITTEST_LINK_LIBRARIES})
 
   set_target_properties(${fq_build_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -371,10 +365,10 @@ function(create_libc_unittest fq_target_name)
     ${fq_deps_list}
   )
 
-  # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcTest.unit)
+  # LibcTest should not depend on anything in LINK_LIBRARIES.
+  list(APPEND link_libraries LibcTest)
   if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors.unit)
+    list(APPEND link_libraries LibcDeathTestExecutors)
   endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
@@ -881,15 +875,7 @@ function(add_libc_hermetic test_name)
     ${compile_options}
     ${HERMETIC_TEST_COMPILE_OPTIONS})
 
-  set(link_libraries "")
   set(compiler_runtime "")
-  foreach(lib IN LISTS HERMETIC_TEST_LINK_LIBRARIES)
-    if(TARGET ${lib}.hermetic)
-      list(APPEND link_libraries ${lib}.hermetic)
-    else()
-      list(APPEND link_libraries ${lib})
-    endif()
-  endforeach()
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -930,9 +916,9 @@ function(add_libc_hermetic test_name)
     ${fq_build_target_name}
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
-      ${link_libraries}
+      ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
-      LibcHermeticTestSupport.hermetic
+      LibcHermeticTestSupport
       # Working around dependency issues caused by compiler introduced libcalls.
       # We need to repeat the libc target so that we can resolve libcalls which
       # pull in functions from LibcHermeticTestSupport (which then foward to
@@ -942,7 +928,7 @@ function(add_libc_hermetic test_name)
       ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name}
-    LibcTest.hermetic
+    LibcTest
     libc.test.UnitTest.ErrnoSetterMatcher
     ${fq_deps_list})
 
@@ -1034,8 +1020,8 @@ function(add_libc_test test_name)
       add_libc_hermetic(
         ${test_name}
         LINK_LIBRARIES
-          LibcTest.hermetic
-          LibcDeathTestExecutors.hermetic
+          LibcTest
+          LibcDeathTestExecutors
           ${LIBC_TEST_UNPARSED_ARGUMENTS}
       )
     endif()

@@ -62,7 +62,14 @@ lit_expand_template(
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_X86_AMX_TESTS@": "0",
         "@MLIR_RUN_X86_TESTS@": "0",
-    },
+    } | select({
+        "//mlir:enable_expensive_pattern_api_checks_config": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "1",
+        },
+        "//conditions:default": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "0",
+        },
+    }),
     template = "lit.site.cfg.py.in",
 )
 

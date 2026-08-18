@@ -22,6 +22,13 @@ static inline Error_t convertResult(ol_result_t Result) {
   case OL_ERRC_INVALID_ARGUMENT:
   case OL_ERRC_INVALID_NULL_POINTER:
     return ErrorInvalidValue;
+  case OL_ERRC_INVALID_SIZE:
+    return ErrorInvalidConfiguration;
+  case OL_ERRC_INVALID_NULL_HANDLE:
+  case OL_ERRC_INVALID_QUEUE:
+  case OL_ERRC_INVALID_EVENT:
+  case OL_ERRC_INVALID_CONTEXT:
+    return ErrorInvalidResourceHandle;
   case OL_ERRC_INVALID_DEVICE:
     return ErrorInvalidDevice;
   default:
@@ -34,6 +41,12 @@ static inline Error_t setLastError(Error_t Error) {
   // TODO: find a more efficient way to set last error
   return static_cast<Error_t>(
       llvm::offload::ThreadStateTy::setLastError(Error));
+}
+
+/// Convert an ol_result_t to the active language's Error_t and set it as the
+/// last error for the current thread.
+static inline Error_t convertAndSetLastError(ol_result_t Result) {
+  return setLastError(convertResult(Result));
 }
 
 /// Convert a Stream_t to an ol_queue_handle_t.

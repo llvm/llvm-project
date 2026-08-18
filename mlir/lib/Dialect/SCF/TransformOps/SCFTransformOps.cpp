@@ -404,6 +404,29 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// LoopUnrollFullOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopUnrollFullOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollFull(scfFor);
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+    result = loopUnrollFull(affineFor);
+  else
+    return emitSilenceableError()
+           << "failed to fully unroll, incorrect type of payload";
+
+  if (failed(result))
+    return emitSilenceableError() << "failed to fully unroll";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopUnrollAndJamOp
 //===----------------------------------------------------------------------===//
 

@@ -991,14 +991,6 @@ ClassTemplateSpecializationDecl *ClassTemplateSpecializationDecl::Create(
       Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
       SpecializedTemplate, Args, StrictPackMatch, PrevDecl);
 
-  // If the template decl is incomplete, copy the external lexical storage from
-  // the base template. This allows instantiations of incomplete types to
-  // complete using the external AST if the template's declaration came from an
-  // external AST.
-  if (!SpecializedTemplate->getTemplatedDecl()->isCompleteDefinition())
-    Result->setHasExternalLexicalStorage(
-      SpecializedTemplate->getTemplatedDecl()->hasExternalLexicalStorage());
-
   return Result;
 }
 

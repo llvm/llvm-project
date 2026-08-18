@@ -3291,6 +3291,17 @@ void populateIRCore(nb::module_ &m) {
   nb::enum_<PyWalkOrder>(m, "WalkOrder")
       .value("PRE_ORDER", PyWalkOrder::PreOrder)
       .value("POST_ORDER", PyWalkOrder::PostOrder);
+
+  nb::enum_<PyOperationEquivalenceFlags>(m, "OperationEquivalenceFlags",
+                                         nb::is_arithmetic(), nb::is_flag())
+      .value("NONE", PyOperationEquivalenceFlags::None)
+      .value("IGNORE_LOCATIONS", PyOperationEquivalenceFlags::IgnoreLocations)
+      .value("IGNORE_DISCARDABLE_ATTRS",
+             PyOperationEquivalenceFlags::IgnoreDiscardableAttrs)
+      .value("IGNORE_PROPERTIES", PyOperationEquivalenceFlags::IgnoreProperties)
+      .value("IGNORE_COMMUTATIVITY",
+             PyOperationEquivalenceFlags::IgnoreCommutativity);
+
   nb::enum_<PyWalkResult>(m, "WalkResult")
       .value("ADVANCE", PyWalkResult::Advance)
       .value("INTERRUPT", PyWalkResult::Interrupt)
@@ -3946,6 +3957,27 @@ void populateIRCore(nb::module_ &m) {
             return mlirOperationHashValue(self.getOperation().get());
           },
           "Returns the hash value of the operation.")
+      .def(
+          "is_structurally_equivalent",
+          [](PyOperationBase &self, PyOperationBase &other,
+             PyOperationEquivalenceFlags flags) {
+            self.getOperation().checkValid();
+            other.getOperation().checkValid();
+            return mlirOperationIsStructurallyEquivalent(
+                self.getOperation().get(), other.getOperation().get(),
+                static_cast<uint32_t>(flags));
+          },
+          "other"_a, "flags"_a = PyOperationEquivalenceFlags::None,
+          R"("Checks whether two operations are structurally equivalent. The predicate recursively compares regions.")")
+      .def(
+          "structural_hash",
+          [](PyOperationBase &self, PyOperationEquivalenceFlags flags) {
+            self.getOperation().checkValid();
+            return mlirOperationStructuralHashValue(
+                self.getOperation().get(), static_cast<uint32_t>(flags));
+          },
+          "flags"_a = PyOperationEquivalenceFlags::None,
+          R"(Computes a structural hash for the operation. The hash does not recurse into regions, unlike the predicate.")")
       .def_prop_ro(
           "attributes",
           [](PyOperationBase &self) {

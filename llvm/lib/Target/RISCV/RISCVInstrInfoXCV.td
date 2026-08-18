@@ -807,6 +807,11 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 // Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
+// The condition codes supported by Select_GPR_Using_CC_SImm5_CV.
+def XCVbiCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc (i32 GPR:$rs1), simm5:$imm5, SETEQ, bb:$imm12),
             (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
@@ -815,14 +820,10 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
-  class Selectbi<CondCode Cond>
-      : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, Cond:$cc,
+  def : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, XCVbiCond:$cc,
                             (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
              (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
-
-  def : Selectbi<SETEQ>;
-  def : Selectbi<SETNE>;
 }
 
 class PatCoreVMacGprGprGpr <string intr, string asm>

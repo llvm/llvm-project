@@ -28,9 +28,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -1283,6 +1285,37 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
   }
 };
 
+static void addNoWrapDecorations(Operation *op,
+                                 spirv::LinearizedIndexNoWrapFlags flags,
+                                 OpBuilder &builder) {
+  if (flags.noSignedWrap)
+    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoSignedWrap),
+                builder.getUnitAttr());
+  if (flags.noUnsignedWrap)
+    op->setAttr(spirv::getDecorationString(spirv::Decoration::NoUnsignedWrap),
+                builder.getUnitAttr());
+}
+
+static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
+                                                     ArrayRef<int64_t> strides,
+                                                     int64_t offset) {
+  if (shape.size() != strides.size() || offset < 0)
+    return std::nullopt;
+
+  uint64_t maxLinearIndex = offset;
+  for (auto [dimension, stride] : llvm::zip(shape, strides)) {
+    if (dimension <= 0 || stride < 0)
+      return std::nullopt;
+    std::optional<uint64_t> nextMaxLinearIndex = llvm::checkedMulAddUnsigned(
+        static_cast<uint64_t>(dimension - 1), static_cast<uint64_t>(stride),
+        maxLinearIndex);
+    if (!nextMaxLinearIndex)
+      return std::nullopt;
+    maxLinearIndex = *nextMaxLinearIndex;
+  }
+  return maxLinearIndex;
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1336,9 +1369,36 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
 // Public functions for index calculation
 //===----------------------------------------------------------------------===//
 
+mlir::spirv::LinearizedIndexNoWrapFlags
+mlir::spirv::getLinearizedIndexNoWrapFlags(const TargetEnv &targetEnv,
+                                           ArrayRef<int64_t> shape,
+                                           ArrayRef<int64_t> strides,
+                                           int64_t offset, Type integerType) {
+  LinearizedIndexNoWrapFlags flags;
+  if (!targetEnv.allows(Extension::SPV_KHR_no_integer_wrap_decoration))
+    return flags;
+
+  auto integer = dyn_cast<IntegerType>(integerType);
+  if (!integer)
+    return flags;
+
+  std::optional<uint64_t> maxLinearIndex =
+      getMaxLinearizedIndex(shape, strides, offset);
+  if (!maxLinearIndex)
+    return flags;
+
+  flags.noSignedWrap =
+      *maxLinearIndex <=
+      APInt::getSignedMaxValue(integer.getWidth()).getZExtValue();
+  flags.noUnsignedWrap =
+      *maxLinearIndex <= APInt::getMaxValue(integer.getWidth()).getZExtValue();
+  return flags;
+}
+
 Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
                                   int64_t offset, Type integerType,
-                                  Location loc, OpBuilder &builder) {
+                                  Location loc, OpBuilder &builder,
+                                  LinearizedIndexNoWrapFlags noWrapFlags) {
   assert(indices.size() == strides.size() &&
          "must provide indices for all dimensions");
 
@@ -1355,8 +1415,15 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
         IntegerAttr::get(integerType, strides[index.index()]));
     Value update =
         builder.createOrFold<spirv::IMulOp>(loc, index.value(), strideVal);
+    if (noWrapFlags.noSignedWrap || noWrapFlags.noUnsignedWrap)
+      if (auto mul = update.getDefiningOp<spirv::IMulOp>())
+        addNoWrapDecorations(mul, noWrapFlags, builder);
+
     linearizedIndex =
         builder.createOrFold<spirv::IAddOp>(loc, update, linearizedIndex);
+    if (noWrapFlags.noSignedWrap || noWrapFlags.noUnsignedWrap)
+      if (auto add = linearizedIndex.getDefiningOp<spirv::IAddOp>())
+        addNoWrapDecorations(add, noWrapFlags, builder);
   }
   return linearizedIndex;
 }
@@ -1376,6 +1443,9 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   auto zero = spirv::ConstantOp::getZero(indexType, loc, builder);
@@ -1383,8 +1453,8 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   if (baseType.getRank() == 0) {
     linearizedIndices.push_back(zero);
   } else {
-    linearizedIndices.push_back(
-        linearizeIndex(indices, strides, offset, indexType, loc, builder));
+    linearizedIndices.push_back(linearizeIndex(
+        indices, strides, offset, indexType, loc, builder, noWrapFlags));
   }
 
   const Type pointeeType =
@@ -1410,14 +1480,17 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   auto indexType = typeConverter.getIndexType();
+  LinearizedIndexNoWrapFlags noWrapFlags = getLinearizedIndexNoWrapFlags(
+      typeConverter.getTargetEnv(), baseType.getShape(), strides, offset,
+      indexType);
 
   SmallVector<Value, 2> linearizedIndices;
   Value linearIndex;
   if (baseType.getRank() == 0) {
     linearIndex = spirv::ConstantOp::getZero(indexType, loc, builder);
   } else {
-    linearIndex =
-        linearizeIndex(indices, strides, offset, indexType, loc, builder);
+    linearIndex = linearizeIndex(indices, strides, offset, indexType, loc,
+                                 builder, noWrapFlags);
   }
   Type pointeeType =
       cast<spirv::PointerType>(basePtr.getType()).getPointeeType();

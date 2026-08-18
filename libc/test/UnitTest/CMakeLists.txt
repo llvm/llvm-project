@@ -11,68 +11,48 @@ function(add_unittest_framework_library name)
       "header only libraries, use 'add_header_library'")
   endif()
 
-  foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
-    add_library(
-      ${lib}
-      STATIC
-      EXCLUDE_FROM_ALL
-        ${TEST_LIB_SRCS}
-        ${TEST_LIB_HDRS}
-    )
-    target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
-    if(TARGET libc.src.time.clock)
-      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
-    endif()
+  add_library(
+    ${name}
+    STATIC
+    EXCLUDE_FROM_ALL
+      ${TEST_LIB_SRCS}
+      ${TEST_LIB_HDRS}
+  )
+  target_include_directories(${name} PRIVATE ${LIBC_SOURCE_DIR})
+  if(TARGET libc.src.time.clock)
+    target_compile_definitions(${name} PRIVATE TARGET_SUPPORTS_CLOCK)
+  endif()
 
-    # Find out if the target supports catching signals.
-    if(NOT LLVM_LIBC_FULL_BUILD)
-      # In an overlay build of libc, assume signal.h is available: the host
-      # libc will provide it even if we don't.
-      set(no_signal FALSE)
-    elseif(TARGET libc.src.signal.signal)
-      # In a full build, signal.h only exists if we provide it ourselves, which
-      # we might not on bare metal.
-      get_target_property(no_signal libc.src.signal.signal SKIPPED)
-    else()
-      set(no_signal TRUE)
-    endif()
-    if(NOT no_signal)
-      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
-    endif()
-  endforeach()
+  # Find out if the target supports catching signals.
+  if(NOT LLVM_LIBC_FULL_BUILD)
+    # In an overlay build of libc, assume signal.h is available: the host
+    # libc will provide it even if we don't.
+    set(no_signal FALSE)
+  elseif(TARGET libc.src.signal.signal)
+    # In a full build, signal.h only exists if we provide it ourselves, which
+    # we might not on bare metal.
+    get_target_property(no_signal libc.src.signal.signal SKIPPED)
+  else()
+    set(no_signal TRUE)
+  endif()
+  if(NOT no_signal)
+    target_compile_definitions(${name} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
+  endif()
 
   if(LLVM_LIBC_FULL_BUILD)
-    # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
-    # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
-    set(LLVM_LIBC_FULL_BUILD "")
-    _get_common_test_compile_options(compile_options "" "")
-    set(LLVM_LIBC_FULL_BUILD ON)
+    _get_hermetic_test_compile_options(compile_options "" "")
+    target_compile_options(${name} PRIVATE ${compile_options} -nostdinc++)
   else()
     _get_common_test_compile_options(compile_options "" "")
-  endif()
 
-  if(TEST_LIB_COMPILE_OPTIONS)
-    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+    if(TEST_LIB_COMPILE_OPTIONS)
+      list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+    endif()
+    target_compile_options(${name} PRIVATE ${compile_options})
   endif()
-  target_compile_options(${name}.unit PRIVATE ${compile_options})
-
-  _get_hermetic_test_compile_options(compile_options "" "")
-  target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
-  target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
   if(TEST_LIB_DEPENDS)
-    foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
-      if(TARGET ${dep}.unit)
-        add_dependencies(${name}.unit ${dep}.unit)
-      else()
-        add_dependencies(${name}.unit ${dep})
-      endif()
-      if(TARGET ${dep}.hermetic)
-        add_dependencies(${name}.hermetic ${dep}.hermetic)
-      else()
-        add_dependencies(${name}.hermetic ${dep})
-      endif()
-    endforeach()
+    add_dependencies(${name} ${TEST_LIB_DEPENDS})
   endif()
 endfunction()
 

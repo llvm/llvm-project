@@ -86,7 +86,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# GNU: GNUStyle::printBBAddrMaps not implemented
+# GNU: GNU output style is not supported for --bb-addr-map
 
 # TRUNCATED:      BBAddrMap [
 # TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump BB addr map section: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end in SHT_LLVM_BB_ADDR_MAP section with index 3

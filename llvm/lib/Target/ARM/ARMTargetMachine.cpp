@@ -160,16 +160,6 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
-  // Default to triple-appropriate float ABI. -target-abi=aapcs16 forces hard
-  // float regardless of the triple default.
-  if (Options.FloatABIType == FloatABI::Default) {
-    if (TargetABI == ARM::ARM_ABI_AAPCS16 ||
-        TT.getDefaultFloatABI() == FloatABI::Hard)
-      this->Options.FloatABIType = FloatABI::Hard;
-    else
-      this->Options.FloatABIType = FloatABI::Soft;
-  }
-
   // Default to triple-appropriate EABI
   if (Options.EABIVersion == EABI::Default ||
       Options.EABIVersion == EABI::Unknown) {
@@ -243,6 +233,20 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
   return ARMFunctionInfo::create<ARMFunctionInfo>(Allocator, F, ARMSTI);
 }
 
+FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
+  // An explicit "float-abi" module flag always wins, even for AAPCS16.
+  if (auto *Val = dyn_cast_or_null<MDString>(M.getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+
+  // With no explicit ABI, an explicit -target-abi=aapcs16 forces hard float
+  // even on triples whose default float ABI is soft (the triple default only
+  // detects AAPCS16 when it is the triple's own default ABI).
+  if (TargetABI == ARM::ARM_ABI_AAPCS16)
+    return FloatABI::Hard;
+  // Otherwise fall back to the ABI implied by the target triple.
+  return M.getTargetTriple().getDefaultFloatABI();
+}
+
 const ARMSubtarget *
 ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -274,16 +278,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
-  // The float ABI comes from the "float-abi" module flag if present, otherwise
-  // from the legacy -float-abi target option (which the constructor seeded from
-  // the target triple).
-  FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
-  if (FloatABI == FloatABI::Default) {
-    FloatABI = Options.FloatABIType;
-    assert(FloatABI != FloatABI::Default &&
-           "expected TargetMachine constructor to overwrite default float abi");
-  }
-
+  FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
   // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
   // registers, but no floating-point hardware (mve+nofp)
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
@@ -494,7 +489,7 @@ bool ARMPassConfig::addInstSelector() {
 }
 
 bool ARMPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 

@@ -79,7 +79,8 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+      "getRegionInvocationBounds", "getSuccessorInputs"]>,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
     RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";

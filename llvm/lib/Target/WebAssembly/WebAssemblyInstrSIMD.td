@@ -938,7 +938,7 @@ def : Pat<(vec.vt (vselect
           (ANDNOT $c, $x)>;
 
 // Also implement vselect in terms of bitselect
-foreach vec = StdVecs in
+foreach vec = AllVecs in
 def : Pat<(vec.vt (vselect
             (vec.int_vt V128:$c), (vec.vt V128:$v1), (vec.vt V128:$v2))),
           (BITSELECT $v1, $v2, $c)>;
@@ -948,7 +948,7 @@ defm SELECT_V128 :
   I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, I32:$cond), (outs), (ins), [],
     "v128.select\t$dst, $lhs, $rhs, $cond", "v128.select", 0x1b>;
 
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 def : Pat<(select I32:$cond, (vec.vt V128:$lhs), (vec.vt V128:$rhs)),
           (SELECT_V128 $lhs, $rhs, $cond)>;
 

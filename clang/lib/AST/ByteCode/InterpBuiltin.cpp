@@ -1381,7 +1381,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
       BaseAlignment = S.getASTContext().getDeclAlign(VD);
-    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
+    else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
@@ -1664,7 +1664,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     if (!BlockToDelete->isDynamic()) {

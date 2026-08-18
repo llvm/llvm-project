@@ -3852,7 +3852,7 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
     auto [ScaledInput, IsScaled] = getScaledLogInput(B, Src, Flags);
     if (ScaledInput) {
       auto LogSrc = B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty})
-                        .addUse(Src)
+                        .addUse(ScaledInput)
                         .setMIFlags(Flags);
       auto ScaledResultOffset = B.buildFConstant(Ty, -32.0 * Log2BaseInverted);
       auto Zero = B.buildFConstant(Ty, 0.0);

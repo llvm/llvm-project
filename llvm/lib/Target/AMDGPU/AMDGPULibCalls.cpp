@@ -844,8 +844,12 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
       SmallVector<APFloat, 4> Values;
       Values.reserve(vecSize);
       for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
-        ConstantFP *eltval =
-            cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
+        // A lane may be undef or poison, in which case there is nothing to
+        // look up in the table.
+        ConstantFP *eltval = dyn_cast_or_null<ConstantFP>(
+            CV->getAggregateElement((unsigned)eltNo));
+        if (!eltval)
+          return false;
         auto MatchingRow = llvm::find_if(tr, [eltval](const TableEntry &entry) {
           return eltval->isExactlyValue(entry.input);
         });
@@ -1820,23 +1824,16 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
                                             APFloat &Res0, APFloat &Res1,
                                             Constant *copr0, Constant *copr1) {
-  // By default, opr0/opr1/opr3 holds values of float/double type.
-  // If they are not float/double, each function has to its
-  // operand separately.
-  double opr0 = 0.0, opr1 = 0.0;
+  // Every function handled below reads its first operand as a floating-point
+  // value. Refuse anything else, e.g. a poison vector lane: silently treating
+  // it as 0.0 misfolds the whole call.
   ConstantFP *fpopr0 = dyn_cast_or_null<ConstantFP>(copr0);
-  ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
-  if (fpopr0) {
-    opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr0->getValueAPF().convertToDouble()
-             : (double)fpopr0->getValueAPF().convertToFloat();
-  }
+  if (!fpopr0)
+    return false;
 
-  if (fpopr1) {
-    opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
-             ? fpopr1->getValueAPF().convertToDouble()
-             : (double)fpopr1->getValueAPF().convertToFloat();
-  }
+  double opr0 = (getArgType(FInfo) == AMDGPULibFunc::F64)
+                    ? fpopr0->getValueAPF().convertToDouble()
+                    : (double)fpopr0->getValueAPF().convertToFloat();
 
   switch (FInfo.getId()) {
   default:
@@ -1952,9 +1949,16 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
 
   // two-arg functions
   case AMDGPULibFunc::EI_POW:
-  case AMDGPULibFunc::EI_POWR:
+  case AMDGPULibFunc::EI_POWR: {
+    ConstantFP *fpopr1 = dyn_cast_or_null<ConstantFP>(copr1);
+    if (!fpopr1)
+      return false;
+    double opr1 = (getArgType(FInfo) == AMDGPULibFunc::F64)
+                      ? fpopr1->getValueAPF().convertToDouble()
+                      : (double)fpopr1->getValueAPF().convertToFloat();
     Res0 = APFloat{pow(opr0, opr1)};
     return true;
+  }
 
   case AMDGPULibFunc::EI_POWN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
@@ -2014,11 +2018,14 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
       return false;
     }
   } else {
-    ConstantDataVector *CDV0 = dyn_cast_or_null<ConstantDataVector>(copr0);
-    ConstantDataVector *CDV1 = dyn_cast_or_null<ConstantDataVector>(copr1);
+    // An operand of a vector variant is not necessarily a vector: sincos takes
+    // a pointer as its second operand, and fmin/fmax/ldexp accept an
+    // implicitly splatted scalar. Only index into actual vectors.
+    Constant *CV0 = copr0 && copr0->getType()->isVectorTy() ? copr0 : nullptr;
+    Constant *CV1 = copr1 && copr1->getType()->isVectorTy() ? copr1 : nullptr;
     for (int i = 0; i < FuncVecSize; ++i) {
-      Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
-      Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
+      Constant *celt0 = CV0 ? CV0->getAggregateElement((unsigned)i) : nullptr;
+      Constant *celt1 = CV1 ? CV1->getAggregateElement((unsigned)i) : nullptr;
       if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
                                   Val1.emplace_back(0.0), celt0, celt1)) {
         return false;

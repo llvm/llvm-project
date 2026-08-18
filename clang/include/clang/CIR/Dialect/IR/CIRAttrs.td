@@ -1959,7 +1959,7 @@ def CIR_UsualDeleteParamsAttr
 
   let parameters = (ins
     DefaultValuedParameter<"bool", "false">:$size,
-    DefaultValuedParameter<"bool", "false">:$alignment,
+    OptionalParameter<"std::optional<uint64_t>">:$alignment,
     DefaultValuedParameter<"bool", "false">:$type_aware_delete,
     DefaultValuedParameter<"bool", "false">:$destroying_delete
   );

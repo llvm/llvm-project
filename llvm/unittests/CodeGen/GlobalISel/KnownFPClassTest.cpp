@@ -1171,6 +1171,88 @@ TEST_F(AArch64GISelMITest, TestFPClassFDiv_Inf) {
   EXPECT_EQ(false, Known.SignBit);
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFDivSqrt) {
+  // The only negative value sqrt(x) can produce is -0.0, so the only negative
+  // value 1.0 / sqrt(x) can produce is -Inf.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %sqrt:_(s32) = G_FSQRT %x
+    %one:_(s32) = G_FCONSTANT float 1.0
+    %fdiv:_(s32) = G_FDIV %one, %sqrt
+    %copy_fdiv:_(s32) = COPY %fdiv
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcAllFlags & ~(fcNegNormal | fcNegSubnormal), Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFDivNegSqrtNeg) {
+  // The only negative value sqrt(-x) can produce is -0.0, so the only positive
+  // value -1.0 / sqrt(-x) can produce is +Inf.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %neg_x:_(s32) = G_FNEG %x
+    %sqrt:_(s32) = G_FSQRT %neg_x
+    %neg_one:_(s32) = G_FCONSTANT float -1.0
+    %fdiv:_(s32) = G_FDIV %neg_one, %sqrt
+    %copy_fdiv:_(s32) = COPY %fdiv
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg, fcPositive);
+
+  EXPECT_EQ(fcAllFlags & ~(fcPosNormal | fcPosSubnormal), Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassSqrtFDiv) {
+  // sqrt(1.0 / x) may produce -0.0 when x is -Inf, but cannot produce any
+  // other negative value or a subnormal value.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %one:_(s32) = G_FCONSTANT float 1.0
+    %inv:_(s32) = G_FDIV %one, %x
+    %sqrt:_(s32) = G_FSQRT %inv
+    %copy_sqrt:_(s32) = COPY %sqrt
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcNan | fcZero | fcPosNormal | fcPosInf, Known.KnownFPClasses);
+  EXPECT_EQ(std::nullopt, Known.SignBit);
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassFRem) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF

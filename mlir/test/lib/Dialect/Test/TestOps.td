@@ -4000,6 +4000,27 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
     "attr-dict `:` functional-type(operands, results)";
 }
 
+// A call-like operation whose first result is produced by the operation itself
+// and is *not* forwarded from the callee. Only the trailing results are
+// forwarded.
+def TestCallAndProduceOp : TEST_Op<"call_and_produce",
+    [DeclareOpInterfaceMethods<CallOpInterface, ["getForwardedResults"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Variadic<AnyType>:$forwarded_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+  let results = (outs
+    I1:$produced_status,
+    Variadic<AnyType>:$forwarded
+  );
+  let assemblyFormat =
+    "$callee `(` $forwarded_operands `)` attr-dict "
+    "`:` functional-type(operands, results)";
+}
+
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {

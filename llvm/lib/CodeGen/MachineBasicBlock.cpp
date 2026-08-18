@@ -1091,7 +1091,7 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
     addLiveIns(*SplitBB, LiveRegs);
 
   if (LIS)
-    LIS->insertMBBInMaps(SplitBB);
+    LIS->splitAt(*this, *SplitBB);
 
   return SplitBB;
 }

@@ -25,6 +25,7 @@
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition [[DF]] [[CALLER]]
 ; CHECK-NEXT: OpStore
 ; CHECK-NEXT: OpFunctionCall
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine
 ; CHECK-NEXT: OpReturnValue
 ; CHECK-NEXT: OpFunctionEnd
 

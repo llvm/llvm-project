@@ -595,23 +595,6 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   }
 }
 
-/// Check \p Plan's live-in and replace them with constants, if they can be
-/// simplified via SCEV.
-static void simplifyLiveInsWithSCEV(VPlan &Plan,
-                                    PredicatedScalarEvolution &PSE) {
-  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
-    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
-    if (auto *C = dyn_cast<SCEVConstant>(Expr))
-      return Plan.getOrAddLiveIn(C->getValue());
-    return nullptr;
-  };
-
-  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
-    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
-      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
-  }
-}
-
 /// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 

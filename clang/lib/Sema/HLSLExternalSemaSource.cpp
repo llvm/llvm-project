@@ -24,7 +24,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -856,31 +855,7 @@ void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (!isa<CXXRecordDecl>(Tag))
     return;
-  auto Record = cast<CXXRecordDecl>(Tag);
-
-  // If this is a specialization, we need to get the underlying templated
-  // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
-    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
-      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
-      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
-      Template->getPartialSpecializations(Partials);
-      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
-      for (auto *Partial : Partials) {
-        sema::TemplateDeductionInfo Info(TDecl->getLocation());
-        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
-                                             Info) ==
-            TemplateDeductionResult::Success) {
-          MatchedPartial = Partial;
-          break;
-        }
-      }
-      if (MatchedPartial)
-        Record = MatchedPartial;
-      else
-        Record = Template->getTemplatedDecl();
-    }
-  }
+  auto *Record = cast<CXXRecordDecl>(Tag);
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())

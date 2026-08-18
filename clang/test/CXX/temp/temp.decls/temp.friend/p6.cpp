@@ -25,3 +25,12 @@ void t3() {
     // expected-error@-1 {{templates cannot be declared inside of a local class}}
   };
 }
+
+template <class T> void t4() {
+  struct S {
+    template <class U> friend void f(T);
+    // expected-error@-1 {{templates can only be declared in namespace or class scope}}
+  };
+}
+
+template void t4<int>();

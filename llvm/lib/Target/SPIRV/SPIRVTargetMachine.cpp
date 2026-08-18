@@ -252,7 +252,7 @@ void SPIRVPassConfig::addISelPrepare() {
 }
 
 bool SPIRVPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 

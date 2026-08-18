@@ -2606,6 +2606,22 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(licm, Plan);
 }
 
+void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
+                                              PredicatedScalarEvolution &PSE) {
+  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
+    const APInt *C;
+    if (match(Expr, m_scev_APInt(C)))
+      return Plan.getConstantInt(*C);
+    return nullptr;
+  };
+
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
+    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
+      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
+  }
+}
+
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
     const DenseMap<Value *, const SCEV *> &StridesMap,
@@ -4720,8 +4736,9 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *Op) {
     auto *Min = Builder.insert(
         new VPWidenIntrinsicRecipe(IsSigned ? Intrinsic::smin : Intrinsic::umin,
                                    {FreezeX, FreezeY}, SrcTy));
-    auto *AbsDiff =
-        Builder.insert(new VPWidenRecipe(Instruction::Sub, {Max, Min}));
+    auto *AbsDiff = Builder.insert(
+        new VPWidenRecipe(Instruction::Sub, {Max, Min},
+                          VPIRFlags::getDefaultFlags(Instruction::Sub)));
     return Builder.createWidenCast(Instruction::CastOps::ZExt, AbsDiff,
                                    Op->getScalarType());
   }
@@ -4850,12 +4867,14 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     VPWidenRecipe *NegRecipe;
     if (WidenRecipe->getOpcode() == Instruction::FSub) {
       NegRecipe =
-          new VPWidenRecipe(Instruction::FNeg, {ExtendedOp}, VPIRFlags(),
+          new VPWidenRecipe(Instruction::FNeg, {ExtendedOp},
+                            VPIRFlags::getDefaultFlags(Instruction::FNeg),
                             VPIRMetadata(), DebugLoc::getUnknown());
     } else {
       auto *Zero = Plan.getZero(ElemTy);
       NegRecipe =
-          new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp}, VPIRFlags(),
+          new VPWidenRecipe(Instruction::Sub, {Zero, ExtendedOp},
+                            VPIRFlags::getDefaultFlags(Instruction::Sub),
                             VPIRMetadata(), DebugLoc::getUnknown());
     }
     Builder.insert(NegRecipe);

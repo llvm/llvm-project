@@ -392,21 +392,21 @@ entry:
   br i1 %x, label %left, label %right, !prof !21
 
 left:
-; CHECK-NEXT: left: float = 0.14
+; CHECK-NEXT: left: float = 0.15
   br i1 %x, label %top, label %bottom, !prof !22
 
 right:
-; CHECK-NEXT: right: float = 0.42
+; CHECK-NEXT: right: float = 0.45
   br i1 %x, label %top, label %bottom, !prof !22
 
 top:
-; CHECK-NEXT: top: float = 8.43
+; CHECK-NEXT: top: float = 3.0
   switch i2 %y, label %exit [ i2 0, label %left
                               i2 1, label %right
                               i2 2, label %bottom ], !prof !23
 
 bottom:
-; CHECK-NEXT: bottom: float = 4.5,
+; CHECK-NEXT: bottom: float = 2.1698,
   br label %top
 
 exit:
@@ -452,17 +452,17 @@ entry:
                             i32 2, label %c ]
 
 a:
-; CHECK-NEXT: a: float = 1774.9,
+; CHECK-NEXT: a: float = 1820.4,
   switch i32 %x, label %a [ i32 1, label %b
                             i32 2, label %c ], !prof !31
 
 b:
-; CHECK-NEXT: b: float = 1160.5,
+; CHECK-NEXT: b: float = 1137.8,
   switch i32 %x, label %a [ i32 1, label %b
                             i32 2, label %c ], !prof !32
 
 c:
-; CHECK-NEXT: c: float = 1160.5,
+; CHECK-NEXT: c: float = 1137.8,
   switch i32 %x, label %a [ i32 1, label %b
                             i32 2, label %c ], !prof !33
 }
@@ -480,17 +480,17 @@ entry:
                              i32 2, label %o2 ]
 
 lh:
-; CHECK-NEXT: lh: float = 2730.7,
+; CHECK-NEXT: lh: float = 2340.6,
   switch i32 %x, label %lh [ i32 1, label %o1
                              i32 2, label %o2 ], !prof !34
 
 o1:
-; CHECK-NEXT: o1: float = 682.67,
+; CHECK-NEXT: o1: float = 877.71,
   switch i32 %x, label %lh [ i32 1, label %o1
                              i32 2, label %o2 ], !prof !35
 
 o2:
-; CHECK-NEXT: o2: float = 682.67,
+; CHECK-NEXT: o2: float = 877.71,
   switch i32 %x, label %lh [ i32 1, label %o1
                              i32 2, label %o2 ], !prof !35
 }
@@ -507,15 +507,15 @@ entry:
   br i1 %x, label %a, label %b
 
 a:
-; CHECK-NEXT: a: float = 62.984,
+; CHECK-NEXT: a: float = 519.62,
   br i1 %y, label %c, label %b
 
 c:
-; CHECK-NEXT: c: float = 31.0,
+; CHECK-NEXT: c: float = 992.0,
   br label %a
 
 b:
-; CHECK-NEXT: b: float = 1.0159,
+; CHECK-NEXT: b: float = 32.0,
   br i1 %z, label %a, label %exit
 
 exit:

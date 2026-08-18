@@ -105,12 +105,13 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
   }
 }
 
-RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M) {
-  // TODO: Consider the remaining module flags.
-  const Triple &TT = M.getTargetTriple();
-  initLibcalls(TT, TT.getDefaultExceptionHandling(), FloatABI::Default,
-               EABI::Default, /*ABIName=*/"", M.getLongDoubleFormat());
-}
+// TODO: Consider the remaining module flags.
+RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M,
+                                         ExceptionHandling ExceptionModel,
+                                         EABI EABIVersion, StringRef ABIName,
+                                         VectorLibrary VecLib)
+    : RuntimeLibcallsInfo(M.getTargetTriple(), ExceptionModel, M.getFloatABI(),
+                          EABIVersion, ABIName, VecLib) {}
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.

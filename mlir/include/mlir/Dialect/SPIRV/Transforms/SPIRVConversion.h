@@ -168,11 +168,25 @@ Value getPushConstantValue(Operation *op, unsigned elementCount,
                            unsigned offset, Type integerType,
                            OpBuilder &builder);
 
+/// No-wrap guarantees proven for a linearized index calculation.
+struct LinearizedIndexNoWrapFlags {
+  bool noSignedWrap = false;
+  bool noUnsignedWrap = false;
+};
+
 /// Generates IR to perform index linearization with the given `indices` and
 /// their corresponding `strides`, adding an initial `offset`.
 Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
                      int64_t offset, Type integerType, Location loc,
-                     OpBuilder &builder);
+                     OpBuilder &builder,
+                     LinearizedIndexNoWrapFlags noWrapFlags = {});
+
+/// Returns no-wrap guarantees for an in-bounds index into the static layout
+/// described by `shape`, `strides`, and `offset` when linearized as
+/// `integerType`, if supported by `targetEnv`.
+LinearizedIndexNoWrapFlags getLinearizedIndexNoWrapFlags(
+    const TargetEnv &targetEnv, ArrayRef<int64_t> shape,
+    ArrayRef<int64_t> strides, int64_t offset, Type integerType);
 
 /// Performs the index computation to get to the element at `indices` of the
 /// memory pointed to by `basePtr`, using the layout map of `baseType`.

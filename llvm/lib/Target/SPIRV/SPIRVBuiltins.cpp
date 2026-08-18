@@ -3186,6 +3186,10 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
       MachineRegisterInfo *MRI = MIRBuilder.getMRI();
       Register ConstReg = EventReg;
       MachineInstr *Def = getDefInstrMaybeConstant(ConstReg, MRI);
+      SPIRVTypeInst EventPointeeType =
+          EventType && EventType->getOpcode() == SPIRV::OpTypePointer
+              ? GR->getPointeeType(EventType)
+              : nullptr;
       if (Def->getOpcode() == TargetOpcode::G_CONSTANT &&
           Def->getOperand(1).getCImm()->isZero()) {
         // Only substitute a null Event for the "ptr null" idiom, not for a
@@ -3199,6 +3203,19 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
             .addDef(NullEventReg)
             .addUse(EventTyReg);
         EventReg = NullEventReg;
+      } else if (EventPointeeType &&
+                 EventPointeeType->getOpcode() == SPIRV::OpTypeEvent) {
+        // Dereference: a real event can end up typed as pointer-to-Event
+        // after round-tripping through a stack slot under the legacy
+        // opaque-ptr ocl_event ABI.
+        Register EventTyReg = GR->getSPIRVTypeID(EventPointeeType);
+        Register LoadedReg =
+            createVirtualRegister(EventPointeeType, GR, MIRBuilder);
+        MIRBuilder.buildInstr(SPIRV::OpLoad)
+            .addDef(LoadedReg)
+            .addUse(EventTyReg)
+            .addUse(EventReg);
+        EventReg = LoadedReg;
       }
     }
     Register NumElemReg = Call->Arguments[2];

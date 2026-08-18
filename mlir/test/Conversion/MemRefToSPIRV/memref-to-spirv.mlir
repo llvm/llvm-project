@@ -220,6 +220,100 @@ func.func @load_store_vec4f32_dynamic_physical(%arg0: memref<?xvector<4xf32>, #s
 
 // -----
 
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.1, [Shader], [SPV_KHR_storage_buffer_storage_class, SPV_KHR_no_integer_wrap_decoration]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index
+func.func @static_linearized_index(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+// The maximum linearized index is 2147483649: too large for a signed i32,
+// but representable in an unsigned i32.
+// CHECK-LABEL: @unsigned_only_linearized_index
+func.func @unsigned_only_linearized_index(
+    %arg0: memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 1073741825 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_unsigned_wrap} : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_unsigned_wrap} : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+// Do not decorate index arithmetic whose layout bounds cannot be proven.
+// CHECK-LABEL: @dynamic_linearized_index
+func.func @dynamic_linearized_index(
+    %arg0: memref<?x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul {{.*}}, %[[STRIDE]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: spirv.IAdd {{.*}}, %[[OFFSET]] : i32
+  %0 = memref.load %arg0[%row, %column] : memref<?x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index_with_spirv_1_4
+func.func @static_linearized_index_with_spirv_1_4(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
+  // CHECK: spirv.{{.*}}AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.1, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @static_linearized_index_without_no_wrap_extension
+func.func @static_linearized_index_without_no_wrap_extension(
+    %arg0: memref<2x4xf32, #spirv.storage_class<StorageBuffer>>,
+    %row: index, %column: index) -> f32 {
+  // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
+  // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] : i32
+  // CHECK-NOT: no_signed_wrap
+  // CHECK-NOT: no_unsigned_wrap
+  // CHECK: spirv.{{.*}}AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
+  return %0 : f32
+}
+
+}
+
+// -----
+
 // Check for Kernel capability, that with proper compute and storage extensions, we don't need to
 // perform special tricks.
 

@@ -134,7 +134,7 @@ LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeHardwareLoopsLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLibcallLoweringInfoWrapperPass(PassRegistry &);
 LLVM_ABI void initializeMIRProfileLoaderPassPass(PassRegistry &);
-LLVM_ABI void initializeIRTranslatorPass(PassRegistry &);
+LLVM_ABI void initializeIRTranslatorLegacyPass(PassRegistry &);
 LLVM_ABI void initializeIVUsersWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIfConverterPass(PassRegistry &);
 LLVM_ABI void

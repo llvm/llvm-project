@@ -1,7 +1,12 @@
-; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-BEFORE -DBEFORE_OR_AFTER=before --implicit-check-not "VPlan for loop in 'foo' before"
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --match-full-lines -check-prefixes=CHECK,CHECK-BEFORE -DBEFORE_OR_AFTER=before --implicit-check-not "VPlan for loop in 'foo' before"
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -DBEFORE_OR_AFTER=before --check-prefix CHECK-DUMP
-; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-AFTER -DBEFORE_OR_AFTER=after --implicit-check-not "VPlan for loop in 'foo' after"
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --match-full-lines -check-prefixes=CHECK,CHECK-AFTER -DBEFORE_OR_AFTER=after --implicit-check-not "VPlan for loop in 'foo' after"
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -DBEFORE_OR_AFTER=after --check-prefix CHECK-DUMP
+
+; These two just to exercise the pass numbering skipping. Can't really check if
+; it's done as we don't print anything, but at least make sure we don't crash.
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all=false -force-vector-width=4 -vplan-verify-each < %s 2>&1 | count 0
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all=false -force-vector-width=4 -vplan-verify-each < %s 2>&1 | count 0
 
 ; Verify that `-vplan-print-before/after-all` option works.
 
@@ -10,7 +15,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createHeaderPhiRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceSymbolicStrides
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceSymbolicStrides@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::finalizeSCEVPredicates
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMiddleCheck
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::handleEarlyExits
@@ -50,11 +55,11 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] legalizeAndOptimizeInductions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] narrowToSingleScalarRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeRedundantExpandSCEVRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] reassociateHeaderMask
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] reassociateHeaderMask@2
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeBranchOnConst
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyReverses
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] removeDeadRecipes@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] licm
@@ -70,9 +75,9 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replicateByVF
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::materializeConstantVectorTripCount
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::optimizeForVFAndUF
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeBranchOnConst
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::simplifyRecipes@2
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeBranchOnConst@2
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::removeDeadRecipes@2
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::convertToConcreteRecipes
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::convertEVLExitCond
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::dissolveLoopRegions

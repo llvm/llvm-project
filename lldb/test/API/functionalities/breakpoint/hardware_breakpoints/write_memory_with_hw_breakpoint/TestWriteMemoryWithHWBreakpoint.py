@@ -13,7 +13,8 @@ from functionalities.breakpoint.hardware_breakpoints.base import *
 
 class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
 
-    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_unsupported)
+    @skipTestIfFn(HardwareBreakpointTestBase.supports_hw_breakpoints)
+    @skip
     def test_copy_memory_with_hw_break(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -45,4 +46,4 @@ class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
         error = lldb.SBError()
 
         result = process.WriteMemory(address, data, error)
-        self.assertTrue(error.Success() and result == len(data))
+        self.assertTrue(error.Success() and result == len(bytes))

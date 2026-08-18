@@ -143,6 +143,7 @@ libc_test(
     name = "realpath_test",
     srcs = ["realpath_test.cpp"],
     deps = [
+        "//libc:__support_c_string",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
         "//libc:__support_cpp_utility",

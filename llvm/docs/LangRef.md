@@ -21520,7 +21520,7 @@ type and first argument.
 
   - FP8 formats: `"Float8E5M2"`, `"Float8E5M2FNUZ"`, `"Float8E4M3"`,
     `"Float8E4M3FN"`, `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`,
-    `"Float8E8M0FNU"`
+    `"Float8E8M0FNU"`, `"Float8E5M3FNU"`
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
@@ -21573,6 +21573,11 @@ integer whose bit width equals the format's bit width (`i8` for FP8, `i6` for FP
   - When `saturation` is `false` and the target format does not support infinity (e.g., formats
     with "FN" suffix), the intrinsic returns a poison value.
   - When `saturation` is `true`, the value is clamped to the maximum/minimum representable finite value.
+- **Negative values in unsigned formats**: Formats without a sign bit (for example
+  `"Float8E5M3FNU"`) cannot represent negative values. `-0.0` converts to zero. Any other negative
+  input is clamped to the minimum representable finite value when `saturation` is `true`, and
+  returns a poison value otherwise. A negative NaN still converts to the NaN encoding when the
+  format supports NaN.
 
 For FP6/FP4 interpretations, producers are expected to use `saturation` = `true`; using `saturation` = `false` and generating NaN/Inf/overflowing values results in a poison value.
 
@@ -21618,7 +21623,7 @@ overloaded on both its return type and first argument.
 
   - FP8 formats: `"Float8E5M2"`, `"Float8E5M2FNUZ"`, `"Float8E4M3"`,
     `"Float8E4M3FN"`, `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`,
-    `"Float8E8M0FNU"`
+    `"Float8E8M0FNU"`, `"Float8E5M3FNU"`
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 

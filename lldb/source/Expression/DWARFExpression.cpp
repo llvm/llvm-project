@@ -1440,7 +1440,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     switch (opcode) {
     case DW_OP_addr:
-      stack.push_back(Scalar(op->getRawOperand(0)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       stack.back().SetValueType(Value::ValueType::FileAddress);
       break;
 
@@ -1925,6 +1925,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (llvm::Error err =
               Evaluate_DW_OP_fbreg(eval_ctx, op->getRawOperand(0)))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_nop:
@@ -2042,7 +2044,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       uint64_t index = op->getRawOperand(0);
       lldb::addr_t value =
           eval_ctx.dwarf_cu->ReadAddressFromDebugAddrSection(index);
-      stack.push_back(Scalar(value));
+      stack.push_back(to_generic(value));
       stack.back().SetValueType(Value::ValueType::FileAddress);
     } break;
 

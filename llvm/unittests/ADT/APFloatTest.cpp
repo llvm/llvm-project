@@ -10852,6 +10852,8 @@ TEST(APFloatTest, getArbitraryFPSemantics) {
             APFloat::getArbitraryFPSemantics("Float8E5M2"));
   EXPECT_EQ(&APFloat::Float8E4M3FN(),
             APFloat::getArbitraryFPSemantics("Float8E4M3FN"));
+  EXPECT_EQ(&APFloat::Float8E5M3FNU(),
+            APFloat::getArbitraryFPSemantics("Float8E5M3FNU"));
   EXPECT_EQ(&APFloat::Float6E3M2FN(),
             APFloat::getArbitraryFPSemantics("Float6E3M2FN"));
   EXPECT_EQ(&APFloat::Float6E2M3FN(),
@@ -10866,7 +10868,6 @@ TEST(APFloatTest, getArbitraryFPSemantics) {
   EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3B11FNUZ"));
   EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E3M4"));
   EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E8M0FNU"));
-  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E5M3FNU"));
 
   // Invalid formats report no semantics.
   EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics(""));

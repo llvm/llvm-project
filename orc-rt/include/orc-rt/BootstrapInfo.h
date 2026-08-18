@@ -41,6 +41,11 @@ public:
                 ValueMap Values = {});
 
   /// Construct with a default initial symbols and values.
+  ///
+  /// Note: Uses sps_ci::addAll by default, which pulls in all sps_ci symbols
+  ///       for the host platform. Use an alternative InitialSymbolsBuilder, or
+  ///       the plain BootstrapInfo constructor and manual adds, if you want
+  ///       finer-grained control of what is linked.
   static Expected<BootstrapInfo>
   CreateDefault(Session &S,
                 InitialSymbolsBuilder AddInitialSymbols = sps_ci::addAll,

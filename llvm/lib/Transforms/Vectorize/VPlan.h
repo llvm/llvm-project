@@ -1841,7 +1841,12 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
                             computeScalarTypeForInstruction(Opcode, Operands),
                             Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {
+    assert(flagsValidForOpcode(Opcode) &&
+           "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode) &&
+           "Opcode requires specific flags to be set");
+  }
 
   ~VPWidenRecipe() override = default;
 

@@ -535,11 +535,9 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
   assert(Root.isReg() && "Expected operand to be a Register");
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-
-  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    auto C = RootDef->getOperand(1).getCImm();
-    if (C->getValue().isAllOnes())
+  std::optional<ValueAndVReg> C;
+  if (mi_match(Root.getReg(), *MRI, m_GCst(C))) {
+    if (C->Value.isAllOnes())
       // If the operand is a G_CONSTANT with value of all ones it is larger than
       // VLMAX. We convert it to an immediate with value VLMaxSentinel. This is
       // recognized specially by the vsetvli insertion pass.
@@ -547,8 +545,8 @@ RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
         MIB.addImm(RISCV::VLMaxSentinel);
       }}};
 
-    if (isUInt<5>(C->getZExtValue())) {
-      uint64_t ZExtC = C->getZExtValue();
+    if (isUInt<5>(C->Value.getZExtValue())) {
+      uint64_t ZExtC = C->Value.getZExtValue();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(ZExtC); }}};
     }
   }

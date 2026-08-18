@@ -103,8 +103,7 @@ define void @gvn_ptr_store(i32 %x, i1 %cond, i32 %a, i32 %b) {
 ; CHECK-NOT: handlefromimplicitbinding
 ; CHECK:     main:
 ; CHECK-NEXT:  %[[C:.*]] = phi i32 [ %a, %entry ], [ %b, %if.then.i ]
-; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 0, %if.then.i ]
-; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @OutArr.str)
 ; CHECK-NEXT:  call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %[[HANDLE]], i32 %[[C]], i32 %[[X]])
 ; CHECK-NEXT:  ret void
 entry:
@@ -130,8 +129,7 @@ define void @multiple_use_handle(i32 %x, i1 %cond, i32 %a, i32 %b) {
 ; CHECK-NEXT:  %[[HANDLE0:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @OutArr.str)
 ; CHECK:     main:
 ; CHECK-NEXT:  %[[C:.*]] = phi i32 [ %[[A]], %entry ], [ %[[B]], %if.then.i ]
-; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 0, %if.then.i ]
-; CHECK-NEXT:  %[[HANDLE1:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[HANDLE1:.*]] = tail call target("dx.TypedBuffer", i32, 1, 0, 1) @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(i32 2, i32 0, i32 1, i32 0, ptr nonnull @OutArr.str)
 ; CHECK-NEXT:  %[[LOAD:.*]] = call { i32, i1 } @llvm.dx.resource.load.typedbuffer.i32.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) %[[HANDLE1]], i32 %[[C]])
 ; CHECK-NEXT:  %[[Y:.*]] = extractvalue { i32, i1 } %[[LOAD]], 0
 ; CHECK-NEXT:  %[[ADD:.*]] = add i32 %[[Y]], %[[X]]

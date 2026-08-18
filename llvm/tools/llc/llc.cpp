@@ -684,9 +684,6 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   if (std::optional<uint64_t> LDT = codegen::getExplicitLargeDataThreshold())
     Target->setLargeDataThreshold(*LDT);
 
-  if (codegen::getFloatABIForCalls() != FloatABI::Default)
-    Target->Options.FloatABIType = codegen::getFloatABIForCalls();
-
   // Figure out where we are going to send the output.
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(TheTriple.getOS());
   if (!Out)
@@ -768,9 +765,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
-      Target->Options.EABIVersion, Options.MCOptions.ABIName,
-      Target->Options.VecLib));
+      Target->Options.ExceptionModel, Target->Options.EABIVersion,
+      Options.MCOptions.ABIName, Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

@@ -47396,32 +47396,33 @@ static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
   assert((NumElts <= 32 || NumElts == 64) &&
          "Not expecting more than 64 elements");
 
+  SDValue Result;
   MVT CmpVT = NumElts == 64 ? MVT::i64 : MVT::i32;
   if (BinOp == ISD::XOR) {
     // parity -> (PARITY(MOVMSK X))
-    SDValue Result = DAG.getNode(ISD::PARITY, DL, CmpVT, Movmsk);
-    return DAG.getZExtOrTrunc(Result, DL, ExtractVT);
-  }
-
-  SDValue CmpC;
-  ISD::CondCode CondCode;
-  if (BinOp == ISD::OR) {
-    // any_of -> MOVMSK != 0
-    CmpC = DAG.getConstant(0, DL, CmpVT);
-    CondCode = ISD::CondCode::SETNE;
+    Result = DAG.getNode(ISD::PARITY, DL, CmpVT, Movmsk);
   } else {
-    // all_of -> MOVMSK == ((1 << NumElts) - 1)
-    CmpC = DAG.getConstant(APInt::getLowBitsSet(CmpVT.getSizeInBits(), NumElts),
-                           DL, CmpVT);
-    CondCode = ISD::CondCode::SETEQ;
+    SDValue CmpC;
+    ISD::CondCode CondCode;
+    if (BinOp == ISD::OR) {
+      // any_of -> MOVMSK != 0
+      CmpC = DAG.getConstant(0, DL, CmpVT);
+      CondCode = ISD::CondCode::SETNE;
+    } else {
+      // all_of -> MOVMSK == ((1 << NumElts) - 1)
+      CmpC = DAG.getConstant(
+          APInt::getLowBitsSet(CmpVT.getSizeInBits(), NumElts), DL, CmpVT);
+      CondCode = ISD::CondCode::SETEQ;
+    }
+
+    EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CmpVT);
+    Result = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
   }
 
-  // The setcc produces an i8 of 0/1, so extend that to the result width and
-  // negate to get the final 0/-1 mask value.
-  EVT SetccVT = TLI.getSetCCResultType(DAG.getDataLayout(), Ctx, CmpVT);
-  SDValue Setcc = DAG.getSetCC(DL, SetccVT, Movmsk, CmpC, CondCode);
-  SDValue Zext = DAG.getZExtOrTrunc(Setcc, DL, ExtractVT);
-  return DAG.getNegative(Zext, DL, ExtractVT);
+  // The setcc/parity produces an i8 of 0/1, so extend that to the result width
+  // and negate to get the final 0/-1 mask value.
+  Result = DAG.getZExtOrTrunc(Result, DL, ExtractVT);
+  return DAG.getNegative(Result, DL, ExtractVT);
 }
 
 static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,

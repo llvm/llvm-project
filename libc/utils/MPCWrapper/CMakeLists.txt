@@ -17,7 +17,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.complex_type
-    LibcTest.unit
+    LibcTest
   )
   if(EXISTS ${LLVM_LIBC_MPFR_INSTALL_PATH})
     target_include_directories(libcMPCWrapper PUBLIC ${LLVM_LIBC_MPFR_INSTALL_PATH}/include)
@@ -28,7 +28,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
     target_link_directories(libcMPCWrapper PUBLIC ${LIBC_MPC_INSTALL_PATH}/lib)
   endif()
   target_include_directories(libcMPCWrapper PUBLIC ${LIBC_SOURCE_DIR})
-  target_link_libraries(libcMPCWrapper PUBLIC libcMPCommon LibcFPTestHelpers.unit LibcTest.unit mpc)
+  target_link_libraries(libcMPCWrapper PUBLIC libcMPCommon LibcFPTestHelpers LibcTest mpc)
 elseif(NOT LIBC_TARGET_OS_IS_GPU AND NOT LLVM_LIBC_FULL_BUILD)
   message(WARNING "Math tests using MPC will be skipped.")
 endif()
