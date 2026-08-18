@@ -67,14 +67,56 @@ define bfloat @v_rcp_bf16(bfloat %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_rcp_bf16:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fdiv = fdiv bfloat 1.0, %x
   ret bfloat %fdiv
@@ -85,14 +127,58 @@ define bfloat @v_rcp_bf16_abs(bfloat %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e64 v0.l, |v0.l|
+; GFX1250-TRUE16-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_rcp_bf16_abs:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e64 v0, |v0|
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fabs = call bfloat @llvm.fabs.bf16(bfloat %x)
   %fdiv = fdiv bfloat 1.0, %fabs
@@ -122,14 +208,56 @@ define bfloat @v_rcp_bf16_neg(bfloat %x) {
 ; GFX1250-TRUE16:       ; %bb.0:
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e64 v0.l, -v0.l
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, -1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, -1.0, v0, -1.0
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_rcp_bf16_neg:
 ; GFX1250-FAKE16:       ; %bb.0:
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e64 v0, -v0
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, -1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, -1.0, v0, -1.0
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %fdiv = fdiv bfloat -1.0, %x
   ret bfloat %fdiv
@@ -213,8 +341,29 @@ define bfloat @v_rsq_bf16_missing_contract0(bfloat %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_rsq_bf16_missing_contract0:
@@ -222,8 +371,29 @@ define bfloat @v_rsq_bf16_missing_contract0(bfloat %x) {
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-FAKE16-NEXT:    v_sqrt_bf16_e32 v0, v0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call bfloat @llvm.sqrt.bf16(bfloat %x)
   %fdiv = fdiv contract bfloat 1.0, %sqrt
@@ -236,8 +406,29 @@ define bfloat @v_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, v0.l
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_rsq_bf16_missing_contract1:
@@ -245,8 +436,29 @@ define bfloat @v_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-FAKE16-NEXT:    v_sqrt_bf16_e32 v0, v0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e32 v0, v0
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, 1.0, v0, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)
   %fdiv = fdiv bfloat 1.0, %sqrt
@@ -259,8 +471,29 @@ define bfloat @v_neg_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
-; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-TRUE16-NEXT:    v_rcp_bf16_e64 v0.l, -v0.l
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, -1.0
+; GFX1250-TRUE16-NEXT:    v_div_scale_f32 v3, vcc_lo, -1.0, v0, -1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 15
+; GFX1250-TRUE16-NEXT:    v_nop
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-TRUE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-TRUE16-NEXT:    s_denorm_mode 12
+; GFX1250-TRUE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-TRUE16-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX1250-TRUE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: v_neg_rsq_bf16_missing_contract1:
@@ -268,8 +501,29 @@ define bfloat @v_neg_rsq_bf16_missing_contract1(bfloat %x) {
 ; GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-FAKE16-NEXT:    v_sqrt_bf16_e32 v0, v0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_rcp_bf16_e64 v0, -v0
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v1, null, v0, v0, -1.0
+; GFX1250-FAKE16-NEXT:    v_div_scale_f32 v3, vcc_lo, -1.0, v0, -1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(TRANS32_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_rcp_f32_e32 v2, v1
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 15
+; GFX1250-FAKE16-NEXT:    v_nop
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v4, -v1, v2, 1.0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v2, v4, v2
+; GFX1250-FAKE16-NEXT:    v_mul_f32_e32 v4, v3, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v5, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    v_fmac_f32_e32 v4, v5, v2
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_fma_f32 v1, -v1, v4, v3
+; GFX1250-FAKE16-NEXT:    s_denorm_mode 12
+; GFX1250-FAKE16-NEXT:    v_div_fmas_f32 v1, v1, v2, v4
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
+; GFX1250-FAKE16-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)
   %fdiv = fdiv bfloat -1.0, %sqrt

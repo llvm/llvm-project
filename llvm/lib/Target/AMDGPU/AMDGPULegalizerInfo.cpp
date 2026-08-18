@@ -5514,19 +5514,14 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
+  // rcp needs afn (or arcp for f16) since it isn't correctly rounded;
+  // !fpmath is handled earlier, in AMDGPUCodeGenPrepare, since it doesn't
+  // survive instruction selection.
+  if (!MI.getFlag(MachineInstr::FmAfn) &&
+      (ResTy != F16 || !MI.getFlag(MachineInstr::FmArcp)))
+    return false;
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
-    if (!AllowInaccurateRcp && ResTy != F16)
-      return false;
-
-    // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
-    // the CI documentation has a worst case error of 1 ulp.
-    // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
-    // use it as long as we aren't trying to use denormals.
-    //
-    // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
-
     // 1 / x -> RCP(x)
     if (CLHS->isOne()) {
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
@@ -5548,12 +5543,6 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
       return true;
     }
   }
-
-  // For f16 require afn or arcp.
-  // For f32 require afn.
-  if (!AllowInaccurateRcp &&
-      (ResTy != F16 || !MI.getFlag(MachineInstr::FmArcp)))
-    return false;
 
   // x / y -> x * (1.0 / y)
   auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy})
