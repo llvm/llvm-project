@@ -2177,7 +2177,27 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
-    return std::nullopt;
+
+    // Normalize num_records to the correct width.
+    std::optional<unsigned> Width = ST->getBufferResourceNumRecordsWidth();
+    if (!Width)
+      return std::nullopt;
+    Type *NumRecordsTy = IC.Builder.getIntNTy(*Width);
+    if (II.getArgOperand(2)->getType() == NumRecordsTy)
+      return std::nullopt;
+    SmallVector<Value *, 4> Args(II.args());
+    Args[2] = IC.Builder.CreateZExtOrTrunc(Args[2], NumRecordsTy);
+    CallInst *NewCall = IC.Builder.CreateIntrinsicWithoutFolding(
+        Intrinsic::amdgcn_make_buffer_rsrc,
+        {II.getType(), Src->getType(), NumRecordsTy}, Args);
+    NewCall->copyMetadata(II);
+    NewCall->setTailCallKind(II.getTailCallKind());
+    // Copy over all attributes except those on num_records, which may no longer
+    // be valid.
+    NewCall->setAttributes(
+        II.getAttributes().removeParamAttributes(II.getContext(), 2));
+    NewCall->takeName(&II);
+    return IC.replaceInstUsesWith(II, NewCall);
   }
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
