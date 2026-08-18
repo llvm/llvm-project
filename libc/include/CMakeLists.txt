@@ -866,6 +866,16 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_sysmacros
+  ../libc/include/sys/sysmacros.yaml
+  sys/sysmacros.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_sysmacros_macros
+    .llvm-libc-types.dev_t
+)
+
+add_header_macro(
   sys_syscall
   ../libc/include/sys/syscall.yaml
   sys/syscall.h
