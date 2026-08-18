@@ -31,17 +31,17 @@ class CheckerContext {
   bool Changed;
   /// The tagged location, which is used to generate all new nodes.
   const ProgramPoint Location;
-  NodeBuilder &NB;
+  NodeBuilder NB;
 
 public:
   /// If we are post visiting a call, this flag will be set if the
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &Builder, ExprEngine &Eng, ExplodedNode *Pred,
+  CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
                  const ProgramPoint &Loc, bool WasInlined = false)
-      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), NB(Builder),
-        wasInlined(WasInlined) {
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc),
+        NB(Dst, Eng.getBuilderContext()), wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
     assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "

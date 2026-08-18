@@ -321,6 +321,10 @@ public:
     return generateSink(L, St, Pred);
   }
 
+  // This is introduced temporarily to allow the gradual removal of
+  // NodeBuilders from the checker callback invocation logic.
+  ExplodedNodeSet &getFrontier() { return Frontier; }
+
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
   void takeNodes(const ExplodedNodeSet &S) {

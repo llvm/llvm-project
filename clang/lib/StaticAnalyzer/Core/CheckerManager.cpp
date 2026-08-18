@@ -167,7 +167,7 @@ std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
                                            ProgramPoint::PostStmtKind;
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
           S, K, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L, WasInlined);
       checkFn(S, C);
     }
   };
@@ -227,7 +227,7 @@ namespace {
       }
 
       const ProgramPoint &L = Msg.getProgramPoint(IsPreVisit,checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L, WasInlined);
 
       checkFn(*Msg.cloneWithState<ObjCMethodCall>(Pred->getState()), C);
     }
@@ -287,7 +287,7 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Call", checkFn.Checker));
       const ProgramPoint &L = Call.getProgramPoint(IsPreVisit,checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L, WasInlined);
 
       checkFn(*Call.cloneWithState(Pred->getState()), C);
     }
@@ -332,7 +332,7 @@ struct CheckLifetimeEndContext {
                   NodeBuilder &Bldr, ExplodedNode *Pred) {
     assert(Pred->getLocation().getAs<LifetimeEnd>().has_value());
     const ProgramPoint L = Pred->getLocation().withTag(checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
+    CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
     checkFn(Decl, C);
   }
 };
@@ -378,7 +378,7 @@ namespace {
                                        ProgramPoint::PreStoreKind;
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
           NodeEx, K, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
       checkFn(Loc, IsLoad, BoundEx, C);
     }
   };
@@ -427,7 +427,7 @@ namespace {
                     NodeBuilder &Bldr, ExplodedNode *Pred) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Bind", checkFn.Checker));
       const ProgramPoint &L = PP.withTag(checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
 
       checkFn(Loc, Val, S, AtDeclInit, C);
     }
@@ -476,7 +476,8 @@ struct CheckBlockEntranceContext {
                   ExplodedNode *Pred) {
     llvm::TimeTraceScope TimeScope(
         checkerScopeName("BlockEntrance", CheckFn.Checker));
-    CheckerContext C(Bldr, Eng, Pred, Entrance.withTag(CheckFn.Checker));
+    CheckerContext C(Eng, Pred, Bldr.getFrontier(),
+                     Entrance.withTag(CheckFn.Checker));
     CheckFn(Entrance, C);
   }
 };
@@ -519,7 +520,7 @@ struct CheckBeginFunctionContext {
                   NodeBuilder &Bldr, ExplodedNode *Pred) {
     llvm::TimeTraceScope TimeScope(checkerScopeName("Begin", checkFn.Checker));
     const ProgramPoint &L = PP.withTag(checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
+    CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
 
     checkFn(C);
   }
@@ -552,7 +553,7 @@ void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
+    CheckerContext C(Eng, Pred, Dst, L);
     llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
     checkFn(RS, C);
   }
@@ -580,7 +581,7 @@ namespace {
           checkerScopeName("BranchCond", checkFn.Checker));
       ProgramPoint L =
           PostCondition(Condition, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
       checkFn(Condition, C);
     }
   };
@@ -624,7 +625,7 @@ namespace {
           checkerScopeName("Allocator", checkFn.Checker));
       ProgramPoint L = PostAllocatorCall(
           Call.getOriginExpr(), Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L, WasInlined);
       checkFn(cast<CXXAllocatorCall>(*Call.cloneWithState(Pred->getState())),
               C);
     }
@@ -676,7 +677,7 @@ namespace {
           checkerScopeName("DeadSymbols", checkFn.Checker));
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
           S, ProgarmPointKind, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Bldr.getFrontier(), L);
 
       // Note, do not pass the statement to the checkers without letting them
       // differentiate if we ran remove dead bindings before or after the
@@ -775,7 +776,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
           UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getStackFrame(), EvalCallChecker.Checker);
 
-      CheckerContext C(B, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, checkDst, L);
       bool evaluated = EvalCallChecker(*UpdatedCall, C);
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
