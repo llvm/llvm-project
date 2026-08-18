@@ -39,10 +39,8 @@ define weak amdgpu_kernel void @visible_body(ptr %dyn, ptr %payload) #0 {
 ; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; CHECK:       [[IS_WORKER_CHECK]]:
-; CHECK-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads()
+; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; CHECK:       [[WORKER_STATE_MACHINE_BEGIN]]:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -101,10 +99,8 @@ define weak amdgpu_kernel void @opaque_body(ptr %dyn, ptr %payload) #0 {
 ; CHECK-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[THREAD_IS_WORKER]], label %[[IS_WORKER_CHECK:.*]], label %[[THREAD_USER_CODE_CHECK:.*]]
 ; CHECK:       [[IS_WORKER_CHECK]]:
-; CHECK-NEXT:    [[BLOCK_HW_SIZE:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()
-; CHECK-NEXT:    [[WARP_SIZE:%.*]] = call i32 @__kmpc_get_warp_size()
-; CHECK-NEXT:    [[BLOCK_SIZE:%.*]] = sub i32 [[BLOCK_HW_SIZE]], [[WARP_SIZE]]
-; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[BLOCK_SIZE]]
+; CHECK-NEXT:    [[MAX_TEAM_THREADS:%.*]] = call i32 @__kmpc_get_max_team_threads()
+; CHECK-NEXT:    [[THREAD_IS_MAIN_OR_WORKER:%.*]] = icmp slt i32 [[TMP0]], [[MAX_TEAM_THREADS]]
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN_OR_WORKER]], label %[[WORKER_STATE_MACHINE_BEGIN:.*]], label %[[WORKER_STATE_MACHINE_FINISHED:.*]]
 ; CHECK:       [[WORKER_STATE_MACHINE_BEGIN]]:
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_generic(ptr @[[GLOB1]], i32 [[TMP0]])
