@@ -3353,23 +3353,16 @@ static bool WithMultipleAppearancesOmpException(const Symbol &symbol,
 
 void OmpAttributeVisitor::CheckMultipleAppearances(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
-  const auto *target{&symbol};
-  if (ompFlagsRequireNewSymbol.test(ompFlag)) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
-      target = &details->symbol();
-    }
-  }
-  const Symbol &ultimate{target->GetUltimate()};
+  const Symbol &ultimate{symbol.GetUltimate()};
   bool conflicts{HasDataSharingAttributeObject(ultimate)};
   if (!conflicts) {
     if (const Symbol *commonBlock{FindCommonBlockContaining(ultimate)}) {
       conflicts = HasDataSharingAttributeObject(*commonBlock);
     } else if (const auto *details{ultimate.detailsIf<CommonBlockDetails>()}) {
       for (const auto &object : details->objects()) {
-        const Symbol &member{object->GetUltimate()};
-        if (HasDataSharingAttributeObject(member) &&
-            !WithMultipleAppearancesOmpException(member, ompFlag,
-                GetContext().FindObjectWithDSAByUltimate(member))) {
+        if (HasDataSharingAttributeObject(*object) &&
+            !WithMultipleAppearancesOmpException(*object, ompFlag,
+                GetContext().FindObjectWithDSAByUltimate(*object))) {
           conflicts = true;
           break;
         }
@@ -3385,7 +3378,7 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
     AddDataSharingAttributeObject(ultimate);
     if (const auto *details{ultimate.detailsIf<CommonBlockDetails>()}) {
       for (const auto &object : details->objects()) {
-        AddDataSharingAttributeObject(object->GetUltimate());
+        AddDataSharingAttributeObject(*object);
       }
     }
   }
