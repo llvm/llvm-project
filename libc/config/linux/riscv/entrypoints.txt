@@ -1395,6 +1395,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
+    libc.src.stdio.freopen
     libc.src.stdio.fopencookie
     libc.src.stdio.fputc
     libc.src.stdio.fputs
@@ -1432,6 +1433,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.system
     libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc

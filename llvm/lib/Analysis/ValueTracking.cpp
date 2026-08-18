@@ -5658,7 +5658,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
 
-      Known.propagateNaN(KnownSrc);
+      Known.propagateNonNaN(KnownSrc);
 
       Type *EltTy = II->getType()->getScalarType();
 
