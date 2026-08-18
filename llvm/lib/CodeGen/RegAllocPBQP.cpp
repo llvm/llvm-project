@@ -63,6 +63,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -751,10 +752,21 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
     Register PReg = MRI.getSimpleHint(LI.reg());
 
     if (PReg == 0) {
-      ArrayRef<MCPhysReg> Order = RCI.getOrder(MRI.getRegClass(LI.reg()));
-      assert(!Order.empty() &&
-             "No un-reserved physical registers in this register class");
-      PReg = Order.front();
+      const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
+      ArrayRef<MCPhysReg> Order = RCI.getOrder(RC);
+      if (Order.empty()) {
+        bool EmitError = !MF.getProperties().hasFailedRegAlloc();
+        if (EmitError) {
+          MF.getProperties().setFailedRegAlloc();
+          MF.getFunction().getContext().diagnose(
+              DiagnosticInfoRegAllocFailure(
+                  "no registers from class available to allocate",
+                  MF.getFunction(), DiagnosticLocation()));
+        }
+        PReg = RC->getRegisters().front();
+      } else {
+        PReg = Order.front();
+      }
     }
 
     VRM.assignVirt2Phys(LI.reg(), PReg);
