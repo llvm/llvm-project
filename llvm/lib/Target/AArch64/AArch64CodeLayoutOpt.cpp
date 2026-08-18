@@ -177,7 +177,6 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   if (EnableCodeAlignment.getNumOccurrences()) {
     if (EnableCodeAlignment.isSet(CodeLayoutOpt::CmpCsel))
       CLO |= CodeLayoutOpt::CmpCsel;
-
     if (EnableCodeAlignment.isSet(CodeLayoutOpt::FcmpFcsel))
       CLO |= CodeLayoutOpt::FcmpFcsel;
   } else {
