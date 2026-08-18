@@ -6285,14 +6285,9 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY: {
-    if (SNaN)
-      return true;
-
-    // TODO: Can check no nans on one of the operands for each one, but which
-    // one?
-    return false;
-  }
+  case AMDGPUISD::FMAX_LEGACY:
+    return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::CVT_PKRTZ_F16_F32: {
     if (SNaN)

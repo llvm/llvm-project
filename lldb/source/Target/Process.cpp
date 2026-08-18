@@ -2035,7 +2035,9 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
 // code
 //#define VERIFY_MEMORY_READS
 
-size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
+size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                           size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 

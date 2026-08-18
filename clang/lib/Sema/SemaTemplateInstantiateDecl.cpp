@@ -2116,9 +2116,9 @@ Sema::SubstFriendType(TypeSourceInfo *TSI,
 
 struct SubstitutedFriend {
   TypeSourceInfo *TypeInfo = nullptr;
-  TemplateName TemplateName;
+  TemplateName Template;
 
-  bool empty() const { return !TypeInfo && TemplateName.isNull(); }
+  bool empty() const { return !TypeInfo && Template.isNull(); }
 };
 
 static std::optional<SubstitutedFriend>
@@ -2216,12 +2216,12 @@ bool TemplateDeclInstantiator::InstantiateFriendPackExpansion(FriendDecl *D) {
       FriendDecl::FriendUnion ToFriend =
           InstFriend->TypeInfo ? FriendDecl::FriendUnion(InstFriend->TypeInfo)
                                : FriendDecl::FriendUnion();
-      FD = FriendTemplateDecl::Create(
-          SemaRef.Context, Owner, D->getLocation(), ToFriend, D->getFriendLoc(),
-          InstTPLs, /*EllipsisLoc=*/{}, InstFriend->TemplateName);
+      FD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                                      ToFriend, D->getFriendLoc(), InstTPLs,
+                                      /*EllipsisLoc=*/{}, InstFriend->Template);
     } else {
       assert(InstTPLs.empty() && "unexpected template parameter lists");
-      assert(InstFriend->TemplateName.isNull() &&
+      assert(InstFriend->Template.isNull() &&
              "non-template friend resolved to a class template");
       FD = FriendDecl::Create(SemaRef.Context, Owner, D->getLocation(),
                               InstFriend->TypeInfo, D->getFriendLoc());
@@ -2818,7 +2818,8 @@ TemplateDeclInstantiator::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   if (!isFriend) {
     Owner->addDecl(InstTemplate);
   } else if (InstTemplate->getDeclContext()->isRecord() &&
-             !getPreviousDeclForInstantiation(D)) {
+             !getPreviousDeclForInstantiation(D) &&
+             isa<CXXMethodDecl>(InstTemplate->getTemplatedDecl())) {
     SemaRef.CheckFriendAccess(InstTemplate);
   }
 
@@ -4992,7 +4993,7 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     if (!Substituted || Substituted->empty())
       return nullptr;
     ToFriend = Substituted->TypeInfo;
-    ToTemplate = Substituted->TemplateName;
+    ToTemplate = Substituted->Template;
   } else if (!D->getFriendTemplateName().isNull()) {
     if (auto *InstTemplate =
             cast_or_null<TemplateDecl>(Visit(D->getFriendDecl())))
