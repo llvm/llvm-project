@@ -35,22 +35,24 @@ __attribute__((objc_root_class))
 // Stepping at a message send has to run through the runtime's dispatch
 // function and land in the method implementation.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:51" -o "run" -o "step" \
+// RUN: %lldb -b -o "b objc-gnustep-stepping.m:53" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP_IN
 //
 // A message to nil dispatches nowhere, so the step must not try to run to an
-// implementation. Where it does land depends on whether the runtime build
-// carries source line information for its hand-written dispatch assembly, so
-// the check below only asserts that no method was entered.
+// implementation - and must not strand the user in the runtime's dispatch
+// assembly either. A runtime built from source has line information for that
+// assembly, so without stepping back out the debugger would stop in
+// objc_msgSend.S; asserting on the frame's source location is what catches
+// that, since the function name alone looks plausible either way.
 //
-// RUN: %lldb -b -o "b objc-gnustep-stepping.m:53" -o "run" -o "step" \
-// RUN:     -- %t | FileCheck %s --check-prefix=STEP_OVER_NIL
+// RUN: %lldb -b -o "b objc-gnustep-stepping.m:55" -o "run" -o "step" \
+// RUN:     -o "frame info" -- %t | FileCheck %s --check-prefix=STEP_OVER_NIL
 //
 int main() {
   Doubler *doubler = [Doubler new];
-  int value = [doubler twice:21];
+  int value = [doubler twice:21]; // line 53: STEP_IN breaks here
   Doubler *nothing = (Doubler *)0;
-  int none = [nothing twice:1];
+  int none = [nothing twice:1]; // line 55: STEP_OVER_NIL breaks here
   return value + none;
 }
 //
@@ -61,3 +63,5 @@ int main() {
 // STEP_OVER_NIL: (lldb) step
 // STEP_OVER_NIL: stop reason = step in
 // STEP_OVER_NIL-NOT: -[Doubler twice:]
+// STEP_OVER_NIL: (lldb) frame info
+// STEP_OVER_NIL: frame #0: {{.*}}main at objc-gnustep-stepping.m:{{[0-9]+}}

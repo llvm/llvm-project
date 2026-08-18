@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -690,9 +691,24 @@ GNUstepObjCRuntime::GetStepThroughTrampolinePlan(Thread &thread,
       return {};
   }
 
-  // A message to nil does not dispatch anywhere.
-  if (receiver == 0 || receiver == LLDB_INVALID_ADDRESS)
-    return {};
+  // A message to nil does not dispatch anywhere, so there is no
+  // implementation to run to. Declining to provide a plan at all would leave
+  // the thread stopped on the dispatch function's first instruction: harmless
+  // when the runtime carries no line information for its hand-written
+  // assembly, but with a runtime built from source it drops the user into
+  // objc_msgSend.S. Step back out to the sender instead, which is where a nil
+  // send returns to and what the user asked to step over.
+  if (receiver == 0 || receiver == LLDB_INVALID_ADDRESS) {
+    const bool continue_to_next_branch = true;
+    const bool gather_return_value = false;
+    auto step_out_sp = std::make_shared<ThreadPlanStepOut>(
+        thread, stop_others, eVoteNo, eVoteNoOpinion, /*frame_idx=*/0,
+        continue_to_next_branch, gather_return_value);
+    // Nothing further should be stepped through on the way out; the enclosing
+    // step-in plan decides where to stop once we are back in the sender.
+    step_out_sp->ClearShouldStopHereCallbacks();
+    return step_out_sp;
+  }
 
   // Consult the method cache before running anything in the inferior.
   // Tagged pointers skip the cache: their ISA is not the object's first word.
