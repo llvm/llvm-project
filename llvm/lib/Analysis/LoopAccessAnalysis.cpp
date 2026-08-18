@@ -3186,6 +3186,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   const SCEV *StrideBase = StrideExpr;
   if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
     StrideBase = C->getOperand();
+  assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
+         "users of the map rely on the stride being loop invariant");
   SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
 }
 
