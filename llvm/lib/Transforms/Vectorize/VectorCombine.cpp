@@ -155,6 +155,7 @@ private:
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
+  bool foldInterleaveOfLaneOps(Instruction &I);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
   bool foldBitcastOfVPLoad(Instruction &I);
@@ -5908,6 +5909,194 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Check if two instructions of the same kind carry exactly the same IR flags
+/// and metadata.
+static bool haveSameIRFlagsAndMetadata(const Instruction *A,
+                                       const Instruction *B) {
+  if (A->getRawSubclassOptionalData() != B->getRawSubclassOptionalData())
+    return false;
+  if (isa<FPMathOperator>(A) && A->getFastMathFlags() != B->getFastMathFlags())
+    return false;
+
+  // ignore debug metadata those can be merged safely.
+  SmallVector<std::pair<unsigned, MDNode *>, 4> AMDs, BMDs;
+  A->getAllMetadata(AMDs);
+  B->getAllMetadata(BMDs);
+  for (auto [Kind, MD] : AMDs) {
+    if (Kind != LLVMContext::MD_dbg && B->getMetadata(Kind) != MD)
+      return false;
+  }
+  for (auto [Kind, MD] : BMDs) {
+    if (Kind != LLVMContext::MD_dbg && A->getMetadata(Kind) != MD)
+      return false;
+  }
+
+  return true;
+}
+
+/// Sink identical lane-wise operations from the inputs of an interleave to its
+/// output. i.e.
+///   interleave(op(x0, y), op(x1, y), ...) -> op(interleave(x0, x1, ...), <N x
+///   y>)
+/// The fold is then unconditionally profitable if interleave gets cancelled
+/// with deinterleave
+// and even if it is not cancelled cost remain same.
+bool VectorCombine::foldInterleaveOfLaneOps(Instruction &I) {
+  auto *Interleave = dyn_cast<IntrinsicInst>(&I);
+  if (!Interleave)
+    return false;
+  Intrinsic::ID InterleaveID = Interleave->getIntrinsicID();
+  unsigned Factor = getInterleaveIntrinsicFactor(InterleaveID);
+  if (!Factor)
+    return false;
+
+  // All the interleave inputs must be used once and lane wise all lane
+  // wise operations are and have common IR flags.
+  SmallVector<Instruction *, 8> LaneOps;
+  for (Value *InterleaveOperand : Interleave->args()) {
+    auto *LaneOp = dyn_cast<Instruction>(InterleaveOperand);
+    if (!LaneOp || !LaneOp->hasOneUse())
+      return false;
+    if (LaneOp->mayHaveSideEffects() || LaneOp->mayReadOrWriteMemory())
+      return false;
+    if (auto *II = dyn_cast<IntrinsicInst>(LaneOp)) {
+      if (!isTriviallyVectorizable(II->getIntrinsicID()))
+        return false;
+    } else if (!isa<CastInst, UnaryOperator, BinaryOperator, CmpInst,
+                    SelectInst>(LaneOp)) {
+      return false;
+    }
+    if (!LaneOps.empty()) {
+      Instruction *First = LaneOps.front();
+      if (!First->isSameOperationAs(LaneOp))
+        return false;
+      // for the intrinsics compare the ID
+      auto *II = dyn_cast<IntrinsicInst>(LaneOp);
+      if (II &&
+          II->getIntrinsicID() != cast<IntrinsicInst>(First)->getIntrinsicID())
+        return false;
+      if (!haveSameIRFlagsAndMetadata(First, LaneOp))
+        return false;
+    }
+    LaneOps.push_back(LaneOp);
+  }
+  assert(LaneOps.size() == Factor && "Unexpected number of interleave inputs");
+
+  // Assume all lane ops have the same shape, so use the first as
+  // representative.
+  Instruction *RepOp = LaneOps.front();
+  auto *RepIntrinsic = dyn_cast<IntrinsicInst>(RepOp);
+  ElementCount LaneEC = cast<VectorType>(RepOp->getType())->getElementCount();
+  ElementCount WideEC = LaneEC * Factor;
+  unsigned NumOperands =
+      RepIntrinsic ? RepIntrinsic->arg_size() : RepOp->getNumOperands();
+  Type *WideTy = I.getType();
+
+  // Check legality for each laneop operand and prepare the operands for the
+  // widened op.
+  SmallVector<Value *, 4> NewOperands(NumOperands);
+  SmallVector<unsigned, 2> SplatIdxs;
+  SmallVector<unsigned, 2> InterleavedIdxs;
+  for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
+    Value *RepOperand = RepOp->getOperand(OpIdx);
+
+    // make sure every lane agrees about scalar operand.
+    if (!isa<VectorType>(RepOperand->getType())) {
+      bool LaneInvariant =
+          RepIntrinsic ? isVectorIntrinsicWithScalarOpAtArg(
+                             RepIntrinsic->getIntrinsicID(), OpIdx, &TTI)
+                       : (isa<SelectInst>(RepOp) && OpIdx == 0);
+      if (!LaneInvariant ||
+          any_of(drop_begin(LaneOps), [&](Instruction *LaneOp) {
+            return LaneOp->getOperand(OpIdx) != RepOperand;
+          }))
+        return false;
+      NewOperands[OpIdx] = RepOperand;
+      continue;
+    }
+
+    // Bail out if operation is changing the number of lanes
+    // i.e. bitcast 2xi32 to 4xi16
+    if (cast<VectorType>(RepOperand->getType())->getElementCount() != LaneEC)
+      return false;
+
+    // A splat holds the same value in every lane, so interleaving it would
+    // just be a wider splat of that value.
+    Value *Splat = getSplatValue(RepOperand);
+    if (Splat && all_of(drop_begin(LaneOps), [&](Instruction *LaneOp) {
+          return getSplatValue(LaneOp->getOperand(OpIdx)) == Splat;
+        })) {
+      NewOperands[OpIdx] = Splat;
+      SplatIdxs.push_back(OpIdx);
+      continue;
+    }
+
+    // At this point operand varies between the lanes and so has to be
+    // interleaved. except this operand matches the first interleaved operand,
+    // in this case only one interleaved is required.
+    if (!InterleavedIdxs.empty() && any_of(LaneOps, [&](Instruction *LaneOp) {
+          return LaneOp->getOperand(OpIdx) !=
+                 LaneOp->getOperand(InterleavedIdxs.front());
+        }))
+      return false;
+    InterleavedIdxs.push_back(OpIdx);
+  }
+
+  LLVM_DEBUG(dbgs() << "VC: Sinking the lane ops of: " << I << "\n");
+
+  for (unsigned OpIdx : SplatIdxs)
+    NewOperands[OpIdx] = Builder.CreateVectorSplat(WideEC, NewOperands[OpIdx]);
+
+  // Build the new interleave of laneop's operand
+  if (!InterleavedIdxs.empty()) {
+    SmallVector<Value *, 8> Operands;
+    for (Instruction *LaneOp : LaneOps)
+      Operands.push_back(LaneOp->getOperand(InterleavedIdxs.front()));
+    auto *OperandTy = cast<VectorType>(Operands.front()->getType());
+    Value *NewInterleave = Builder.CreateIntrinsic(
+        InterleaveID, {VectorType::get(OperandTy->getElementType(), WideEC)},
+        Operands);
+    // Add new interleave to worklist for next iteration
+    Worklist.pushValue(NewInterleave);
+    for (unsigned OpIdx : InterleavedIdxs)
+      NewOperands[OpIdx] = NewInterleave;
+  }
+
+  // Rebuild the operation on the interleaved operands.
+  Instruction *NewOp;
+  if (RepIntrinsic) {
+    NewOp = Builder.CreateIntrinsicWithoutFolding(
+        WideTy, RepIntrinsic->getIntrinsicID(), NewOperands);
+  } else if (auto *Cast = dyn_cast<CastInst>(RepOp)) {
+    NewOp = Builder.Insert(
+        CastInst::Create(Cast->getOpcode(), NewOperands[0], WideTy));
+  } else if (auto *Cmp = dyn_cast<CmpInst>(RepOp)) {
+    NewOp = Builder.Insert(CmpInst::Create(
+        Cmp->getOpcode(), Cmp->getPredicate(), NewOperands[0], NewOperands[1]));
+  } else if (isa<SelectInst>(RepOp)) {
+    NewOp = Builder.Insert(
+        SelectInst::Create(NewOperands[0], NewOperands[1], NewOperands[2]));
+  } else if (auto *UnOp = dyn_cast<UnaryOperator>(RepOp)) {
+    NewOp = Builder.Insert(
+        UnaryOperator::Create(UnOp->getOpcode(), NewOperands[0]));
+  } else {
+    auto *BinOp = cast<BinaryOperator>(RepOp);
+    NewOp = Builder.Insert(BinaryOperator::Create(
+        BinOp->getOpcode(), NewOperands[0], NewOperands[1]));
+  }
+
+  // Every lane op carries the same flags, so transfer as they are.
+  // Combine and Merge metadata and location from all lane ops in wider ops.
+  NewOp->copyIRFlags(RepOp);
+  NewOp->copyMetadata(*RepOp);
+  for (Instruction *LaneOp : LaneOps) {
+    combineMetadataForCSE(NewOp, LaneOp, /*DoesKMove=*/true);
+    NewOp->applyMergedLocation(NewOp->getDebugLoc(), LaneOp->getDebugLoc());
+  }
+  replaceValue(I, *NewOp);
+  return true;
+}
+
 /// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
 /// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
 /// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
@@ -6553,6 +6742,8 @@ bool VectorCombine::run() {
       if (scalarizeExtExtract(I))
         return true;
       if (scalarizeVPIntrinsic(I))
+        return true;
+      if (foldInterleaveOfLaneOps(I))
         return true;
       if (foldInterleaveIntrinsics(I))
         return true;

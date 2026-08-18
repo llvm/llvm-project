@@ -4,12 +4,7 @@
 define <8 x i16> @factor2(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i16> @factor2(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[T0:%.*]] = trunc <4 x i32> [[E0]] to <4 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <4 x i32> [[E1]] to <4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> [[T0]], <4 x i16> [[T1]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <8 x i32> [[X]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -24,12 +19,7 @@ define <8 x i16> @factor2(<8 x i32> %x) {
 define <vscale x 8 x i16> @factor2_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @factor2_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 4 x i32> [[E0]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 4 x i32> [[E1]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> [[T0]], <vscale x 4 x i16> [[T1]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 8 x i32> [[X]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -44,16 +34,7 @@ define <vscale x 8 x i16> @factor2_scalable(<vscale x 8 x i32> %x) {
 define <vscale x 16 x i8> @factor4(<vscale x 16 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 16 x i8> @factor4(
 ; CHECK-SAME: <vscale x 16 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 3
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 4 x i32> [[E0]] to <vscale x 4 x i8>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 4 x i32> [[E1]] to <vscale x 4 x i8>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <vscale x 4 x i32> [[E2]] to <vscale x 4 x i8>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <vscale x 4 x i32> [[E3]] to <vscale x 4 x i8>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i8> @llvm.vector.interleave4.nxv16i8(<vscale x 4 x i8> [[T0]], <vscale x 4 x i8> [[T1]], <vscale x 4 x i8> [[T2]], <vscale x 4 x i8> [[T3]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 16 x i32> [[X]] to <vscale x 16 x i8>
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> %x)
@@ -72,14 +53,7 @@ define <vscale x 16 x i8> @factor4(<vscale x 16 x i32> %x) {
 define <6 x i16> @factor3(<6 x i32> %x) {
 ; CHECK-LABEL: define <6 x i16> @factor3(
 ; CHECK-SAME: <6 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave3.v6i32(<6 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[D]], 2
-; CHECK-NEXT:    [[T0:%.*]] = trunc <2 x i32> [[E0]] to <2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <2 x i32> [[E1]] to <2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <2 x i32> [[E2]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <6 x i16> @llvm.vector.interleave3.v6i16(<2 x i16> [[T0]], <2 x i16> [[T1]], <2 x i16> [[T2]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <6 x i32> [[X]] to <6 x i16>
 ; CHECK-NEXT:    ret <6 x i16> [[R]]
 ;
   %d = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave3.v6i32(<6 x i32> %x)
@@ -96,14 +70,7 @@ define <6 x i16> @factor3(<6 x i32> %x) {
 define <vscale x 6 x i16> @factor3_scalable(<vscale x 6 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 6 x i16> @factor3_scalable(
 ; CHECK-SAME: <vscale x 6 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3.nxv6i32(<vscale x 6 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 2
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 2 x i32> [[E0]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 2 x i32> [[E1]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <vscale x 2 x i32> [[E2]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 6 x i16> @llvm.vector.interleave3.nxv6i16(<vscale x 2 x i16> [[T0]], <vscale x 2 x i16> [[T1]], <vscale x 2 x i16> [[T2]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 6 x i32> [[X]] to <vscale x 6 x i16>
 ; CHECK-NEXT:    ret <vscale x 6 x i16> [[R]]
 ;
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave3.nxv6i32(<vscale x 6 x i32> %x)
@@ -120,18 +87,7 @@ define <vscale x 6 x i16> @factor3_scalable(<vscale x 6 x i32> %x) {
 define <vscale x 10 x i8> @factor5(<vscale x 10 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 10 x i8> @factor5(
 ; CHECK-SAME: <vscale x 10 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave5.nxv10i32(<vscale x 10 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 3
-; CHECK-NEXT:    [[E4:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } [[D]], 4
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 2 x i32> [[E0]] to <vscale x 2 x i8>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 2 x i32> [[E1]] to <vscale x 2 x i8>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <vscale x 2 x i32> [[E2]] to <vscale x 2 x i8>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <vscale x 2 x i32> [[E3]] to <vscale x 2 x i8>
-; CHECK-NEXT:    [[T4:%.*]] = trunc <vscale x 2 x i32> [[E4]] to <vscale x 2 x i8>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 10 x i8> @llvm.vector.interleave5.nxv10i8(<vscale x 2 x i8> [[T0]], <vscale x 2 x i8> [[T1]], <vscale x 2 x i8> [[T2]], <vscale x 2 x i8> [[T3]], <vscale x 2 x i8> [[T4]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 10 x i32> [[X]] to <vscale x 10 x i8>
 ; CHECK-NEXT:    ret <vscale x 10 x i8> [[R]]
 ;
   %d = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave5.nxv10i32(<vscale x 10 x i32> %x)
@@ -152,22 +108,7 @@ define <vscale x 10 x i8> @factor5(<vscale x 10 x i32> %x) {
 define <14 x i16> @factor7(<14 x i64> %x) {
 ; CHECK-LABEL: define <14 x i16> @factor7(
 ; CHECK-SAME: <14 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave7.v14i64(<14 x i64> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 3
-; CHECK-NEXT:    [[E4:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 4
-; CHECK-NEXT:    [[E5:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 5
-; CHECK-NEXT:    [[E6:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 6
-; CHECK-NEXT:    [[T0:%.*]] = trunc <2 x i64> [[E0]] to <2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <2 x i64> [[E1]] to <2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <2 x i64> [[E2]] to <2 x i16>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <2 x i64> [[E3]] to <2 x i16>
-; CHECK-NEXT:    [[T4:%.*]] = trunc <2 x i64> [[E4]] to <2 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <2 x i64> [[E5]] to <2 x i16>
-; CHECK-NEXT:    [[T6:%.*]] = trunc <2 x i64> [[E6]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <14 x i16> @llvm.vector.interleave7.v14i16(<2 x i16> [[T0]], <2 x i16> [[T1]], <2 x i16> [[T2]], <2 x i16> [[T3]], <2 x i16> [[T4]], <2 x i16> [[T5]], <2 x i16> [[T6]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <14 x i64> [[X]] to <14 x i16>
 ; CHECK-NEXT:    ret <14 x i16> [[R]]
 ;
   %d = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave7.v14i64(<14 x i64> %x)
@@ -192,22 +133,7 @@ define <14 x i16> @factor7(<14 x i64> %x) {
 define <vscale x 14 x i16> @factor7_scalable(<vscale x 14 x i64> %x) {
 ; CHECK-LABEL: define <vscale x 14 x i16> @factor7_scalable(
 ; CHECK-SAME: <vscale x 14 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave7.nxv14i64(<vscale x 14 x i64> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 3
-; CHECK-NEXT:    [[E4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 4
-; CHECK-NEXT:    [[E5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 5
-; CHECK-NEXT:    [[E6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 6
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 2 x i64> [[E0]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 2 x i64> [[E1]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <vscale x 2 x i64> [[E2]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <vscale x 2 x i64> [[E3]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T4:%.*]] = trunc <vscale x 2 x i64> [[E4]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <vscale x 2 x i64> [[E5]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T6:%.*]] = trunc <vscale x 2 x i64> [[E6]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 14 x i16> @llvm.vector.interleave7.nxv14i16(<vscale x 2 x i16> [[T0]], <vscale x 2 x i16> [[T1]], <vscale x 2 x i16> [[T2]], <vscale x 2 x i16> [[T3]], <vscale x 2 x i16> [[T4]], <vscale x 2 x i16> [[T5]], <vscale x 2 x i16> [[T6]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 14 x i64> [[X]] to <vscale x 14 x i16>
 ; CHECK-NEXT:    ret <vscale x 14 x i16> [[R]]
 ;
   %d = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave7.nxv14i64(<vscale x 14 x i64> %x)
@@ -232,24 +158,7 @@ define <vscale x 14 x i16> @factor7_scalable(<vscale x 14 x i64> %x) {
 define <16 x i16> @factor8(<16 x i64> %x) {
 ; CHECK-LABEL: define <16 x i16> @factor8(
 ; CHECK-SAME: <16 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave8.v16i64(<16 x i64> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 3
-; CHECK-NEXT:    [[E4:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 4
-; CHECK-NEXT:    [[E5:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 5
-; CHECK-NEXT:    [[E6:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 6
-; CHECK-NEXT:    [[E7:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[D]], 7
-; CHECK-NEXT:    [[T0:%.*]] = trunc <2 x i64> [[E0]] to <2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <2 x i64> [[E1]] to <2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <2 x i64> [[E2]] to <2 x i16>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <2 x i64> [[E3]] to <2 x i16>
-; CHECK-NEXT:    [[T4:%.*]] = trunc <2 x i64> [[E4]] to <2 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <2 x i64> [[E5]] to <2 x i16>
-; CHECK-NEXT:    [[T6:%.*]] = trunc <2 x i64> [[E6]] to <2 x i16>
-; CHECK-NEXT:    [[T7:%.*]] = trunc <2 x i64> [[E7]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <16 x i16> @llvm.vector.interleave8.v16i16(<2 x i16> [[T0]], <2 x i16> [[T1]], <2 x i16> [[T2]], <2 x i16> [[T3]], <2 x i16> [[T4]], <2 x i16> [[T5]], <2 x i16> [[T6]], <2 x i16> [[T7]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <16 x i64> [[X]] to <16 x i16>
 ; CHECK-NEXT:    ret <16 x i16> [[R]]
 ;
   %d = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave8.v16i64(<16 x i64> %x)
@@ -276,24 +185,7 @@ define <16 x i16> @factor8(<16 x i64> %x) {
 define <vscale x 16 x i16> @factor8_scalable(<vscale x 16 x i64> %x) {
 ; CHECK-LABEL: define <vscale x 16 x i16> @factor8_scalable(
 ; CHECK-SAME: <vscale x 16 x i64> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave8.nxv16i64(<vscale x 16 x i64> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 1
-; CHECK-NEXT:    [[E2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 2
-; CHECK-NEXT:    [[E3:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 3
-; CHECK-NEXT:    [[E4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 4
-; CHECK-NEXT:    [[E5:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 5
-; CHECK-NEXT:    [[E6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 6
-; CHECK-NEXT:    [[E7:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[D]], 7
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 2 x i64> [[E0]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 2 x i64> [[E1]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T2:%.*]] = trunc <vscale x 2 x i64> [[E2]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T3:%.*]] = trunc <vscale x 2 x i64> [[E3]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T4:%.*]] = trunc <vscale x 2 x i64> [[E4]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <vscale x 2 x i64> [[E5]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T6:%.*]] = trunc <vscale x 2 x i64> [[E6]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[T7:%.*]] = trunc <vscale x 2 x i64> [[E7]] to <vscale x 2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i16> @llvm.vector.interleave8.nxv16i16(<vscale x 2 x i16> [[T0]], <vscale x 2 x i16> [[T1]], <vscale x 2 x i16> [[T2]], <vscale x 2 x i16> [[T3]], <vscale x 2 x i16> [[T4]], <vscale x 2 x i16> [[T5]], <vscale x 2 x i16> [[T6]], <vscale x 2 x i16> [[T7]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 16 x i64> [[X]] to <vscale x 16 x i16>
 ; CHECK-NEXT:    ret <vscale x 16 x i16> [[R]]
 ;
   %d = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.vector.deinterleave8.nxv16i64(<vscale x 16 x i64> %x)
@@ -323,9 +215,8 @@ define <8 x i16> @permuted_order(<8 x i32> %x) {
 ; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
 ; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
 ; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[T0:%.*]] = trunc <4 x i32> [[E0]] to <4 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <4 x i32> [[E1]] to <4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> [[T1]], <4 x i16> [[T0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[E1]], <4 x i32> [[E0]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <8 x i32> [[TMP1]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -343,9 +234,8 @@ define <vscale x 8 x i16> @permuted_order_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
 ; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
 ; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[T0:%.*]] = trunc <vscale x 4 x i32> [[E0]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[T1:%.*]] = trunc <vscale x 4 x i32> [[E1]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> [[T1]], <vscale x 4 x i16> [[T0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[E1]], <vscale x 4 x i32> [[E0]])
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 8 x i32> [[TMP1]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -360,12 +250,7 @@ define <vscale x 8 x i16> @permuted_order_scalable(<vscale x 8 x i32> %x) {
 define <8 x float> @unary_fneg(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @unary_fneg(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[N0:%.*]] = fneg <4 x float> [[E0]]
-; CHECK-NEXT:    [[N1:%.*]] = fneg <4 x float> [[E1]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[N0]], <4 x float> [[N1]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <8 x float> [[X]]
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -380,12 +265,7 @@ define <8 x float> @unary_fneg(<8 x float> %x) {
 define <vscale x 8 x float> @unary_fneg_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @unary_fneg_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[N0:%.*]] = fneg <vscale x 4 x float> [[E0]]
-; CHECK-NEXT:    [[N1:%.*]] = fneg <vscale x 4 x float> [[E1]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[N0]], <vscale x 4 x float> [[N1]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 8 x float> [[X]]
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -400,9 +280,8 @@ define <vscale x 8 x float> @unary_fneg_scalable(<vscale x 8 x float> %x) {
 define <8 x float> @arbitrary_vector_operands(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: define <8 x float> @arbitrary_vector_operands(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEG0:%.*]] = fneg <4 x float> [[X]]
-; CHECK-NEXT:    [[NEG1:%.*]] = fneg <4 x float> [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[NEG0]], <4 x float> [[NEG1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[X]], <4 x float> [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <8 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %neg0 = fneg <4 x float> %x
@@ -414,9 +293,8 @@ define <8 x float> @arbitrary_vector_operands(<4 x float> %x, <4 x float> %y) {
 define <vscale x 8 x float> @arbitrary_vector_operands_scalable(<vscale x 4 x float> %x, <vscale x 4 x float> %y) {
 ; CHECK-LABEL: define <vscale x 8 x float> @arbitrary_vector_operands_scalable(
 ; CHECK-SAME: <vscale x 4 x float> [[X:%.*]], <vscale x 4 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEG0:%.*]] = fneg <vscale x 4 x float> [[X]]
-; CHECK-NEXT:    [[NEG1:%.*]] = fneg <vscale x 4 x float> [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[NEG0]], <vscale x 4 x float> [[NEG1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[X]], <vscale x 4 x float> [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <vscale x 8 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %neg0 = fneg <vscale x 4 x float> %x
@@ -480,12 +358,7 @@ define <vscale x 8 x i32> @two_varying_operands_scalable(<vscale x 8 x i32> %x, 
 define <8 x i32> @binop_splat_constant(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @binop_splat_constant(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = shl <4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[S1:%.*]] = shl <4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[S0]], <4 x i32> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = shl <8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -500,12 +373,7 @@ define <8 x i32> @binop_splat_constant(<8 x i32> %x) {
 define <vscale x 8 x i32> @binop_splat_constant_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @binop_splat_constant_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = shl <vscale x 4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[S1:%.*]] = shl <vscale x 4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[S0]], <vscale x 4 x i32> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = shl <vscale x 8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -520,14 +388,9 @@ define <vscale x 8 x i32> @binop_splat_constant_scalable(<vscale x 8 x i32> %x) 
 define <8 x i32> @binop_splat_value(<8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: define <8 x i32> @binop_splat_value(
 ; CHECK-SAME: <8 x i32> [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[H:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
-; CHECK-NEXT:    [[SP:%.*]] = shufflevector <4 x i32> [[H]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[A0:%.*]] = add <4 x i32> [[E0]], [[SP]]
-; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[E1]], [[SP]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[A0]], <4 x i32> [[A1]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[Y]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i32> [[X]], [[DOTSPLAT]]
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -544,14 +407,9 @@ define <8 x i32> @binop_splat_value(<8 x i32> %x, i32 %y) {
 define <vscale x 8 x i32> @binop_splat_value_scalable(<vscale x 8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @binop_splat_value_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[H:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[Y]], i64 0
-; CHECK-NEXT:    [[SP:%.*]] = shufflevector <vscale x 4 x i32> [[H]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[A0:%.*]] = add <vscale x 4 x i32> [[E0]], [[SP]]
-; CHECK-NEXT:    [[A1:%.*]] = add <vscale x 4 x i32> [[E1]], [[SP]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[A0]], <vscale x 4 x i32> [[A1]])
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[Y]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i32> [[DOTSPLATINSERT]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = add <vscale x 8 x i32> [[X]], [[DOTSPLAT]]
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -608,12 +466,7 @@ define <vscale x 8 x i32> @binop_differing_splats_scalable(<vscale x 8 x i32> %x
 define <8 x i1> @icmp_splat_operand(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i1> @icmp_splat_operand(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DX]], 1
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt <4 x i32> [[X0]], splat (i32 7)
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt <4 x i32> [[X1]], splat (i32 7)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> [[C0]], <4 x i1> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <8 x i32> [[X]], splat (i32 7)
 ; CHECK-NEXT:    ret <8 x i1> [[R]]
 ;
   %dx = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -628,12 +481,7 @@ define <8 x i1> @icmp_splat_operand(<8 x i32> %x) {
 define <vscale x 8 x i1> @icmp_splat_operand_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i1> @icmp_splat_operand_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DX]], 1
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt <vscale x 4 x i32> [[X0]], splat (i32 7)
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt <vscale x 4 x i32> [[X1]], splat (i32 7)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[C0]], <vscale x 4 x i1> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <vscale x 8 x i32> [[X]], splat (i32 7)
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[R]]
 ;
   %dx = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -728,12 +576,7 @@ define <vscale x 8 x i1> @differing_predicate_scalable(<vscale x 8 x i32> %x) {
 define <8 x float> @elementwise_intrinsic(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @elementwise_intrinsic(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[F0:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[E0]])
-; CHECK-NEXT:    [[F1:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[F0]], <4 x float> [[F1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[X]])
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -748,12 +591,7 @@ define <8 x float> @elementwise_intrinsic(<8 x float> %x) {
 define <vscale x 8 x float> @elementwise_intrinsic_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @elementwise_intrinsic_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[F0:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[E0]])
-; CHECK-NEXT:    [[F1:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[F0]], <vscale x 4 x float> [[F1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.fabs.nxv8f32(<vscale x 8 x float> [[X]])
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -768,12 +606,7 @@ define <vscale x 8 x float> @elementwise_intrinsic_scalable(<vscale x 8 x float>
 define <8 x float> @fma_splat_operands(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @fma_splat_operands(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[F0:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[X0]], <4 x float> splat (float 2.000000e+00), <4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[F1:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[X1]], <4 x float> splat (float 2.000000e+00), <4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[F0]], <4 x float> [[F1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.fma.v8f32(<8 x float> [[X]], <8 x float> splat (float 2.000000e+00), <8 x float> splat (float 3.000000e+00))
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %dx = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -788,12 +621,7 @@ define <8 x float> @fma_splat_operands(<8 x float> %x) {
 define <vscale x 8 x float> @fma_splat_operands_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @fma_splat_operands_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[F0:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> [[X0]], <vscale x 4 x float> splat (float 2.000000e+00), <vscale x 4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[F1:%.*]] = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> [[X1]], <vscale x 4 x float> splat (float 2.000000e+00), <vscale x 4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[F0]], <vscale x 4 x float> [[F1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.fma.nxv8f32(<vscale x 8 x float> [[X]], <vscale x 8 x float> splat (float 2.000000e+00), <vscale x 8 x float> splat (float 3.000000e+00))
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %dx = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -848,12 +676,7 @@ define <vscale x 8 x float> @fma_two_varying_operands_scalable(<vscale x 8 x flo
 define <8 x float> @powi_scalar_exponent(<8 x float> %x, i32 %exp) {
 ; CHECK-LABEL: define <8 x float> @powi_scalar_exponent(
 ; CHECK-SAME: <8 x float> [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[POW0:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X0]], i32 [[EXP]])
-; CHECK-NEXT:    [[POW1:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X1]], i32 [[EXP]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[POW0]], <4 x float> [[POW1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.powi.v8f32.i32(<8 x float> [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %dx = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -868,12 +691,7 @@ define <8 x float> @powi_scalar_exponent(<8 x float> %x, i32 %exp) {
 define <vscale x 8 x float> @powi_scalar_exponent_scalable(<vscale x 8 x float> %x, i32 %exp) {
 ; CHECK-LABEL: define <vscale x 8 x float> @powi_scalar_exponent_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]], i32 [[EXP:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[POW0:%.*]] = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> [[X0]], i32 [[EXP]])
-; CHECK-NEXT:    [[POW1:%.*]] = call <vscale x 4 x float> @llvm.powi.nxv4f32.i32(<vscale x 4 x float> [[X1]], i32 [[EXP]])
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[POW0]], <vscale x 4 x float> [[POW1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.powi.nxv8f32.i32(<vscale x 8 x float> [[X]], i32 [[EXP]])
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %dx = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -888,12 +706,7 @@ define <vscale x 8 x float> @powi_scalar_exponent_scalable(<vscale x 8 x float> 
 define <8 x float> @pow_splat_exponent(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @pow_splat_exponent(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[POW0:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[X0]], <4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[POW1:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[X1]], <4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[POW0]], <4 x float> [[POW1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.pow.v8f32(<8 x float> [[X]], <8 x float> splat (float 3.000000e+00))
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %dx = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -908,12 +721,7 @@ define <8 x float> @pow_splat_exponent(<8 x float> %x) {
 define <vscale x 8 x float> @pow_splat_exponent_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @pow_splat_exponent_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[POW0:%.*]] = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> [[X0]], <vscale x 4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[POW1:%.*]] = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> [[X1]], <vscale x 4 x float> splat (float 3.000000e+00))
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[POW0]], <vscale x 4 x float> [[POW1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.pow.nxv8f32(<vscale x 8 x float> [[X]], <vscale x 8 x float> splat (float 3.000000e+00))
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %dx = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -928,14 +736,8 @@ define <vscale x 8 x float> @pow_splat_exponent_scalable(<vscale x 8 x float> %x
 define <8 x float> @lane_op_chain(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @lane_op_chain(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[NEG0:%.*]] = fneg <4 x float> [[E0]]
-; CHECK-NEXT:    [[NEG1:%.*]] = fneg <4 x float> [[E1]]
-; CHECK-NEXT:    [[ABS0:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[NEG0]])
-; CHECK-NEXT:    [[ABS1:%.*]] = call <4 x float> @llvm.fabs.v4f32(<4 x float> [[NEG1]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[ABS0]], <4 x float> [[ABS1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <8 x float> [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -952,14 +754,8 @@ define <8 x float> @lane_op_chain(<8 x float> %x) {
 define <vscale x 8 x float> @lane_op_chain_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @lane_op_chain_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[NEG0:%.*]] = fneg <vscale x 4 x float> [[E0]]
-; CHECK-NEXT:    [[NEG1:%.*]] = fneg <vscale x 4 x float> [[E1]]
-; CHECK-NEXT:    [[ABS0:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[NEG0]])
-; CHECK-NEXT:    [[ABS1:%.*]] = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> [[NEG1]])
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[ABS0]], <vscale x 4 x float> [[ABS1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <vscale x 8 x float> [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.fabs.nxv8f32(<vscale x 8 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -976,12 +772,7 @@ define <vscale x 8 x float> @lane_op_chain_scalable(<vscale x 8 x float> %x) {
 define <8 x i32> @bitcast_same_element_count(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x i32> @bitcast_same_element_count(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[B0:%.*]] = bitcast <4 x float> [[E0]] to <4 x i32>
-; CHECK-NEXT:    [[B1:%.*]] = bitcast <4 x float> [[E1]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[B0]], <4 x i32> [[B1]])
+; CHECK-NEXT:    [[R:%.*]] = bitcast <8 x float> [[X]] to <8 x i32>
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -996,12 +787,7 @@ define <8 x i32> @bitcast_same_element_count(<8 x float> %x) {
 define <vscale x 8 x i32> @bitcast_same_element_count_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @bitcast_same_element_count_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[B0:%.*]] = bitcast <vscale x 4 x float> [[E0]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[B1:%.*]] = bitcast <vscale x 4 x float> [[E1]] to <vscale x 4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[B0]], <vscale x 4 x i32> [[B1]])
+; CHECK-NEXT:    [[R:%.*]] = bitcast <vscale x 8 x float> [[X]] to <vscale x 8 x i32>
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -1160,12 +946,7 @@ define <vscale x 8 x i32> @differing_poison_flags_scalable(<vscale x 8 x i32> %x
 define <8 x i32> @matching_poison_flags(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @matching_poison_flags(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DX]], 1
-; CHECK-NEXT:    [[A0:%.*]] = add nuw nsw <4 x i32> [[X0]], splat (i32 1)
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw <4 x i32> [[X1]], splat (i32 1)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[A0]], <4 x i32> [[A1]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <8 x i32> [[X]], splat (i32 1)
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %dx = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1180,12 +961,7 @@ define <8 x i32> @matching_poison_flags(<8 x i32> %x) {
 define <vscale x 8 x i32> @matching_poison_flags_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @matching_poison_flags_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[DX]], 1
-; CHECK-NEXT:    [[A0:%.*]] = add nuw nsw <vscale x 4 x i32> [[X0]], splat (i32 1)
-; CHECK-NEXT:    [[A1:%.*]] = add nuw nsw <vscale x 4 x i32> [[X1]], splat (i32 1)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[A0]], <vscale x 4 x i32> [[A1]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <vscale x 8 x i32> [[X]], splat (i32 1)
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %dx = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1240,12 +1016,7 @@ define <vscale x 8 x i32> @differing_disjoint_flag_scalable(<vscale x 8 x i32> %
 define <8 x i32> @matching_disjoint_flag(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @matching_disjoint_flag(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = or disjoint <4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[B:%.*]] = or disjoint <4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[A]], <4 x i32> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1260,12 +1031,7 @@ define <8 x i32> @matching_disjoint_flag(<8 x i32> %x) {
 define <vscale x 8 x i32> @matching_disjoint_flag_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @matching_disjoint_flag_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = or disjoint <vscale x 4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[B:%.*]] = or disjoint <vscale x 4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = or disjoint <vscale x 8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1320,12 +1086,7 @@ define <vscale x 8 x i64> @differing_nneg_flag_scalable(<vscale x 8 x i32> %x) {
 define <8 x i64> @matching_nneg_flag(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i64> @matching_nneg_flag(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = zext nneg <4 x i32> [[E0]] to <4 x i64>
-; CHECK-NEXT:    [[B:%.*]] = zext nneg <4 x i32> [[E1]] to <4 x i64>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[A]], <4 x i64> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = zext nneg <8 x i32> [[X]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1340,12 +1101,7 @@ define <8 x i64> @matching_nneg_flag(<8 x i32> %x) {
 define <vscale x 8 x i64> @matching_nneg_flag_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i64> @matching_nneg_flag_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = zext nneg <vscale x 4 x i32> [[E0]] to <vscale x 4 x i64>
-; CHECK-NEXT:    [[B:%.*]] = zext nneg <vscale x 4 x i32> [[E1]] to <vscale x 4 x i64>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64> [[A]], <vscale x 4 x i64> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = zext nneg <vscale x 8 x i32> [[X]] to <vscale x 8 x i64>
 ; CHECK-NEXT:    ret <vscale x 8 x i64> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1400,12 +1156,7 @@ define <vscale x 8 x i1> @differing_samesign_flag_scalable(<vscale x 8 x i32> %x
 define <8 x i1> @matching_samesign_flag(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i1> @matching_samesign_flag(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = icmp samesign sgt <4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[B:%.*]] = icmp samesign sgt <4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> [[A]], <4 x i1> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign sgt <8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <8 x i1> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1420,12 +1171,7 @@ define <8 x i1> @matching_samesign_flag(<8 x i32> %x) {
 define <vscale x 8 x i1> @matching_samesign_flag_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i1> @matching_samesign_flag_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = icmp samesign sgt <vscale x 4 x i32> [[E0]], splat (i32 3)
-; CHECK-NEXT:    [[B:%.*]] = icmp samesign sgt <vscale x 4 x i32> [[E1]], splat (i32 3)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[A]], <vscale x 4 x i1> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign sgt <vscale x 8 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1480,12 +1226,7 @@ define <vscale x 8 x i16> @differing_trunc_wrap_flags_scalable(<vscale x 8 x i32
 define <8 x i16> @matching_trunc_wrap_flags(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i16> @matching_trunc_wrap_flags(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = trunc nuw nsw <4 x i32> [[E0]] to <4 x i16>
-; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw <4 x i32> [[E1]] to <4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i16> @llvm.vector.interleave2.v8i16(<4 x i16> [[A]], <4 x i16> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw nsw <8 x i32> [[X]] to <8 x i16>
 ; CHECK-NEXT:    ret <8 x i16> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1500,12 +1241,7 @@ define <8 x i16> @matching_trunc_wrap_flags(<8 x i32> %x) {
 define <vscale x 8 x i16> @matching_trunc_wrap_flags_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @matching_trunc_wrap_flags_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = trunc nuw nsw <vscale x 4 x i32> [[E0]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[B:%.*]] = trunc nuw nsw <vscale x 4 x i32> [[E1]] to <vscale x 4 x i16>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> [[A]], <vscale x 4 x i16> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = trunc nuw nsw <vscale x 8 x i32> [[X]] to <vscale x 8 x i16>
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1560,12 +1296,7 @@ define <vscale x 8 x float> @differing_fneg_fmf_scalable(<vscale x 8 x float> %x
 define <8 x float> @matching_fneg_fmf(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @matching_fneg_fmf(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = fneg nnan <4 x float> [[E0]]
-; CHECK-NEXT:    [[B:%.*]] = fneg nnan <4 x float> [[E1]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[A]], <4 x float> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan <8 x float> [[X]]
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -1580,12 +1311,7 @@ define <8 x float> @matching_fneg_fmf(<8 x float> %x) {
 define <vscale x 8 x float> @matching_fneg_fmf_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @matching_fneg_fmf_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = fneg nnan <vscale x 4 x float> [[E0]]
-; CHECK-NEXT:    [[B:%.*]] = fneg nnan <vscale x 4 x float> [[E1]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = fneg nnan <vscale x 8 x float> [[X]]
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -1680,12 +1406,7 @@ define <vscale x 8 x float> @differing_uitofp_nneg_scalable(<vscale x 8 x i32> %
 define <8 x float> @matching_uitofp_flags(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x float> @matching_uitofp_flags(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = uitofp nnan nneg <4 x i32> [[E0]] to <4 x float>
-; CHECK-NEXT:    [[B:%.*]] = uitofp nnan nneg <4 x i32> [[E1]] to <4 x float>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[A]], <4 x float> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = uitofp nnan nneg <8 x i32> [[X]] to <8 x float>
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1700,12 +1421,7 @@ define <8 x float> @matching_uitofp_flags(<8 x i32> %x) {
 define <vscale x 8 x float> @matching_uitofp_flags_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @matching_uitofp_flags_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[A:%.*]] = uitofp nnan nneg <vscale x 4 x i32> [[E0]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[B:%.*]] = uitofp nnan nneg <vscale x 4 x i32> [[E1]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[A]], <vscale x 4 x float> [[B]])
+; CHECK-NEXT:    [[R:%.*]] = uitofp nnan nneg <vscale x 8 x i32> [[X]] to <vscale x 8 x float>
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -1840,12 +1556,7 @@ define <vscale x 8 x float> @differing_fmf_intrinsic_scalable(<vscale x 8 x floa
 define <8 x float> @matching_fmf_intrinsic(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @matching_fmf_intrinsic(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = call nnan ninf <4 x float> @llvm.sqrt.v4f32(<4 x float> [[E0]])
-; CHECK-NEXT:    [[S1:%.*]] = call nnan ninf <4 x float> @llvm.sqrt.v4f32(<4 x float> [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[S0]], <4 x float> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan ninf <8 x float> @llvm.sqrt.v8f32(<8 x float> [[X]])
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %d = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -1860,12 +1571,7 @@ define <8 x float> @matching_fmf_intrinsic(<8 x float> %x) {
 define <vscale x 8 x float> @matching_fmf_intrinsic_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @matching_fmf_intrinsic_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = call nnan ninf <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[E0]])
-; CHECK-NEXT:    [[S1:%.*]] = call nnan ninf <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[E1]])
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[S0]], <vscale x 4 x float> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan ninf <vscale x 8 x float> @llvm.sqrt.nxv8f32(<vscale x 8 x float> [[X]])
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %d = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -1920,12 +1626,7 @@ define <vscale x 8 x float> @differing_fpmath_metadata_scalable(<vscale x 8 x fl
 define <8 x float> @matching_fpmath_metadata(<8 x float> %x) {
 ; CHECK-LABEL: define <8 x float> @matching_fpmath_metadata(
 ; CHECK-SAME: <8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[A0:%.*]] = fdiv <4 x float> [[X0]], splat (float 2.000000e+00), !fpmath [[META0]]
-; CHECK-NEXT:    [[A1:%.*]] = fdiv <4 x float> [[X1]], splat (float 2.000000e+00), !fpmath [[META0]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[A0]], <4 x float> [[A1]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv <8 x float> [[X]], splat (float 2.000000e+00), !fpmath [[META0]]
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %dx = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -1940,12 +1641,7 @@ define <8 x float> @matching_fpmath_metadata(<8 x float> %x) {
 define <vscale x 8 x float> @matching_fpmath_metadata_scalable(<vscale x 8 x float> %x) {
 ; CHECK-LABEL: define <vscale x 8 x float> @matching_fpmath_metadata_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[A0:%.*]] = fdiv <vscale x 4 x float> [[X0]], splat (float 2.000000e+00), !fpmath [[META0]]
-; CHECK-NEXT:    [[A1:%.*]] = fdiv <vscale x 4 x float> [[X1]], splat (float 2.000000e+00), !fpmath [[META0]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[A0]], <vscale x 4 x float> [[A1]])
+; CHECK-NEXT:    [[R:%.*]] = fdiv <vscale x 8 x float> [[X]], splat (float 2.000000e+00), !fpmath [[META0]]
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %dx = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -1960,12 +1656,7 @@ define <vscale x 8 x float> @matching_fpmath_metadata_scalable(<vscale x 8 x flo
 define <8 x i32> @shared_immarg(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @shared_immarg(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[C0:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[E0]], i1 true)
-; CHECK-NEXT:    [[C1:%.*]] = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[E1]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[C0]], <4 x i32> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> [[X]], i1 true)
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %d = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %x)
@@ -1980,12 +1671,7 @@ define <8 x i32> @shared_immarg(<8 x i32> %x) {
 define <vscale x 8 x i32> @shared_immarg_scalable(<vscale x 8 x i32> %x) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @shared_immarg_scalable(
 ; CHECK-SAME: <vscale x 8 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[X]])
-; CHECK-NEXT:    [[E0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[E1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[C0:%.*]] = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> [[E0]], i1 true)
-; CHECK-NEXT:    [[C1:%.*]] = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> [[E1]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[C0]], <vscale x 4 x i32> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.ctlz.nxv8i32(<vscale x 8 x i32> [[X]], i1 true)
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %d = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %x)
@@ -2042,12 +1728,7 @@ define <8 x i32> @flags_stay_on_the_merged_op(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-SAME: <8 x i32> [[A:%.*]], <8 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul <8 x i32> [[A]], [[B]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(<8 x i32> [[M]])
-; CHECK-NEXT:    [[D:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[M]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw nsw <4 x i32> [[X0]], zeroinitializer
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw <4 x i32> [[X1]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[S0]], <4 x i32> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <8 x i32> [[M]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %m = mul <8 x i32> %a, %b
@@ -2066,12 +1747,7 @@ define <vscale x 8 x i32> @flags_stay_on_the_merged_op_scalable(<vscale x 8 x i3
 ; CHECK-SAME: <vscale x 8 x i32> [[A:%.*]], <vscale x 8 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = mul <vscale x 8 x i32> [[A]], [[B]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(<vscale x 8 x i32> [[M]])
-; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> [[M]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[D]], 1
-; CHECK-NEXT:    [[S0:%.*]] = shl nuw nsw <vscale x 4 x i32> [[X0]], zeroinitializer
-; CHECK-NEXT:    [[S1:%.*]] = shl nuw nsw <vscale x 4 x i32> [[X1]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[S0]], <vscale x 4 x i32> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw <vscale x 8 x i32> [[M]], zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %m = mul <vscale x 8 x i32> %a, %b
@@ -2128,9 +1804,8 @@ define <vscale x 8 x i32> @differing_immarg_scalable(<vscale x 8 x i32> %x) {
 define <8 x i32> @repeated_operand(<4 x i32> %x0, <4 x i32> %x1) {
 ; CHECK-LABEL: define <8 x i32> @repeated_operand(
 ; CHECK-SAME: <4 x i32> [[X0:%.*]], <4 x i32> [[X1:%.*]]) {
-; CHECK-NEXT:    [[A0:%.*]] = add <4 x i32> [[X0]], [[X0]]
-; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[X1]], [[X1]]
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[A0]], <4 x i32> [[A1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[X0]], <4 x i32> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret <8 x i32> [[R]]
 ;
   %a0 = add <4 x i32> %x0, %x0
@@ -2142,9 +1817,8 @@ define <8 x i32> @repeated_operand(<4 x i32> %x0, <4 x i32> %x1) {
 define <vscale x 8 x i32> @repeated_operand_scalable(<vscale x 4 x i32> %x0, <vscale x 4 x i32> %x1) {
 ; CHECK-LABEL: define <vscale x 8 x i32> @repeated_operand_scalable(
 ; CHECK-SAME: <vscale x 4 x i32> [[X0:%.*]], <vscale x 4 x i32> [[X1:%.*]]) {
-; CHECK-NEXT:    [[A0:%.*]] = add <vscale x 4 x i32> [[X0]], [[X0]]
-; CHECK-NEXT:    [[A1:%.*]] = add <vscale x 4 x i32> [[X1]], [[X1]]
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[A0]], <vscale x 4 x i32> [[A1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[X0]], <vscale x 4 x i32> [[X1]])
+; CHECK-NEXT:    [[R:%.*]] = add <vscale x 8 x i32> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[R]]
 ;
   %a0 = add <vscale x 4 x i32> %x0, %x0
@@ -2156,12 +1830,7 @@ define <vscale x 8 x i32> @repeated_operand_scalable(<vscale x 4 x i32> %x0, <vs
 define <8 x float> @select_scalar_cond(<8 x float> %x, i1 %c) {
 ; CHECK-LABEL: define <8 x float> @select_scalar_cond(
 ; CHECK-SAME: <8 x float> [[X:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <4 x float>, <4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], <4 x float> [[X0]], <4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], <4 x float> [[X1]], <4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[S0]], <4 x float> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], <8 x float> [[X]], <8 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %dx = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %x)
@@ -2176,12 +1845,7 @@ define <8 x float> @select_scalar_cond(<8 x float> %x, i1 %c) {
 define <vscale x 8 x float> @select_scalar_cond_scalable(<vscale x 8 x float> %x, i1 %c) {
 ; CHECK-LABEL: define <vscale x 8 x float> @select_scalar_cond_scalable(
 ; CHECK-SAME: <vscale x 8 x float> [[X:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[DX:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> [[X]])
-; CHECK-NEXT:    [[X0:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 0
-; CHECK-NEXT:    [[X1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[DX]], 1
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C]], <vscale x 4 x float> [[X0]], <vscale x 4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C]], <vscale x 4 x float> [[X1]], <vscale x 4 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[S0]], <vscale x 4 x float> [[S1]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], <vscale x 8 x float> [[X]], <vscale x 8 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %dx = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %x)
@@ -2196,9 +1860,8 @@ define <vscale x 8 x float> @select_scalar_cond_scalable(<vscale x 8 x float> %x
 define <8 x float> @select_vector_cond(<4 x i1> %c0, <4 x i1> %c1) {
 ; CHECK-LABEL: define <8 x float> @select_vector_cond(
 ; CHECK-SAME: <4 x i1> [[C0:%.*]], <4 x i1> [[C1:%.*]]) {
-; CHECK-NEXT:    [[S0:%.*]] = select <4 x i1> [[C0]], <4 x float> splat (float 1.000000e+00), <4 x float> splat (float 2.000000e+00)
-; CHECK-NEXT:    [[S1:%.*]] = select <4 x i1> [[C1]], <4 x float> splat (float 1.000000e+00), <4 x float> splat (float 2.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[S0]], <4 x float> [[S1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> [[C0]], <4 x i1> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = select <8 x i1> [[TMP1]], <8 x float> splat (float 1.000000e+00), <8 x float> splat (float 2.000000e+00)
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
   %s0 = select <4 x i1> %c0, <4 x float> splat (float 1.0), <4 x float> splat (float 2.0)
@@ -2210,9 +1873,8 @@ define <8 x float> @select_vector_cond(<4 x i1> %c0, <4 x i1> %c1) {
 define <vscale x 8 x float> @select_vector_cond_scalable(<vscale x 4 x i1> %c0, <vscale x 4 x i1> %c1) {
 ; CHECK-LABEL: define <vscale x 8 x float> @select_vector_cond_scalable(
 ; CHECK-SAME: <vscale x 4 x i1> [[C0:%.*]], <vscale x 4 x i1> [[C1:%.*]]) {
-; CHECK-NEXT:    [[S0:%.*]] = select <vscale x 4 x i1> [[C0]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 2.000000e+00)
-; CHECK-NEXT:    [[S1:%.*]] = select <vscale x 4 x i1> [[C1]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> splat (float 2.000000e+00)
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float> [[S0]], <vscale x 4 x float> [[S1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> [[C0]], <vscale x 4 x i1> [[C1]])
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 8 x i1> [[TMP1]], <vscale x 8 x float> splat (float 1.000000e+00), <vscale x 8 x float> splat (float 2.000000e+00)
 ; CHECK-NEXT:    ret <vscale x 8 x float> [[R]]
 ;
   %s0 = select <vscale x 4 x i1> %c0, <vscale x 4 x float> splat (float 1.0), <vscale x 4 x float> splat (float 2.0)
