@@ -142,41 +142,39 @@ bool SISinkAsyncDMA::sinkFromBlock(MachineBasicBlock &MBB) {
   SmallVector<MachineInstr *, 4> ToSink;
   bool CrossedUnsafe = false;
   bool CrossedM0Write = false;
+  bool DontMoveAcrossStore = true;
 
-  for (MachineInstr &TMI : reverse(*ThenBB)) {
-    if (isAsyncMarker(TMI))
+  for (MachineInstr &MI : reverse(*ThenBB)) {
+    if (isAsyncMarker(MI))
       return false;
-    if (TMI.isMetaInstruction())
+    if (MI.isMetaInstruction() || MI.isUnconditionalBranch())
       continue;
 
-    if (isAsyncDMA(TMI)) {
+    if (isAsyncDMA(MI)) {
       // A cluster load takes its mask from M0.
       if (CrossedUnsafe ||
-          (CrossedM0Write && TMI.readsRegister(AMDGPU::M0, TRI)))
+          (CrossedM0Write && MI.readsRegister(AMDGPU::M0, TRI)))
         return false;
-      ToSink.push_back(&TMI);
+      ToSink.push_back(&MI);
       continue;
     }
 
-    CrossedUnsafe |= TII->hasUnwantedEffectsWhenEXECEmpty(TMI) ||
-                     TMI.modifiesRegister(AMDGPU::EXEC, TRI) ||
-                     TMI.hasUnmodeledSideEffects() || TMI.mayStore() ||
-                     (TMI.mayLoad() && !TMI.isDereferenceableInvariantLoad());
-    CrossedM0Write |= TMI.modifiesRegister(AMDGPU::M0, TRI);
+    CrossedUnsafe |= TII->hasUnwantedEffectsWhenEXECEmpty(MI) ||
+                     MI.modifiesRegister(AMDGPU::EXEC, TRI) ||
+                     !MI.isSafeToMove(DontMoveAcrossStore);
+    CrossedM0Write |= MI.modifiesRegister(AMDGPU::M0, TRI);
   }
   if (ToSink.empty())
     return false;
 
-  std::reverse(ToSink.begin(), ToSink.end());
-
   MachineSSAUpdater Updater(*MBB.getParent());
   SmallDenseMap<Register, Register, 4> MergedRegs;
-  for (MachineInstr *DmaMI : ToSink) {
+  for (MachineInstr *DmaMI : reverse(ToSink)) {
     for (MachineOperand &MO : DmaMI->uses()) {
       if (!MO.isReg() || !MO.readsReg() || !MO.getReg().isVirtual())
         continue;
       Register Reg = MO.getReg();
-      if (MRI->getVRegDef(Reg)->getParent() != ThenBB)
+      if (MRI->getDefBlock(Reg) != ThenBB)
         continue;
       Register &Merged = MergedRegs[Reg];
       if (!Merged) {
@@ -192,7 +190,7 @@ bool SISinkAsyncDMA::sinkFromBlock(MachineBasicBlock &MBB) {
     DmaMI->moveBefore(&*Boundary);
   }
 
-  JoinBB->splitAt(*ToSink.back(), /*UpdateLiveIns=*/true);
+  JoinBB->splitAt(*ToSink.front(), /*UpdateLiveIns=*/true);
 
   return true;
 }
