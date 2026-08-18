@@ -2658,9 +2658,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   Type *ValTy = I.getValOperand()->getType();
   Type *PtrTy = I.getPointerOperand()->getType();
-  // Encode the address space and value type in the name (e.g. _p1_i32,
-  // _p1_v2i32), as lowerLLVMIntrinsicName() does, since SPIR-V resolves an
-  // imported function by its linkage name alone.
+  // Encode the address space and value type in the name for overload.
   std::string TypeSuffix;
   if (auto *VecTy = dyn_cast<FixedVectorType>(ValTy))
     TypeSuffix = "v" + std::to_string(VecTy->getNumElements());
