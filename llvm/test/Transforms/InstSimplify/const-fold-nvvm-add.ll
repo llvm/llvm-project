@@ -557,11 +557,10 @@ define bfloat @test_subnorm_plus_subnorm_to_normal_rz_bf16() {
 ;###############################################################
 ;#                  Add(Normal, -Subnormal) -> Subnormal       #
 ;###############################################################
-; Tests addition of 2^-126 (the smallest normal number) and -(2^127).
-; - Without FTZ: The result is correctly computed as a subnormal (2^127)
-; - With FTZ: The result is flushed to zero.
-; This verifies that the output is also flushed to zero, as we'd end up
-; with 2^-126 if we only flushed the inputs.
+; Tests addition of 2^-126 (the smallest normal number) and -(2^-127).
+; - Without FTZ: The result is correctly computed as a subnormal (2^-127)
+; - With FTZ: The subnormal input is flushed to zero, so the result is the
+;   normal input (2^-126)
 
 define double @test_normal_minus_subnorm_to_subnorm_rm_d() {
 ; CHECK-LABEL: define double @test_normal_minus_subnorm_to_subnorm_rm_d() {
@@ -645,17 +644,17 @@ define float @test_normal_minus_subnorm_to_subnorm_rn_ftz_f() {
 
 define float @test_normal_minus_subnorm_to_subnorm_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_normal_minus_subnorm_to_subnorm_rp_ftz_f() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3800000000000000, float 0x3800000000000000, /* rnd=rp */ i32 2)
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3810000000000000, float 0xB800000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
 define float @test_normal_minus_subnorm_to_subnorm_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_normal_minus_subnorm_to_subnorm_rz_ftz_f() {
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3800000000000000, float 0x3800000000000000, /* rnd=rz */ i32 0)
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3810000000000000, float 0xB800000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -691,6 +690,38 @@ define half @test_normal_minus_subnorm_to_subnorm_rz_f16() {
   ret half %res
 }
 
+define half @test_normal_minus_subnorm_to_subnorm_rm_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_subnorm_to_subnorm_rm_ftz_f16() {
+; CHECK-NEXT:    ret half 6.103520e-05
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0400, half 0xH8200, /* rnd=rm */ i32 3)
+  ret half %res
+}
+
+define half @test_normal_minus_subnorm_to_subnorm_rn_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_subnorm_to_subnorm_rn_ftz_f16() {
+; CHECK-NEXT:    ret half 6.103520e-05
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0400, half 0xH8200, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define half @test_normal_minus_subnorm_to_subnorm_rp_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_subnorm_to_subnorm_rp_ftz_f16() {
+; CHECK-NEXT:    ret half 6.103520e-05
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0400, half 0xH8200, /* rnd=rp */ i32 2)
+  ret half %res
+}
+
+define half @test_normal_minus_subnorm_to_subnorm_rz_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_subnorm_to_subnorm_rz_ftz_f16() {
+; CHECK-NEXT:    ret half 6.103520e-05
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0400, half 0xH8200, /* rnd=rz */ i32 0)
+  ret half %res
+}
+
 define bfloat @test_normal_minus_subnorm_to_subnorm_rm_bf16() {
 ; CHECK-LABEL: define bfloat @test_normal_minus_subnorm_to_subnorm_rm_bf16() {
 ; CHECK-NEXT:    ret bfloat 5.877470e-39
@@ -721,6 +752,143 @@ define bfloat @test_normal_minus_subnorm_to_subnorm_rz_bf16() {
 ;
   %res = call bfloat @llvm.nvvm.fadd.bf16(bfloat 0xR0080, bfloat 0xR8040, /* rnd=rz */ i32 0)
   ret bfloat %res
+}
+
+;###############################################################
+;#                  Add(Normal, -Normal) -> Subnormal          #
+;###############################################################
+; Tests addition of 1.5*(2^-126) and -(2^-126), where both inputs are normal
+; but the exact result is subnormal.
+; - Without FTZ: The result is the exact difference (2^-127)
+; - With FTZ: The result is flushed to zero. Flushing the inputs alone would
+;   leave it untouched, as neither input is subnormal.
+
+define float @test_normal_minus_normal_to_subnorm_rm_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rm_f() {
+; CHECK-NEXT:    ret float f0x00400000
+;
+  %res = call float @llvm.nvvm.fadd.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rm */ i32 3)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rn_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rn_f() {
+; CHECK-NEXT:    ret float f0x00400000
+;
+  %res = call float @llvm.nvvm.fadd.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rn */ i32 1)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rp_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rp_f() {
+; CHECK-NEXT:    ret float f0x00400000
+;
+  %res = call float @llvm.nvvm.fadd.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rp */ i32 2)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rz_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rz_f() {
+; CHECK-NEXT:    ret float f0x00400000
+;
+  %res = call float @llvm.nvvm.fadd.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rz */ i32 0)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rm_ftz_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rm_ftz_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rm */ i32 3)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rn_ftz_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rn_ftz_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rn */ i32 1)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rp_ftz_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rp_ftz_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rp */ i32 2)
+  ret float %res
+}
+
+define float @test_normal_minus_normal_to_subnorm_rz_ftz_f() {
+; CHECK-LABEL: define float @test_normal_minus_normal_to_subnorm_rz_ftz_f() {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %res = call float @llvm.nvvm.fadd.ftz.f32(float 0x3818000000000000, float 0xB810000000000000, /* rnd=rz */ i32 0)
+  ret float %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rm_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rm_f16() {
+; CHECK-NEXT:    ret half 3.051760e-05
+;
+  %res = call half @llvm.nvvm.fadd.f16(half 0xH0600, half 0xH8400, /* rnd=rm */ i32 3)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rn_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rn_f16() {
+; CHECK-NEXT:    ret half 3.051760e-05
+;
+  %res = call half @llvm.nvvm.fadd.f16(half 0xH0600, half 0xH8400, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rp_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rp_f16() {
+; CHECK-NEXT:    ret half 3.051760e-05
+;
+  %res = call half @llvm.nvvm.fadd.f16(half 0xH0600, half 0xH8400, /* rnd=rp */ i32 2)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rz_f16() {
+; CHECK-NEXT:    ret half 3.051760e-05
+;
+  %res = call half @llvm.nvvm.fadd.f16(half 0xH0600, half 0xH8400, /* rnd=rz */ i32 0)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rm_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rm_ftz_f16() {
+; CHECK-NEXT:    ret half 0.000000e+00
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0600, half 0xH8400, /* rnd=rm */ i32 3)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rn_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rn_ftz_f16() {
+; CHECK-NEXT:    ret half 0.000000e+00
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0600, half 0xH8400, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rp_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rp_ftz_f16() {
+; CHECK-NEXT:    ret half 0.000000e+00
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0600, half 0xH8400, /* rnd=rp */ i32 2)
+  ret half %res
+}
+
+define half @test_normal_minus_normal_to_subnorm_rz_ftz_f16() {
+; CHECK-LABEL: define half @test_normal_minus_normal_to_subnorm_rz_ftz_f16() {
+; CHECK-NEXT:    ret half 0.000000e+00
+;
+  %res = call half @llvm.nvvm.fadd.ftz.f16(half 0xH0600, half 0xH8400, /* rnd=rz */ i32 0)
+  ret half %res
 }
 
 ;###############################################################
