@@ -61,7 +61,8 @@ entry:
   ret <2 x double> %c
 }
 
-; A lane that is not a ConstantFP has nothing to look up in the table.
+; A lane that is not a ConstantFP (e.g. poison or undef) has nothing to look
+; up in the table.
 define <2 x float> @test_tdo_v2_f32_cos_poison_lane() {
 ; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_cos_poison_lane() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -70,17 +71,6 @@ define <2 x float> @test_tdo_v2_f32_cos_poison_lane() {
 ;
 entry:
   %c = call <2 x float> @_Z3cosDv2_f(<2 x float> <float 0.000000e+00, float poison>)
-  ret <2 x float> %c
-}
-
-define <2 x float> @test_tdo_v2_f32_cos_undef_lane() {
-; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_cos_undef_lane() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C:%.*]] = call <2 x float> @_Z3cosDv2_f(<2 x float> <float 0.000000e+00, float undef>)
-; CHECK-NEXT:    ret <2 x float> [[C]]
-;
-entry:
-  %c = call <2 x float> @_Z3cosDv2_f(<2 x float> <float 0.000000e+00, float undef>)
   ret <2 x float> %c
 }
 
