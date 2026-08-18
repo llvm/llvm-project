@@ -235,6 +235,10 @@ libc_test_library(
 libc_test_library(
     name = "protected_pages",
     hdrs = ["memory_utils/protected_pages.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//libc:__support_macros_attributes",
         "//libc:__support_macros_properties_os",
