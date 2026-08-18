@@ -185,7 +185,7 @@ body:             |
   MachineInstr *U1 = Instrs[2];
   MachineInstr *U2 = Instrs[3];
 
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MRI);
   GCNRPTracker::LiveRegSet Empty;
   RPTracker.reset(MRI, Empty);
 
@@ -236,7 +236,7 @@ body:             |
   MachineInstr *DefS0 = Instrs[0];
   MachineInstr *UseRedef = Instrs[1];
 
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MRI);
   GCNRPTracker::LiveRegSet Empty;
   RPTracker.reset(MRI, Empty);
 
