@@ -105,6 +105,7 @@
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -119,7 +120,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace clang::serialization;

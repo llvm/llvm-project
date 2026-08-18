@@ -17,10 +17,10 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace {

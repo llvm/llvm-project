@@ -13,10 +13,10 @@
 #include "XRefs.h"
 #include "refactor/InsertionPoint.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclObjC.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "clang/AST/DeclObjC.h"
 
 namespace clang {
 namespace clangd {

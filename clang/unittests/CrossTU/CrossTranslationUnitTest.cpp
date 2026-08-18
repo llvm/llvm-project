@@ -11,13 +11,13 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "gtest/gtest.h"
 #include <cassert>
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 
 namespace clang {
 namespace cross_tu {

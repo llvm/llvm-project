@@ -17,9 +17,9 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Path.h"
 #include <algorithm>
 #include <optional>
-#include "llvm/Support/Path.h"
 
 using namespace clang;
 

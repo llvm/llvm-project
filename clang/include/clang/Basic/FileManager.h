@@ -38,10 +38,6 @@
 namespace llvm {
 
 namespace vfs {
-// Only named through pointers, references and IntrusiveRefCntPtr below.
-// Including VirtualFileSystem.h here would put <chrono>, and with it libc++'s
-// <sstream>/<locale>/<format> machinery, into every translation unit that
-// touches SourceManager.
 class File;
 class FileSystem;
 class Status;
@@ -161,9 +157,8 @@ public:
   /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
-  /// Construct a file manager over the real file system. Kept separate from
-  /// the constructor above rather than defaulting its argument so that callers
-  /// do not need llvm::vfs::FileSystem to be complete.
+  /// Construct a file manager over the real file system. Separate from the
+  /// overload above so that callers do not need a complete FileSystem type.
   explicit FileManager(const FileSystemOptions &FileSystemOpts);
   ~FileManager();
 

@@ -10,6 +10,7 @@
 #include "Selection.h"
 #include "TestTU.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,7 +20,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
-#include "clang/AST/DeclObjC.h"
 
 namespace clang {
 namespace clangd {

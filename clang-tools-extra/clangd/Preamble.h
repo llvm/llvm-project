@@ -41,13 +41,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
+#include "clang/AST/ASTContext.h"
 #include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include "clang/AST/ASTContext.h"
 
 namespace clang {
 namespace clangd {

@@ -22,10 +22,10 @@
 #include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace syntax {

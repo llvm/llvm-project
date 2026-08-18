@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Out-of-line members of GlobalDecl. GlobalDecl is a small key type that is
-// included very widely, so everything here is kept out of the header to spare
-// its users the OpenMP and OpenACC declaration hierarchies, the generated
-// attribute classes, and the template declaration hierarchy.
+// GlobalDecl.h is included very widely, so these members are defined here to
+// keep the OpenMP and OpenACC declaration hierarchies, the generated attribute
+// classes, and the template declaration hierarchy out of it.
 //
 //===----------------------------------------------------------------------===//
 

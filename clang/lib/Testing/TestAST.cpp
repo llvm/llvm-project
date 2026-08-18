@@ -16,9 +16,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
+#include "clang/Lex/Preprocessor.h"
 #include "gtest/gtest.h"
 #include <string>
-#include "clang/Lex/Preprocessor.h"
 
 namespace clang {
 namespace {

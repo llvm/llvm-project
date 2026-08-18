@@ -29,11 +29,11 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/StringSaver.h"
 
+#include "llvm/Support/VirtualFileSystem.h"
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace llvm {
 class Triple;

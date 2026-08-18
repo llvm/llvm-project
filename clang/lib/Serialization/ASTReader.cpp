@@ -124,6 +124,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -142,7 +143,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang;
 using namespace clang::serialization;

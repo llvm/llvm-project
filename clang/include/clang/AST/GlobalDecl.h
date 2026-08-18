@@ -61,17 +61,10 @@ class GlobalDecl {
   llvm::PointerIntPair<const Decl *, 3> Value;
   unsigned MultiVersionIndex = 0;
 
-  /// Whether \p D carries the CUDA `__global__` attribute.
-  ///
-  /// Defined out of line so that this header does not have to include the
-  /// generated attribute class definitions for assertions alone.
   CLANG_ABI static bool hasCUDAGlobalAttr(const Decl *D);
 
-  /// Whether \p D is a kernel that is referred to through an explicit
-  /// KernelReferenceKind, either directly or as a function template.
-  ///
-  /// Defined out of line so that this header does not have to include the
-  /// template declaration hierarchy for assertions alone.
+  /// Whether \p D is a kernel referred to through a KernelReferenceKind,
+  /// either directly or as a function template.
   CLANG_ABI static bool isKernelReference(const Decl *D);
 
   void Init(const Decl *D) {
@@ -101,8 +94,6 @@ public:
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
-  // Defined out of line so that this header does not have to pull in the
-  // OpenMP and OpenACC declaration hierarchies for these rare cases.
   GlobalDecl(const OMPDeclareReductionDecl *D);
   GlobalDecl(const OMPDeclareMapperDecl *D);
   GlobalDecl(const OpenACCRoutineDecl *D);
@@ -173,8 +164,6 @@ public:
     return GD;
   }
 
-  /// Defined out of line so that this header does not have to include the
-  /// generated attribute class definitions.
   CLANG_ABI static KernelReferenceKind
   getDefaultKernelReference(const FunctionDecl *D);
 

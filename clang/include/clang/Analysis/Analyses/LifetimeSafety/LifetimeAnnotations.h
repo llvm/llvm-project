@@ -17,8 +17,6 @@
 #include <optional>
 
 namespace clang {
-// Only ever named through a pointer here, so the generated attribute
-// class definitions are not needed.
 class LifetimeBoundAttr;
 } // namespace clang
 

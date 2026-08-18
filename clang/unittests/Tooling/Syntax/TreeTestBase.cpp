@@ -12,6 +12,7 @@
 
 #include "TreeTestBase.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -31,7 +32,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
-#include "clang/AST/ASTContext.h"
 
 using namespace clang;
 using namespace clang::syntax;

@@ -22,8 +22,8 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/Parser.h"
 #include "llvm/ADT/SmallString.h"
-#include "gtest/gtest.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "gtest/gtest.h"
 
 // static bool HACK_EnableDebugInUnitTest = (::llvm::DebugFlag = true);
 

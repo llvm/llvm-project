@@ -26,11 +26,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 #include <queue>
 #include <set>
 #include <utility>
-#include "llvm/Support/Path.h"
 
 namespace clang::include_cleaner {
 namespace {
