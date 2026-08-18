@@ -2649,8 +2649,9 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
       getMemScope(TM.getTargetTriple(), I.getContext(), I.getSyncScopeID()));
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  uint32_t MemSem =
-      static_cast<uint32_t>(getMemSemantics(I.getOrdering())) | ScSem;
+  uint32_t MemSem = getMemSemanticsWithStorageClass(
+      TM.getTargetTriple(),
+      static_cast<uint32_t>(getMemSemantics(I.getOrdering())), ScSem);
 
   std::string FuncName = (Op == AtomicRMWInst::UIncWrap)
                              ? "__translate_spirv_atomic_uinc_wrap"
