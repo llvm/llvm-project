@@ -501,7 +501,7 @@ NamespaceDecl *SemaSYCL::getSyclNamespace(SourceLocation Loc) {
   IdentifierInfo const &SyclNamespaceID = Ctx.Idents.get("sycl");
 
   LookupResult NamespaceResult(SemaRef, &SyclNamespaceID, Loc,
-                              Sema::LookupNamespaceName);
+                               Sema::LookupNamespaceName);
   SemaRef.LookupQualifiedName(NamespaceResult, Ctx.getTranslationUnitDecl());
 
   if (NamespaceResult.isAmbiguous())
@@ -514,17 +514,18 @@ NamespaceDecl *SemaSYCL::getSyclNamespace(SourceLocation Loc) {
 }
 
 bool SemaSYCL::isEnforcingDeviceCopyable(SourceLocation Loc) const {
-  DiagnosticsEngine::Level DiagLvl =
-      getDiagnostics().getDiagnosticLevel(
-          diag::warn_sycl_kernel_param_not_device_copyable, Loc);
+  DiagnosticsEngine::Level DiagLvl = getDiagnostics().getDiagnosticLevel(
+      diag::warn_sycl_kernel_param_not_device_copyable, Loc);
   return DiagLvl >= DiagnosticsEngine::Level::Error;
 }
 
-bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty, SourceLocation Loc) {
+bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
+                                           SourceLocation Loc) {
   ASTContext &Ctx = getASTContext();
 
   // TODO: do I even bother caching lambdas?
-  // Lambda signatures are weird, and odds are lambdas are a one-time lookup anyway
+  // Lambda signatures are weird, and odds are lambdas are a one-time lookup
+  // anyway
   QualType CanonicalTy = Ctx.getCanonicalType(Ty);
   auto It = MarkedDeviceCopyableCache.find(CanonicalTy);
   if (It != MarkedDeviceCopyableCache.end()) {
@@ -630,9 +631,9 @@ bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty, SourceLocation Loc
     Expr *GotExpr;
     ICEDiagnoser(QualType &TT, Expr *E) : TraitTy(TT), GotExpr(E) {}
     Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
-                                              SourceLocation Loc) override {
+                                               SourceLocation Loc) override {
       return S.Diag(Loc, diag::err_sycl_unexpected_type_trait_val)
-            << TraitTy << "std::true_type or std::false_type" << GotExpr;
+             << TraitTy << "std::true_type or std::false_type" << GotExpr;
     }
   } Diagnoser(IDCTrait, ValueExpr.get());
 
@@ -898,25 +899,27 @@ public:
     ObjectAccessPath.push_back(BS);
     QualType Ty = BS->getType();
     // If type is explicitly marked as sycl::is_device_copyable, don't check the
-    // type further: Defining a non device-copyable type as device-copyable is 
+    // type further: Defining a non device-copyable type as device-copyable is
     // UB.
     if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, BS->getBaseTypeLoc()))
       return false;
     return checkType(Ty) && checkDeviceCopyable(Ty);
-    // TODO: if a class inherits an is_device_copyable class, does that make it device copyable?
+    // TODO: if a class inherits an is_device_copyable class, does that make it
+    // device copyable?
   }
 
   bool visitFieldDeclPre(const FieldDecl *FD) {
     ObjectAccessPath.push_back(FD);
     QualType Ty = FD->getType();
     // If type is explicitly marked as sycl::is_device_copyable, don't check the
-    // type further: Defining a non device-copyable type as device-copyable is 
+    // type further: Defining a non device-copyable type as device-copyable is
     // UB.
     if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, FD->getLocation()))
       return false;
     return checkType(Ty) && checkDeviceCopyable(Ty);
-    // TODO: if a class has a field of type is_device_copyable, should I still check the field type?
-    // can I guarantee e.g. copy constructors and other special functions are going to be safe on the device?
+    // TODO: if a class has a field of type is_device_copyable, should I still
+    // check the field type? can I guarantee e.g. copy constructors and other
+    // special functions are going to be safe on the device?
   }
 
   // Returns true if subobjects should be visited and false otherwise.
@@ -945,13 +948,13 @@ public:
       return false;
     }
 
-    // TODO Make sure I'm descending into Lambdas properly 
+    // TODO Make sure I'm descending into Lambdas properly
     return true;
   }
 
   // TODO this function needs more context to produce useful diagnostics
-  // - i.e. if traversal class is already marked is_device_copyable, then issue a
-  //   warning instead
+  // - i.e. if traversal class is already marked is_device_copyable, then issue
+  //   a warning instead
   // TODO should these results be cached?
   bool checkDeviceCopyable(QualType Ty) {
     auto DirectParent = ObjectAccessPath.back();
@@ -961,13 +964,14 @@ public:
     QualType Type = Ty;
     if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent))
       Type = Ty->getPointeeType();
-    // TODO exit earlier if it's a reference but not a parmvardecl 
+    // TODO exit earlier if it's a reference but not a parmvardecl
 
     // No need to lookup anything if trivially copyable already
     if (Type.isTriviallyCopyableType(SemaSYCLRef.getASTContext()))
       return true;
 
-    bool markedCopyable = SemaSYCLRef.checkExplicitDeviceCopyable(Type, Detail.Loc);
+    bool markedCopyable =
+        SemaSYCLRef.checkExplicitDeviceCopyable(Type, Detail.Loc);
 
     if (const CXXRecordDecl *RD = Type->getAsCXXRecordDecl()) {
       // Set all lambdas as copyable: Future traversal deeper into the lambda
@@ -976,8 +980,8 @@ public:
       if (RD->isLambda())
         return true;
       // TODO confirm:
-      // - does RD have at least one eligible copy constructor, move constructor,
-      // copy assignment operator, or move assignment operator?
+      // - does RD have at least one eligible copy constructor, move
+      //   constructor, copy assignment operator, or move assignment operator?
       //   - for each of aforementioned, ensure it is public
       //   - confirm each does a bitwise copy (perhaps not possible, up to the
       //   user to enforce)
@@ -990,8 +994,11 @@ public:
     // TODO subsequent base classes shouldn't be checked for not device copyable
 
     if (!markedCopyable) {
-      // TODO Type is culprit but Ty is original caller: fix diagnostics to include both
-      SemaSYCLRef.Diag(Detail.Loc, diag::warn_sycl_kernel_param_not_device_copyable) << Type;
+      // TODO Type is culprit but Ty is original caller: fix diagnostics to
+      // include both
+      SemaSYCLRef.Diag(Detail.Loc,
+                       diag::warn_sycl_kernel_param_not_device_copyable)
+          << Type;
       emitObjectAccessPathNotes();
 
       // Continue traversal if not enforcing device-copyability.
