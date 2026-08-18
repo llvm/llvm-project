@@ -1320,7 +1320,7 @@ MLocTracker::emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
         // manifests as too-little or too-much memory being read from the stack.
         // However we can't solve that without putting more type information in
         // debug-info.
-        if (ValueSizeInBits > MF.getTarget().getPointerSizeInBits(0))
+        if (ValueSizeInBits > MF.getDataLayout().getPointerSizeInBits(0))
           UseDerefSize = false;
 
         SmallVector<uint64_t, 5> OffsetOps;

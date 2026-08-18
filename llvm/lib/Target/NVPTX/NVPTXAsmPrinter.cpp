@@ -1815,7 +1815,8 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
   case Type::DoubleTyID:
     return "f64";
   case Type::PointerTyID: {
-    unsigned PtrSize = TM.getPointerSizeInBits(Ty->getPointerAddressSpace());
+    unsigned PtrSize =
+        getDataLayout().getPointerSizeInBits(Ty->getPointerAddressSpace());
     assert((PtrSize == 64 || PtrSize == 32) && "Unexpected pointer size");
 
     if (PtrSize == 64)

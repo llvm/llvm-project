@@ -7812,8 +7812,8 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   unsigned DestAS = N->getDestAddressSpace();
   assert(SrcAS != DestAS &&
          "addrspacecast must be between different address spaces");
-  assert(TLI.getTargetMachine().getPointerSize(SrcAS) !=
-             TLI.getTargetMachine().getPointerSize(DestAS) &&
+  assert(DAG.getDataLayout().getPointerSize(SrcAS) !=
+             DAG.getDataLayout().getPointerSize(DestAS) &&
          "addrspacecast must be between different ptr sizes");
   (void)TLI;
 

@@ -317,10 +317,10 @@ bool X86TargetMachine::parseMachineFunctionInfo(
   return false;
 }
 
-bool X86TargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
+bool X86TargetMachine::isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
                                            unsigned DestAS) const {
   assert(SrcAS != DestAS && "Expected different address spaces!");
-  if (getPointerSize(SrcAS) != getPointerSize(DestAS))
+  if (DL.getPointerSize(SrcAS) != DL.getPointerSize(DestAS))
     return false;
   return SrcAS < 256 && DestAS < 256;
 }

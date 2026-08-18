@@ -411,6 +411,7 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
                        char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
+      PointerSize(tm.getTargetTriple().getArchPointerBitWidth() / 8),
       SM(*this) {
   VerboseAsm = OutStreamer->isVerboseAsm();
   DwarfUsesRelocationsAcrossSections =
@@ -491,12 +492,6 @@ const DataLayout &AsmPrinter::getDataLayout() const {
   return MMI->getModule()->getDataLayout();
 }
 
-// Do not use the cached DataLayout because some client use it without a Module
-// (dsymutil, llvm-dwarfdump).
-unsigned AsmPrinter::getPointerSize() const {
-  return TM.getPointerSize(0); // FIXME: Default address space
-}
-
 const MCSubtargetInfo &AsmPrinter::getSubtargetInfo() const {
   assert(MF && "getSubtargetInfo requires a valid MachineFunction!");
   return MF->getSubtarget<MCSubtargetInfo>();
@@ -528,6 +523,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool AsmPrinter::doInitialization(Module &M) {
   MMI = GetMMI();
+  PointerSize = M.getDataLayout().getPointerSize(0);
   HasSplitStack = false;
   HasNoSplitStack = false;
   DbgInfoAvailable = !M.debug_compile_units().empty();
@@ -1737,7 +1733,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   const MCSymbol *FunctionSymbol = getFunctionBegin();
   uint64_t StackSize =
       FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
-  OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
+  const DataLayout &DL = getDataLayout();
+  OutStreamer->emitSymbolValue(FunctionSymbol,
+                               DL.getPointerSize(DL.getProgramAddressSpace()));
   OutStreamer->emitULEB128IntValue(StackSize);
 
   OutStreamer->popSection();
@@ -1843,9 +1841,11 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // 6) For each unique direct callee, the callee's PC.
   // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
-  OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
+  OutStreamer->emitSymbolValue(getSymbol(&F), ProgramPointerSize);
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)
     OutStreamer->emitInt64(TypeId->getZExtValue());
@@ -1855,7 +1855,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   if (DirectCallees.size() > 0) {
     OutStreamer->emitULEB128IntValue(DirectCallees.size());
     for (const auto &CalleeSymbol : DirectCallees)
-      OutStreamer->emitSymbolValue(CalleeSymbol, TM.getProgramPointerSize());
+      OutStreamer->emitSymbolValue(CalleeSymbol, ProgramPointerSize);
     FuncCGInfo.DirectCallees.clear();
   }
   if (IndirectCalleeTypeIDs.size() > 0) {
@@ -3570,10 +3570,12 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
 
   OutStreamer->switchSection(JumpTableSizesSection);
 
+  const DataLayout &DL = getDataLayout();
+  unsigned ProgramPointerSize = DL.getPointerSize(DL.getProgramAddressSpace());
   for (unsigned JTI = 0, E = JT.size(); JTI != E; ++JTI) {
     const std::vector<MachineBasicBlock *> &JTBBs = JT[JTI].MBBs;
-    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), TM.getProgramPointerSize());
-    OutStreamer->emitIntValue(JTBBs.size(), TM.getProgramPointerSize());
+    OutStreamer->emitSymbolValue(GetJTISymbol(JTI), ProgramPointerSize);
+    OutStreamer->emitIntValue(JTBBs.size(), ProgramPointerSize);
   }
 }
 
@@ -3972,7 +3974,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     const Constant *Op = CE->getOperand(0);
     unsigned DstAS = CE->getType()->getPointerAddressSpace();
     unsigned SrcAS = Op->getType()->getPointerAddressSpace();
-    if (TM.isNoopAddrSpaceCast(SrcAS, DstAS))
+    if (TM.isNoopAddrSpaceCast(getDataLayout(), SrcAS, DstAS))
       return lowerConstant(Op);
 
     break; // Error

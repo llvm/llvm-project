@@ -47,7 +47,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   // Addrspacecasts are always noops.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     return true;
   }
 };

@@ -36,8 +36,7 @@ using namespace llvm;
 
 SystemZXPLINKAsmPrinter::SystemZXPLINKAsmPrinter(
     TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-    : SystemZAsmPrinter(TM, std::move(Streamer)),
-      ADATable(TM.getPointerSize(0)) {}
+    : SystemZAsmPrinter(TM, std::move(Streamer)), ADATable(8) {}
 
 bool SystemZXPLINKAsmPrinter::doInitialization(Module &M) {
   SM.reset();
