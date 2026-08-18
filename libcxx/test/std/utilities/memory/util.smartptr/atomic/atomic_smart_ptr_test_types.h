@@ -5,11 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // Shared fixtures for libc++ tests under util.smartptr/atomic/{shared,weak}/:
 // heterogeneous value types (built-in, standard library, and user-defined).
-//
-//===----------------------------------------------------------------------===//
+
 
 #ifndef TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
 #define TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
