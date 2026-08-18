@@ -2176,6 +2176,7 @@ add_fp_unittest(
   HDRS
     IsSignalingTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.issignalingf128
 )
 

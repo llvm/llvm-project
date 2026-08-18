@@ -3046,6 +3046,7 @@ add_entrypoint_object(
   HDRS
     ../issignalingf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.issignalingf128
 )
 
