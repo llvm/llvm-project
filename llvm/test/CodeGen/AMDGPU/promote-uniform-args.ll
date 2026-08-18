@@ -1218,8 +1218,47 @@ define amdgpu_kernel void @k_ptrmask_private(ptr %p) {
   ret void
 }
 
+; optnone on the caller: ABI attributes must not be changed.
+define internal fastcc void @callee_optnone_caller(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_optnone_caller(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_optnone_caller(ptr %p) #2 {
+; CHECK-LABEL: define amdgpu_kernel void @k_optnone_caller(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    call fastcc void @callee_optnone_caller(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_optnone_caller(ptr %p)
+  ret void
+}
+
+; optnone on the callee itself.
+define internal fastcc void @callee_optnone_callee(ptr %p) #2 {
+; CHECK-LABEL: define internal fastcc void @callee_optnone_callee(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_optnone_callee(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_optnone_callee(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_optnone_callee(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_optnone_callee(ptr %p)
+  ret void
+}
+
 attributes #0 = { inlinehint }
 attributes #1 = { alwaysinline }
+attributes #2 = { noinline optnone }
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare ptr @llvm.amdgcn.readfirstlane.p0(ptr)

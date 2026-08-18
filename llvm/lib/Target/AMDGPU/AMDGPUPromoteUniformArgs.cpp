@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 // Promote provably-uniform pointer arguments of internal callees to \c inreg
-// (SGPR passing) on the definition and at every direct call site. Uniformity is
-// established conservatively: an operand is uniform if it is an always-uniform
-// instruction (per TargetTransformInfo) or an argument that every visible
-// caller forwards from another uniform value. A full \c UniformityInfo-based
-// check is a planned follow-up.
+// (SGPR passing) on the definition and at every direct call site. Pointers are
+// the primary target: non-entry pointer args default to VGPR unless marked
+// \c inreg, while many scalars already use the SGPR path. Scalar promotion is
+// a planned follow-up. Uniformity is established conservatively via
+// \c GCNTTIImpl::isAlwaysUniform (queried through TTI) plus recursive
+// propagation through visible caller chains. A full \c UniformityInfo check is
+// a planned follow-up.
 //
 //===----------------------------------------------------------------------===//
 
@@ -147,6 +149,13 @@ static bool calleeCastsArgToPrivate(const Argument &A) {
   return false;
 }
 
+static bool isAlwaysUniformValue(const TargetTransformInfo &TTI,
+                                 const Value *V) {
+  if (isa<Constant>(V))
+    return true;
+  return TTI.getValueUniformity(V) == ValueUniformity::AlwaysUniform;
+}
+
 static bool isTriviallyUniformArg(
     const Argument *Arg,
     function_ref<TargetTransformInfo &(const Function &)> GetTTI,
@@ -159,10 +168,8 @@ static bool isTriviallyUniformOperand(
   if (const auto *Arg = dyn_cast<Argument>(V))
     return isTriviallyUniformArg(Arg, GetTTI, Visited);
 
-  if (const auto *I = dyn_cast<Instruction>(V)) {
-    const TargetTransformInfo &TTI = GetTTI(*I->getFunction());
-    return TTI.getValueUniformity(V) == ValueUniformity::AlwaysUniform;
-  }
+  if (const auto *I = dyn_cast<Instruction>(V))
+    return isAlwaysUniformValue(GetTTI(*I->getFunction()), V);
 
   return false;
 }
@@ -218,6 +225,8 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
   while (RoundChanged) {
     RoundChanged = false;
     for (Function &F : M) {
+      if (F.hasOptNone())
+        continue;
       if (!isEligibleInRegUniformCallee(F))
         continue;
 
@@ -230,11 +239,16 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
       // isEligibleInRegUniformCallee guarantees every user is a direct,
       // non-musttail, non-invoke call to F, so we can just gather them.
       SmallVector<CallBase *, 8> Calls;
-      for (User *U : F.users())
-        if (auto *CB = dyn_cast<CallBase>(U);
-            CB && CB->getCalledFunction() == &F)
-          Calls.push_back(CB);
-      if (Calls.empty())
+      bool HasOptNoneCaller = false;
+      for (User *U : F.users()) {
+        auto *CB = dyn_cast<CallBase>(U);
+        if (!CB || CB->getCalledFunction() != &F)
+          continue;
+        if (CB->getFunction()->hasOptNone())
+          HasOptNoneCaller = true;
+        Calls.push_back(CB);
+      }
+      if (HasOptNoneCaller || Calls.empty())
         continue;
 
       bool FuncChanged = false;
