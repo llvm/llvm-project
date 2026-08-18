@@ -58,6 +58,10 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(GNUstepObjCRuntime)
 
+// An ISA chain deeper than this is not something a compiler produced. It comes
+// from inferior memory, so it is bounded rather than trusted.
+static constexpr uint32_t g_max_superclass_depth = 256;
+
 namespace {
 /// Registers the Objective-C selectors of a JIT'd expression module with the
 /// libobjc2 runtime.
@@ -217,6 +221,7 @@ private:
 };
 
 class GNUstepObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
+public:
   RecognizedStackFrameSP RecognizeFrame(StackFrameSP frame) override {
     return std::make_shared<GNUstepObjCExceptionRecognizedStackFrame>(frame);
   }
@@ -229,12 +234,37 @@ class GNUstepObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
 /// objc.dll, ...), so the recognizer is registered without a module filter
 /// and matched on the symbol alone; an empty module ConstString matches any
 /// module (StackFrameRecognizer.cpp).
+///
+/// The mangled name is what has to match. libobjc2's Windows exception
+/// back-end is C++ (eh_win32_msvc.cc), so where the runtime carries debug
+/// info the demangled name of this extern "C" function is
+/// `::objc_exception_throw(id)` rather than the bare symbol. Preferring the
+/// mangled name gives `objc_exception_throw` there, and falls back to the
+/// same string through the symbol when there is no debug info at all.
 void RegisterGNUstepObjCExceptionRecognizer(Process *process) {
   static const std::vector<ConstString> g_symbols = {
       ConstString("objc_exception_throw")};
-  process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
+  static const std::string g_name =
+      GNUstepObjCExceptionThrowFrameRecognizer().GetName();
+
+  // A runtime is created per Process but recognizers live on the Target, so
+  // re-running the same target would otherwise stack up a copy per run, each
+  // consulted for every frame.
+  StackFrameRecognizerManager &manager =
+      process->GetTarget().GetFrameRecognizerManager();
+  bool already_registered = false;
+  manager.ForEach([&](uint32_t, bool, std::string name, std::string,
+                      llvm::ArrayRef<ConstString>, Mangled::NamePreference,
+                      bool) {
+    if (name == g_name)
+      already_registered = true;
+  });
+  if (already_registered)
+    return;
+
+  manager.AddRecognizer(
       std::make_shared<GNUstepObjCExceptionThrowFrameRecognizer>(),
-      ConstString(), g_symbols, Mangled::NamePreference::ePreferDemangled,
+      ConstString(), g_symbols, Mangled::NamePreference::ePreferMangled,
       /*first_instruction_only=*/true);
 }
 } // namespace
@@ -799,8 +829,11 @@ GNUstepObjCRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
   if (!descriptor_sp || !descriptor_sp->IsValid())
     return {};
 
+  // The chain comes from inferior memory, so bound the walk rather than
+  // trusting it to terminate.
   static const ConstString g_NSException("NSException");
-  for (; descriptor_sp; descriptor_sp = descriptor_sp->GetSuperclass()) {
+  for (uint32_t depth = 0; descriptor_sp && depth < g_max_superclass_depth;
+       ++depth, descriptor_sp = descriptor_sp->GetSuperclass()) {
     if (descriptor_sp->GetClassName() == g_NSException)
       return cpp_exception_sp;
   }

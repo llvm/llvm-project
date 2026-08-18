@@ -268,6 +268,34 @@ static bool GNUstepNSURLSummary(ValueObject &valobj, Stream &stream,
   return true;
 }
 
+bool lldb_private::formatters::GNUstepNSURLSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // Shared type name with Apple's provider - see GNUstepNSDateSummaryProvider.
+  if (!IsGNUstepObjCRuntime(valobj))
+    return NSURLSummaryProvider(valobj, stream, options);
+  return GNUstepNSURLSummary(valobj, stream, options, /*depth=*/0);
+}
+
+bool lldb_private::formatters::GNUstepNSExceptionSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // Shared type name with Apple's provider - see GNUstepNSDateSummaryProvider.
+  if (!IsGNUstepObjCRuntime(valobj))
+    return NSException_SummaryProvider(valobj, stream, options);
+  // gnustep-base's NSException has three ivars - _e_name, _e_reason and
+  // _reserved - not the four Apple's does, and they sit behind
+  // GS_EXPOSE(NSException), so this depends on the runtime-metadata
+  // fallback. userInfo lives inside _reserved and is not reachable by name.
+  ValueObjectSP reason_sp = GNUstepGetIvar(valobj, "_e_reason");
+  if (!reason_sp || reason_sp->GetValueAsUnsigned(0) == 0) {
+    // A raised exception always has a name even when it carries no reason.
+    ValueObjectSP name_sp = GNUstepGetIvar(valobj, "_e_name");
+    if (!name_sp || name_sp->GetValueAsUnsigned(0) == 0)
+      return false;
+    return GNUstepNSStringSummaryProvider(*name_sp, stream, options);
+  }
+  return GNUstepNSStringSummaryProvider(*reason_sp, stream, options);
+}
+
 bool lldb_private::formatters::GNUstepNSNullSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   if (!IsGNUstepObjCRuntime(valobj))
@@ -467,6 +495,10 @@ void lldb_private::formatters::LoadGNUstepFormatters(
   AddCXXSummary(objc_category_sp, GNUstepNSNullSummaryProvider,
                 "GNUstep NSNull summary provider", "NSNull", summary_flags);
 
+  AddCXXSummary(objc_category_sp, GNUstepNSExceptionSummaryProvider,
+                "GNUstep NSException summary provider", "NSException",
+                summary_flags);
+
   AddCXXSummary(objc_category_sp, GNUstepNSURLSummaryProvider,
                 "GNUstep NSURL summary provider", "NSURL", summary_flags);
 
@@ -481,12 +513,4 @@ void lldb_private::formatters::LoadGNUstepFormatters(
   for (const char *name : {"objc_selector *", "SEL *"})
     AddCXXSummary(objc_category_sp, GNUstepObjCSELSummaryProvider<true>,
                   "GNUstep SEL summary provider", name, sel_flags);
-}
-
-bool lldb_private::formatters::GNUstepNSURLSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  // Shared type name with Apple's provider - see GNUstepNSDateSummaryProvider.
-  if (!IsGNUstepObjCRuntime(valobj))
-    return NSURLSummaryProvider(valobj, stream, options);
-  return GNUstepNSURLSummary(valobj, stream, options, /*depth=*/0);
 }
