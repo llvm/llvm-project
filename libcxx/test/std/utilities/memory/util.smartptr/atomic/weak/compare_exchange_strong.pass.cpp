@@ -14,7 +14,7 @@
 
 #include <atomic>
 #include <cassert>
-#include <concepts> // needed on Armv7/Armv8 with -fmodules
+#include <concepts>
 #include <memory>
 
 #include "../atomic_smart_ptr_test_types.h"
