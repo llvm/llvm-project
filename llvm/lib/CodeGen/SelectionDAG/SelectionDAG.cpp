@@ -3407,6 +3407,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::FREEZE: {
+    if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
+                                         UndefPoisonKind::UndefOrPoison))
+      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    break;
+  }
   case ISD::MERGE_VALUES:
     return computeKnownBits(Op.getOperand(Op.getResNo()), DemandedElts,
                             Depth + 1);

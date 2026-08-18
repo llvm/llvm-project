@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenACC.h"
 
 #include "flang/Common/idioms.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -20,6 +21,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
+#include "flang/Lower/Support/LoopAnnotation.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -726,6 +728,75 @@ extractComponentFromDesignator(
   return componentRef;
 }
 
+/// True when \p triplet covers the full extent of \p base's \p dimension:
+/// omitted bounds, or explicit bounds that fold to the declared LBOUND/UBOUND,
+/// with unit stride.
+static bool
+isWholeDimensionTriplet(const Fortran::evaluate::Triplet &triplet,
+                        const Fortran::evaluate::NamedEntity &base,
+                        int dimension,
+                        Fortran::evaluate::FoldingContext &foldingContext) {
+  if (Fortran::evaluate::ToInt64(triplet.GetStride()) != 1)
+    return false;
+
+  auto matchesBound =
+      [&](const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+              *sectionBound,
+          Fortran::evaluate::MaybeExtentExpr declaredBound) {
+        // Omitted section bound means the declared bound of that dimension.
+        if (!sectionBound)
+          return true;
+        if (!declaredBound)
+          return false;
+        std::optional<std::int64_t> sectionVal =
+            Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+                foldingContext,
+                Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>{
+                    *sectionBound}));
+        std::optional<std::int64_t> declaredVal = Fortran::evaluate::ToInt64(
+            Fortran::evaluate::Fold(foldingContext, std::move(*declaredBound)));
+        return sectionVal && declaredVal && *sectionVal == *declaredVal;
+      };
+
+  return matchesBound(
+             triplet.GetLower(),
+             Fortran::evaluate::GetLBOUND(foldingContext, base, dimension)) &&
+         matchesBound(triplet.GetUpper(), Fortran::evaluate::GetUBOUND(
+                                              foldingContext, base, dimension));
+}
+
+/// Return the base array designator when \p designator is a whole-array
+/// section, such as `x(:)`, `x(:,:)`, or `x(1:10)` on `x(10)`.
+static Fortran::semantics::MaybeExpr
+getWholeArrayBase(const Fortran::semantics::MaybeExpr &designator,
+                  Fortran::semantics::SemanticsContext &semanticsContext) {
+  if (!designator)
+    return std::nullopt;
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*designator);
+  if (!dataRef)
+    return std::nullopt;
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || arrayRef->subscript().empty())
+    return std::nullopt;
+
+  const Fortran::evaluate::NamedEntity &base = arrayRef->base();
+  Fortran::evaluate::FoldingContext &foldingContext =
+      semanticsContext.foldingContext();
+  for (auto [dimension, subscript] : llvm::enumerate(arrayRef->subscript())) {
+    const auto *triplet = std::get_if<Fortran::evaluate::Triplet>(&subscript.u);
+    if (!triplet ||
+        !isWholeDimensionTriplet(*triplet, base, static_cast<int>(dimension),
+                                 foldingContext))
+      return std::nullopt;
+  }
+
+  Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+  if (const auto *symbol = base.UnwrapSymbolRef())
+    return ea.Designate(Fortran::evaluate::DataRef{*symbol});
+  return std::nullopt;
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -751,6 +822,10 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
 
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    if (dataClause == mlir::acc::DataClause::acc_reduction)
+      if (Fortran::semantics::MaybeExpr wholeArray =
+              getWholeArrayBase(designator, semanticsContext))
+        designator = std::move(wholeArray);
     std::optional<Fortran::evaluate::Component> componentRef =
         extractComponentFromDesignator(designator);
 
@@ -1148,6 +1223,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
+    if (Fortran::semantics::MaybeExpr wholeArray =
+            getWholeArrayBase(designator, semanticsContext))
+      designator = std::move(wholeArray);
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -2235,6 +2313,32 @@ static bool hasEarlyReturn(Fortran::lower::pft::Evaluation &eval) {
   return hasReturnStmt;
 }
 
+/// Return the NonLabelDoStmt evaluation associated with an OpenACC loop or
+/// a DoConstruct being lowered as an acc.loop.
+static Fortran::lower::pft::Evaluation *
+getAccLoopDoStmtEval(Fortran::lower::pft::Evaluation &eval) {
+  Fortran::lower::pft::Evaluation *e = &eval;
+  if (e->isA<Fortran::parser::OpenACCConstruct>()) {
+    if (!e->hasNestedEvaluations())
+      return nullptr;
+    e = nullptr;
+    for (Fortran::lower::pft::Evaluation &nested :
+         eval.getNestedEvaluations()) {
+      if (nested.isA<Fortran::parser::DoConstruct>()) {
+        e = &nested;
+        break;
+      }
+    }
+    if (!e)
+      return nullptr;
+  }
+  if (e->isA<Fortran::parser::DoConstruct>() && e->hasNestedEvaluations())
+    return &e->getFirstNestedEvaluation();
+  if (e->isA<Fortran::parser::NonLabelDoStmt>())
+    return e;
+  return nullptr;
+}
+
 static mlir::acc::LoopOp createLoopOp(
     Fortran::lower::AbstractConverter &converter,
     mlir::Location currentLocation,
@@ -2503,12 +2607,16 @@ static mlir::acc::LoopOp createLoopOp(
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), *combinedConstructs));
 
-  // TODO: retrieve directives from NonLabelDoStmt pft::Evaluation, and add them
-  // as attribute to the acc.loop as an extra attribute. It is not quite clear
-  // how useful these $dir are in acc contexts, but they could still provide
-  // more information about the loop acc codegen. They can be obtained by
-  // looking for the first lexicalSuccessor of eval that is a NonLabelDoStmt,
-  // and using the related `dirs` member.
+  // Apply `!dir$` loop directives associated with the DO statement as a
+  // discardable LLVM loop annotation attribute on the acc.loop.
+  // TODO: consider limiting to directives that are reasonable to apply
+  if (Fortran::lower::pft::Evaluation *doStmtEval =
+          getAccLoopDoStmtEval(eval)) {
+    if (mlir::LLVM::LoopAnnotationAttr la =
+            Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
+                                                  doStmtEval->dirs))
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
+  }
 
   return loopOp;
 }
@@ -5434,6 +5542,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     loopOp.setAuto_Attr(arrOfDeviceNone);
   } else {
     llvm_unreachable("Unexpected loop par mode");
+  }
+
+  // Apply `!dir$` loop directives associated with the DO statement as a
+  // discardable LLVM loop annotation attribute on the acc.loop.
+  if (Fortran::lower::pft::Evaluation *doStmtEval =
+          getAccLoopDoStmtEval(eval)) {
+    if (mlir::LLVM::LoopAnnotationAttr la =
+            Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
+                                                  doStmtEval->dirs))
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
   }
 
   return loopOp;
