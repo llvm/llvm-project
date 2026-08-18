@@ -895,3 +895,21 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// A dead successor block argument must be removed even when the value
+// forwarded to it is itself live for an unrelated reason (here, %arg0 is
+// also returned directly). Fixes #216644.
+//
+// CHECK-LABEL: func.func @dead_block_arg_with_live_forwarded_operand
+// CHECK-SAME: (%[[arg0:.*]]: i32) -> i32
+// CHECK: cf.br ^[[BB1:bb[0-9]+]]
+// CHECK-NOT: i32
+// CHECK: ^[[BB1]]:
+// CHECK-NEXT: return %[[arg0]] : i32
+func.func @dead_block_arg_with_live_forwarded_operand(%arg0: i32) -> i32 {
+  cf.br ^bb1(%arg0 : i32)
+^bb1(%0: i32):
+  return %arg0 : i32
+}

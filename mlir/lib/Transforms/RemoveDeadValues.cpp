@@ -465,10 +465,9 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 /// conditional branch op), the entire operation is dead.
 ///
 /// Otherwise, iterate through each successor block of `branchOp`.
-/// (1) For each successor block, gather all operands from all successors.
-/// (2) Fetch their associated liveness analysis data and collect for future
-///     removal.
-/// (3) Identify and collect the dead operands from the successor block
+/// (1) For each successor block, fetch the liveness analysis data of its
+///     block arguments and collect for future removal.
+/// (2) Identify and collect the dead operands from the successor block
 ///     as well as their corresponding arguments.
 
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
@@ -495,22 +494,18 @@ static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {
     Block *successorBlock = branchOp->getSuccessor(succIdx);
 
-    // Do (1)
-    SuccessorOperands successorOperands =
-        branchOp.getSuccessorOperands(succIdx);
-    SmallVector<Value> operandValues;
-    for (unsigned operandIdx = 0; operandIdx < successorOperands.size();
-         ++operandIdx) {
-      operandValues.push_back(successorOperands[operandIdx]);
-    }
-
-    // Do (2)
+    // Do (1). Liveness of a successor block argument must be determined
+    // from the argument itself (i.e. whether it is used inside the
+    // successor block), not from the liveness of the operand value being
+    // forwarded to it. The forwarded operand value may well be live for
+    // unrelated reasons (e.g. it is also used elsewhere), which must not
+    // prevent the block argument from being recognized as dead.
     BitVector successorNonLive =
-        markLives(operandValues, nonLiveSet, la).flip();
+        markLives(successorBlock->getArguments(), nonLiveSet, la).flip();
     collectNonLiveValues(nonLiveSet, successorBlock->getArguments(),
                          successorNonLive);
 
-    // Do (3)
+    // Do (2)
     cl.blocks.push_back({successorBlock, successorNonLive});
     cl.successorOperands.push_back({branchOp, succIdx, successorNonLive});
   }
