@@ -353,6 +353,12 @@ namespace isfpclass {
 
   constexpr float a = 1.0f;
   static_assert(__builtin_isfpclass(1.0f, a) == 0);
+
+  enum class EC { A, B };
+  static_assert(__builtin_isfpclass(1.0f, EC::A) == 0); // both-error {{passing 'isfpclass::EC' to parameter of incompatible type 'int'}}
+  struct foostruct {};
+  static_assert(__builtin_isfpclass(1.0f, foostruct{}) == 0); // both-error {{passing 'foostruct' to parameter of incompatible type 'int'}}
+
 }
 
 namespace signbit {
