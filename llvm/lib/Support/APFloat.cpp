@@ -2548,30 +2548,36 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
       *losesInfo =
           fromSemantics.nonFiniteBehavior != fltNonfiniteBehavior::NanOnly;
       makeNaN(false, sign);
-      return is_signaling ? opInvalidOp : opOK;
-    }
-
-    // If NaN is negative zero, we need to create a new NaN to avoid converting
-    // NaN to -Inf.
-    if (fromSemantics.nanEncoding == fltNanEncoding::NegativeZero &&
-        semantics->nanEncoding != fltNanEncoding::NegativeZero)
-      makeNaN(false, false);
-
-    *losesInfo = lostFraction != lfExactlyZero || X86SpecialNan;
-
-    // For x87 extended precision, we want to make a NaN, not a special NaN if
-    // the input wasn't special either.
-    if (!X86SpecialNan && semantics == &APFloatBase::semX87DoubleExtended)
-      APInt::tcSetBit(significandParts(), semantics->precision - 1);
-
-    // Convert of sNaN creates qNaN and raises an exception (invalid op).
-    // This also guarantees that a sNaN does not become Inf on a truncation
-    // that loses all payload bits.
-    if (is_signaling) {
-      makeQuiet();
-      fs = opInvalidOp;
+      fs = is_signaling ? opInvalidOp : opOK;
     } else {
-      fs = opOK;
+      // If NaN is negative zero, we need to create a new NaN to avoid
+      // converting NaN to -Inf.
+      if (fromSemantics.nanEncoding == fltNanEncoding::NegativeZero &&
+          semantics->nanEncoding != fltNanEncoding::NegativeZero)
+        makeNaN(false, false);
+
+      // If the source has no significand, there are no payload bits to carry
+      // over, and an all-zero significand would encode an Inf. Create a new
+      // NaN.
+      if (!APFloat::hasSignificand(fromSemantics))
+        makeNaN(false, sign);
+
+      *losesInfo = lostFraction != lfExactlyZero || X86SpecialNan;
+
+      // For x87 extended precision, we want to make a NaN, not a special NaN
+      // if the input wasn't special either.
+      if (!X86SpecialNan && semantics == &APFloatBase::semX87DoubleExtended)
+        APInt::tcSetBit(significandParts(), semantics->precision - 1);
+
+      // Convert of sNaN creates qNaN and raises an exception (invalid op).
+      // This also guarantees that a sNaN does not become Inf on a truncation
+      // that loses all payload bits.
+      if (is_signaling) {
+        makeQuiet();
+        fs = opInvalidOp;
+      } else {
+        fs = opOK;
+      }
     }
   } else if (category == fcInfinity &&
              semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
@@ -2589,6 +2595,17 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   } else {
     *losesInfo = false;
     fs = opOK;
+  }
+
+  // The target may have no encoding for a negative value, or none for zero.
+  // The paths above only report what rounding lost, so report these here too:
+  // a caller that checks losesInfo would otherwise accept a result the target
+  // cannot represent, and printing that result asserts.
+  if ((sign && !semantics->hasSignedRepr) ||
+      (category == fcZero && !semantics->hasZero)) {
+    *losesInfo = true;
+    if (fs == opOK)
+      fs = opInexact;
   }
 
   if (category == fcZero && !semantics->hasZero)
@@ -6049,11 +6066,11 @@ bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
 
 const fltSemantics *APFloatBase::getArbitraryFPSemantics(StringRef Format) {
   // TODO: extend to remaining arbitrary FP types: Float8E4M3, Float8E3M4,
-  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU,
-  // Float8E5M3FNU.
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU.
   return StringSwitch<const fltSemantics *>(Format)
       .Case("Float8E5M2", &semFloat8E5M2)
       .Case("Float8E4M3FN", &semFloat8E4M3FN)
+      .Case("Float8E5M3FNU", &semFloat8E5M3FNU)
       .Case("Float4E2M1FN", &semFloat4E2M1FN)
       .Case("Float6E3M2FN", &semFloat6E3M2FN)
       .Case("Float6E2M3FN", &semFloat6E2M3FN)

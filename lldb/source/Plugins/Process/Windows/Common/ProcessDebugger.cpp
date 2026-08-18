@@ -437,7 +437,7 @@ Status ProcessDebugger::DeallocateMemory(lldb::addr_t vm_addr) {
 
   Log *log = GetLog(WindowsLog::Memory);
   llvm::sys::ScopedLock lock(m_mutex);
-  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", vm_addr);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0:x}", vm_addr);
 
   if (!m_session_data) {
     result = Status::FromErrorString(
@@ -541,7 +541,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
   }
 
   LLDB_LOG_VERBOSE(log,
-                   "Memory region info for address {0}: readable={1}, "
+                   "Memory region info for address {0:x}: readable={1}, "
                    "executable={2}, writable={3}",
                    vm_addr, info.GetReadable(), info.GetExecutable(),
                    info.GetWritable());

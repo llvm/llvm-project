@@ -2004,7 +2004,8 @@ enum StmtCode {
   STMT_OMP_FLUSH_DIRECTIVE,
   STMT_OMP_DEPOBJ_DIRECTIVE,
   STMT_OMP_SCAN_DIRECTIVE,
-  STMT_OMP_ORDERED_DIRECTIVE,
+  STMT_OMP_ORDERED_STANDALONE_DIRECTIVE,
+  STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE,
   STMT_OMP_ATOMIC_DIRECTIVE,
   STMT_OMP_TARGET_DIRECTIVE,
   STMT_OMP_TARGET_DATA_DIRECTIVE,
@@ -2120,6 +2121,14 @@ enum CtorInitializerType {
   CTOR_INITIALIZER_DELEGATING,
   CTOR_INITIALIZER_MEMBER,
   CTOR_INITIALIZER_INDIRECT_MEMBER
+};
+
+/// Kinds of friend payloads owned by FriendTemplateDecl.
+enum FriendTemplateDeclKind {
+  FTDK_Type = 0,
+  FTDK_Decl = 1,
+  FTDK_Template = 2,
+  FTDK_Dependent = 3,
 };
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.

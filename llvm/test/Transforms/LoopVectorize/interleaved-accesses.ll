@@ -469,7 +469,7 @@ define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP4]]
@@ -574,10 +574,10 @@ define void @load_gap_reverse(ptr noalias nocapture %P1, ptr noalias nocapture %
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP14]], i32 2
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP30]], i64 [[TMP15]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP14]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP30]], i64 [[TMP15]], i64 3
 ; CHECK-NEXT:    [[TMP20:%.*]] = sub nsw <4 x i64> [[TMP19]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP21]], ptr [[TMP4]], align 8
@@ -865,7 +865,7 @@ define void @PR27626_0(ptr %p, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP1]]
@@ -955,7 +955,7 @@ define i32 @PR27626_1(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP1]]
@@ -1049,7 +1049,7 @@ define void @PR27626_2(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP1]]
@@ -1144,7 +1144,7 @@ define i32 @PR27626_3(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP23]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP23]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP23]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP23]], [[TMP1]]
@@ -1252,7 +1252,7 @@ define void @PR27626_4(ptr %a, i32 %x, i32 %y, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i64 0
@@ -1341,7 +1341,7 @@ define void @PR27626_5(ptr %a, i32 %x, i32 %y, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 3, [[TMP5]]
@@ -1466,7 +1466,7 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <4 x i16> poison, i16 [[DOTPRE]], i32 3

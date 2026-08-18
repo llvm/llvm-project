@@ -42,10 +42,11 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
     case Tcgen05MMAKind::I8:
       OS << "i8";
       return;
+    case Tcgen05MMAKind::TI16:
+      OS << "ti16";
+      return;
     }
   }
-  llvm_unreachable(
-      "printTcgen05MMAKind called with invalid value for immediate argument");
 }
 
 void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
@@ -67,8 +68,27 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
       return;
     }
   }
-  llvm_unreachable("printTcgen05CollectorUsageOp called with invalid value for "
-                   "immediate argument");
+}
+
+void nvvm::printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                           const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<Tcgen05MMACollectorBBuffer>(Val)) {
+    case Tcgen05MMACollectorBBuffer::B0:
+      OS << "b0";
+      return;
+    case Tcgen05MMACollectorBBuffer::B1:
+      OS << "b1";
+      return;
+    case Tcgen05MMACollectorBBuffer::B2:
+      OS << "b2";
+      return;
+    case Tcgen05MMACollectorBBuffer::B3:
+      OS << "b3";
+      return;
+    }
+  }
 }
 
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {

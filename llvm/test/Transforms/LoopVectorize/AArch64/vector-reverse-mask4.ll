@@ -26,7 +26,7 @@ define void @vector_reverse_mask_v4i1(ptr noalias %a, ptr noalias %cond, i64 %N)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -118,6 +118,6 @@ attributes #0 = {"target-cpu"="generic" "target-features"="+neon,+sve" vscale_ra
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.scalable.disable"}
 !4 = !{!"llvm.loop.vectorize.enable"}
 !5 = !{!"llvm.loop.interleave.count", i32 2}

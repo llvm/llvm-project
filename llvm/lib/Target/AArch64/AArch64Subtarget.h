@@ -268,6 +268,17 @@ public:
            hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
   }
 
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions.
+  bool fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                       unsigned SecondOpc, unsigned SecondShift) const;
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  bool fusesMOVImmPair(const MachineInstr *FirstMI,
+                       const MachineInstr &SecondMI) const;
+
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
   }

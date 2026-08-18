@@ -887,7 +887,7 @@ TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
   case TST_##Trait:                                                            \
     return UnaryTransformType::Enum;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   default:
     llvm_unreachable("attempted to parse a non-unary transform builtin");
   }
@@ -1307,7 +1307,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for the transformation?");
     Result = S.BuildUnaryTransformType(
@@ -3379,8 +3379,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::FunctionalCast:
       if (isa<DeducedTemplateSpecializationType>(Deduced))
         break;
-      if (SemaRef.getLangOpts().CPlusPlus23 && IsCXXAutoType &&
-          !Auto->isDecltypeAuto())
+      if (IsCXXAutoType && !Auto->isDecltypeAuto())
         break; // auto(x)
       [[fallthrough]];
     case DeclaratorContext::TypeName:
@@ -9353,7 +9352,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     }
     case ParsedAttr::AT_HLSLResourceClass:
     case ParsedAttr::AT_HLSLResourceDimension:
-    case ParsedAttr::AT_HLSLROV:
+    case ParsedAttr::AT_HLSLIsROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLIsArray:
     case ParsedAttr::AT_HLSLIsMultiSampled:
