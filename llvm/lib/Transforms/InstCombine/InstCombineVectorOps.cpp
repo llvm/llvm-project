@@ -410,6 +410,83 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Fold a variable extract from a vector of pointers that all point into the
+/// same object at a constant stride
+static Value *
+foldExtractOfStridedPointerVector(ExtractElementInst &EI,
+                                  InstCombiner::BuilderTy &Builder,
+                                  const DataLayout &DL) {
+  auto *VecTy = dyn_cast<FixedVectorType>(EI.getVectorOperandType());
+  if (!VecTy || !VecTy->getElementType()->isPointerTy())
+    return nullptr;
+
+  unsigned NumElts = VecTy->getNumElements();
+  if (NumElts < 2)
+    return nullptr;
+
+  // Walk the insertelement chain outermost-first, so the first value seen for
+  // an index is the one that survives
+  SmallVector<Value *> Elts(NumElts, nullptr);
+  unsigned NumFound = 0;
+  for (Value *V = EI.getVectorOperand(); NumFound != NumElts;) {
+    auto *IE = dyn_cast<InsertElementInst>(V);
+    if (!IE)
+      return nullptr;
+    auto *IdxC = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!IdxC || IdxC->uge(NumElts))
+      return nullptr;
+    unsigned Idx = IdxC->getZExtValue();
+    if (!Elts[Idx]) {
+      Elts[Idx] = IE->getOperand(1);
+      ++NumFound;
+    }
+    V = IE->getOperand(0);
+  }
+
+  // Every element must be the same base pointer plus a constant byte offset
+  unsigned IdxWidth = DL.getIndexTypeSizeInBits(VecTy->getElementType());
+  Value *Base = nullptr;
+  SmallVector<APInt> Offsets;
+  for (Value *Elt : Elts) {
+    APInt Offset(IdxWidth, 0);
+    Value *EltBase =
+        Elt->stripAndAccumulateConstantOffsets(DL, Offset,
+                                               /*AllowNonInbounds=*/true);
+    if (!Base)
+      Base = EltBase;
+    else if (Base != EltBase)
+      return nullptr;
+    Offsets.push_back(Offset);
+  }
+
+  // Stripping walks through addrspacecasts, so the base may live in a
+  // different address space than the pointer the extract produces.
+  if (Base->getType() != VecTy->getElementType())
+    return nullptr;
+
+  // The offsets must form an arithmetic sequence.
+  APInt Stride = Offsets[1] - Offsets[0];
+  for (unsigned I = 1; I != NumElts; ++I)
+    if (Offsets[I] - Offsets[0] != Stride * I)
+      return nullptr;
+
+  // Index off the common base, not off element 0: an element may be poison in
+  // a lane the extract never selects. The base is an operand of every element
+  // and the new GEP has no flags, so the result is never more poisonous.
+  Type *IdxTy = DL.getIndexType(VecTy->getElementType());
+  Constant *BaseOff = ConstantInt::get(IdxTy, Offsets[0]);
+  if (Stride.isZero())
+    return Offsets[0].isZero()
+               ? Base
+               : Builder.CreateGEP(Builder.getInt8Ty(), Base, BaseOff);
+
+  Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
+  Value *ByteOff = Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride));
+  if (!Offsets[0].isZero())
+    ByteOff = Builder.CreateAdd(ByteOff, BaseOff);
+  return Builder.CreateGEP(Builder.getInt8Ty(), Base, ByteOff);
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -430,6 +507,12 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         isa<Constant>(EI.getIndexOperand()))
       if (Instruction *R = FoldOpIntoSelect(EI, SI))
         return R;
+
+  // Fold a variable index into a table of pointers into one object into
+  // address arithmetic
+  if (!isa<ConstantInt>(Index))
+    if (Value *V = foldExtractOfStridedPointerVector(EI, Builder, DL))
+      return replaceInstUsesWith(EI, V);
 
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
