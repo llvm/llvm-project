@@ -375,15 +375,23 @@ public:
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
     VPlan &Plan = getPlan();
-    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
       VPValue *VScale = createVScale(Ty);
-      RuntimeEC = EC.getKnownMinValue() == 1
-                      ? VScale
-                      : createOverflowingOp(Instruction::Mul,
-                                            {VScale, RuntimeEC}, {true, false});
+      unsigned MinEC = EC.getKnownMinValue();
+      if (MinEC == 1)
+        return VScale;
+      // TODO: Move this optimization into createOverflowingOp directly.
+      else if (isPowerOf2_32(MinEC)) {
+        VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
+        return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
+                                   {true, false});
+      } else {
+        return createOverflowingOp(Instruction::Mul,
+                                   {VScale, Plan.getConstantInt(Ty, MinEC)},
+                                   {true, false});
+      }
     }
-    return RuntimeEC;
+    return Plan.getConstantInt(Ty, EC.getKnownMinValue());
   }
 
   /// Convert \p Current to \p Start + \p Current * \p Step.

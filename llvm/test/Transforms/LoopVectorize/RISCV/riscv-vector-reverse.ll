@@ -87,8 +87,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP0]], 3
-; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
+; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP1]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -111,7 +110,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[TMP22]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    store <vscale x 4 x i32> [[REVERSE3]], ptr [[TMP27]], align 4
 ; RV64-UF2-NEXT:    store <vscale x 4 x i32> [[REVERSE4]], ptr [[TMP32]], align 4
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP7]]
 ; RV64-UF2-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; RV64-UF2:       [[MIDDLE_BLOCK]]:
@@ -286,8 +285,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP1]], 2
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP1]], 3
-; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
+; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[TMP20]] to i32
@@ -314,7 +312,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i32, ptr [[TMP37]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    store <vscale x 4 x i32> [[REVERSE6]], ptr [[TMP42]], align 4
 ; RV64-UF2-NEXT:    store <vscale x 4 x i32> [[REVERSE7]], ptr [[TMP47]], align 4
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
+; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; RV64-UF2-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP20]]
 ; RV64-UF2-NEXT:    br i1 [[TMP49]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; RV64-UF2:       [[MIDDLE_BLOCK]]:
@@ -502,8 +500,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP1]], 2
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP1]], 3
-; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
+; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = sub i64 [[TMP0]], [[TMP20]]
 ; RV64-UF2-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[TMP20]] to i32
@@ -530,7 +527,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds float, ptr [[TMP37]], i64 [[TMP25]]
 ; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE6]], ptr [[TMP42]], align 4
 ; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE7]], ptr [[TMP47]], align 4
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
+; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; RV64-UF2-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP20]]
 ; RV64-UF2-NEXT:    br i1 [[TMP49]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; RV64-UF2:       [[MIDDLE_BLOCK]]:
@@ -644,8 +641,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
 ; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP0]], 3
-; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
+; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP1]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
 ; RV64-UF2-NEXT:    [[TMP33:%.*]] = sub i64 1023, [[TMP7]]
 ; RV64-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -668,7 +664,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP32:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i64 [[TMP11]]
 ; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE3]], ptr [[TMP27]], align 4
 ; RV64-UF2-NEXT:    store <vscale x 4 x float> [[REVERSE4]], ptr [[TMP32]], align 4
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; RV64-UF2-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[TMP7]]
 ; RV64-UF2-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; RV64-UF2:       [[MIDDLE_BLOCK]]:
