@@ -1273,7 +1273,9 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
     Instruction *SplitBefore = CoverInstruction->getNextNode();
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
-    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    LoadInst *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    if (Options.Atomic || AtomicCounterUpdateAll)
+      Load->setOrdering(llvm::AtomicOrdering::Monotonic);
     Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
         SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
@@ -1281,7 +1283,9 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
   }
 
   // We store zero to represent that this block is covered.
-  Builder.CreateStore(Builder.getInt8(0), Addr);
+  StoreInst *Store = Builder.CreateStore(Builder.getInt8(0), Addr);
+  if (Options.Atomic || AtomicCounterUpdateAll)
+    Store->setOrdering(llvm::AtomicOrdering::Monotonic);
   CoverInstruction->eraseFromParent();
 }
 
@@ -1491,6 +1495,9 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
     // Note, just-loaded Bitmap might not be up-to-date. Use it just for
     // early testing.
+    // Use an atomic load to pair with the later atomicrmw, preventing a data
+    // race.
+    Bitmap->setOrdering(llvm::AtomicOrdering::Monotonic);
     auto *Masked = Builder.CreateAnd(Bitmap, ShiftedVal);
     auto *ShouldStore = Builder.CreateICmpNE(Masked, ShiftedVal);
 
