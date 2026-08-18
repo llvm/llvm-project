@@ -2858,18 +2858,19 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         (RHS.getNode()->getOpcode() == ISD::ZERO_EXTEND &&
          RHS.getOperand(0).getValueType() == MVT::i32))
       ++Cost;
-    // If the value being negated is the base itself - A - (A << C) - cancel the
-    // "may save a mov" discount below: the baseline emits the shift
-    // non-destructively and the SUB writes A in place, so there is no copy to
-    // save. The copy the NEG needs is already charged above.
-    if (NegScale != 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
-        AM.Base_Reg == RHS)
-      ++Cost;
-    // If the base is a register with multiple uses, this
-    // transformation may save a mov.
-    if ((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
-         !AM.Base_Reg.getNode()->hasOneUse()) ||
-        AM.BaseType == X86ISelAddressMode::FrameIndexBase)
+    // A - (A << C), where the base is itself the value being negated.
+    bool BaseIsNegatedValue = NegScale != 1 &&
+                              AM.BaseType == X86ISelAddressMode::RegBase &&
+                              AM.Base_Reg == RHS;
+    // If the base is a register with multiple uses, this transformation may
+    // save a mov - but not for BaseIsNegatedValue, where the baseline emits the
+    // shift non-destructively into another register and the SUB writes A in
+    // place, so there is no copy for the LEA to save. The copy the NEG needs
+    // there is charged by the multiple-use test above.
+    if (((AM.BaseType == X86ISelAddressMode::RegBase && AM.Base_Reg.getNode() &&
+          !AM.Base_Reg.getNode()->hasOneUse()) ||
+         AM.BaseType == X86ISelAddressMode::FrameIndexBase) &&
+        !BaseIsNegatedValue)
       --Cost;
     // If the folded LHS was interesting, this transformation saves
     // address arithmetic.
