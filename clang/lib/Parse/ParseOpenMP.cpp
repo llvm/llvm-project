@@ -2753,9 +2753,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       BalancedDelimiterTracker T(*this, tok::l_paren,
                                  tok::annot_pragma_openmp_end);
       while (Tok.isNot(tok::annot_pragma_openmp_end)) {
-        OpenMPClauseKind CKind =
-            Tok.isAnnotation() ? OMPC_unknown
-                               : getOpenMPClauseKind(PP.getSpelling(Tok));
+        OpenMPClauseKind CKind = Tok.isAnnotation()
+                                     ? OMPC_unknown
+                                     : getOpenMPClauseKind(PP.getSpelling(Tok));
         SourceLocation ClauseLoc = ConsumeToken();
 
         // Parse '('.
