@@ -160,19 +160,7 @@ define void @two_potential_callees_pos1(i1 %c) {
 ; CGSCC-LABEL: define {{[^@]+}}@two_potential_callees_pos1
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @scc1_foo
-; CGSCC-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
-; CGSCC-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CGSCC:       2:
-; CGSCC-NEXT:    call void @scc1_foo()
-; CGSCC-NEXT:    br label [[TMP6:%.*]]
-; CGSCC:       3:
-; CGSCC-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CGSCC:       4:
-; CGSCC-NEXT:    call void @foo1()
-; CGSCC-NEXT:    br label [[TMP6]]
-; CGSCC:       5:
-; CGSCC-NEXT:    unreachable
-; CGSCC:       6:
+; CGSCC-NEXT:    call void [[FP]]() #[[ATTR3:[0-9]+]], !callees [[META0:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   %fp = select i1 %c, ptr @foo1, ptr @scc1_foo
@@ -180,47 +168,52 @@ define void @two_potential_callees_pos1(i1 %c) {
   ret void
 }
 define void @two_potential_callees_pos2(i1 %c) {
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@two_potential_callees_pos2
-; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo2, ptr @scc1_foo
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @scc1_foo()
-; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @foo2()
-; CHECK-NEXT:    br label [[TMP6]]
-; CHECK:       5:
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    ret void
+; TUNIT: Function Attrs: nounwind
+; TUNIT-LABEL: define {{[^@]+}}@two_potential_callees_pos2
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo2, ptr @scc1_foo
+; TUNIT-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @foo2
+; TUNIT-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; TUNIT:       2:
+; TUNIT-NEXT:    call void @foo2()
+; TUNIT-NEXT:    br label [[TMP4:%.*]]
+; TUNIT:       3:
+; TUNIT-NEXT:    call void [[FP]](), !callees [[META0:![0-9]+]]
+; TUNIT-NEXT:    br label [[TMP4]]
+; TUNIT:       4:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: nounwind
+; CGSCC-LABEL: define {{[^@]+}}@two_potential_callees_pos2
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo2, ptr @scc1_foo
+; CGSCC-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @foo2
+; CGSCC-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
+; CGSCC:       2:
+; CGSCC-NEXT:    call void @foo2()
+; CGSCC-NEXT:    br label [[TMP4:%.*]]
+; CGSCC:       3:
+; CGSCC-NEXT:    call void [[FP]](), !callees [[META1:![0-9]+]]
+; CGSCC-NEXT:    br label [[TMP4]]
+; CGSCC:       4:
+; CGSCC-NEXT:    ret void
 ;
   %fp = select i1 %c, ptr @foo2, ptr @scc1_foo
   call void %fp()
   ret void
 }
 define void @two_potential_callees_neg(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@two_potential_callees_neg
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @non_nounwind
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @non_nounwind
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @non_nounwind()
-; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @foo1()
-; CHECK-NEXT:    br label [[TMP6]]
-; CHECK:       5:
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    ret void
+; TUNIT-LABEL: define {{[^@]+}}@two_potential_callees_neg
+; TUNIT-SAME: (i1 [[C:%.*]]) {
+; TUNIT-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @non_nounwind
+; TUNIT-NEXT:    call void [[FP]](), !callees [[META1:![0-9]+]]
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@two_potential_callees_neg
+; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @non_nounwind
+; CGSCC-NEXT:    call void [[FP]](), !callees [[META2:![0-9]+]]
+; CGSCC-NEXT:    ret void
 ;
   %fp = select i1 %c, ptr @foo1, ptr @non_nounwind
   call void %fp()
@@ -240,4 +233,12 @@ declare void @__cxa_end_catch()
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nounwind }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn }
+;.
+; TUNIT: [[META0]] = !{ptr @scc1_foo}
+; TUNIT: [[META1]] = !{ptr @non_nounwind, ptr @foo1}
+;.
+; CGSCC: [[META0]] = !{ptr @scc1_foo, ptr @foo1}
+; CGSCC: [[META1]] = !{ptr @scc1_foo}
+; CGSCC: [[META2]] = !{ptr @non_nounwind, ptr @foo1}
 ;.
