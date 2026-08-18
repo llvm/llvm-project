@@ -113,14 +113,15 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
       return {MemorySlot{getResult(), VectorType::get(type.getShape(),
                                                       type.getElementType())}};
 
-    // A 1-D memref whose single dynamic extent is `vector.vscale * C` maps to a
-    // scalable `vector<[C]x...>` slot, for a strictly positive `C`.
+    // A 1-D memref whose single dynamic extent is `vector.vscale * N` maps to a
+    // scalable `vector<[N]x...>` slot, for a strictly positive multiple `N`.
     if (type.getRank() == 1 && type.isDynamicDim(0)) {
-      if (std::optional<int64_t> c = matchVScaleMultiple(getDynamicSizes()[0]);
-          c && *c > 0)
-        return {
-            MemorySlot{getResult(), VectorType::get({*c}, type.getElementType(),
-                                                    /*scalableDims=*/{true})}};
+      if (std::optional<int64_t> multiple =
+              matchVScaleMultiple(getDynamicSizes()[0]);
+          multiple && *multiple > 0)
+        return {MemorySlot{getResult(),
+                           VectorType::get({*multiple}, type.getElementType(),
+                                           /*scalableDims=*/{true})}};
     }
   }
 
