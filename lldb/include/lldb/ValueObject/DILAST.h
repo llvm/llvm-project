@@ -45,21 +45,27 @@ enum class UnaryOpKind {
 
 /// The binary operators recognized by DIL.
 enum class BinaryOpKind {
-  Add,       ///< "+"
-  AddAssign, ///< "+="
   Assign,    ///< "="
-  Div,       ///< "/"
+  Add,       ///< "+"
+  Sub,       ///< "-"
   Mul,       ///< "*"
+  Div,       ///< "/"
   Rem,       ///< "%"
   And,       ///< "&"
   Xor,       ///< "^"
   Or,        ///< "|"
   Shl,       ///< "<<"
   Shr,       ///< ">>"
-  Sub,       ///< "-"
+  AddAssign, ///< "+="
   SubAssign, ///< "-="
   LAnd,      ///< "&&"
   LOr,       ///< "||"
+  LT,        ///< "<"
+  GT,        ///< ">"
+  LE,        ///< "<="
+  GE,        ///< ">="
+  EQ,        ///< "=="
+  NE,        ///< "!="
 };
 
 /// Translates DIL tokens to BinaryOpKind.
@@ -94,6 +100,8 @@ public:
   virtual ~ASTNode() = default;
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
+
+  virtual bool IsConstLiteral() const { return false; }
 
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
@@ -254,6 +262,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APInt &GetValue() const { return m_value; }
   uint32_t GetRadix() const { return m_radix; }
   bool IsUnsigned() const { return m_is_unsigned; }
@@ -278,6 +287,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   const llvm::APFloat &GetValue() const { return m_value; }
 
   static bool classof(const ASTNode &node) {
@@ -295,6 +305,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
+  bool IsConstLiteral() const override { return true; }
   bool GetValue() const & { return m_value; }
 
   static bool classof(const ASTNode &node) {
