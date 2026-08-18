@@ -1,9 +1,7 @@
 // RUN: mlir-opt %s -convert-vector-to-scf | FileCheck %s
 
 // The lowering of a transfer op whose rank exceeds the target rank allocates a
-// temporary buffer, so it needs an enclosing automatic allocation scope. These
-// ops sit directly in the implicit `builtin.module`, which is not one, so the
-// pattern has to decline instead of building an invalid `memref.alloca`.
+// temporary buffer, so it needs an enclosing automatic allocation scope.
 
 // CHECK: vector.transfer_write
 %c0 = arith.constant 0 : index
