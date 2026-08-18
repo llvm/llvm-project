@@ -144,6 +144,22 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCSSoft) {
 }
 
 // Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// return path under Win64.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectWin64) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
+
+  for (const ABIType *RetTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getReturnInfo());
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
 // argument path under AAPCS.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCS) {
   std::unique_ptr<TargetInfo> TI =
@@ -186,6 +202,21 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectOrPromotableDarwin) {
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCSSoft) {
   std::unique_ptr<TargetInfo> TI =
       createAArch64TargetInfo(TB, AArch64ABIKind::AAPCSSoft);
+
+  for (const ABIType *ArgTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// argument path under Win64.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::Win64);
 
   for (const ABIType *ArgTy :
        {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {

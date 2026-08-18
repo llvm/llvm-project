@@ -352,7 +352,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  if (T.getArch() == llvm::Triple::aarch64 && !T.isOSWindows())
+  if (T.getArch() == llvm::Triple::aarch64 ||
+      T.getArch() == llvm::Triple::aarch64_32 ||
+      T.getArch() == llvm::Triple::aarch64_be)
     return true;
 
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
@@ -390,7 +392,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   default:
     llvm_unreachable("LLVMABI lowering requested for an unsupported target");
 
-  case llvm::Triple::aarch64: {
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
     StringRef ABI = getTarget().getABI();
     llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
     if (ABI == "darwinpcs")

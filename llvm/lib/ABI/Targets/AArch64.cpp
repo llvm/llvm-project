@@ -51,8 +51,6 @@ private:
 
 std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
                                                     AArch64ABIKind Kind) {
-  if (Kind == AArch64ABIKind::Win64)
-    reportFatalUsageError("Win64 ABI is not supported yet for AArch64");
   return std::make_unique<AArch64TargetInfo>(TB, Kind);
 }
 
