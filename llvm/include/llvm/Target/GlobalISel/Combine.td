@@ -961,6 +961,28 @@ class redundant_ext_sext_inreg<Instruction Ext>: GICombineRule <
 def redundant_zext_sext_inreg : redundant_ext_sext_inreg<G_ZEXT>;
 def redundant_aext_sext_inreg : redundant_ext_sext_inreg<G_ANYEXT>;
 
+// Convert G_SEXT_INREG(G_ZEXT(G_UNMERGE(G_ZEXT))) -> G_SEXT(G_UNMERGE(G_SEXT))
+class redundant_ext_unmerge_sext_inreg<Instruction Ext>: GICombineRule <
+  (defs root:$root),
+  (match (Ext $tmp1, $src),
+         (G_UNMERGE_VALUES $tmp2, $tmp3, $tmp1):$unmerge,
+         (Ext $tmp4, $tmp2),
+         (G_SEXT_INREG $dst, $tmp4, $amt):$root,
+         [{ LLT SrcTy = MRI.getType(${src}.getReg());
+            return ${amt}.getImm() <= SrcTy.getScalarSizeInBits() &&
+                   MRI.getType(${tmp2}.getReg()).getScalarType() ==
+                     MRI.getType(${tmp1}.getReg()).getScalarType() &&
+                   VT->computeNumSignBits(${src}.getReg()) >=
+                     (SrcTy.getScalarSizeInBits() - ${amt}.getImm() + 1); }]),
+  (apply [{ auto SExt1 = Helper.getBuilder().buildSExt(MRI.getType(${tmp1}.getReg()), ${src}.getReg());
+            auto Unmerge = Helper.getBuilder().buildUnmerge(MRI.getType(${tmp2}.getReg()), SExt1);
+            unsigned UnmergeDef = ${tmp2}.getReg() == ${unmerge}->getOperand(0).getReg() ? 0 : 1;
+            Helper.getBuilder().buildSExt(${dst}.getReg(), Unmerge.getReg(UnmergeDef));
+            ${root}->eraseFromParent(); }])
+>;
+def redundant_zext_unmerge_sext_inreg : redundant_ext_unmerge_sext_inreg<G_ZEXT>;
+def redundant_aext_unmerge_sext_inreg : redundant_ext_unmerge_sext_inreg<G_ANYEXT>;
+
 // Fold (anyext (trunc x)) -> x if the source type is same as
 // the destination type.
 def anyext_trunc_fold: GICombineRule <
@@ -2624,6 +2646,7 @@ def const_combines : GICombineGroup<[constant_fold_fp_ops, const_ptradd_to_i2p,
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_sext_inreg, redundant_zext_sext_inreg, redundant_aext_sext_inreg,
+  redundant_zext_unmerge_sext_inreg, redundant_aext_unmerge_sext_inreg,
   redundant_and, redundant_or, urem_pow2_to_mask, zext_trunc_fold,
   sext_inreg_to_zext_inreg]>;
 
