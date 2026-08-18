@@ -786,6 +786,9 @@ struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
 
 } // namespace internal
 
+// Like 'FPBits' but named by 'FPType', so no native C++ type need exist.
+template <FPType fp_type> using FPRep = internal::FPRep<fp_type>;
+
 // Returns the FPType corresponding to C++ type T on the host.
 template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   using UnqualT = cpp::remove_cv_t<T>;

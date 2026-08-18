@@ -208,6 +208,12 @@ TEST(LlvmLibcSharedBuiltinsTest, ExtendConversion) {
   EXPECT_FP_EQ(float128(1.5), shared::extendxftf2(1.5L));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+#endif // LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+  EXPECT_FP_EQ(1.5L, shared::extendhfxf2(static_cast<uint16_t>(0x3E00)));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
@@ -219,6 +225,13 @@ TEST(LlvmLibcSharedBuiltinsTest, TruncateConversion) {
   EXPECT_FP_EQ(1.5L, shared::trunctfxf2(float128(1.5)));
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+#endif // LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+  EXPECT_EQ(static_cast<uint16_t>(0x3FC0), shared::truncxfbf2(1.5L));
+  EXPECT_EQ(static_cast<uint16_t>(0x3E00), shared::truncxfhf2(1.5L));
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, SingleCompare) {
