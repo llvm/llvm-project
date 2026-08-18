@@ -46,6 +46,8 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 };
 
 INTERCEPTOR(void, free, void* ptr) {
+  if (UNLIKELY(!ptr))
+    return;
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
@@ -54,6 +56,8 @@ INTERCEPTOR(void, free, void* ptr) {
 
 #  if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void, cfree, void* ptr) {
+  if (UNLIKELY(!ptr))
+    return;
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
   GET_STACK_TRACE_FREE;
