@@ -1,10 +1,10 @@
 ;; Tests memprof profile matching (with and without instrumentation profiles).
 ; RUN: rm -rf %t && split-file %s %t
 
+;; MEMPROFRAND2 checks fail on different platforms, possibly due to different rand implementations
+; REQUIRES: x86_64-linux
 ;; -stats requires asserts
 ; REQUIRES: asserts
-;; MEMPROFRAND2 checks fail on windows, possibly due to different rand implementations
-; UNSUPPORTED: system-windows
 
 ;; Generate indexed profiles of all combinations:
 ; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
