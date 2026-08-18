@@ -2635,7 +2635,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // No SPIR-V opcode exists for these, so lowering to an imported helper is an
   // AMD extension. Other targets keep the generic expansion.
-  if (!isAMDTarget(TM.getTargetTriple()))
+  if (TM.getTargetTriple().getVendor() != Triple::AMD)
     return &I;
 
   Module *M = I.getModule();
