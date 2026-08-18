@@ -2857,11 +2857,6 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
-  // For unroll directives without a value, force full unrolling.
-  // For unroll directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling.
-  // Enabling unroll and jamming / vectorization is handled in
-  // genLoopAnnotationAttr.
   void addLoopAnnotationAttr(
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
