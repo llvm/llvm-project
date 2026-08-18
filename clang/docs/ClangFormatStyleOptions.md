@@ -2597,6 +2597,16 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+  - `bool AfterExportBlock` Wrap export blocks.
+
+    ```c++
+    true:                            false:
+    export                           export {
+    {                                  int foo();
+      int foo();                     }
+    }
+    ```
+
   - `bool BeforeCatch` Wrap before `catch`.
 
     ```c++

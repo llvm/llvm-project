@@ -1549,6 +1549,15 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterExternBlock; // Partially superseded by IndentExternBlock
+    /// Wrap export blocks.
+    /// \code
+    ///   true:                            false:
+    ///   export                           export {
+    ///   {                                  int foo();
+    ///     int foo();                     }
+    ///   }
+    /// \endcode
+    bool AfterExportBlock;
     /// Wrap before `catch`.
     /// \code
     ///   true:

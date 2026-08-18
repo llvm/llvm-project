@@ -220,6 +220,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
     IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
+    IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
@@ -1725,6 +1726,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*AfterStruct=*/false,
                             /*AfterUnion=*/false,
                             /*AfterExternBlock=*/false,
+                            /*AfterExportBlock=*/false,
                             /*BeforeCatch=*/false,
                             /*BeforeElse=*/false,
                             /*BeforeLambdaBody=*/false,
@@ -1746,6 +1748,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.SplitEmptyFunction = true;
     Expanded.BraceWrapping.SplitEmptyRecord = false;
     break;
@@ -1765,6 +1768,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
     Expanded.BraceWrapping.AfterStruct = true;
     Expanded.BraceWrapping.AfterUnion = true;
     Expanded.BraceWrapping.AfterExternBlock = true;
+    Expanded.BraceWrapping.AfterExportBlock = true;
     Expanded.BraceWrapping.BeforeCatch = true;
     Expanded.BraceWrapping.BeforeElse = true;
     Expanded.BraceWrapping.BeforeLambdaBody = true;
@@ -1795,6 +1799,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterStruct=*/true,
         /*AfterUnion=*/true,
         /*AfterExternBlock=*/true,
+        /*AfterExportBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
         /*BeforeLambdaBody=*/true,
@@ -1897,6 +1902,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*AfterStruct=*/false,
                              /*AfterUnion=*/false,
                              /*AfterExternBlock=*/false,
+                             /*AfterExportBlock=*/false,
                              /*BeforeCatch=*/false,
                              /*BeforeElse=*/false,
                              /*BeforeLambdaBody=*/false,

@@ -444,7 +444,8 @@ private:
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         (FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
                                   TT_ForEachMacro) ||
-         TheLine->startsWithExportBlock())) {
+         (TheLine->startsWithExportBlock() &&
+          !Style.BraceWrapping.AfterExportBlock))) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -937,6 +938,14 @@ private:
     }
 
     if (Line.endsWith(tok::l_brace)) {
+      // Refuse to merge export blocks if the style requires the brace to be on
+      // a new line.
+      if (Style.BraceWrapping.AfterExportBlock &&
+          Line.First->is(tok::l_brace) && I > AnnotatedLines.begin() &&
+          I[-1]->startsWith(tok::kw_export)) {
+        return 0;
+      }
+
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never &&
           Line.First->is(TT_BlockLBrace)) {
         return 0;
