@@ -13,19 +13,22 @@
 #include <ranges>
 #include <utility>
 
-// Non-simple: only the non-const begin()/end() overloads are viable.
-struct NonSimpleView : std::ranges::view_base {
+// Non-simple, so the non-const begin()/end() overloads are viable. Not a common range, but sized and random access,
+// which is enough for cartesian_product_view to return an iterator from end() rather than default_sentinel_t.
+struct View : std::ranges::view_interface<View> {
   int* begin();
-  int* end();
+  const int* begin() const;
+  volatile int* end();
+  const volatile int* end() const;
+  unsigned size() const;
 };
+static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+static_assert(!std::ranges::common_range<View> && !std::ranges::common_range<const View>);
+static_assert(std::ranges::sized_range<View> && std::ranges::random_access_range<View>);
+static_assert(std::ranges::sized_range<const View> && std::ranges::random_access_range<const View>);
 
-// Simple: only the const begin()/end() overloads are viable.
-struct ConstAccessibleView : std::ranges::view_base {
-  int* begin() const;
-  int* end() const;
-};
-
-// Distinct sentinel type: not a common range, so end() yields default_sentinel_t.
+// Neither a common range nor sized and random access, so end() yields default_sentinel_t.
 struct NonCommonView : std::ranges::view_base {
   struct Sentinel {
     friend bool operator==(int*, Sentinel) noexcept;
@@ -33,37 +36,30 @@ struct NonCommonView : std::ranges::view_base {
   int* begin() const;
   Sentinel end() const;
 };
-
-struct SizedView : std::ranges::view_base {
-  int* begin() const;
-  int* end() const;
-  unsigned size() const;
-};
+static_assert(!std::ranges::common_range<const NonCommonView>);
+static_assert(!std::ranges::sized_range<const NonCommonView>);
 
 void test() {
   // [range.cartesian.view]
 
-  std::ranges::cartesian_product_view<NonSimpleView> non_simple{NonSimpleView{}};
-  non_simple.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  non_simple.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  const std::ranges::cartesian_product_view<ConstAccessibleView> const_view{ConstAccessibleView{}};
-  const_view.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  const_view.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::cartesian_product_view<View> v{View{}};
+  v.begin(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.end();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.size();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).begin();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).end();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).size();
 
   // Not a common range: end() returns default_sentinel_t.
   const std::ranges::cartesian_product_view<NonCommonView> non_common{NonCommonView{}};
   non_common.end(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  std::ranges::cartesian_product_view<SizedView> sized{SizedView{}};
-  sized.size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(sized).size();
-
   // [range.cartesian.iterator]
 
-  const std::ranges::cartesian_product_view<ConstAccessibleView> view{ConstAccessibleView{}};
-  auto iter = view.begin();
+  auto iter = v.begin();
 
   *iter;    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   iter[0];  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
