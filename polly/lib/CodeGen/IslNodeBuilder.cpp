@@ -28,7 +28,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -74,6 +73,9 @@
 
 using namespace llvm;
 using namespace polly;
+
+// Declared in LoopGenerators.cpp
+extern llvm::cl::opt<bool> PollyVectorizeMetadata;
 
 #define DEBUG_TYPE "polly-codegen"
 
@@ -434,6 +436,55 @@ static bool IsLoopVectorizerDisabled(isl::ast_node_for Node) {
   return false;
 }
 
+/// Returns true if the loop has a dist=1 dependence involving FP operations
+/// (array-carried RAW/WAW or scalar FP reduction). In that case we omit the
+/// vectorize.enable annotation and let the Loop Vectorizer decide.
+static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
+  isl::pw_aff PwaDist = IslAstInfo::getMinimalDependenceDistance(For);
+  if (PwaDist.is_null())
+    return false;
+
+  isl::set Dist = isl::manage(isl_pw_aff_domain(PwaDist.copy()));
+  isl::pw_aff PwaOne = isl::pw_aff(Dist, isl::val::one(S.getIslCtx()));
+  if (isl_pw_aff_is_equal(PwaDist.get(), PwaOne.get()) != isl_bool_true)
+    return false;
+
+  // dist=1: suppress forced vectorization if the body has FP operations.
+  for (isl::set StmtSet :
+       IslAstInfo::getSchedule(For).domain().get_set_list()) {
+    auto *Stmt = static_cast<ScopStmt *>(StmtSet.get_tuple_id().get_user());
+    for (Instruction *Inst : Stmt->getInstructions()) {
+      if (Inst->getType()->isFloatingPointTy() ||
+          (Inst->getNumOperands() > 0 &&
+           Inst->getOperand(0)->getType()->isFloatingPointTy()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+/// Sign-extend or truncate V to Ty.
+///
+/// Returns V unchanged if it already has type Ty, sign-extends it if
+/// Ty is wider, or truncates it if Ty is narrower.
+static Value *castToType(IRBuilderBase &Builder, Value *V, Type *Ty) {
+  if (V->getType() == Ty)
+    return V;
+  return Builder.CreateSExtOrTrunc(V, Ty);
+}
+
+/// Returns true when V is known to fit in IntPtrTy without data loss.
+/// Accepts i64 constants such as 0 and 1 that ISL materialises as i64 even on
+/// 32-bit targets.
+static bool fitsInTy(Value *V, IntegerType *IntTy) {
+  if (V->getType()->getIntegerBitWidth() <= IntTy->getBitWidth())
+    return true;
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->getValue().isSignedIntN(IntTy->getBitWidth());
+  return false;
+}
+
 void IslNodeBuilder::createForSequential(isl::ast_node_for For,
                                          bool MarkParallel) {
   Value *ValueLB, *ValueUB, *ValueInc;
@@ -467,20 +518,44 @@ void IslNodeBuilder::createForSequential(isl::ast_node_for For,
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. This also allows Hexagon to represent loops as
+  // Hardware loops. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   // If we can show that LB <Predicate> UB holds at least once, we can
   // omit the GuardBB in front of the loop.
   bool UseGuardBB = !GenSE->isKnownPredicate(Predicate, GenSE->getSCEV(ValueLB),
                                              GenSE->getSCEV(ValueUB));
+
+  // FIXME: This is a workaround for
+  // https://github.com/llvm/llvm-project/issues/198726.
+  // llvm.loop.vectorize.enable=true has an additional property beyond
+  // requesting vectorization — it implicitly allows FP operation reordering.
+  // This is a limitation of the metadata format: there is no way to separate
+  // the request for vectorization from the request for reassociating FP ops.
+  // Once LoopVectorize is fixed to not reorder FP ops without explicit
+  // permission, this workaround can be removed.
+  // For now, skip vectorize.enable for dist=1 FP loops to avoid correctness
+  // failures from FP reassociation.
+  bool SkipVectorizeEnableMetadata = hasLoopCarriedDependence(For, S);
+
   IV = createLoop(ValueLB, ValueUB, ValueInc, Builder, *GenLI, *GenDT,
                   ExitBlock, Predicate, &Annotator, MarkParallel, UseGuardBB,
-                  LoopVectorizerDisabled);
+                  LoopVectorizerDisabled, SkipVectorizeEnableMetadata);
   IDToValue[IteratorID.get()] = IV;
 
   create(Body.release());
@@ -534,12 +609,22 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   MaxType = ExprBuilder.getWidestType(MaxType, ValueUB->getType());
   MaxType = ExprBuilder.getWidestType(MaxType, ValueInc->getType());
 
-  if (MaxType != ValueLB->getType())
-    ValueLB = Builder.CreateSExt(ValueLB, MaxType);
-  if (MaxType != ValueUB->getType())
-    ValueUB = Builder.CreateSExt(ValueUB, MaxType);
-  if (MaxType != ValueInc->getType())
-    ValueInc = Builder.CreateSExt(ValueInc, MaxType);
+  // Narrow the IV type to pointer size when all three bounds are known to fit.
+  // On 32-bit targets (e.g. Hexagon) this avoids i64 IVs and the truncations
+  // they cause in loop bodies. ISL materializes constants (e.g. LB=0, Inc=1)
+  // as i64 even when they fit in i32, so we accept those via isSignedIntN.
+  // Non-constant variables with a type wider than PtrBits are left unchanged
+  // to avoid an unsafe truncation.
+  IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
+  if (MaxType->getIntegerBitWidth() > IntPtrTy->getBitWidth() &&
+      fitsInTy(ValueLB, IntPtrTy) && fitsInTy(ValueUB, IntPtrTy) &&
+      fitsInTy(ValueInc, IntPtrTy))
+    MaxType = IntPtrTy;
+
+  // Coerce each bound to MaxType, using trunc when MaxType was narrowed.
+  ValueLB = castToType(Builder, ValueLB, MaxType);
+  ValueUB = castToType(Builder, ValueUB, MaxType);
+  ValueInc = castToType(Builder, ValueInc, MaxType);
 
   BasicBlock::iterator LoopBody;
 
@@ -587,6 +672,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ScalarEvolution *CallerSE = GenSE;
   ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
+  MapVector<const Loop *, const SCEV *> OutsideLoopIterationsCopy =
+      OutsideLoopIterations;
 
   // Get the analyses for the subfunction. ParallelLoopGenerator already create
   // DominatorTree and LoopInfo for us.
@@ -618,15 +705,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Update the ValueMap to use instructions in the subfunction. Note that
   // "GlobalMap" used in BlockGenerator/IslExprBuilder is a reference to this
   // ValueMap.
-  for (auto &[OldVal, NewVal] : ValueMap) {
-    NewVal = NewValues.lookup(NewVal);
-
-    // Clean-up any value that getReferencesInSubtree thinks we do not need.
-    // DenseMap::erase only writes a tombstone (and destroys OldVal/NewVal), so
-    // does not invalidate our iterator.
-    if (!NewVal)
-      ValueMap.erase(OldVal);
-  }
+  ValueMap.remove_if([&](auto &P) {
+    P.second = NewValues.lookup(P.second);
+    // Clean up any value that getReferencesInSubtree thinks we do not need.
+    return !P.second;
+  });
 
   // This is for NewVals that do not appear in ValueMap (such as SCoP-invariant
   // values whose original value can be reused as long as we are in the same
@@ -647,6 +730,19 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
     assert(NewVal);
   }
   IDToValue[IteratorID] = IV;
+
+  // Also update OutsideLoopIterations to use values from the subfunction.
+  // SCEVExpander may fold identity operations (e.g. x+0 -> x), returning the
+  // original loop PHI instead of a new instruction. We need to remap these
+  // values through NewValues so GenSE (now SubSE) doesn't operate on values
+  // from the caller function.
+  for (auto &[L, S] : OutsideLoopIterations) {
+    if (auto *U = dyn_cast<SCEVUnknown>(S)) {
+      Value *NewVal = NewValues.lookup(U->getValue());
+      assert(NewVal && "must have a new value");
+      OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
+    }
+  }
 
 #ifndef NDEBUG
   // Check whether the maps now exclusively refer to SubFn values.
@@ -680,13 +776,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenSE = CallerSE;
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
+  OutsideLoopIterations = std::move(OutsideLoopIterationsCopy);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(AfterLoop);
-
-  for (const Loop *L : Loops)
-    OutsideLoopIterations.erase(L);
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
@@ -794,9 +888,17 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                      Stmt->getParent()->getContext().release());
       SchedDom = isl_set_intersect_params(
           SchedDom, Stmt->getParent()->getContext().release());
-      assert(isl_set_is_subset(SchedDom, AccDom) &&
+      // Restrict to defined behavior context to match DeLICM's contract:
+      // new read accesses are only required to cover the defined-behavior
+      // subset of the domain.
+      auto *DefinedBehavior =
+          Stmt->getParent()->getBestKnownDefinedBehaviorContext().release();
+      SchedDom =
+          isl_set_intersect_params(SchedDom, isl_set_copy(DefinedBehavior));
+      Dom = isl_set_intersect_params(Dom, DefinedBehavior);
+      assert(isl_set_is_subset(SchedDom, AccDom) != isl_bool_false &&
              "Access relation not defined on full schedule domain");
-      assert(isl_set_is_subset(Dom, AccDom) &&
+      assert(isl_set_is_subset(Dom, AccDom) != isl_bool_false &&
              "Access relation not defined on full domain");
       isl_set_free(AccDom);
       isl_set_free(SchedDom);
@@ -925,6 +1027,30 @@ void IslNodeBuilder::createBlock(__isl_take isl_ast_node *Block) {
   isl_ast_node_list_free(List);
 }
 
+void IslNodeBuilder::generateBeginScopTrace() {
+  if (!TraceStmts)
+    return;
+
+  // Sequence of strings to print.
+  SmallVector<llvm::Value *, 8> Values;
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "Scop: "));
+
+  auto Params = S.getParamSpace();
+  for (int i : rangeIslSize(0, Params.dim(isl::dim::param))) {
+    if (i != 0)
+      Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, " "));
+
+    isl::id PId = Params.get_dim_id(isl::dim::param, i);
+    Values.push_back(
+        RuntimeDebugBuilder::getPrintableString(Builder, PId.get_name()));
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "="));
+    Values.push_back(IDToValue.lookup(PId.get()));
+  }
+
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "\n"));
+  RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
+}
+
 void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   switch (isl_ast_node_get_type(Node)) {
   case isl_ast_node_error:
@@ -1013,7 +1139,7 @@ bool IslNodeBuilder::materializeValue(__isl_take isl_id *Id) {
   return true;
 }
 
-bool IslNodeBuilder::materializeParameters(__isl_take isl_set *Set) {
+bool IslNodeBuilder::materializeParameters(__isl_keep isl_set *Set) {
   for (unsigned i = 0, e = isl_set_dim(Set, isl_dim_param); i < e; ++i) {
     if (!isl_set_involves_dims(Set, isl_dim_param, i, 1))
       continue;
@@ -1033,14 +1159,14 @@ bool IslNodeBuilder::materializeParameters() {
   return true;
 }
 
-Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                              isl_ast_build *Build,
+Value *IslNodeBuilder::preloadUnconditionally(isl::set AccessRange,
+                                              isl::ast_build Build,
                                               Instruction *AccInst) {
-  isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
-  isl_ast_expr *Access =
-      isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-  auto *Address = isl_ast_expr_address_of(Access);
-  auto *AddressValue = ExprBuilder.create(Address);
+  isl::pw_multi_aff PWAccRel = isl::pw_multi_aff::from_set(AccessRange);
+  PWAccRel = PWAccRel.gist_params(S.getContext());
+  isl::ast_expr Access = Build.access_from(PWAccRel);
+  isl::ast_expr Address = Access.address_of();
+  Value *AddressValue = ExprBuilder.create(Address.release());
   Value *PreloadVal;
 
   // Correct the type as the SAI might have a different type than the user
@@ -1053,54 +1179,34 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
 
-  // TODO: This is only a hot fix for SCoP sequences that use the same load
-  //       instruction contained and hoisted by one of the SCoPs.
-  if (SE.isSCEVable(Ty))
-    SE.forgetValue(AccInst);
-
   return PreloadVal;
 }
 
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
-                                            __isl_take isl_set *Domain) {
-  isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
+                                            isl::set Domain) {
+  isl::set AccessRange = MA.getAddressFunction().range();
 
-  if (!materializeParameters(AccessRange)) {
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+  if (!materializeParameters(AccessRange.get()))
     return nullptr;
-  }
 
-  auto *Build =
-      isl_ast_build_from_context(isl_set_universe(S.getParamSpace().release()));
-  isl_set *Universe = isl_set_universe(isl_set_get_space(Domain));
-  bool AlwaysExecuted = isl_set_is_equal(Domain, Universe);
-  isl_set_free(Universe);
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::set::universe(S.getParamSpace()));
+  isl::set Universe = isl::set::universe(Domain.get_space());
+  bool AlwaysExecuted = Domain.is_equal(Universe);
 
   Instruction *AccInst = MA.getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = nullptr;
-  if (AlwaysExecuted) {
-    PreloadVal = preloadUnconditionally(AccessRange, Build, AccInst);
-    isl_ast_build_free(Build);
-    isl_set_free(Domain);
-    return PreloadVal;
-  }
+  if (AlwaysExecuted)
+    return preloadUnconditionally(AccessRange, Build, AccInst);
 
-  if (!materializeParameters(Domain)) {
-    isl_ast_build_free(Build);
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+  if (!materializeParameters(Domain.get()))
     return nullptr;
-  }
 
-  isl_ast_expr *DomainCond = isl_ast_build_expr_from_set(Build, Domain);
-  Domain = nullptr;
+  isl::ast_expr DomainCond = Build.expr_from(Domain);
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.createBool(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond.release());
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
@@ -1137,7 +1243,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
-  PreloadVal = MergePHI;
+  Value *PreloadVal = MergePHI;
 
   if (!PreAccInst) {
     PreloadVal = nullptr;
@@ -1147,7 +1253,6 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   MergePHI->addIncoming(PreAccInst, ExecBB);
   MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
 
-  isl_ast_build_free(Build);
   return PreloadVal;
 }
 
@@ -1214,7 +1319,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx.copy());
+  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx);
   if (!PreloadVal)
     return false;
 

@@ -8,6 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
+#include "../bugprone/AssignmentInSelectionStatementCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/CopyConstructorMutatesArgumentCheck.h"
@@ -308,6 +309,8 @@ public:
     // EXP
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");
+    CheckFactories.registerCheck<bugprone::AssignmentInSelectionStatementCheck>(
+        "cert-exp45-c");
     // FLP
     CheckFactories.registerCheck<bugprone::FloatLoopCounterCheck>(
         "cert-flp30-c");
@@ -350,6 +353,7 @@ public:
     Opts["cert-arr39-c.WarnOnSizeOfPointerToAggregate"] = "false";
     Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-err33-c.CheckedFunctions"] = CertErr33CCheckedFunctions;
+    Opts["cert-err33-c.CheckedReturnTypes"] = "";
     Opts["cert-err33-c.AllowCastToVoid"] = "true";
     Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
     Opts["cert-str34-c.DiagnoseSignedUnsignedCharComparisons"] = "false";

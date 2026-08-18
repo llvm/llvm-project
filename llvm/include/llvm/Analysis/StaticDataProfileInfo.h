@@ -4,9 +4,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 
 namespace llvm {
 
@@ -21,11 +24,11 @@ enum class AnnotationKind : uint8_t {
   ReservedName,
 };
 /// Returns the annotation kind of the global variable \p GV.
-AnnotationKind getAnnotationKind(const GlobalVariable &GV);
+LLVM_ABI AnnotationKind getAnnotationKind(const GlobalVariable &GV);
 
 /// Returns true if the annotation kind of the global variable \p GV is
 /// AnnotationOK.
-bool IsAnnotationOK(const GlobalVariable &GV);
+LLVM_ABI bool IsAnnotationOK(const GlobalVariable &GV);
 } // namespace memprof
 
 /// A class that holds the constants that represent static data and their
@@ -110,6 +113,31 @@ public:
 
 private:
   std::unique_ptr<StaticDataProfileInfo> Info;
+};
+
+class LLVM_ABI StaticDataProfileInfoAnalysis
+    : public AnalysisInfoMixin<StaticDataProfileInfoAnalysis> {
+public:
+  static AnalysisKey Key;
+
+  class Result {
+    std::unique_ptr<StaticDataProfileInfo> HeldInfo;
+    Result(std::unique_ptr<StaticDataProfileInfo> &&Info)
+        : HeldInfo(std::move(Info)) {}
+    friend class StaticDataProfileInfoAnalysis;
+
+  public:
+    StaticDataProfileInfo &getStaticDataProfileInfo() {
+      return *HeldInfo;
+    }
+
+    bool invalidate(Module &, const PreservedAnalyses &,
+                    ModuleAnalysisManager::Invalidator &) {
+      return false;
+    }
+  };
+
+  Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // namespace llvm

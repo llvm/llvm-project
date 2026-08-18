@@ -16,6 +16,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -118,6 +119,25 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)
            << TheCall->getSourceRange();
+
+  // Check if the builtin requires specific target features.
+  StringRef FeatureList(Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+  if (!FeatureList.empty()) {
+    const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+    llvm::StringMap<bool> CallerFeatureMap;
+    Context.getFunctionFeatureMap(CallerFeatureMap, FD);
+    if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
+                                                 CallerFeatureMap)) {
+      // Get the builtin name from the CallExpr's callee
+      const FunctionDecl *BuiltinDecl = TheCall->getDirectCallee();
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_needs_feature)
+          << (BuiltinDecl ? BuiltinDecl->getDeclName()
+                          : DeclarationName(&Context.Idents.get(
+                                Context.BuiltinInfo.getName(BuiltinID))))
+          << FeatureList;
+      return true;
+    }
+  }
 
   // Common BCD type-validation helpers
   // Emit error diagnostics and return true on success
@@ -229,6 +249,14 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
   case PPC::BI__builtin_vsx_xxpermx:
     return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint4tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
+  case PPC::BI__builtin_altivec_vupkint8tobf16:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
+  case PPC::BI__builtin_altivec_vupkint4tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 7);
+  case PPC::BI__builtin_altivec_vupkint8tofp32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3);
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 1, 31);

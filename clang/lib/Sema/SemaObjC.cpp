@@ -1711,9 +1711,30 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  VarDecl *VD = dyn_cast<VarDecl>(D);
-  if (!VD || !VD->hasLocalStorage()) {
-    Diag(AL.getLoc(), diag::err_block_on_nonlocal) << AL;
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (VD->getStorageClass() == SC_Register) {
+      Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+          << diag::NotAllowedBlockVarReason::RegisterVariable;
+      return;
+    }
+
+    if (!VD->hasLocalStorage()) {
+      if (VD->isStaticLocal())
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::StaticLocalVariable;
+      else if (VD->isStaticDataMember())
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::CppStaticDataMember;
+      else
+        Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+            << diag::NotAllowedBlockVarReason::NonlocalVariable;
+      return;
+    }
+  }
+
+  if (isa<ObjCIvarDecl>(D)) {
+    Diag(AL.getLoc(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::ObjCInstanceVariable;
     return;
   }
 

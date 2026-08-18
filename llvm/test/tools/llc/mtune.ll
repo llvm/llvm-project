@@ -16,17 +16,15 @@
 ; RUN: llc < %s -mtriple=aarch64 -mtune=help 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP,CHECK-TUNE-HELP-NO-COMPILE
 ; RUN: llc < %s -mtriple=aarch64 -mtune=help -o %t.s 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP,CHECK-TUNE-HELP-NO-COMPILE
 
-;; Missing target triple for -mtune=help
-; RUN: not llc -mtune=help 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP-MISSING-TRIPLE
-; RUN: not llc < %s -mtune=help 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP-MISSING-TRIPLE
+;; Using default target triple for -mtune=help
+; RUN: llc -mtune=help 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP,CHECK-TUNE-HELP-NO-COMPILE
+; RUN: llc < %s -mtune=help 2>&1 | FileCheck %s --check-prefixes=CHECK-TUNE-HELP,CHECK-TUNE-HELP-NO-COMPILE
 
 ; CHECK-TUNE-HELP: Available CPUs for this target:
 ; CHECK-TUNE-HELP: Available features for this target:
 
 ;; To check we dont compile the file
 ; CHECK-TUNE-HELP-NO-COMPILE-NOT: zero_cycle_regmove_FPR32:
-
-; CHECK-TUNE-HELP-MISSING-TRIPLE: error: unable to get target for 'unknown', see --version and --triple.
 
 ;; A test case that depends on `FeatureZCRegMoveFPR128` tuning feature, to enable -mtune verification
 ;; through codegen effects. Taken from: llvm/test/CodeGen/AArch64/arm64-zero-cycle-regmove-fpr.ll

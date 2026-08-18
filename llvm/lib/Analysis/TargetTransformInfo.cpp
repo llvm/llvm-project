@@ -106,13 +106,12 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
     ParamTys.push_back(Argument->getType());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<const Value *> Args,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags,
-                                                 const IntrinsicInst *I,
-                                                 InstructionCost ScalarCost)
-    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
+IntrinsicCostAttributes::IntrinsicCostAttributes(
+    Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
+    ArrayRef<Type *> Tys, FastMathFlags Flags, const IntrinsicInst *I,
+    InstructionCost ScalarCost, VectorInstrContext VIC)
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost),
+      VIC(VIC) {
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
 }
@@ -292,14 +291,15 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
 
-InstructionUniformity
-llvm::TargetTransformInfo::getInstructionUniformity(const Value *V) const {
-  // Calls with the NoDivergenceSource attribute are always uniform.
+ValueUniformity
+llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
+  ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return InstructionUniformity::AlwaysUniform;
+    if (VU == ValueUniformity::NeverUniform &&
+        Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return ValueUniformity::Default;
   }
-  return TTIImpl->getInstructionUniformity(V);
+  return VU;
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
@@ -379,9 +379,9 @@ unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
   return TTIImpl->getEpilogueVectorizationMinVF();
 }
 
-bool TargetTransformInfo::preferPredicateOverEpilogue(
+bool TargetTransformInfo::preferTailFoldingOverEpilogue(
     TailFoldingInfo *TFI) const {
-  return TTIImpl->preferPredicateOverEpilogue(TFI);
+  return TTIImpl->preferTailFoldingOverEpilogue(TFI);
 }
 
 TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {
@@ -616,6 +616,10 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
+}
+
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {
   return TTIImpl->shouldBuildRelLookupTables();
 }
@@ -626,11 +630,6 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
 
 bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
   return TTIImpl->useFastCCForInternalCall(F);
-}
-
-bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
-    Intrinsic::ID ID) const {
-  return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
@@ -741,6 +740,10 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
+}
+
+bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
+  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -860,8 +863,11 @@ unsigned TargetTransformInfo::getMaximumVF(unsigned ElemWidth,
 }
 
 unsigned TargetTransformInfo::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                                Type *ScalarValTy) const {
-  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+                                                Type *ScalarValTy,
+                                                Align Alignment,
+                                                unsigned AddrSpace) const {
+  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
 }
 
 bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
@@ -923,8 +929,10 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind, FMF);
 }
 
-unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
-  return TTIImpl->getMaxInterleaveFactor(VF);
+unsigned
+TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
+  return TTIImpl->getMaxInterleaveFactor(VF, HasUnorderedReductions);
 }
 
 TargetTransformInfo::OperandValueInfo
@@ -1055,6 +1063,22 @@ TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
   if (auto *Cast = dyn_cast<CastInst>(I))
     return getPartialReductionExtendKind(Cast->getOpcode());
   return PR_None;
+}
+
+Instruction::CastOps
+TargetTransformInfo::getOpcodeForPartialReductionExtendKind(
+    TargetTransformInfo::PartialReductionExtendKind Kind) {
+  switch (Kind) {
+  case TargetTransformInfo::PR_ZeroExtend:
+    return Instruction::CastOps::ZExt;
+  case TargetTransformInfo::PR_SignExtend:
+    return Instruction::CastOps::SExt;
+  case TargetTransformInfo::PR_FPExtend:
+    return Instruction::CastOps::FPExt;
+  default:
+    break;
+  }
+  llvm_unreachable("Unhandled partial reduction extend kind");
 }
 
 TargetTransformInfo::PartialReductionExtendKind
@@ -1444,9 +1468,8 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(
-    bool IsEpilogue) const {
-  return TTIImpl->preferFixedOverScalableIfEqualCost(IsEpilogue);
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
 bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
@@ -1456,6 +1479,10 @@ bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferSLPInstCountCheck() const {
+  return TTIImpl->preferSLPInstCountCheck();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {
@@ -1549,6 +1576,11 @@ void TargetTransformInfo::collectKernelLaunchBounds(
 
 bool TargetTransformInfo::allowVectorElementIndexingUsingGEP() const {
   return TTIImpl->allowVectorElementIndexingUsingGEP();
+}
+
+bool TargetTransformInfo::isUniform(const Instruction *I,
+                                    const SmallBitVector &UniformArgs) const {
+  return TTIImpl->isUniform(I, UniformArgs);
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;

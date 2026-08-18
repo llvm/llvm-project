@@ -90,6 +90,29 @@ template <class ForwardIt, class T>
 void iota(ForwardIt first, ForwardIt last, T value);
 
 template <class ForwardIt>
+ForwardIt unique(ForwardIt first, ForwardIt last);
+template <class ForwardIt, class BinaryPred>
+ForwardIt unique(ForwardIt first, ForwardIt last, BinaryPred pred) {
+  return first;
+}
+
+template <class ForwardIt, class T>
+ForwardIt remove(ForwardIt first, ForwardIt last, const T &value);
+template <class ForwardIt, class UnaryPred>
+ForwardIt remove_if(ForwardIt first, ForwardIt last, UnaryPred pred) {
+  return first;
+}
+
+template <class ForwardIt, class UnaryPred>
+ForwardIt partition(ForwardIt first, ForwardIt last, UnaryPred pred) {
+  return first;
+}
+template <class BidirIt, class UnaryPred>
+BidirIt stable_partition(BidirIt first, BidirIt last, UnaryPred pred) {
+  return first;
+}
+
+template <class ForwardIt>
 ForwardIt rotate(ForwardIt first, ForwardIt middle, ForwardIt last);
 } // namespace _V1
 

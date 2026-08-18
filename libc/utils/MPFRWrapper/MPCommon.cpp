@@ -210,6 +210,12 @@ MPFRNumber MPFRNumber::erf() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::erfc() const {
+  MPFRNumber result(*this);
+  mpfr_erfc(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::exp() const {
   MPFRNumber result(*this);
   mpfr_exp(result.value, value, mpfr_rounding);
@@ -317,6 +323,13 @@ MPFRNumber MPFRNumber::hypot(const MPFRNumber &b) {
   return result;
 }
 
+MPFRNumber MPFRNumber::lgamma() const {
+  MPFRNumber result(*this);
+  int signp;
+  mpfr_lgamma(result.value, &signp, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::log() const {
   MPFRNumber result(*this);
   mpfr_log(result.value, value, mpfr_rounding);
@@ -327,6 +340,22 @@ MPFRNumber MPFRNumber::log2() const {
   MPFRNumber result(*this);
   mpfr_log2(result.value, value, mpfr_rounding);
   return result;
+}
+
+MPFRNumber MPFRNumber::log2p1() const {
+  // TODO: Only use mpfr_log2p1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0)
+  MPFRNumber result(*this);
+  mpfr_log2p1(result.value, value, mpfr_rounding);
+  return result;
+#else
+  unsigned int prec = mpfr_precision * 3;
+  MPFRNumber result(*this, prec);
+  MPFRNumber one(1.0f, prec);
+  mpfr_add(result.value, value, one.value, mpfr_rounding);
+  mpfr_log2(result.value, result.value, mpfr_rounding);
+  return result;
+#endif
 }
 
 MPFRNumber MPFRNumber::log10() const {
@@ -521,7 +550,7 @@ MPFRNumber MPFRNumber::tanpi() const {
   mpfr_mul_si(value_ret_exact.value, value_ret_exact.value, 4, MPFR_RNDN);
 
   if (mpfr_integer_p(value_ret_exact.value)) {
-    int mod = mpfr_get_si(value_ret_exact.value, MPFR_RNDN);
+    long mod = mpfr_get_si(value_ret_exact.value, MPFR_RNDN);
     mod = (mod < 0 ? -1 * mod : mod);
 
     switch (mod) {

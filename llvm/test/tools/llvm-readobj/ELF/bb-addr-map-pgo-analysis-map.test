@@ -116,7 +116,7 @@
 # PRETTY-NO-BAM: warning: --bb-addr-map must be enabled for --pretty-pgo-analysis-map to have an effect
 
 # TRUNCATED:      BBAddrMap [
-# TRUNCATED-NEXT: {{.*}}: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
+# TRUNCATED-NEXT: {{.*}}: warning: '[[FILE]]': unable to dump BB addr map section: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end in SHT_LLVM_BB_ADDR_MAP section with index 3
 # TRUNCATED-NEXT: ]
 ## Check that the other valid section is properly dumped.
 # TRUNCATED-NEXT: BBAddrMap [
@@ -156,7 +156,7 @@
 # TRUNCATED-NEXT:   }
 # TRUNCATED-NEXT: ]
 
-# INVALIDFT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 5: unable to decode LEB128 at offset 0x00000010: malformed uleb128, extends past end
+# INVALIDFT:   warning: '[[FILE]]': unable to dump BB addr map section: unable to decode LEB128 at offset 0x00000010: malformed uleb128, extends past end in SHT_LLVM_BB_ADDR_MAP section with index 5
 
 --- !ELF
 FileHeader:

@@ -31,8 +31,7 @@ end subroutine
 ! CHECK: %[[LEN_B:.*]] = fir.convert %[[UNBOX_B]]#1 : (index) -> i64
 ! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A]], %[[LEN_B]] : i64
 ! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i64) -> index
-! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LEN_LEN_IDX]], %c0{{.*}} : index
-! CHECK: %[[RES_LENGTH:.*]] = arith.select %[[CMPI]], %[[LEN_LEN_IDX]], %c0{{.*}} : index
+! CHECK: %[[RES_LENGTH:.*]] = arith.maxsi %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[RES_LENGTH]] : index) {bindc_name = ".result"}
 ! CHECK: fir.call @_QMm1Pfct1
 
@@ -54,8 +53,7 @@ end subroutine
 ! CHECK: %[[LEN_B_I32:.*]] = fir.convert %[[LEN_B]] : (index) -> i64
 ! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A_I32]], %[[LEN_B_I32]] : i64
 ! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i64) -> index
-! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LEN_LEN_IDX]], %c0{{.*}} : index
-! CHECK: %[[LENGTH:.*]] = arith.select %[[CMPI]], %[[LEN_LEN_IDX]], %c0{{.*}} : index
+! CHECK: %[[LENGTH:.*]] = arith.maxsi %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %{{.*}} = hlfir.elemental %{{.*}} typeparams %[[LENGTH]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>>
 
 end module

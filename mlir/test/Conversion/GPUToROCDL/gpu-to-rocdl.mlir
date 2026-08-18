@@ -989,4 +989,14 @@ func.func @broadcast_3xi16(%arg0 : vector<3xi16>) -> vector<3xi16> {
   %0 = gpu.subgroup_broadcast %arg0, first_active_lane : vector<3xi16>
   func.return %0 : vector<3xi16>
 }
+
+// CHECK-LABEL: func @ballot
+//  CHECK-SAME: (%[[PRED:.*]]: i1)
+func.func @ballot(%pred: i1) -> (i32, i64) {
+  // CHECK: rocdl.ballot %[[PRED]] : i32
+  %0 = gpu.ballot %pred : i32
+  // CHECK: rocdl.ballot %[[PRED]] : i64
+  %1 = gpu.ballot %pred : i64
+  func.return %0, %1 : i32, i64
+}
 }

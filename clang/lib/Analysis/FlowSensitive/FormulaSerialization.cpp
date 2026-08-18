@@ -203,9 +203,8 @@ parseFormula(llvm::StringRef Str, Arena &A,
     return F.takeError();
   if (!Str.empty())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   ("unexpected suffix of length: " +
-                                    llvm::Twine(Str.size() - OriginalSize))
-                                       .str());
+                                   "unexpected suffix of length: " +
+                                       llvm::Twine(Str.size() - OriginalSize));
   return F;
 }
 

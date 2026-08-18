@@ -11,18 +11,18 @@ define void @_ZSt6uniqueISt15_Deque_iteratorIdRdPdEET_S4_S4_(ptr %__first, ptr n
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__FIRST:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x ptr>, ptr [[__LAST:%.*]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 %arg, label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT:%.*]], label [[WHILE_COND_I_PREHEADER:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> [[TMP1]], ptr [[TMP0]], i64 0
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT:%.*]], label [[WHILE_COND_I_PREHEADER:%.*]]
 ; CHECK:       while.cond.i.preheader:
 ; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
 ; CHECK:       while.cond.i:
-; CHECK-NEXT:    br i1 %arg, label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT]], label [[WHILE_BODY_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT]], label [[WHILE_BODY_I:%.*]]
 ; CHECK:       while.body.i:
-; CHECK-NEXT:    br i1 %arg, label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT]], label [[WHILE_COND_I]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[_ZST13ADJACENT_FINDIST15_DEQUE_ITERATORIDRDPDEET_S4_S4__EXIT]], label [[WHILE_COND_I]]
 ; CHECK:       _ZSt13adjacent_findISt15_Deque_iteratorIdRdPdEET_S4_S4_.exit:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x ptr> [ [[TMP2]], [[ENTRY:%.*]] ], [ [[TMP1]], [[WHILE_COND_I]] ], [ undef, [[WHILE_BODY_I]] ]
 ; CHECK-NEXT:    store <2 x ptr> [[TMP3]], ptr [[__FIRST]], align 8
-; CHECK-NEXT:    br i1 %arg, label [[IF_THEN_I55:%.*]], label [[WHILE_COND:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN_I55:%.*]], label [[WHILE_COND:%.*]]
 ; CHECK:       if.then.i55:
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.cond:

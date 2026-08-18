@@ -675,8 +675,7 @@ static bool processSaturatingInst(SaturatingInst *SI, LazyValueInfo *LVI) {
   ++NumSaturating;
 
   // See if we can infer the other no-wrap too.
-  if (auto *BO = dyn_cast<BinaryOperator>(BinOp))
-    processBinOp(BO, LVI);
+  processBinOp(BinOp, LVI);
 
   return true;
 }
@@ -1177,9 +1176,73 @@ static bool processSIToFP(SIToFPInst *SIToFP, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
-  using OBO = OverflowingBinaryOperator;
+namespace {
+struct NoWrapFlags {
+  bool NSW = false;
+  bool NUW = false;
+};
+} // namespace
 
+// Check if the requested no-wrap flags are valid for \p Opcode on \p LRange and
+// \p RRange.
+static NoWrapFlags computeNoWrapFlags(Instruction::BinaryOps Opcode,
+                                      const ConstantRange &LRange,
+                                      const ConstantRange &RRange,
+                                      bool CheckNSW, bool CheckNUW) {
+  using OBO = OverflowingBinaryOperator;
+  NoWrapFlags Flags;
+  if (CheckNUW)
+    Flags.NUW = ConstantRange::makeGuaranteedNoWrapRegion(Opcode, RRange,
+                                                          OBO::NoUnsignedWrap)
+                    .contains(LRange);
+  if (CheckNSW)
+    Flags.NSW = ConstantRange::makeGuaranteedNoWrapRegion(Opcode, RRange,
+                                                          OBO::NoSignedWrap)
+                    .contains(LRange);
+  return Flags;
+}
+
+// Try to prove that \p BinOp does not wrap by looking at the operand ranges
+// constrained at each of its use sites, rather than at the definition. This
+// improves results, e.g. when all uses are constrained by a runtime check.
+static NoWrapFlags inferNoWrapFromUses(BinaryOperator *BinOp,
+                                       LazyValueInfo *LVI, bool WantNSW,
+                                       bool WantNUW) {
+  // Skip analysis, when there are too many uses to check or any use is in the
+  // same block.
+  const unsigned MaxUsesToInspect = 4;
+  BasicBlock *DefBB = BinOp->getParent();
+  unsigned NumUses = 0;
+  for (Use &U : BinOp->uses()) {
+    if (++NumUses > MaxUsesToInspect)
+      return {};
+    auto *UserI = cast<Instruction>(U.getUser());
+    if (isa<PHINode>(UserI) || UserI->getParent() == DefBB)
+      return {};
+  }
+  if (NumUses == 0)
+    return {};
+
+  Instruction::BinaryOps Opcode = BinOp->getOpcode();
+  NoWrapFlags Flags;
+  Flags.NSW = WantNSW;
+  Flags.NUW = WantNUW;
+  for (Use &U : BinOp->uses()) {
+    auto *UserI = cast<Instruction>(U.getUser());
+    // Constrain both operands at this use site and see which flags still hold.
+    ConstantRange LRange = LVI->getConstantRange(BinOp->getOperand(0), UserI,
+                                                 /*UndefAllowed=*/false);
+    ConstantRange RRange = LVI->getConstantRange(BinOp->getOperand(1), UserI,
+                                                 /*UndefAllowed=*/false);
+    Flags = computeNoWrapFlags(Opcode, LRange, RRange, Flags.NSW, Flags.NUW);
+    if (!Flags.NSW && !Flags.NUW)
+      return {};
+  }
+
+  return Flags;
+}
+
+static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   bool NSW = BinOp->hasNoSignedWrap();
   bool NUW = BinOp->hasNoUnsignedWrap();
   if (NSW && NUW)
@@ -1191,24 +1254,24 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   ConstantRange RRange = LVI->getConstantRangeAtUse(BinOp->getOperandUse(1),
                                                     /*UndefAllowed=*/false);
 
-  bool Changed = false;
-  bool NewNUW = false, NewNSW = false;
-  if (!NUW) {
-    ConstantRange NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Opcode, RRange, OBO::NoUnsignedWrap);
-    NewNUW = NUWRange.contains(LRange);
-    Changed |= NewNUW;
-  }
-  if (!NSW) {
-    ConstantRange NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Opcode, RRange, OBO::NoSignedWrap);
-    NewNSW = NSWRange.contains(LRange);
-    Changed |= NewNSW;
+  NoWrapFlags New =
+      computeNoWrapFlags(Opcode, LRange, RRange, /*CheckNSW=*/!NSW,
+                         /*CheckNUW=*/!NUW);
+
+  // If a still-wanted flag could not be proven at the definition, retry using
+  // the operand ranges constrained at the use sites. This is the more
+  // expensive path, so it only runs when the cheap query above came up short.
+  bool WantNSW = !NSW && !New.NSW;
+  bool WantNUW = !NUW && !New.NUW;
+  if (WantNSW || WantNUW) {
+    NoWrapFlags FromUses = inferNoWrapFromUses(BinOp, LVI, WantNSW, WantNUW);
+    New.NSW |= FromUses.NSW;
+    New.NUW |= FromUses.NUW;
   }
 
-  setDeducedOverflowingFlags(BinOp, Opcode, NewNSW, NewNUW);
+  setDeducedOverflowingFlags(BinOp, Opcode, New.NSW, New.NUW);
 
-  return Changed;
+  return New.NSW || New.NUW;
 }
 
 static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {

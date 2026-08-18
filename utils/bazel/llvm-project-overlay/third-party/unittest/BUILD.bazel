@@ -55,6 +55,7 @@ cc_library(
     ],
     hdrs = [
         "googletest/include/gtest/gtest.h",
+        "googletest/include/gtest/gtest-printers.h",
         "googletest/include/gtest/gtest-spi.h",
         "googletest/include/gtest/internal/gtest-port.h",
     ],

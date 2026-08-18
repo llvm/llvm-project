@@ -228,16 +228,28 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or
-  /// null if the block is not well formed.
+  /// Returns whether the block has a terminator.
+  bool hasTerminator() const LLVM_READONLY {
+    return !InstList.empty() && InstList.back().isTerminator();
+  }
+
+  /// Returns the terminator instruction; assumes that the block is well-formed.
   const Instruction *getTerminator() const LLVM_READONLY {
-    if (InstList.empty() || !InstList.back().isTerminator())
-      return nullptr;
+    assert(hasTerminator() && "cannot get terminator of non-well-formed block");
     return &InstList.back();
   }
   Instruction *getTerminator() {
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getTerminator());
+  }
+
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
+  const Instruction *getTerminatorOrNull() const LLVM_READONLY {
+    return hasTerminator() ? getTerminator() : nullptr;
+  }
+  Instruction *getTerminatorOrNull() {
+    return hasTerminator() ? getTerminator() : nullptr;
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
@@ -267,21 +279,6 @@ public:
     return const_cast<CallInst *>(
         static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
-
-  /// Returns a pointer to the first instruction in this block that is not a
-  /// PHINode instruction.
-  ///
-  /// When adding instructions to the beginning of the basic block, they should
-  /// be added before the returned value, not before the first instruction,
-  /// which might be PHI. Returns 0 is there's no non-PHI instruction.
-  ///
-  /// Deprecated in favour of getFirstNonPHIIt, which returns an iterator that
-  /// preserves some debugging information.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "getFirstNonPHIIt") const
-      Instruction *getFirstNonPHI() const;
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions instead",
-                           "getFirstNonPHIIt") Instruction *getFirstNonPHI();
 
   /// Returns an iterator to the first instruction in this block that is not a
   /// PHINode instruction.
@@ -735,7 +732,7 @@ public:
   /// instructions, so the order should be validated no more than once after
   /// each ordering to ensure that transforms have the same algorithmic
   /// complexity when asserts are enabled as when they are disabled.
-  LLVM_ABI_FOR_TEST void validateInstrOrdering() const;
+  LLVM_ABI void validateInstrOrdering() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -755,16 +752,6 @@ inline void BasicBlock::validateInstrOrdering() const {}
 // maps and sets. The iterator is made up of its node pointer, and the
 // debug-info "head" bit.
 template <> struct DenseMapInfo<BasicBlock::iterator> {
-  static inline BasicBlock::iterator getEmptyKey() {
-    return BasicBlock::iterator(nullptr);
-  }
-
-  static inline BasicBlock::iterator getTombstoneKey() {
-    BasicBlock::iterator It(nullptr);
-    It.setHeadBit(true);
-    return It;
-  }
-
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^

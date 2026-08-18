@@ -218,7 +218,8 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
       else
         return MaybeLoc.takeError();
     } else if (KeyName == "Args") {
-      auto *Args = dyn_cast<yaml::SequenceNode>(RemarkField.getValue());
+      auto *Args =
+          dyn_cast_if_present<yaml::SequenceNode>(RemarkField.getValue());
       if (!Args)
         return error("wrong value type for key.", RemarkField);
 
@@ -257,19 +258,19 @@ Expected<Type> YAMLRemarkParser::parseType(yaml::MappingNode &Node) {
 }
 
 Expected<StringRef> YAMLRemarkParser::parseKey(yaml::KeyValueNode &Node) {
-  if (auto *Key = dyn_cast<yaml::ScalarNode>(Node.getKey()))
+  if (auto *Key = dyn_cast_if_present<yaml::ScalarNode>(Node.getKey()))
     return Key->getRawValue();
 
   return error("key is not a string.", Node);
 }
 
 Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
-  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
+  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
   yaml::BlockScalarNode *ValueBlock;
   StringRef Result;
   if (!Value) {
     // Try to parse the value as a block node.
-    ValueBlock = dyn_cast<yaml::BlockScalarNode>(Node.getValue());
+    ValueBlock = dyn_cast_if_present<yaml::BlockScalarNode>(Node.getValue());
     if (!ValueBlock)
       return error("expected a value of scalar type.", Node);
     Result = ValueBlock->getValue();
@@ -284,7 +285,7 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
 
 Expected<unsigned> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
   SmallVector<char, 4> Tmp;
-  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
+  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
   if (!Value)
     return error("expected a value of scalar type.", Node);
   unsigned UnsignedValue = 0;
@@ -295,7 +296,7 @@ Expected<unsigned> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
 
 Expected<RemarkLocation>
 YAMLRemarkParser::parseDebugLoc(yaml::KeyValueNode &Node) {
-  auto *DebugLoc = dyn_cast<yaml::MappingNode>(Node.getValue());
+  auto *DebugLoc = dyn_cast_if_present<yaml::MappingNode>(Node.getValue());
   if (!DebugLoc)
     return error("expected a value of mapping type.", Node);
 

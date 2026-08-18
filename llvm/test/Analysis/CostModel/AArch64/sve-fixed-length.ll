@@ -47,6 +47,40 @@ define void @add() #0 {
   ret void
 }
 
+; Ensure the cost of legalisation is removed as the vector length grows.
+; NOTE: Assumes BaseCost_sub=1, BaseCost_fsub=2.
+define void @sub() #0 {
+; CHECK-LABEL: function 'sub'
+; CHECK: cost of [[#div(127,VBITS)+1]] for instruction:   %sub128 = sub <4 x i32> undef, undef
+; CHECK: cost of [[#div(255,VBITS)+1]] for instruction:   %sub256 = sub <8 x i32> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512 = sub <16 x i32> undef, undef
+; CHECK: cost of [[#div(1023,VBITS)+1]] for instruction:   %sub1024 = sub <32 x i32> undef, undef
+; CHECK: cost of [[#div(2047,VBITS)+1]] for instruction:   %sub2048 = sub <64 x i32> undef, undef
+  %sub128 = sub <4 x i32> undef, undef
+  %sub256 = sub <8 x i32> undef, undef
+  %sub512 = sub <16 x i32> undef, undef
+  %sub1024 = sub <32 x i32> undef, undef
+  %sub2048 = sub <64 x i32> undef, undef
+
+; Using a single vector length, ensure all element types are recognised.
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.i8 = sub <64 x i8> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.i16 = sub <32 x i16> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.i32 = sub <16 x i32> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.i64 = sub <8 x i64> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.f16 = fsub <32 x half> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.f32 = fsub <16 x float> undef, undef
+; CHECK: cost of [[#div(511,VBITS)+1]] for instruction:   %sub512.f64 = fsub <8 x double> undef, undef
+  %sub512.i8 = sub <64 x i8> undef, undef
+  %sub512.i16 = sub <32 x i16> undef, undef
+  %sub512.i32 = sub <16 x i32> undef, undef
+  %sub512.i64 = sub <8 x i64> undef, undef
+  %sub512.f16 = fsub <32 x half> undef, undef
+  %sub512.f32 = fsub <16 x float> undef, undef
+  %sub512.f64 = fsub <8 x double> undef, undef
+
+  ret void
+}
+
 ; Assuming base_cost = 2
 ; Assuming legalization_cost = (vec_len-1/VBITS)+1
 ; For fixed-length vectors >= 128, if element type is i8, multiply the cost by 8.

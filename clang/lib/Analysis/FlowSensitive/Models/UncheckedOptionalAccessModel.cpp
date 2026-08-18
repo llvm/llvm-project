@@ -157,52 +157,31 @@ auto hasOptionalOrDerivedType() {
   return hasType(desugarsToOptionalOrDerivedType());
 }
 
-QualType getPublicType(const Expr *E) {
-  auto *Cast = dyn_cast<ImplicitCastExpr>(E->IgnoreParens());
-  if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase) {
-    QualType Ty = E->getType();
-    if (Ty->isPointerType())
-      return Ty->getPointeeType();
-    return Ty;
-  }
-
-  // Is the derived type that we're casting from the type of `*this`? In this
-  // special case, we can upcast to the base class even if the base is
-  // non-public.
-  bool CastingFromThis = isa<CXXThisExpr>(Cast->getSubExpr());
-
-  // Find the least-derived type in the path (i.e. the last entry in the list)
-  // that we can access.
-  const CXXBaseSpecifier *PublicBase = nullptr;
-  for (const CXXBaseSpecifier *Base : Cast->path()) {
-    if (Base->getAccessSpecifier() != AS_public && !CastingFromThis)
-      break;
-    PublicBase = Base;
-    CastingFromThis = false;
-  }
-
-  if (PublicBase != nullptr)
-    return PublicBase->getType();
-
-  // We didn't find any public type that we could cast to. There may be more
-  // casts in `getSubExpr()`, so recurse. (If there aren't any more casts, this
-  // will return the type of `getSubExpr()`.)
-  return getPublicType(Cast->getSubExpr());
+bool isDesugaredTypeOptional(QualType Ty) {
+  const Type &DesugaredTy = *Ty->getUnqualifiedDesugaredType();
+  return DesugaredTy.isRecordType() &&
+         hasOptionalClassName(*DesugaredTy.getAsCXXRecordDecl());
 }
 
-// Returns the least-derived type for the receiver of `MCE` that
-// `MCE.getImplicitObjectArgument()->IgnoreParentImpCasts()` can be downcast to.
-// Effectively, we upcast until we reach a non-public base class, unless that
-// base is a base of `*this`.
+bool isDesugaredTypeOptionalOrPointerToOptional(QualType Ty) {
+  if (Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  return isDesugaredTypeOptional(Ty);
+}
+
+// Returns true if `E` is intended to refer to an optional type, but may refer
+// to an internal base class of the optional type, and involve an
+// UncheckedDerivedToBase cast.
 //
 // This is needed to correctly match methods called on types derived from
-// `std::optional`.
+// `std::optional`, as methods may be defined in a private base class like
+// `std::__optional_storage_base`.
 //
 // Say we have a `struct Derived : public std::optional<int> {} d;` For a call
 // `d.has_value()`, the `getImplicitObjectArgument()` looks like this:
 //
 //   ImplicitCastExpr 'const std::__optional_storage_base<int>' lvalue
-//   |            <UncheckedDerivedToBase (optional -> __optional_storage_base)>
+//   |     <UncheckedDerivedToBase (optional -> ... -> __optional_storage_base)>
 //   `-DeclRefExpr 'Derived' lvalue Var 'd' 'Derived'
 //
 // The type of the implicit object argument is `__optional_storage_base`
@@ -213,31 +192,53 @@ QualType getPublicType(const Expr *E) {
 // calling a method on `optional`.
 //
 // Instead, starting with the most derived type, we need to follow the chain of
-// casts
-QualType getPublicReceiverType(const CXXMemberCallExpr &MCE) {
-  return getPublicType(MCE.getImplicitObjectArgument());
+// casts, until we reach a class that matches
+// `isDesugaredTypeOptionalOrPointerToOptional` (if at all).
+bool hasReceiverTypeDesugaringToOptional(const Expr *E) {
+  auto *Cast = dyn_cast<ImplicitCastExpr>(E->IgnoreParens());
+  if (Cast == nullptr || Cast->getCastKind() != CK_UncheckedDerivedToBase)
+    return isDesugaredTypeOptionalOrPointerToOptional(E->getType());
+
+  // Usually, the SubExpr is already an optional type, so check the SubExpr
+  // first before trying the cast path. The cast path helps in the case when the
+  // SubExpr is a derived class.
+  if (isDesugaredTypeOptionalOrPointerToOptional(Cast->getSubExpr()->getType()))
+    return true;
+
+  // See if we hit an optional type in the cast path, going from derived
+  // to base.
+  for (const CXXBaseSpecifier *Base : Cast->path()) {
+    if (isDesugaredTypeOptional(Base->getType()))
+      return true;
+  }
+
+  // We didn't find a optional in the cast path and the subexpr isn't an
+  // optional. It may be that the subexpression itself has more relevant
+  // implicit casts, so recurse and search further.
+  return hasReceiverTypeDesugaringToOptional(Cast->getSubExpr());
 }
 
-AST_MATCHER_P(CXXMemberCallExpr, publicReceiverType,
-              ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  return InnerMatcher.matches(getPublicReceiverType(Node), Finder, Builder);
+AST_MATCHER(CXXMemberCallExpr, hasOptionalReceiverType) {
+  return hasReceiverTypeDesugaringToOptional(Node.getImplicitObjectArgument());
+}
+
+AST_MATCHER(CXXOperatorCallExpr, hasOptionalOperatorObjectType) {
+  return hasReceiverTypeDesugaringToOptional(Node.getArg(0));
 }
 
 auto isOptionalMemberCallWithNameMatcher(
     ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
-  return cxxMemberCallExpr(Ignorable ? on(expr(unless(*Ignorable)))
-                                     : anything(),
-                           publicReceiverType(desugarsToOptionalType()),
-                           callee(cxxMethodDecl(matcher)));
+  return cxxMemberCallExpr(
+      Ignorable ? on(expr(unless(*Ignorable))) : anything(),
+      callee(cxxMethodDecl(matcher)), hasOptionalReceiverType());
 }
 
 auto isOptionalOperatorCallWithName(
     llvm::StringRef operator_name,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   return cxxOperatorCallExpr(
-      hasOverloadedOperatorName(operator_name),
-      callee(cxxMethodDecl(ofClass(optionalClass()))),
+      hasOverloadedOperatorName(operator_name), hasOptionalOperatorObjectType(),
       Ignorable ? callExpr(unless(hasArgument(0, *Ignorable))) : callExpr());
 }
 
@@ -1277,9 +1278,14 @@ auto buildDiagnoseMatchSwitch(
 
 } // namespace
 
-ast_matchers::DeclarationMatcher
-UncheckedOptionalAccessModel::optionalClassDecl() {
-  return cxxRecordDecl(optionalClass());
+ast_matchers::StatementMatcher
+UncheckedOptionalAccessModel::memberCallToOptionalClass() {
+  return cxxMemberCallExpr(hasOptionalReceiverType());
+}
+
+ast_matchers::StatementMatcher
+UncheckedOptionalAccessModel::operatorCallToOptionalClass() {
+  return cxxOperatorCallExpr(hasOptionalOperatorObjectType());
 }
 
 UncheckedOptionalAccessModel::UncheckedOptionalAccessModel(ASTContext &Ctx,

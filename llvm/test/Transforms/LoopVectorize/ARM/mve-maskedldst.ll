@@ -10,10 +10,10 @@ entry:
   %cmp12 = icmp sgt i32 %n, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.013 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.013
   %0 = load i32, ptr %arrayidx, align 4
@@ -21,19 +21,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %1 = icmp ult i32 %.off, 19
   br i1 %1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i32 0, ptr %arrayidx, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -44,10 +44,10 @@ entry:
   %cmp12 = icmp sgt i32 %n, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.013 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.013
   %0 = load i32, ptr %arrayidx, align 2
@@ -55,19 +55,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %1 = icmp ult i32 %.off, 19
   br i1 %1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i32 0, ptr %arrayidx, align 2
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -78,10 +78,10 @@ entry:
   %cmp12 = icmp sgt i32 %n, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.013 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.013
   %0 = load i32, ptr %arrayidx
@@ -89,19 +89,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %1 = icmp ult i32 %.off, 19
   br i1 %1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i32 0, ptr %arrayidx
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -112,10 +112,10 @@ entry:
   %cmp12 = icmp sgt i32 %n, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.013 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %A, i32 %i.013
   %0 = load i16, ptr %arrayidx, align 2
@@ -123,19 +123,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %1 = icmp ult i16 %.off, 19
   br i1 %1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i16 0, ptr %arrayidx, align 2
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 
@@ -146,10 +146,10 @@ entry:
   %cmp12 = icmp sgt i32 %n, 0
   br i1 %cmp12, label %for.body.preheader, label %for.cond.cleanup
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.inc
+for.body:
   %i.013 = phi i32 [ %inc, %for.inc ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i16, ptr %A, i32 %i.013
   %0 = load i16, ptr %arrayidx, align 1
@@ -157,19 +157,19 @@ for.body:                                         ; preds = %for.body.preheader,
   %1 = icmp ult i16 %.off, 19
   br i1 %1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   store i16 0, ptr %arrayidx, align 1
   br label %for.inc
 
-for.inc:                                          ; preds = %for.body, %if.then
+for.inc:
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.inc
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 }
 

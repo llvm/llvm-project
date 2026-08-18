@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def _set_up_inferior(self):
         self._exe_to_attach = "%s_%d" % (self.testMethodName, os.getpid())
         self.build(dictionary={"EXE": self._exe_to_attach, "CXX_SOURCES": "main.cpp"})

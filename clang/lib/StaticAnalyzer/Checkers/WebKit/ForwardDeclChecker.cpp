@@ -212,8 +212,7 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
+      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(F);
 
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
@@ -227,12 +226,8 @@ public:
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
-    if (auto *F = CE->getConstructor()) {
-      // Skip the first argument for overloaded member operators (e. g. lambda
-      // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
-
+    if (const CXXMethodDecl *F = CE->getConstructor()) {
+      unsigned ArgIdx = 0;
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx)
         visitCallArg(CE->getArg(ArgIdx), *P, DeclWithIssue);

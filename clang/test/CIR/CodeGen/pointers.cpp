@@ -47,20 +47,20 @@ void foo(int *iptr, char *cptr, unsigned ustride) {
 void testPointerSubscriptAccess(int *ptr) {
 // CHECK: testPointerSubscriptAccess
   ptr[1];
-  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<1> : !s32i
+  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<1> : !s64i
   // CHECK: %[[#PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CHECK: cir.ptr_stride %[[#PTR]], %[[#STRIDE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+  // CHECK: cir.ptr_stride %[[#PTR]], %[[#STRIDE]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 }
 
 void testPointerMultiDimSubscriptAccess(int **ptr) {
 // CHECK: testPointerMultiDimSubscriptAccess
   ptr[1][2];
-  // CHECK: %[[#STRIDE2:]] = cir.const #cir.int<2> : !s32i
-  // CHECK: %[[#STRIDE1:]] = cir.const #cir.int<1> : !s32i
+  // CHECK: %[[#STRIDE2:]] = cir.const #cir.int<2> : !s64i
+  // CHECK: %[[#STRIDE1:]] = cir.const #cir.int<1> : !s64i
   // CHECK: %[[#PTR1:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, !cir.ptr<!cir.ptr<!s32i>>
-  // CHECK: %[[#PTR2:]] = cir.ptr_stride %[[#PTR1]], %[[#STRIDE1]] : (!cir.ptr<!cir.ptr<!s32i>>, !s32i) -> !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK: %[[#PTR2:]] = cir.ptr_stride %[[#PTR1]], %[[#STRIDE1]] : (!cir.ptr<!cir.ptr<!s32i>>, !s64i) -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK: %[[#PTR3:]] = cir.load{{.*}} %[[#PTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CHECK: cir.ptr_stride %[[#PTR3]], %[[#STRIDE2]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+  // CHECK: cir.ptr_stride %[[#PTR3]], %[[#STRIDE2]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 }
 
 // This test is meant to verify code that handles the 'p = nullptr + n' idiom

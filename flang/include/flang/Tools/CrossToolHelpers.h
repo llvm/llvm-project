@@ -20,7 +20,6 @@
 #include <cstdint>
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -47,6 +46,18 @@ public:
     FIROptLastEPCallbacks.push_back(C);
   }
 
+  void registerHLFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerHLFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    HLFIROptLastEPCallbacks.push_back(C);
+  }
+
   void invokeFIROptEarlyEPCallbacks(
       mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
     for (auto &C : FIROptEarlyEPCallbacks)
@@ -65,6 +76,18 @@ public:
       C(pm, optLevel);
   };
 
+  void invokeHLFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeHLFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) const {
+    for (auto &C : HLFIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
 private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
@@ -77,6 +100,14 @@ private:
   llvm::SmallVector<
       std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
       FIROptLastEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      HLFIROptLastEPCallbacks;
 };
 
 /// Configuriation for the MLIR to LLVM pass pipeline.
@@ -106,6 +137,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
         ApproxFuncFPMath && mathOpts.getFPContractEnabled();
     Reciprocals = opts.Reciprocals;
     PreferVectorWidth = opts.PreferVectorWidth;
+    UseSampleProfile = !opts.SampleProfileFile.empty();
+    DebugInfoForProfiling = opts.DebugInfoForProfiling;
     if (opts.InstrumentFunctions) {
       InstrumentFunctionEntry = "__cyg_profile_func_enter";
       InstrumentFunctionExit = "__cyg_profile_func_exit";
@@ -138,7 +171,12 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
+  bool EnableOpenACC = false; ///< Enable OpenACC lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  bool EnableOpenMPIsTargetDevice =
+      false; ///< Compiling for an OpenMP target device.
+  bool UseSampleProfile = false; ///< Enable sample based profiling
+  bool DebugInfoForProfiling = false; ///< Enable extra debugging info
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   bool SkipConvertComplexPow = false; ///< Do not run complex pow conversion.
   std::string InstrumentFunctionEntry =
@@ -157,89 +195,21 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Fortran::common::FPMaxminBehavior::Legacy;
 };
 
-struct OffloadModuleOpts {
-  OffloadModuleOpts() {}
-  OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
-      bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
-      bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
-      bool OpenMPIsGPU, bool OpenMPForceUSM, uint32_t OpenMPVersion,
-      std::string OMPHostIRFile = {},
-      const std::vector<llvm::Triple> &OMPTargetTriples = {},
-      bool NoGPULib = false)
-      : OpenMPTargetDebug(OpenMPTargetDebug),
-        OpenMPTeamSubscription(OpenMPTeamSubscription),
-        OpenMPThreadSubscription(OpenMPThreadSubscription),
-        OpenMPNoThreadState(OpenMPNoThreadState),
-        OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
-        OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
-        OpenMPForceUSM(OpenMPForceUSM), OpenMPVersion(OpenMPVersion),
-        OMPHostIRFile(OMPHostIRFile),
-        OMPTargetTriples(OMPTargetTriples.begin(), OMPTargetTriples.end()),
-        NoGPULib(NoGPULib) {}
-
-  OffloadModuleOpts(Fortran::common::LangOptions &Opts)
-      : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
-        OpenMPTeamSubscription(Opts.OpenMPTeamSubscription),
-        OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),
-        OpenMPNoThreadState(Opts.OpenMPNoThreadState),
-        OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
-        OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
-        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPForceUSM(Opts.OpenMPForceUSM),
-        OpenMPVersion(Opts.OpenMPVersion), OMPHostIRFile(Opts.OMPHostIRFile),
-        OMPTargetTriples(Opts.OMPTargetTriples), NoGPULib(Opts.NoGPULib) {}
-
-  uint32_t OpenMPTargetDebug = 0;
-  bool OpenMPTeamSubscription = false;
-  bool OpenMPThreadSubscription = false;
-  bool OpenMPNoThreadState = false;
-  bool OpenMPNoNestedParallelism = false;
-  bool OpenMPIsTargetDevice = false;
-  bool OpenMPIsGPU = false;
-  bool OpenMPForceUSM = false;
-  uint32_t OpenMPVersion = 31;
-  std::string OMPHostIRFile = {};
-  std::vector<llvm::Triple> OMPTargetTriples = {};
-  bool NoGPULib = false;
-};
-
-//  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
-//  attributes accross Flang tools (bbc/flang)
-[[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
-    mlir::ModuleOp module, OffloadModuleOpts Opts) {
-  // Should be registered by the OpenMPDialect
-  if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
-          module.getOperation())) {
-    offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
-    offloadMod.setIsGPU(Opts.OpenMPIsGPU);
-    if (Opts.OpenMPForceUSM) {
-      offloadMod.setRequires(mlir::omp::ClauseRequires::unified_shared_memory);
-    }
-    if (Opts.OpenMPIsTargetDevice) {
-      offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
-          Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
-          Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion, Opts.NoGPULib);
-
-      if (!Opts.OMPHostIRFile.empty())
-        offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
-    }
-    auto strTriples = llvm::to_vector(llvm::map_range(Opts.OMPTargetTriples,
-        [](llvm::Triple triple) { return triple.normalize(); }));
-    offloadMod.setTargetTriples(strTriples);
-  }
+/// Create OffloadModuleOpts from Flang LangOptions.
+[[maybe_unused]] static mlir::omp::OffloadModuleOpts makeOffloadModuleOpts(
+    Fortran::common::LangOptions &Opts) {
+  return mlir::omp::OffloadModuleOpts(Opts.OpenMPTargetDebug,
+      Opts.OpenMPTeamSubscription, Opts.OpenMPThreadSubscription,
+      Opts.OpenMPNoThreadState, Opts.OpenMPNoNestedParallelism,
+      Opts.OpenMPIsTargetDevice, Opts.OpenMPIsGPU, Opts.OpenMPForceUSM,
+      Opts.OpenMPVersion, Opts.OMPHostIRFile, Opts.OMPTargetTriples,
+      Opts.NoGPULib);
 }
 
-[[maybe_unused]] static void setOpenMPVersionAttribute(
-    mlir::ModuleOp module, int64_t version) {
-  module.getOperation()->setAttr(
-      mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
-      mlir::omp::VersionAttr::get(module.getContext(), version));
-}
-
-[[maybe_unused]] static int64_t getOpenMPVersionAttribute(
-    mlir::ModuleOp module, int64_t fallback = -1) {
-  if (mlir::Attribute verAttr = module->getAttr("omp.version"))
-    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
-  return fallback;
+[[maybe_unused]] static void setOpenMPIntegerWrapAround(
+    mlir::ModuleOp module, bool value) {
+  module.getOperation()->setAttr("omp.integer_wrap_around",
+      mlir::omp::IntegerWrapAroundAttr::get(module.getContext(), value));
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

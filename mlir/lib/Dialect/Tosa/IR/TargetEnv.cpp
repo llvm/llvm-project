@@ -12,8 +12,19 @@
 namespace mlir {
 namespace tosa {
 
+TosaLevel getTosaLevelFromEnum(const Level level) {
+  switch (level) {
+  case Level::eightK:
+    return TOSA_LEVEL_EIGHTK;
+  case Level::none:
+    return TOSA_LEVEL_NONE;
+  }
+  llvm_unreachable("Unknown TOSA level");
+}
+
 llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version) {
-  return llvm::formatv("{0}.{1}", version.getMajor(), version.getMinor());
+  return llvm::formatv("{0}.{1}{2}", version.getMajor(), version.getMinor(),
+                       version.isDraft() ? ".draft" : "");
 }
 
 TosaSpecificationVersion getMinVersion(const Profile &profile) {
@@ -45,7 +56,14 @@ TosaSpecificationVersion getMinVersion(const Extension &extension) {
   case Extension::int64:
   case Extension::mxfp_conv:
   case Extension::shape:
-    return TosaSpecificationVersion(1, 1);
+  case Extension::mx_common:
+  case Extension::mx_fp4e2m1:
+  case Extension::mx_fp6e2m3:
+  case Extension::mx_fp6e3m2:
+  case Extension::mx_fp8e4m3:
+  case Extension::mx_fp8e5m2:
+  case Extension::mx_int8:
+    return TosaSpecificationVersion(1, 1, true);
   case Extension::none:
     return TosaSpecificationVersion(0, 0);
   }
@@ -65,6 +83,13 @@ SmallVector<Profile, 2> getCooperativeProfiles(Extension ext) {
   case Extension::fft:
   case Extension::mxfp:
   case Extension::mxfp_conv:
+  case Extension::mx_common:
+  case Extension::mx_fp4e2m1:
+  case Extension::mx_fp6e2m3:
+  case Extension::mx_fp6e3m2:
+  case Extension::mx_fp8e4m3:
+  case Extension::mx_fp8e5m2:
+  case Extension::mx_int8:
     return {Profile::pro_fp};
   case Extension::variable:
   case Extension::controlflow:

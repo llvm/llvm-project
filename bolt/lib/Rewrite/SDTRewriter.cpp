@@ -68,8 +68,7 @@ void SDTRewriter::readSection() {
     return;
 
   StringRef Buf = SDTSection->getContents();
-  DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian(),
-                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor DE = DataExtractor(Buf, BC.AsmInfo->isLittleEndian());
   uint64_t Offset = 0;
 
   while (DE.isValidOffset(Offset)) {
@@ -156,6 +155,8 @@ Error SDTRewriter::postEmitFinalizer() {
         F->translateInputToOutputAddress(OriginalAddress);
     SDTNotePatcher->addLE64Patch(SDTInfo.PCOffset, NewAddress);
   }
+
+  SDTMarkers.clear();
 
   return Error::success();
 }

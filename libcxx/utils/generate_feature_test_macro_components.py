@@ -191,13 +191,12 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_min_max",
             "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_ref",
             "values": {
                 "c++20": 201806,
-                "c++26": 202411,  # P2835R7: Expose std::atomic_ref 's object address
+                "c++26": 202603,
             },
             "headers": ["atomic"],
         },
@@ -335,6 +334,13 @@ feature_test_macros = [
             "headers": ["concepts"],
         },
         {
+            "name": "__cpp_lib_constant_wrapper",
+            "values": {
+                "c++26": 202606,
+            },
+            "headers": ["utility"],
+        },
+        {
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
@@ -399,6 +405,11 @@ feature_test_macros = [
             "headers": ["list"],
         },
         {
+            "name": "__cpp_lib_constexpr_map",
+            "values": {"c++26": 202502},
+            "headers": ["map"],
+        },
+        {
             "name": "__cpp_lib_constexpr_memory",
             "values": {"c++20": 201811, "c++23": 202202},
             "headers": ["memory"],
@@ -419,6 +430,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_queue",
             "values": {"c++26": 202502},
             "headers": ["queue"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_set",
+            "values": {"c++26": 202502},
+            "headers": ["set"],
         },
         {
             "name": "__cpp_lib_constexpr_string",
@@ -572,6 +588,7 @@ feature_test_macros = [
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
                 # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
+                # "c++26": 202603, P3953R3 Rename std::runtime_format (implemented)
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
             # 202304 P2510R3 Formatting pointers (Implemented)
@@ -690,10 +707,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_function_ref",
             "values": {
-                "c++26": 202306  # P0792R14 function_ref: a type-erased callable reference
+                "c++26": 202603  # P3948R1 constant_wrapper is the only tool needed for passing constant expressions via function arguments
             },
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_gcd_lcm",
@@ -743,6 +759,11 @@ feature_test_macros = [
             "name": "__cpp_lib_incomplete_container_elements",
             "values": {"c++17": 201505},
             "headers": ["forward_list", "list", "vector"],
+        },
+        {
+            "name": "__cpp_lib_initializer_list",
+            "values": {"c++14": 202511},
+            "headers": ["initializer_list"],
         },
         {
             "name": "__cpp_lib_inplace_vector",
@@ -949,7 +970,7 @@ feature_test_macros = [
             "name": "__cpp_lib_mdspan",
             "values": {
                 "c++23": 202207,
-                "c++26": 202406,  # P2389R2 dextents Index Type Parameter
+                "c++26": 202406,
             },
             "headers": ["mdspan"],
         },
@@ -1117,7 +1138,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_concat",
             "values": {"c++26": 202403}, # P2542R8: views::concat
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_contains",
@@ -1125,7 +1145,17 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_enumerate",
+            "values": {"c++23": 202302},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_find_last",
+            "values": {"c++23": 202207},
+            "headers": ["algorithm"],
+        },
+        {
+            "name": "__cpp_lib_ranges_fold",
             "values": {"c++23": 202207},
             "headers": ["algorithm"],
         },
@@ -1161,6 +1191,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_ranges_stride",
+            "values": {"c++23": 202207},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_to_container",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
@@ -1177,7 +1212,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_raw_memory_algorithms",
-            "values": {"c++17": 201606},
+            "values": {"c++17": 201606, "c++26": 202411},
             "headers": ["memory"],
         },
         {
@@ -1221,7 +1256,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_saturation_arithmetic",
-            "values": {"c++26": 202311},  # P0543R3 Saturation arithmetic
+            "values": {"c++26": 202603},  # P0543R3 Saturation arithmetic
             "headers": ["numeric"],
         },
         {
@@ -1284,7 +1319,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1901R2 Enabling the Use of weak_ptr as Keys in Unordered Associative Containers
             },
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_source_location",
@@ -1303,11 +1337,6 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_span_at",
             "values": {"c++26": 202311},  # P2821R3 span.at()
-            "headers": ["span"],
-        },
-        {
-            "name": "__cpp_lib_span_initializer_list",
-            "values": {"c++26": 202311},  # P2447R6 std::span over an initializer list
             "headers": ["span"],
         },
         {
@@ -1395,7 +1424,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1885R12 Naming Text Encodings to Demystify Them
             },
             "headers": ["text_encoding"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_three_way_comparison",
@@ -1490,6 +1518,11 @@ feature_test_macros = [
             "name": "__cpp_lib_unwrap_ref",
             "values": {"c++20": 201811},
             "headers": ["functional"],
+        },
+        {
+            "name": "__cpp_lib_valarray",
+            "values": {"c++14": 202511},
+            "headers": ["valarray"],
         },
         {
             "name": "__cpp_lib_variant",

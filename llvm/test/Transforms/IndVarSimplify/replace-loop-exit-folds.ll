@@ -9,8 +9,7 @@ define i32 @remove_loop(i32 %size) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SIZE]], i32 31)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[UMIN]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1]], -32
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[SIZE]], [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:

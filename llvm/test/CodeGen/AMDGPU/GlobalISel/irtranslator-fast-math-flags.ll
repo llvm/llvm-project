@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03 -O0 -stop-after=irtranslator -global-isel %s -o - | FileCheck %s
 
 ; Check flags are preserved for a regular instruction.
 ; CHECK-LABEL: name: fadd_nnan
@@ -20,7 +20,7 @@ define amdgpu_kernel void @fma_fast(float %arg0, float %arg1, float %arg2) {
 
 ; Check flags are preserved for an arbitrarry target intrinsic
 ; CHECK-LABEL: name: rcp_nsz
-; CHECK: = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %{{[0-9]+}}(s32)
+; CHECK: = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), %{{[0-9]+}}(f32)
 define amdgpu_kernel void @rcp_nsz(float %arg0) {
   %res = call nsz float @llvm.amdgcn.rcp.f32 (float %arg0)
   store float %res, ptr addrspace(1) poison

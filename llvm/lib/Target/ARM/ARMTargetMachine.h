@@ -78,16 +78,6 @@ public:
     return TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
-  bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *

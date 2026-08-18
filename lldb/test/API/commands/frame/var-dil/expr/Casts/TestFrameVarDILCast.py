@@ -286,9 +286,39 @@ class TestFrameVarDILCast(TestBase):
             substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
         )
 
+        # cv-qualifiers in a cast must be consumed by the parser.
+        self.expect_var_path("(const int)1", value="1", type="int")
+        self.expect_var_path("(volatile int)1", value="1", type="int")
+        self.expect_var_path("(const volatile int)1", value="1", type="int")
+        self.expect(
+            "frame variable '(const)1'",
+            error=True,
+            substrs=["expected 'eof', got: <'1' (integer_constant)>"],
+        )
+        self.expect(
+            "frame variable '(volatile)1'",
+            error=True,
+            substrs=["expected 'eof', got: <'1' (integer_constant)>"],
+        )
+
         # Check that casts are not allowed in both simple and legacy modes
         frame = thread.GetFrameAtIndex(0)
         simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
         legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertFailure(legacy.GetError())
+
+        # Check enum casting
+        self.expect_var_path("(UnscopedEnum) 0", value="kZero")
+        self.expect_var_path("(UnscopedEnum) ((char) 1)", value="kOne")
+        self.expect_var_path("(UnscopedEnum) 1.5", value="kOne")
+        self.expect_var_path("(UnscopedEnum) enum_one8", value="kOne")
+        self.expect_var_path("(UnscopedEnumInt8) 1ULL", value="kOne8")
+        self.expect_var_path("(UnscopedEnumInt8) -1.5", value="kMinusOne8")
+        self.expect_var_path("(UnscopedEnumInt8) 1.5", value="kOne8")
+        self.expect_var_path("(UnscopedEnumInt8) enum_one", value="kOne8")
+        self.expect(
+            "frame variable '(UnscopedEnum) ifoo'",
+            error=True,
+            substrs=["Cast from 'InnerFoo' to 'UnscopedEnum' is not allowed"],
+        )

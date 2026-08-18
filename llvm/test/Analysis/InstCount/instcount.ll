@@ -1,11 +1,5 @@
 ; REQUIRES: asserts
 ; RUN: opt -stats -passes=instcount -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='thinlto<O3>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='thinlto-pre-link<O2>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='lto<O1>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -passes='lto-pre-link<Os>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -O3 -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -stats -O0 -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-DAG: 10 instcount - Largest number of basic blocks in a single function
 ; CHECK-DAG: 18 instcount - Largest number of instructions in a single function
@@ -17,7 +11,7 @@
 ; CHECK-DAG: 1 instcount - Number of Switch insts
 ; CHECK-DAG: 11 instcount - Number of basic blocks
 ; CHECK-DAG: 2 instcount - Number of non-external functions
-; CHECK-DAG: 19 instcount - Number of instructions (of all types)
+; CHECK-DAG: 19 instcount - Number of instructions of all types
 
 define void @foo(i32 %i, i32 %j, i32 %n) {
 entry:

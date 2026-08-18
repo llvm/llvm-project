@@ -14,8 +14,9 @@ import lldbsuite.test.lldbutil
 class AttachCancelTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfRemote
+    @skipIfWasm  # the Wasm platform cannot attach to a process by name
     @skipIf(
-        remote=True,
         hostoslist=["windows", "linux"],
         bugnumber="https://github.com/llvm/llvm-project/issues/115618",
     )

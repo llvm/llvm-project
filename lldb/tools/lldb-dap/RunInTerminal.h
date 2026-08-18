@@ -89,6 +89,8 @@ public:
   ///     out.
   llvm::Error NotifyPid();
 
+  llvm::Error NotifyPid(lldb::pid_t pid);
+
   /// Notify the debug adapter that there's been an error.
   void NotifyError(llvm::StringRef error);
 

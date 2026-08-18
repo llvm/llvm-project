@@ -113,7 +113,7 @@ source_filename = "test.c"
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
-define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
+define void @masked_strided1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) #0 {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body
@@ -149,7 +149,7 @@ for.end:
 }
 
 
-define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr #0 {
+define void @masked_strided2(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard) #0 {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body
@@ -178,7 +178,7 @@ for.end:
 }
 
 
-define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard1, i8 zeroext %guard2) local_unnamed_addr #0 {
+define void @masked_strided3(ptr noalias nocapture readnone %p, ptr noalias nocapture %q, i8 zeroext %guard1, i8 zeroext %guard2) #0 {
 entry:
   %conv = zext i8 %guard1 to i32
   %conv3 = zext i8 %guard2 to i32

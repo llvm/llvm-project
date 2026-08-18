@@ -58,13 +58,13 @@ namespace llvm {
 
 class Function;
 
-class TailCallElimPass : public PassInfoMixin<TailCallElimPass> {
+class TailCallElimPass : public OptionalPassInfoMixin<TailCallElimPass> {
   const bool UpdateFunctionEntryCount;
 
 public:
   TailCallElimPass(bool UpdateFunctionEntryCount = true)
       : UpdateFunctionEntryCount(UpdateFunctionEntryCount) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }
 

@@ -155,8 +155,8 @@ TEST(JSONTest, Object) {
   auto E = O.find("e");
   EXPECT_EQ(E, O.end());
 
-  O.erase("b");
   O.erase(D);
+  O.erase("b");
   EXPECT_EQ(O.size(), 2u);
   EXPECT_EQ(R"({"a":1,"c":3})", s(std::move(O)));
 }

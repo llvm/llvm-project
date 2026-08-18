@@ -250,3 +250,19 @@ def testDenseElementsAttr():
         idx_type = IndexType.get()
         print(DenseElementsAttr.get(idx_values, type=VectorType.get([4], idx_type)))
         # CHECK{LITERAL}: dense<[0, 1, 2, 3]> : vector<4xindex>
+
+
+# CHECK-LABEL: TEST: testBuiltinTraits
+@run
+def testBuiltinTraits():
+    with Context() as ctx, Location.unknown() as loc:
+        module = builtin.ModuleOp()
+
+        # CHECK: True
+        print(module.operation.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(module.operation.has_trait(IsTerminatorTrait))
+        # CHECK: True
+        print(builtin.ModuleOp.has_trait(NoTerminatorTrait))
+        # CHECK: False
+        print(builtin.ModuleOp.has_trait(IsTerminatorTrait))

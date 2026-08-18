@@ -20,7 +20,7 @@
   ; CHECK-NEXT:    lw a5, 32(sp)
   ; CHECK-NEXT:    li a6, 1
   ; CHECK-NEXT:    li a7, 1
-  ; CHECK-NEXT:    li t2, 0
+  ; CHECK-NEXT:    li t3, 0
   ; CHECK-NEXT:    mv a2, a0
   ; CHECK-NEXT:    mv      a3, t1
   ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
@@ -52,7 +52,7 @@
   ; CHECK-NEXT:    lw a5, 32(sp)
   ; CHECK-NEXT:    li a6, 1
   ; CHECK-NEXT:    li a7, 1
-  ; CHECK-NEXT:    li t2, 0
+  ; CHECK-NEXT:    li t3, 0
   ; CHECK-NEXT:    mv a1, a0
   ; CHECK-NEXT:    mv      a3, t1
   ; CHECK-NEXT:    tail OUTLINED_FUNCTION_0
@@ -70,7 +70,7 @@
   ; CHECK-LABEL: OUTLINED_FUNCTION_0:
   ; CHECK:       # %bb.0:
   ; CHECK-NEXT:      mv      a4, t0
-  ; CHECK-NEXT:      jalr    t2
+  ; CHECK-NEXT:      jalr    t3
   ; CHECK-NEXT:      sw      s3, 0(s1)
   ; CHECK-NEXT:      li      a0, 1
   ; CHECK-NEXT:      sw      s2, 0(s0)
@@ -202,11 +202,11 @@ body:             |
     renamable $x15 = LW $x2, 32 :: (load (s32) from %fixed-stack.4, align 16)
     $x16 = ADDI $x0, 1
     $x17 = ADDI $x0, 1
-    $x7 = ADDI $x0, 0
+    $x28 = ADDI $x0, 0
     $x12 = ADDI renamable $x10, 0
     $x13 = ADDI killed renamable $x6, 0
     $x14 = ADDI killed renamable $x5, 0
-    PseudoCALLIndirect killed renamable $x7, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
+    PseudoCALLIndirect killed renamable $x28, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
     SW killed renamable $x19, killed renamable $x9, 0 :: (store (s32) into %ir.var3)
     $x10 = ADDI $x0, 1
     SW killed renamable $x18, killed renamable $x8, 0 :: (store (s32) into %ir.var7)
@@ -336,11 +336,11 @@ body:             |
     renamable $x15 = LW $x2, 32 :: (load (s32) from %fixed-stack.4, align 16)
     $x16 = ADDI $x0, 1
     $x17 = ADDI $x0, 1
-    $x7 = ADDI $x0, 0
+    $x28 = ADDI $x0, 0
     $x11 = ADDI renamable $x10, 0
     $x13 = ADDI killed renamable $x6, 0
     $x14 = ADDI killed renamable $x5, 0
-    PseudoCALLIndirect killed renamable $x7, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
+    PseudoCALLIndirect killed renamable $x28, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def dead $x10
     SW killed renamable $x19, killed renamable $x9, 0 :: (store (s32) into %ir.var3)
     $x10 = ADDI $x0, 1
     SW killed renamable $x18, killed renamable $x8, 0 :: (store (s32) into %ir.var7)

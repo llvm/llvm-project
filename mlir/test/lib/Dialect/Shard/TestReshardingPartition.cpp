@@ -40,7 +40,7 @@ struct TestReshardingRewritePattern : OpRewritePattern<ShardOp> {
         op, cast<ShardingOp>(op.getSharding().getDefiningOp()).getGridAttr());
 
     bool foundUser = false;
-    for (auto user : op->getUsers()) {
+    for (auto *user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
             grid == symbolTable.lookupNearestSymbolFrom<shard::GridOp>(
@@ -58,7 +58,7 @@ struct TestReshardingRewritePattern : OpRewritePattern<ShardOp> {
       return failure();
     }
 
-    for (auto user : op->getUsers()) {
+    for (auto *user : op->getUsers()) {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
           symbolTable.lookupNearestSymbolFrom<shard::GridOp>(

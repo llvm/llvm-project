@@ -1,7 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; FIXME: re-enable when validator issue if fixed
-; https://github.com/llvm/llvm-project/issues/186756
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[Int8Ty:[0-9]+]] = OpTypeInt 8 0
 ; CHECK: %[[Int8PtrTy:[0-9]+]] = OpTypePointer Generic %[[Int8Ty]]
@@ -23,10 +21,10 @@
 ; CHECK: %[[Const168toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[Const168]]
 ; CHECK: %[[ConstMinus16toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[ConstMinus16]]
 ; CHECK: %[[ConstMinus184toPtr:[0-9]+]] = OpSpecConstantOp %[[GlobInt8PtrTy]] ConvertUToPtr %[[ConstMinus184]]
-; CHECK: %[[Vtbl012:[0-9]+]] = OpConstantComposite %[[ArrTy]] %[[Const184toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
-; CHECK: %[[Vtbl3:[0-9]+]] = OpConstantComposite %[[ArrTy]] %[[Const168toPtr]] %[[ConstMinus16toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
-; CHECK: %[[Vtbl4:[0-9]+]] = OpConstantComposite %[[ArrTy]] %[[ConstMinus184toPtr]] %[[ConstMinus184toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
-; CHECK: %[[Vtbl:[0-9]+]] = OpConstantComposite %[[VtblTy]] %[[Vtbl012]] %[[Vtbl012]] %[[Vtbl012]] %[[Vtbl3]] %[[Vtbl4]]
+; CHECK: %[[Vtbl012:[0-9]+]] = OpSpecConstantComposite %[[ArrTy]] %[[Const184toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
+; CHECK: %[[Vtbl3:[0-9]+]] = OpSpecConstantComposite %[[ArrTy]] %[[Const168toPtr]] %[[ConstMinus16toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
+; CHECK: %[[Vtbl4:[0-9]+]] = OpSpecConstantComposite %[[ArrTy]] %[[ConstMinus184toPtr]] %[[ConstMinus184toPtr]] %[[Nullptr]] %[[Nullptr]] %[[Nullptr]]
+; CHECK: %[[Vtbl:[0-9]+]] = OpSpecConstantComposite %[[VtblTy]] %[[Vtbl012]] %[[Vtbl012]] %[[Vtbl012]] %[[Vtbl3]] %[[Vtbl4]]
 ; CHECK: %[[#]] = OpVariable %[[GlobVtblPtrTy]] CrossWorkgroup %[[Vtbl]]
 
 @vtable = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)], [5 x ptr addrspace(1)] }

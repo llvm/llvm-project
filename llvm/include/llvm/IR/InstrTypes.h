@@ -51,6 +51,15 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// Provide fast-math flags storage, instructions that support fast-math flags
+/// should inherit from this class.
+class FastMathFlagsStorage {
+  friend class FPMathOperator;
+
+protected:
+  FastMathFlags FMF;
+};
+
 //===----------------------------------------------------------------------===//
 //                          UnaryInstruction Class
 //===----------------------------------------------------------------------===//
@@ -158,6 +167,32 @@ public:
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return I->isUnaryOp();
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+/// Unary operators support fast-math flags, users should not use this
+/// class directly, Unary can create instructions with correct type
+/// automatically.
+class FPUnaryOperator : public UnaryOperator, public FastMathFlagsStorage {
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class UnaryOperator;
+  using UnaryOperator::UnaryOperator;
+
+  LLVM_ABI FPUnaryOperator *cloneImpl() const;
+
+public:
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    switch (I->getOpcode()) {
+    case Instruction::FNeg:
+      return true;
+    default:
+      return false;
+    }
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
@@ -434,6 +469,35 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
   cast<PossiblyDisjointInst>(BO)->setIsDisjoint(true);
   return BO;
 }
+
+/// Binary operators support fast-math flags, users should not use this
+/// class directly, BinaryOperator can create instructions with correct type
+/// automatically.
+class FPBinaryOperator : public BinaryOperator, public FastMathFlagsStorage {
+  // Note: Instruction needs to be a friend here to call cloneImpl.
+  friend class Instruction;
+  friend class BinaryOperator;
+  LLVM_ABI FPBinaryOperator *cloneImpl() const;
+  using BinaryOperator::BinaryOperator;
+
+public:
+  static bool classof(const Instruction *I) {
+    switch (I->getOpcode()) {
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv:
+    case Instruction::FRem:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //                               CastInst Class
@@ -728,8 +792,7 @@ public:
 protected:
   LLVM_ABI CmpInst(Type *ty, Instruction::OtherOps op, Predicate pred,
                    Value *LHS, Value *RHS, const Twine &Name = "",
-                   InsertPosition InsertBefore = nullptr,
-                   Instruction *FlagsSource = nullptr);
+                   InsertPosition InsertBefore = nullptr);
 
 public:
   // allocate space for exactly two operands
@@ -1186,6 +1249,10 @@ public:
   LLVM_ABI static CallBase *
   removeOperandBundle(CallBase *CB, uint32_t ID,
                       InsertPosition InsertPt = nullptr);
+
+  LLVM_ABI static CallBase *
+  removeOperandBundleAt(CallBase *CB, size_t Offset,
+                        InsertPosition InsertPtr = nullptr);
 
   /// Return the convergence control token for this call, if it exists.
   Value *getConvergenceControlToken() const {
@@ -2284,6 +2351,12 @@ public:
   /// Return the range [\p bundle_op_info_begin, \p bundle_op_info_end).
   iterator_range<const_bundle_op_iterator> bundle_op_infos() const {
     return make_range(bundle_op_info_begin(), bundle_op_info_end());
+  }
+
+  auto operand_bundles() const {
+    return map_range(bundle_op_infos(), [this](BundleOpInfo BOI) {
+      return operandBundleFromBundleOpInfo(BOI);
+    });
   }
 
   /// Populate the BundleOpInfo instances and the Use& vector from \p

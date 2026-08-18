@@ -1,7 +1,7 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00 < %s | FileCheck %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02 < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK-NOT: s_waitcnt

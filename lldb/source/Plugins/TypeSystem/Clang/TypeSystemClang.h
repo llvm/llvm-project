@@ -512,6 +512,8 @@ public:
 
   CompilerType GetPointerDiffType(bool is_signed) override;
 
+  CompilerType GetSizeType() override;
+
   // Floating point functions
 
   static CompilerType GetFloatTypeFromBitSize(clang::ASTContext *ast,
@@ -941,13 +943,10 @@ public:
 
   CompilerType GetTypeForFormatters(void *type) override;
 
-  // DIL
-
   bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
 
-  llvm::Expected<CompilerType>
-  DoIntegralPromotion(CompilerType from,
-                      ExecutionContextScope *exe_scope) override;
+  CompilerType
+  GetPromotedIntegerType(lldb::opaque_compiler_type_t type) override;
 
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx

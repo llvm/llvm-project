@@ -40,7 +40,12 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
     Option<"typeDescriptorsRenamedForAssembly",
            "type-descriptors-renamed-for-assembly", "bool", /*default=*/"false",
            "Global variables created to describe derived types "
-           "have been renamed to avoid special symbols in their names.">
+           "have been renamed to avoid special symbols in their names.">,
+    Option<"cudaDescriptorAllocFunction", "cuda-descriptor-alloc-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to allocate CUDA Fortran descriptors. "
+           "Must have the same signature as CUFAllocDescriptor. "
+           "Defaults to CUFAllocDescriptor.">
   ];
 }
 
@@ -50,7 +55,8 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
     Fuse specific subgraphs into single Ops for code generation.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect",
+    "mlir::cf::ControlFlowDialect"
   ];
   let options = [
     Option<"preserveDeclare", "preserve-declare", "bool", /*default=*/"false",
@@ -58,6 +64,18 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   ];
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
+  ];
+}
+
+def RematerializeFIRBoxOpsPass
+    : Pass<"fir-rematerialize-box-ops", "mlir::func::FuncOp"> {
+  let summary = "Rematerialize FIR box operations before selected uses.";
+  let description = [{
+    Clone selected FIR box operations to preserve region-local descriptor
+    storage when their results are used inside nested regions.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::omp::OpenMPDialect"
   ];
 }
 
@@ -78,6 +96,8 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
            "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
+    Option<"forcedTargetABI", "target-abi", "std::string", /*default=*/"",
+           "Override module's target ABI.">,
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",
            "Disable target-specific conversion of CHARACTER.">,
@@ -103,6 +123,7 @@ def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
            "for W^X compliance. When enabled, internal procedure pointers "
            "use a runtime-managed pool of executable trampolines with "
            "separate data region, avoiding the need for an executable stack.">];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {

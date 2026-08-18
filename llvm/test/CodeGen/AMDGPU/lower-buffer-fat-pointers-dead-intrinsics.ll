@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu9.00-amd-amdhsa -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
 ; CHECK: @arbitrary
 declare amdgpu_kernel void @arbitrary(ptr addrspace(1))

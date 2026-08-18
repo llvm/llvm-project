@@ -46,6 +46,7 @@ enum ActionType {
   GenClangAttrIsTypeDependent,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
+  GenClangAttrUndocumentedAttrList,
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
@@ -118,12 +119,15 @@ enum ActionType {
   GenRISCVAndesVectorBuiltins,
   GenRISCVAndesVectorBuiltinCG,
   GenRISCVAndesVectorBuiltinSema,
+  GenHLSLAliasIntrinsics,
+  GenHLSLInlineIntrinsics,
   GenAttrDocs,
   GenBuiltinDocs,
   GenDiagDocs,
   GenOptDocs,
   GenDataCollectors,
-  GenTestPragmaAttributeSupportedAttributes
+  GenTestPragmaAttributeSupportedAttributes,
+  GenClangBuiltinTraits
 };
 
 namespace {
@@ -189,6 +193,9 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute text node dumper"),
         clEnumValN(GenClangAttrNodeTraverse, "gen-clang-attr-node-traverse",
                    "Generate clang attribute traverser"),
+        clEnumValN(GenClangAttrUndocumentedAttrList,
+                   "gen-clang-attr-undocumented-list",
+                   "Generate a list of undocumented attributes"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
         clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
@@ -346,6 +353,12 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVAndesVectorBuiltinSema,
                    "gen-riscv-andes-vector-builtin-sema",
                    "Generate riscv_andes_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenHLSLAliasIntrinsics, "gen-hlsl-alias-intrinsics",
+                   "Generate HLSL alias intrinsic overloads for "
+                   "hlsl_alias_intrinsics.h"),
+        clEnumValN(GenHLSLInlineIntrinsics, "gen-hlsl-inline-intrinsics",
+                   "Generate HLSL inline intrinsic overloads for "
+                   "hlsl_intrinsics.h"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenBuiltinDocs, "gen-builtin-docs",
@@ -358,7 +371,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenTestPragmaAttributeSupportedAttributes,
                    "gen-clang-test-pragma-attribute-supported-attributes",
                    "Generate a list of attributes supported by #pragma clang "
-                   "attribute for testing purposes")));
+                   "attribute for testing purposes"),
+        clEnumValN(GenClangBuiltinTraits, "gen-clang-builtin-traits",
+                   "Generate BuiltinTraits.inc for clang")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",
@@ -441,6 +456,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangAttrNodeTraverse:
     EmitClangAttrNodeTraverse(Records, OS);
+    break;
+  case GenClangAttrUndocumentedAttrList:
+    EmitClangUndocumentedAttrList(Records, OS);
     break;
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
@@ -654,6 +672,12 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
     break;
+  case GenHLSLAliasIntrinsics:
+    EmitHLSLAliasIntrinsics(Records, OS);
+    break;
+  case GenHLSLInlineIntrinsics:
+    EmitHLSLInlineIntrinsics(Records, OS);
+    break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);
     break;
@@ -671,6 +695,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenTestPragmaAttributeSupportedAttributes:
     EmitTestPragmaAttributeSupportedAttributes(Records, OS);
+    break;
+  case GenClangBuiltinTraits:
+    EmitClangBuiltinTraits(Records, OS);
     break;
   }
 

@@ -46,18 +46,20 @@ public:
 
   MlirTransformResults get() const { return results; }
 
-  void setOps(PyValue &result, const nb::list &ops) {
+  void setOps(PyValue &result,
+              const nb::typed<nb::sequence, PyOperationBase> &ops) {
     std::vector<MlirOperation> opsVec;
-    opsVec.reserve(ops.size());
+    opsVec.reserve(nb::len(ops));
     for (auto op : ops) {
       opsVec.push_back(nb::cast<MlirOperation>(op));
     }
     mlirTransformResultsSetOps(results, result, opsVec.size(), opsVec.data());
   }
 
-  void setValues(PyValue &result, const nb::list &values) {
+  void setValues(PyValue &result,
+                 const nb::typed<nb::sequence, PyValue> &values) {
     std::vector<MlirValue> valuesVec;
-    valuesVec.reserve(values.size());
+    valuesVec.reserve(nb::len(values));
     for (auto item : values) {
       valuesVec.push_back(nb::cast<MlirValue>(item));
     }
@@ -65,9 +67,10 @@ public:
                                   valuesVec.data());
   }
 
-  void setParams(PyValue &result, const nb::list &params) {
+  void setParams(PyValue &result,
+                 const nb::typed<nb::sequence, PyAttribute> &params) {
     std::vector<MlirAttribute> paramsVec;
-    paramsVec.reserve(params.size());
+    paramsVec.reserve(nb::len(params));
     for (auto item : params) {
       paramsVec.push_back(nb::cast<MlirAttribute>(item));
     }
@@ -490,39 +493,55 @@ struct ParamType : PyConcreteType<ParamType> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-void onlyReadsHandle(nb::iterable &operands,
-                     PyMemoryEffectsInstanceList effects) {
+void collectMemoryEffectInstances(intptr_t numEffects,
+                                  MlirMemoryEffectInstance *effects,
+                                  void *userData) {
+  auto *result = static_cast<std::vector<PyMemoryEffectInstance> *>(userData);
+  result->reserve(result->size() + numEffects);
+  for (intptr_t i = 0; i < numEffects; ++i)
+    result->emplace_back(mlirMemoryEffectInstanceClone(effects[i]));
+}
+
+std::vector<PyMemoryEffectInstance> onlyReadsHandle(nb::iterable &operands) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(),
-                               effects.effects);
+                               collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void consumesHandle(nb::iterable &operands,
-                    PyMemoryEffectsInstanceList effects) {
+std::vector<PyMemoryEffectInstance> consumesHandle(nb::iterable &operands) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(),
-                              effects.effects);
+                              collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void producesHandle(nb::iterable &results,
-                    PyMemoryEffectsInstanceList effects) {
+std::vector<PyMemoryEffectInstance> producesHandle(nb::iterable &results) {
   std::vector<MlirValue> resultsVec;
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result).get());
+  std::vector<PyMemoryEffectInstance> effects;
   mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
-                              effects.effects);
+                              collectMemoryEffectInstances, &effects);
+  return effects;
 };
 
-void modifiesPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformModifiesPayload(effects.effects);
+std::vector<PyMemoryEffectInstance> modifiesPayload() {
+  std::vector<PyMemoryEffectInstance> effects;
+  mlirTransformModifiesPayload(collectMemoryEffectInstances, &effects);
+  return effects;
 }
 
-void onlyReadsPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformOnlyReadsPayload(effects.effects);
+std::vector<PyMemoryEffectInstance> onlyReadsPayload() {
+  std::vector<PyMemoryEffectInstance> effects;
+  mlirTransformOnlyReadsPayload(collectMemoryEffectInstances, &effects);
+  return effects;
 }
 } // namespace
 
@@ -546,21 +565,25 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
   PyPatternDescriptorOpInterface::bind(m);
 
   m.def("only_reads_handle", onlyReadsHandle,
-        "Mark operands as only reading handles.", nb::arg("operands"),
-        nb::arg("effects"));
+        "Returns `OnlyReadsHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
+        nb::arg("operands"));
 
   m.def("consumes_handle", consumesHandle,
-        "Mark operands as consuming handles.", nb::arg("operands"),
-        nb::arg("effects"));
+        "Returns `ConsumesHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
+        nb::arg("operands"));
 
-  m.def("produces_handle", producesHandle, "Mark results as producing handles.",
-        nb::arg("results"), nb::arg("effects"));
+  m.def("produces_handle", producesHandle,
+        "Returns `ProducesHandle` effects corresponding to results which have "
+        "been marked as having those effects.",
+        nb::arg("results"));
 
   m.def("modifies_payload", modifiesPayload,
-        "Mark the transform as modifying the payload.", nb::arg("effects"));
+        "Returns `ModifiesPayload` effects.");
 
   m.def("only_reads_payload", onlyReadsPayload,
-        "Mark the transform as only reading the payload.", nb::arg("effects"));
+        "Returns `OnlyReadsPayload` effects.");
 }
 } // namespace transform
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

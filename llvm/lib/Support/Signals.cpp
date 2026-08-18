@@ -302,6 +302,10 @@ void sys::symbolizeAddresses(AddressSet &Addresses,
   assert(!DisableSymbolicationFlag && !getenv(DisableSymbolizationEnv) &&
          "Debugify origin stacktraces require symbolization to be enabled.");
 
+  // This function deals with temporary files for the purposes of symbolization
+  // only, not formal compiler output.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   // Convert Set of Addresses to ordered list.
   SmallVector<void *, 0> AddressList(Addresses.begin(), Addresses.end());
   if (AddressList.empty())

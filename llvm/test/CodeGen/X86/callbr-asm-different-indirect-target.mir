@@ -52,7 +52,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[XOR64ri32_:%[0-9]+]]:gr64 = XOR64ri32 killed [[COPY3]], 9, implicit-def dead $eflags
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[XOR64ri32_]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", 1 /* sideeffect attdialect */, 13 /* imm */, %bb.1, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+  ; CHECK-NEXT:   INLINEASM_BR &"", sideeffect attdialect, imm, %bb.1, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:
@@ -79,7 +79,7 @@ body:             |
     successors: %bb.3(0x80000000), %bb.1(0x00000000)
 
     %1:gr64 = XOR64ri32 killed %0, 9, implicit-def dead $eflags
-    INLINEASM_BR &"", 1 /* sideeffect attdialect */, 13 /* imm */, %bb.1, 12 /* clobber */, implicit-def dead early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def dead early-clobber $eflags
+    INLINEASM_BR &"", sideeffect attdialect, imm, %bb.1, clobber, implicit-def dead early-clobber $df, clobber, implicit-def early-clobber $fpsw, clobber, implicit-def dead early-clobber $eflags
     JMP_1 %bb.3
 
   bb.3.exit:

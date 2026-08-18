@@ -492,7 +492,7 @@ unsigned AVRInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         static_cast<const AVRTargetMachine &>(MF.getTarget());
     const TargetInstrInfo &TII = *STI.getInstrInfo();
     return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                                  *TM.getMCAsmInfo());
+                                  TM.getMCAsmInfo());
   }
   }
 }

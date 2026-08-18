@@ -42,6 +42,12 @@ void invalid_multiple() {}
 // CHECK-FIXES: template <typename T, typename = typename std::enable_if<T::some_value>::type, typename = typename std::enable_if<T::other_value>::type>
 // CHECK-FIXES-CXX20: template <typename T, typename = std::enable_if<T::some_value>::type, typename = std::enable_if<T::other_value>::type>
 
+template <typename T, typename = typename std::enable_if<T::some_value>>
+void invalid_typename_keyword() {}
+// CHECK-MESSAGES: [[@LINE-2]]:23: warning: incorrect std::enable_if usage detected; use 'typename std::enable_if<...>::type' [bugprone-incorrect-enable-if]
+// CHECK-FIXES: template <typename T, typename = typename std::enable_if<T::some_value>::type>
+// CHECK-FIXES-CXX20: template <typename T, typename = typename std::enable_if<T::some_value>::type>
+
 template <typename T, typename = std::enable_if<T::some_value>>
 struct InvalidClass {};
 // CHECK-MESSAGES: [[@LINE-2]]:23: warning: incorrect std::enable_if usage detected; use 'typename std::enable_if<...>::type' [bugprone-incorrect-enable-if]

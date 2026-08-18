@@ -42,7 +42,6 @@
 #include <array>
 #include <bitset>
 #include <memory>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -329,7 +328,7 @@ private:
   using RegID = unsigned;
   mutable DenseMap<RegID, LIFeatureComponents> CachedFeatures;
 
-  mutable std::unordered_map<unsigned, unsigned> VirtRegEvictionCounts;
+  mutable DenseMap<unsigned, unsigned> VirtRegEvictionCounts;
 
   void onEviction(Register RegBeingEvicted) const {
     // If we cannot find the virtual register in the map, we just assume it has
@@ -412,7 +411,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 };
@@ -561,7 +559,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysisLegacy::getAnalysisUsage(AU);
   }
 };

@@ -48,6 +48,10 @@
 
 #define __builtin_prefetch(X, Y, Z)
 
+#define LIBC_HAS_BUILTIN_IS_CONSTANT_EVALUATED 1
+#define LIBC_HAS_BUILTIN_IS_ASSIGNABLE 1
+#define LIBC_HAS_BUILTIN_IS_CONSTRUCTIBLE 1
+
 #endif // LIBC_COMPILER_IS_MSVC
 
 #ifdef __clang__

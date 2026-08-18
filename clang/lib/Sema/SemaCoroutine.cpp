@@ -21,7 +21,9 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/DynamicAllocationArgumentsCXX.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
@@ -693,6 +695,13 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
 
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
+
+  // Support for coroutines is not stable on 32 bits windows
+  // Warn about it.
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+      Context.getTargetInfo().getTriple().isX86_32())
+    Diag(KWLoc, diag::warn_coroutines_x86_windows);
+
   auto *ScopeInfo = getCurFunction();
   assert(ScopeInfo->CoroutinePromise);
 
@@ -1470,13 +1479,18 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     IAP = ImplicitAllocationParameters(
         alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
 
-    FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(
+    auto FoundAllocations = S.FindAllocationFunctions(
         Loc, SourceRange(), NewScope,
         /*DeleteScope=*/AllocationFunctionScope::Both, PromiseType,
         /*isArray=*/false, IAP,
-        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
-        UnusedResult, /*Diagnose=*/false);
+        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs,
+        /*Diagnose=*/false);
+    if (FoundAllocations) {
+      IAP = FoundAllocations->IAP;
+      OperatorNew = FoundAllocations->OperatorNew;
+    } else {
+      OperatorNew = nullptr;
+    }
     assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 

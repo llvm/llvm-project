@@ -21,6 +21,25 @@ def ArithExpandOpsPass : Pass<"arith-expand"> {
               "Enable the F8E8M0 expansion patterns">,
        Option<"includeF4E2M1", "include-f4e2m1", "bool", /*default=*/"false",
               "Enable the F4E2M1 expansion patterns">,
+       Option<"includeFlushDenormals", "include-flush-denormals", "bool",
+              /*default=*/"false",
+              "Enable expansion of `arith.flush_denormals` on IEEE-like "
+              "floating-point types">,
+       Option<"includeMinMaxF", "include-min-max-f", "bool", /*default=*/"false",
+              "Enable expansion of the floating-point min/max ops "
+              "(maximumf/minimumf/maxnumf/minnumf). These ops also have a "
+              "direct arith-to-llvm lowering to the "
+              "`llvm.intr.maximum/minimum/maxnum/minnum` intrinsics; disable "
+              "this so pipelines that run arith-to-llvm can use those "
+              "single-instruction lowerings instead of the cmpf/select "
+              "expansion">,
+       Option<"includeMinMaxI", "include-min-max-i", "bool", /*default=*/"false",
+              "Enable expansion of the signed/unsigned integer min/max ops "
+              "(maxsi/maxui/minsi/minui). These ops also have a direct "
+              "arith-to-llvm lowering to the `llvm.intr.smax/umax/smin/umin` "
+              "intrinsics; disable this so pipelines that run arith-to-llvm "
+              "can use those single-instruction lowerings instead of the "
+              "cmpi/select expansion">,
   ];
 }
 

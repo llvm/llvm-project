@@ -21,7 +21,7 @@
 // CHECK-SAME:  %[[ARG_J:.*]]: !emitc.size_t)
 func.func private @memref_alloc_store(%v : f32, %i: index, %j: index) {
   /// Allocation size  computation
-  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
+  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 32 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_F32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
   /// Alloc
@@ -42,7 +42,7 @@ func.func private @memref_alloc_store(%v : f32, %i: index, %j: index) {
 // CHECK-SAME:  %[[ARG_I:.*]]: !emitc.size_t,
 // CHECK-SAME:  %[[ARG_J:.*]]: !emitc.size_t) -> f32
 func.func private @memref_alloc_load(%i: index, %j: index) -> f32 {
-  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() {args = [f32]} : () -> !emitc.size_t
+  // CHECK:     %[[SIZEOF_F32:.*]] = call_opaque "sizeof"() <{args = [f32]}> : () -> !emitc.size_t
   // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 32 : index}> : () -> index
   // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_F32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
   // CHECK:     %[[MALLOC_PTR:.*]] = call_opaque "malloc"(%[[TOTAL_BYTES]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
@@ -70,5 +70,53 @@ func.func @memref_load_store(%buff0: memref<2xf32>,
   // CHECK:     %[[ELEM_LVALUE1:.*]] = subscript %[[BUFF1]]{{.*}} (!emitc.array<4x8xf32>, !emitc.size_t, !emitc.size_t) -> !emitc.lvalue<f32>
   // CHECK:     assign %[[VAL]] : f32 to %[[ELEM_LVALUE1]] : <f32>
   memref.store %v, %buff1[%i, %j] : memref<4x8xf32>
+  return
+}
+
+/// Rank-0 alloc-backed load/store lower through pointer subscript at index 0.
+// CHECK-LABEL: emitc.func private @memref_alloc_store_rank0(
+// CHECK-SAME:  %[[VAL:.*]]: i32)
+func.func private @memref_alloc_store_rank0(%v : i32) {
+  // CHECK:     %[[SIZEOF_I32:.*]] = call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
+  // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
+  // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_I32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
+  // CHECK:     %[[MALLOC_PTR:.*]] = call_opaque "malloc"(%[[TOTAL_BYTES]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+  // CHECK:     %[[ELEM_PTR:.*]] = cast %[[MALLOC_PTR]] : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+  %alloc = memref.alloc() : memref<i32>
+  // CHECK:     %[[ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[ELEM_LVALUE:.*]] = subscript %[[ELEM_PTR]]{{\[}}%[[ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  // CHECK:     assign %[[VAL]] : i32 to %[[ELEM_LVALUE]] : <i32>
+  memref.store %v, %alloc[] : memref<i32>
+  return
+}
+
+// CHECK-LABEL: emitc.func private @memref_alloc_load_rank0() -> i32
+func.func private @memref_alloc_load_rank0() -> i32 {
+  // CHECK:     %[[SIZEOF_I32:.*]] = call_opaque "sizeof"() <{args = [i32]}> : () -> !emitc.size_t
+  // CHECK:     %[[NUM_ELEMS:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> index
+  // CHECK:     %[[TOTAL_BYTES:.*]] = mul %[[SIZEOF_I32]], %[[NUM_ELEMS]] : (!emitc.size_t, index) -> !emitc.size_t
+  // CHECK:     %[[MALLOC_PTR:.*]] = call_opaque "malloc"(%[[TOTAL_BYTES]]) : (!emitc.size_t) -> !emitc.ptr<!emitc.opaque<"void">>
+  // CHECK:     %[[ELEM_PTR:.*]] = cast %[[MALLOC_PTR]] : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+  %alloc = memref.alloc() : memref<i32>
+  // CHECK:     %[[ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[ELEM_LVALUE:.*]] = subscript %[[ELEM_PTR]]{{\[}}%[[ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  // CHECK:     %[[LOADED_VAL:.*]] = load %[[ELEM_LVALUE]] : <i32>
+  %v = memref.load %alloc[] : memref<i32>
+  // CHECK:     return %[[LOADED_VAL]] : i32
+  return %v : i32
+}
+
+// CHECK-LABEL: emitc.func @memref_load_store_rank0(
+// CHECK-SAME:  %[[SRC:.*]]: !emitc.ptr<i32>,
+// CHECK-SAME:  %[[DST:.*]]: !emitc.ptr<i32>)
+func.func @memref_load_store_rank0(%src: memref<i32>, %dst: memref<i32>) {
+  // CHECK:     %[[LOAD_ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[SRC_LVALUE:.*]] = subscript %[[SRC]]{{\[}}%[[LOAD_ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  // CHECK:     %[[VAL:.*]] = load %[[SRC_LVALUE]] : <i32>
+  %v = memref.load %src[] : memref<i32>
+  // CHECK:     %[[STORE_ZERO:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK:     %[[DST_LVALUE:.*]] = subscript %[[DST]]{{\[}}%[[STORE_ZERO]]] : (!emitc.ptr<i32>, index) -> !emitc.lvalue<i32>
+  // CHECK:     assign %[[VAL]] : i32 to %[[DST_LVALUE]] : <i32>
+  memref.store %v, %dst[] : memref<i32>
   return
 }

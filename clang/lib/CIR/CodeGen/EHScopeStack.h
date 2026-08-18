@@ -166,6 +166,12 @@ private:
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
 
+  /// When true, pushCleanup() does not create a cir.cleanup.scope op for the
+  /// pushed cleanup. This is set while emitting a loop's condition variable so
+  /// its destructor can be captured on the stack and later emitted into the
+  /// loop op's per-iteration cleanup region.
+  bool capturingLoopConditionCleanups = false;
+
   // This class uses a custom allocator for maximum efficiency because cleanups
   // are allocated and freed very frequently. It's basically a bump pointer
   // allocator, but we can't use LLVM's BumpPtrAllocator because we use offsets
@@ -206,7 +212,29 @@ public:
     return new (buffer) T(n, a...);
   }
 
+  /// Push a cleanup by copying a serialized cleanup object from the
+  /// LifetimeExtendedCleanupStack onto the EH scope stack. This is used when
+  /// a full-expression's RunCleanupsScope exits: cleanups that were deferred
+  /// for lifetime extension (e.g. destroying a temporary bound to a local
+  /// reference) are promoted from the byte buffer to the enclosing scope's
+  /// EH stack so they run when that scope ends.
+  ///
+  /// The memcpy is safe because Cleanup subclasses are required to be POD-like
+  /// (see the Cleanup class comment), and the vtable pointer is part of the
+  /// copied bytes, so the clone dispatches to the correct emit() override.
+  void pushCopyOfCleanup(CleanupKind kind, const void *cleanup, size_t size) {
+    void *buffer = pushCleanup(kind, size);
+    std::memcpy(buffer, cleanup, size);
+  }
+
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
+
+  bool isCapturingLoopConditionCleanups() const {
+    return capturingLoopConditionCleanups;
+  }
+  void setCapturingLoopConditionCleanups(bool value) {
+    capturingLoopConditionCleanups = value;
+  }
 
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.
   void popCleanup();

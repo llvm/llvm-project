@@ -8,5 +8,6 @@ configure_lit_site_cfg(
 add_lit_testsuite(check-clang-doc-unit "Running clang-doc unit tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ClangDocTests
   ARGS --filter=ClangDocTests
   )

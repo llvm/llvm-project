@@ -3,12 +3,12 @@ function(add_unittest_framework_library name)
     "TEST_LIB"
     "" # No optional arguments
     "" # No single value arguments
-    "SRCS;HDRS;DEPENDS" # Multi value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
   )
   if(NOT TEST_LIB_SRCS)
     message(FATAL_ERROR "'add_unittest_framework_library' requires SRCS; for "
-                        "header only libraries, use 'add_header_library'")
+      "header only libraries, use 'add_header_library'")
   endif()
 
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
@@ -16,12 +16,28 @@ function(add_unittest_framework_library name)
       ${lib}
       STATIC
       EXCLUDE_FROM_ALL
-      ${TEST_LIB_SRCS}
-      ${TEST_LIB_HDRS}
+        ${TEST_LIB_SRCS}
+        ${TEST_LIB_HDRS}
     )
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
+    endif()
+
+    # Find out if the target supports catching signals.
+    if(NOT LLVM_LIBC_FULL_BUILD)
+      # In an overlay build of libc, assume signal.h is available: the host
+      # libc will provide it even if we don't.
+      set(no_signal FALSE)
+    elseif(TARGET libc.src.signal.signal)
+      # In a full build, signal.h only exists if we provide it ourselves, which
+      # we might not on bare metal.
+      get_target_property(no_signal libc.src.signal.signal SKIPPED)
+    else()
+      set(no_signal TRUE)
+    endif()
+    if(NOT no_signal)
+      target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
     endif()
   endforeach()
 
@@ -30,14 +46,17 @@ function(add_unittest_framework_library name)
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
     set(LLVM_LIBC_FULL_BUILD "")
     _get_common_test_compile_options(compile_options "" "")
-    target_compile_options(${name}.unit PRIVATE ${compile_options})
     set(LLVM_LIBC_FULL_BUILD ON)
   else()
     _get_common_test_compile_options(compile_options "" "")
-    target_compile_options(${name}.unit PRIVATE ${compile_options})
   endif()
 
-  _get_hermetic_test_compile_options(compile_options "")
+  if(TEST_LIB_COMPILE_OPTIONS)
+    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+  endif()
+  target_compile_options(${name}.unit PRIVATE ${compile_options})
+
+  _get_hermetic_test_compile_options(compile_options "" "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
@@ -57,17 +76,30 @@ function(add_unittest_framework_library name)
   endif()
 endfunction()
 
+if(NOT TARGET libc.src.__support.OSUtil.osutil OR NOT LLVM_LIBC_FULL_BUILD)
+  message(STATUS "TestLogger will use system libc's stdio to print.")
+  set(test_logger_compile_options "-DLIBC_TEST_USE_SYSTEM_PRINTF")
+  set(test_logger_osutil "")
+else()
+  set(test_logger_compile_options "")
+  set(test_logger_osutil "libc.src.__support.OSUtil.osutil")
+endif()
+
 add_unittest_framework_library(
   LibcTest
   SRCS
     CmakeFilePath.cpp
+    LibcCTest.cpp
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
   HDRS
+    LibcCTest.h
     LibcTest.h
     Test.h
     TestLogger.h
+  COMPILE_OPTIONS
+    ${test_logger_compile_options}
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
@@ -78,13 +110,26 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.types
-    libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
+    ${test_logger_osutil}
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
-if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
+set(libc_death_test_deps
+  libc.hdr.stdint_proxy
+  libc.src.__support.libc_assert
+)
+if(LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND libc_death_test_deps
+      libc.include.llvm-libc-macros.poll-macros
+      libc.include.llvm-libc-macros.signal_macros
+      libc.include.llvm-libc-macros.sys_wait_macros
+      libc.include.llvm-libc-types.pid_t
+      libc.include.llvm-libc-types.struct_pollfd
+    )
+  endif()
 endif()
 
 add_unittest_framework_library(
@@ -94,7 +139,7 @@ add_unittest_framework_library(
   HDRS
     ExecuteFunction.h
   DEPENDS
-    libc.hdr.stdint_proxy
+    ${libc_death_test_deps}
 )
 
 add_unittest_framework_library(
@@ -169,7 +214,8 @@ add_unittest_framework_library(
     LibcTest
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
-    libc.src.stdio.printf_core.core_structs
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.printf_config
     libc.test.UnitTest.string_utils
 )
 
@@ -206,4 +252,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
+)
+
+add_header_library(
+  ConstraintHandlerCheckingTest
+  HDRS
+    ConstraintHandlerCheckingTest.h
+  DEPENDS
+    libc.hdr.types.constraint_handler_t
+    libc.hdr.types.errno_t
+    libc.src.stdlib.set_constraint_handler_s
 )

@@ -55,6 +55,9 @@ class LLDBTest(TestFormat):
         # python exe as the first parameter of the command.
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
 
+        if test.config.maxIndividualTestTime > 0:
+            cmd += ["--timeout", str(test.config.maxIndividualTestTime)]
+
         launcher = getattr(test.config, "lldb_launcher", None)
         if launcher:
             cmd = [launcher] + cmd
@@ -68,14 +71,14 @@ class LLDBTest(TestFormat):
             out, err, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
+                timeout=test.config.maxIndividualTestTime,
             )
         except lit.util.ExecuteCommandTimeoutException as e:
             out = e.out
             err = e.err
             exitCode = e.exitCode
             timeoutInfo = "Reached timeout of {} seconds".format(
-                litConfig.maxIndividualTestTime
+                test.config.maxIndividualTestTime
             )
 
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (" ".join(cmd), exitCode)
@@ -127,6 +130,15 @@ class LLDBTest(TestFormat):
         expected_failures = parsed_details["expected failures"]
         unexpected_successes = parsed_details["unexpected successes"]
 
+        only_skipped = 0
+        breakdown = re.search(
+            r"^Skip breakdown \(unsupported=(\d+), skipped=(\d+)\)\r?$",
+            err,
+            re.MULTILINE,
+        )
+        if breakdown:
+            only_skipped = int(breakdown.group(2))
+
         non_pass = (
             failures + errors + skipped + expected_failures + unexpected_successes
         )
@@ -142,9 +154,11 @@ class LLDBTest(TestFormat):
             return lit.Test.XPASS, output
         else:
             # Aggregate the tests results with the following precedence:
-            # PASS > XFAIL > UNSUPPORTED
+            # PASS > XFAIL > SKIPPED > UNSUPPORTED
             if passes > 0:
                 return lit.Test.PASS, output
             if expected_failures > 0:
                 return lit.Test.XFAIL, output
+            if only_skipped > 0:
+                return lit.Test.SKIPPED, output
             return lit.Test.UNSUPPORTED, output

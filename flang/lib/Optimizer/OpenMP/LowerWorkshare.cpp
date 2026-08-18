@@ -26,18 +26,16 @@
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallVectorExtras.h>
 #include <llvm/ADT/iterator_range.h>
-#include <llvm/Support/ErrorHandling.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/OpenMP/OpenMPClauseOperands.h>
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
-#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/IRMapping.h>
 #include <mlir/IR/OpDefinition.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
 #include <mlir/IR/Visitors.h>
+#include <mlir/Interfaces/CallInterfaces.h>
 #include <mlir/Interfaces/LoopLikeInterface.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
@@ -137,6 +135,16 @@ static bool mustParallelizeOp(Operation *op) {
       .wasInterrupted();
 }
 
+// If val is defined by an hlfir.declare/fir.declare, returns the declared
+// memref (the value the declare wraps); otherwise returns val unchanged.
+static Value lookThroughDeclare(Value val) {
+  if (auto hlfirDecl = val.getDefiningOp<hlfir::DeclareOp>())
+    return hlfirDecl.getMemref();
+  if (auto firDecl = val.getDefiningOp<fir::DeclareOp>())
+    return firDecl.getMemref();
+  return val;
+}
+
 // Determines if a memory reference is thread-local in an OpenMP context.
 //
 // This is a best-effort analysis. We cannot definitively determine if code
@@ -177,19 +185,13 @@ static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
     // sets the source value to the declare op result (not the block arg).
     // Trace through the declare to check if the underlying Memref is a
     // private block argument.
-    Value declMemref;
-    if (auto hlfirDecl = sourceValue.getDefiningOp<hlfir::DeclareOp>())
-      declMemref = hlfirDecl.getMemref();
-    else if (auto firDecl = sourceValue.getDefiningOp<fir::DeclareOp>())
-      declMemref = firDecl.getMemref();
-    if (declMemref) {
-      if (auto blockArg = llvm::dyn_cast<BlockArgument>(declMemref)) {
-        Operation *parentOp = blockArg.getOwner()->getParentOp();
-        if (auto argIface =
-                llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
-          if (llvm::is_contained(argIface.getPrivateBlockArgs(), blockArg))
-            return true;
-        }
+    if (auto blockArg =
+            llvm::dyn_cast<BlockArgument>(lookThroughDeclare(sourceValue))) {
+      Operation *parentOp = blockArg.getOwner()->getParentOp();
+      if (auto argIface =
+              llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
+        if (llvm::is_contained(argIface.getPrivateBlockArgs(), blockArg))
+          return true;
       }
     }
   }
@@ -236,24 +238,169 @@ static bool isSafeToParallelize(Operation *op) {
 
   // Thread-local variables allocated in the OpenMP parallel region or coming
   // from privatizing clauses are private to each thread and thus safe (and
-  // sometimes required) to parallelize. If the compiler wraps such load/stores
-  // in an omp.single block, only one thread updates its local copy, while
-  // all other threads read uninitialized data (see issue #143330).
-  // Use MemoryEffectOpInterface to check all memory effects generically.
-  // This also handles hlfir.assign which is present when the pass runs before
-  // HLFIR lowering.
+  // sometimes required) to parallelize. If the compiler wraps stores to
+  // thread-local variables in an omp.single block, only one thread updates
+  // its local copy, while all other threads read uninitialized data (see
+  // issue #143330).
+  //
+  // Only WRITE effects to thread-local memory are considered safe here, not
+  // reads. If reads were also safe, the cascading effect in moveToSingle
+  // could cause entire SingleRegions to become fully parallelized (all ops
+  // safe), eliminating the omp.single and its implicit barrier. This removes
+  // synchronization points needed to keep threads coordinated inside
+  // sequential loops that contain workshared operations.
   if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
     SmallVector<MemoryEffects::EffectInstance> effects;
     memEffects.getEffects(effects);
     if (!effects.empty() &&
         llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &effect) {
           Value val = effect.getValue();
-          return val && isOpenMPThreadLocalMemory(op, val);
+          return val && isa<MemoryEffects::Write>(effect.getEffect()) &&
+                 isOpenMPThreadLocalMemory(op, val);
         }))
       return true;
   }
 
   return false;
+}
+
+// Returns the underlying thread-local storage that mem refers to, or null if
+// mem is not thread-local. The alias analysis is used to look through
+// fir.declare/hlfir.declare, fir.convert, fir.rebox, etc., so that two
+// accesses of the same thread-local location yield the same value even if one
+// goes through such ops and the other does not. This is what makes it safe to
+// match the reads and writes of collect{Reads,Writes} against each other by
+// value identity: a store to an alloca and a load from a fir.declare of that
+// alloca map to the same key. Matching the raw effect value instead would
+// silently miss such accesses, dropping a required broadcast.
+static Value getOpenMPThreadLocalSource(Operation *op, Value mem) {
+  if (!isOpenMPThreadLocalMemory(op, mem))
+    return nullptr;
+  fir::AliasAnalysis aliasAnalysis;
+  Value source = llvm::dyn_cast_if_present<mlir::Value>(
+      aliasAnalysis.getSource(mem).origin.u);
+  if (!source)
+    return nullptr;
+  // The alias analysis looks through a fir.declare/hlfir.declare that wraps an
+  // allocation, but stops at the declare result when it wraps a privatizing
+  // clause block argument (see isOpenMPThreadLocalMemory). A write through such
+  // a declare and a read of the block argument itself (or vice versa) would
+  // then result in different origins and fail to match, dropping a required
+  // broadcast. Look through the declare to the block argument so that both
+  // accesses canonicalize to the same key.
+  if (Value memref = lookThroughDeclare(source);
+      llvm::isa<BlockArgument>(memref))
+    return memref;
+  return source;
+}
+
+// Collects the thread-local memory locations that op writes to and that
+// need to be broadcasted to other threads when op ends up being executed
+// by a single thread only.
+//
+// Some thread-local variables carry state which is logically shared by the
+// whole omp.workshare region even though each thread owns a copy of it.
+//
+// One example is the fetch counter of the temporary storage used to implement
+// FORALL: it is bumped from within an omp.single (because the value it is
+// bumped by is only available there), so the copies owned by the threads
+// which did not execute the omp.single would otherwise go stale and the
+// following iterations would fetch the wrong element. See issue #209942.
+//
+// Only the underlying thread-local allocation is considered, so that a shallow
+// copy of it faithfully reproduces the update on the other threads.
+static void collectThreadLocalWrites(Operation *op,
+                                     llvm::SmallVectorImpl<Value> &vars) {
+  auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memEffects)
+    return;
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  memEffects.getEffects(effects);
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (!isa<MemoryEffects::Write>(effect.getEffect()))
+      continue;
+    Value val = effect.getValue();
+    if (!val)
+      continue;
+    Value source = getOpenMPThreadLocalSource(op, val);
+    if (!source)
+      continue;
+    auto refTy = dyn_cast<fir::ReferenceType>(source.getType());
+    if (!refTy)
+      continue;
+    // createCopyFunc emits a load/store pair, so restrict this to types for
+    // which such a shallow copy is both legal and cheap.
+    mlir::Type eleTy = refTy.getEleTy();
+    if (!fir::isa_trivial(eleTy) && !fir::isa_box_type(eleTy))
+      continue;
+    vars.push_back(source);
+  }
+}
+
+// The thread-local locations that the whole team may read, used to decide
+// which writes performed inside an omp.single must be broadcasted with
+// copyprivate. "unknown" is set when an operation whose memory effects cannot
+// be determined is found (see collectThreadLocalReads): such an operation
+// might read any thread-local location, so every thread-local write then has
+// to be broadcasted to stay correct.
+struct ThreadLocalReads {
+  llvm::SmallDenseSet<Value> reads;
+  bool unknown = false;
+
+  bool mayBeReadByTeam(Value v) const { return unknown || reads.contains(v); }
+};
+
+// Collects into reads the thread-local allocations that are read anywhere in
+// scope. A thread-local location written from within an omp.single only needs
+// to be broadcasted if some other thread may later read it. The scope must be
+// a region executed by the whole team (i.e. the enclosing omp.parallel), so
+// that reads performed after the omp.workshare region are accounted for too.
+//
+// Reads are matched by their underlying thread-local allocation, mirroring
+// collectThreadLocalWrites, so that a load through a fir.declare/fir.convert
+// still keeps the corresponding write live for broadcasting.
+//
+// An opaque call may read any thread-local location inside its callee, and a
+// memory-effecting operation may report a read of unspecified memory (a read
+// effect with no attached value). Neither read can be attributed to a specific
+// location, so reads.unknown is set to force every thread-local write to be
+// broadcasted. Other interface-less operations (e.g. omp.barrier, fir.declare)
+// have known, inspectable behaviour and are safe to ignore here.
+static void collectThreadLocalReads(Region &scope, ThreadLocalReads &reads) {
+  scope.walk([&](Operation *op) {
+    if (isa<mlir::CallOpInterface>(op)) {
+      reads.unknown = true;
+      return;
+    }
+    // TODO: An op that does not implement MemoryEffectOpInterface has
+    // unknown effects and could read a thread-local location, so the
+    // conservative choice would be to set reads.unknown here.
+    // However, we deliberately don't, because the interface-less ops we see in
+    // practice (omp.barrier, fir.declare, etc) have known, inspectable
+    // behaviour and never read program memory. Forcing a broadcast for them
+    // would defeat the read-back optimization. This assumption only holds for
+    // the FIR/HLFIR/OpenMP dialects we know about; an op from another dialect
+    // could break it. Once such ops are properly mapped (or made to model
+    // their effects), fall back to reads.unknown here for any remaining
+    // unknown-effect ops instead of ignoring them.
+    auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
+    if (!memEffects)
+      return;
+    SmallVector<MemoryEffects::EffectInstance> effects;
+    memEffects.getEffects(effects);
+    for (const MemoryEffects::EffectInstance &effect : effects) {
+      if (!isa<MemoryEffects::Read>(effect.getEffect()))
+        continue;
+      Value val = effect.getValue();
+      if (!val) {
+        // A read effect without an attached value reads unspecified memory.
+        reads.unknown = true;
+        continue;
+      }
+      if (Value source = getOpenMPThreadLocalSource(op, val))
+        reads.reads.insert(source);
+    }
+  });
 }
 
 /// Simple shallow copies suffice for our purposes in this pass, so we implement
@@ -336,9 +483,14 @@ static void cleanupBlock(Block *block) {
       op.erase();
 }
 
+// canUseNowait to check whether the work generated for sourceRegion is the
+// very last thing the omp.workshare region does, and thus whether the
+// synchronization of its last omp.single/omp.wsloop may be left to the
+// barrier emitted at the end of the omp.workshare region.
 static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
                               IRMapping &rootMapping, Location loc,
-                              mlir::DominanceInfo &di) {
+                              mlir::DominanceInfo &di, bool canUseNowait,
+                              const ThreadLocalReads &threadLocalReads) {
   OpBuilder rootBuilder(sourceRegion.getContext());
   ModuleOp m = sourceRegion.getParentOfType<ModuleOp>();
   OpBuilder copyFuncBuilder(m.getBodyRegion());
@@ -362,6 +514,9 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           OpBuilder parallelBuilder) -> std::pair<bool, SmallVector<Value>> {
     IRMapping singleMapping = rootMapping;
     SmallVector<Value> copyPrivate;
+    // Thread-local memory updated by the single thread only, which has to be
+    // broadcasted to the other threads to keep their copies in sync.
+    SmallVector<Value> threadLocalWrites;
     bool allParallelized = true;
 
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
@@ -385,6 +540,9 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           assert(llvm::all_of(op.getResults(), [&](Value v) {
             return !isTransitivelyUsedOutside(v, sr);
           }));
+          // The operation only runs on the thread executing the omp.single,
+          // so the thread-local memory it updates has to be broadcasted.
+          collectThreadLocalWrites(&op, threadLocalWrites);
           allParallelized = false;
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
@@ -396,6 +554,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         allParallelized = false;
       } else {
         singleBuilder.clone(op, singleMapping);
+        collectThreadLocalWrites(&op, threadLocalWrites);
         // Prepare reloaded values for results of operations that cannot be
         // safely parallelized and which are used after the region `sr`.
         for (auto res : op.getResults()) {
@@ -410,6 +569,22 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       }
     }
     omp::TerminatorOp::create(singleBuilder, loc);
+
+    // Broadcast the thread-local state which only the thread executing the
+    // omp.single has updated, but only when some other thread may actually read
+    // it back: a location that is never read (e.g. a write to a temporary in a
+    // terminal omp.single) does not need to be broadcasted. Values defined
+    // inside sr are remapped; values defined before it (e.g. hoisted allocas)
+    // are used as is.
+    llvm::SmallDenseSet<Value> seen(copyPrivate.begin(), copyPrivate.end());
+    for (Value v : threadLocalWrites) {
+      if (!threadLocalReads.mayBeReadByTeam(v))
+        continue;
+      Value mapped = singleMapping.lookupOrDefault(v);
+      if (seen.insert(mapped).second)
+        copyPrivate.push_back(mapped);
+    }
+
     return {allParallelized, copyPrivate};
   };
 
@@ -422,7 +597,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     rootMapping.map(block.getArguments(), targetBlock->getArguments());
   }
 
-  auto handleOneBlock = [&](Block &block) {
+  auto handleOneBlock = [&](Block &block, bool blockCanUseNowait) {
     Block &targetBlock = *rootMapping.lookup(&block);
     rootBuilder.setInsertionPointToStart(&targetBlock);
     Operation *terminator = block.getTerminator();
@@ -450,14 +625,10 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
       ;
 
     for (auto [i, opOrSingle] : llvm::enumerate(regions)) {
-      bool isLast = i + 1 == regions.size();
-      // Make sure shared runtime calls are synchronized: disable `nowait`
-      // insertion, and rely on the implicit barrier at the end of the
-      // omp.workshare block. This applies to any loop-like operation
-      // (fir.do_loop, fir.iterate_while, fir.do_concurrent.loop, etc.)
-      // because iterations could overlap if nowait is used.
-      if (isa<LoopLikeOpInterface>(block.getParentOp()))
-        isLast = false;
+      // Only the very last piece of work of the whole omp.workshare region
+      // may use nowait and rely on the barrier emitted at the end of that
+      // region.
+      bool isLast = blockCanUseNowait && i + 1 == regions.size();
       if (std::holds_alternative<SingleRegion>(opOrSingle)) {
         OpBuilder singleBuilder(sourceRegion.getContext());
         Block *singleBlock = new Block();
@@ -482,7 +653,10 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           delete singleBlock;
         } else {
           omp::SingleOperands singleOperands;
-          if (isLast)
+          // nowait and copyprivate are mutually exclusive on a single
+          // construct: the broadcast relies on the barrier at the end of the
+          // region.
+          if (isLast && copyprivateVars.empty())
             singleOperands.nowait = rootBuilder.getUnitAttr();
           singleOperands.copyprivateVars = copyprivateVars;
           cleanupBlock(singleBlock);
@@ -516,10 +690,15 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           clonedWslw->erase();
         } else {
           assert(mustParallelizeOp(op));
+          // A loop-like operation may run its region more than once, so the
+          // iterations of the work generated for it could overlap if nowait
+          // were used inside of it.
+          bool nestedCanUseNowait = isLast && !isa<LoopLikeOpInterface>(op);
           Operation *cloned = rootBuilder.cloneWithoutRegions(*op, rootMapping);
           for (auto [region, clonedRegion] :
                llvm::zip(op->getRegions(), cloned->getRegions()))
-            parallelizeRegion(region, clonedRegion, rootMapping, loc, di);
+            parallelizeRegion(region, clonedRegion, rootMapping, loc, di,
+                              nestedCanUseNowait, threadLocalReads);
         }
       }
     }
@@ -528,11 +707,13 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
   };
 
   if (sourceRegion.hasOneBlock()) {
-    handleOneBlock(sourceRegion.front());
+    handleOneBlock(sourceRegion.front(), canUseNowait);
   } else if (!sourceRegion.empty()) {
+    // With several blocks, no block is known to hold the last piece of work of
+    // the region, so none of them may use nowait.
     auto &domTree = di.getDomTree(&sourceRegion);
     for (auto node : llvm::breadth_first(domTree.getRootNode())) {
-      handleOneBlock(*node->getBlock());
+      handleOneBlock(*node->getBlock(), /*blockCanUseNowait=*/false);
     }
   }
 
@@ -592,8 +773,21 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     if (!wsOp.getNowait())
       omp::BarrierOp::create(rootBuilder, loc);
 
-    parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc,
-                      di);
+    // Compute the thread-local locations read by the whole team, so that only
+    // those get broadcasted out of the omp.single's below. The enclosing
+    // omp.parallel is used as the scope so that reads performed after the
+    // omp.workshare region are taken into account as well; if there is none,
+    // fall back to the innermost isolated-from-above ancestor.
+    ThreadLocalReads threadLocalReads;
+    if (auto parallelOp = wsOp->getParentOfType<omp::ParallelOp>())
+      collectThreadLocalReads(parallelOp.getRegion(), threadLocalReads);
+    else if (Operation *top =
+                 wsOp->getParentWithTrait<OpTrait::IsIsolatedFromAbove>())
+      for (Region &r : top->getRegions())
+        collectThreadLocalReads(r, threadLocalReads);
+
+    parallelizeRegion(wsOp.getRegion(), newOp.getRegion(), rootMapping, loc, di,
+                      /*canUseNowait=*/true, threadLocalReads);
 
     // Inline the contents of the placeholder workshare op into its parent
     // block.
@@ -606,6 +800,13 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     term->erase();
     newOp->erase();
     wsOp->erase();
+
+    // If this was part of a combined construct (e.g. 'parallel workshare'), the
+    // changes we just made to the region can be incompatible with a combined
+    // construct, such as containing multiple block-associated constructs in it.
+    if (auto parentOp =
+            dyn_cast<omp::ComposableOpInterface>(parentBlock->getParentOp()))
+      parentOp.setCombined(false);
   } else {
     // Otherwise just change the operation to an omp.single.
 

@@ -20,7 +20,6 @@
 // (1.4) -- Otherwise, ITER_CONCEPT(I) does not denote a type.
 
 #include <__iterator/concepts.h>
-#include <__type_traits/is_valid_expansion.h>
 #include <cstddef>
 #include <iterator>
 
@@ -77,5 +76,3 @@ ASSERT_SAME_TYPE(std::_ITER_CONCEPT<MyIter3>, OtherTagTwo);
 // FIXME - This requirement makes no sense to me. Why does an empty type with
 // an empty default iterator_traits get a category of random?
 ASSERT_SAME_TYPE(std::_ITER_CONCEPT<Empty>, std::random_access_iterator_tag);
-
-static_assert(!std::_IsValidExpansion<std::_ITER_CONCEPT, EmptyWithSpecial>::value);

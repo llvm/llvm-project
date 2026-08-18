@@ -37,3 +37,45 @@ define i64 @mul64_no_implicit_copy(i64 %a0) nounwind {
   %a3 = extractvalue { i64, i1 } %a2, 0
   ret i64 %a3
 }
+
+define i64 @mul64_add_hi_order_a(ptr %x, i64 %y) {
+; CHECK-LABEL: mul64_add_hi_order_a:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    imulq 8(%rdi), %rsi
+; CHECK-NEXT:    mulq (%rdi)
+; CHECK-NEXT:    leaq (%rdx,%rsi), %rax
+; CHECK-NEXT:    retq
+  %p1 = getelementptr inbounds i64, ptr %x, i64 1
+  %qv = load i64, ptr %p1, align 8
+  %q = mul i64 %qv, %y
+  %pv = load i64, ptr %x, align 8
+  %pv.zext = zext i64 %pv to i128
+  %y.zext = zext i64 %y to i128
+  %prod = mul nuw i128 %pv.zext, %y.zext
+  %prod.hi = lshr i128 %prod, 64
+  %p = trunc i128 %prod.hi to i64
+  %sum = add i64 %q, %p
+  ret i64 %sum
+}
+
+define i64 @mul64_add_hi_order_b(ptr %x, i64 %y) {
+; CHECK-LABEL: mul64_add_hi_order_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    mulq (%rdi)
+; CHECK-NEXT:    imulq 8(%rdi), %rsi
+; CHECK-NEXT:    leaq (%rsi,%rdx), %rax
+; CHECK-NEXT:    retq
+  %pv = load i64, ptr %x, align 8
+  %pv.zext = zext i64 %pv to i128
+  %y.zext = zext i64 %y to i128
+  %prod = mul nuw i128 %pv.zext, %y.zext
+  %prod.hi = lshr i128 %prod, 64
+  %p = trunc i128 %prod.hi to i64
+  %p1 = getelementptr inbounds i64, ptr %x, i64 1
+  %qv = load i64, ptr %p1, align 8
+  %q = mul i64 %qv, %y
+  %sum = add i64 %q, %p
+  ret i64 %sum
+}

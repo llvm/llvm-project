@@ -132,7 +132,7 @@ def DereferenceableOrNull : IntAttr<"dereferenceable_or_null", IntersectMin,
 def DisableSanitizerInstrumentation: EnumAttr<"disable_sanitizer_instrumentation", IntersectPreserve, [FnAttr]>;
 
 /// Provide pointer element type to intrinsic.
-def ElementType : TypeAttr<"elementtype", IntersectPreserve, [ParamAttr]>;
+def ElementType : TypeAttr<"elementtype", IntersectPreserve, [RetAttr, ParamAttr]>;
 
 /// Flatten function by recursively inlining all calls.
 def Flatten : EnumAttr<"flatten", IntersectPreserve, [FnAttr]>;
@@ -217,6 +217,9 @@ def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
 /// nooutline
 def NoOutline : EnumAttr<"nooutline", IntersectPreserve, [FnAttr]>;
+
+/// Do not do interprocedural analysis or optimization including this function
+def NoIPA : EnumAttr<"noipa", IntersectPreserve, [FnAttr]>;
 
 /// Function is called early and/or often, so lazy binding isn't worthwhile.
 def NonLazyBind : EnumAttr<"nonlazybind", IntersectPreserve, [FnAttr]>;

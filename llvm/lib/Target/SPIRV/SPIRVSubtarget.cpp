@@ -91,7 +91,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
   else if (TargetTriple.getOS() == Triple::OpenCL ||
-           TargetTriple.getVendor() == Triple::AMD)
+           TargetTriple.getVendor() == Triple::AMD ||
+           TargetTriple.getOS() == Triple::ChipStar)
     Env = Kernel;
   else
     Env = Unknown;
@@ -109,7 +110,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
+  GR = std::make_unique<SPIRVGlobalRegistry>(TM.createDataLayout());
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -193,6 +194,8 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 }
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  *GR = SPIRVGlobalRegistry(M.getDataLayout());
+
   if (Env != Unknown) {
     assert(!(isKernel() && any_of(M,
                                   [](const Function &F) {
@@ -202,13 +205,8 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     return;
   }
 
-  bool HasShaderAttr = false;
-  for (const Function &F : M) {
-    if (F.hasFnAttribute("hlsl.shader")) {
-      HasShaderAttr = true;
-      break;
-    }
-  }
+  bool HasShaderAttr = any_of(
+      M, [](const Function &F) { return F.hasFnAttribute("hlsl.shader"); });
 
   if (!HasShaderAttr) {
     if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {

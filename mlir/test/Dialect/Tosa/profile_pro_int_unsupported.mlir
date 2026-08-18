@@ -2,7 +2,7 @@
 // Check operations fail to validation when pro_int is not provided in the target.
 //--------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="profiles=pro_fp" -tosa-validate="strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="specification_version=1.1.draft profiles=pro_fp" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_const_i1() -> tensor<3x11x11x3xi1> {
@@ -21,6 +21,17 @@ func.func @test_argmax(%arg0: tensor<14x19xi8>) -> tensor<14xi32> {
   // expected-error@+1 {{'tosa.argmax' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
   %0 = tosa.argmax %arg0 {axis = 1 : i32} : (tensor<14x19xi8>) -> tensor<14xi32>
   return %0 : tensor<14xi32>
+}
+
+// -----
+func.func @test_avg_pool2d_adaptive_missing_pro_int(%arg0: tensor<1x7x7x9xi8>, %arg1: tensor<1xi8>, %arg2: tensor<1xi8>) -> tensor<1x7x7x9xi8> {
+  %kernel = tosa.const_shape {values = dense<[2, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 1, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
+  %0 = tosa.avg_pool2d_adaptive %arg0, %arg1, %arg2, %kernel, %stride, %pad {acc_type = i32} :
+       (tensor<1x7x7x9xi8>, tensor<1xi8>, tensor<1xi8>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x7x7x9xi8>
+  return %0 : tensor<1x7x7x9xi8>
 }
 
 // -----
@@ -228,20 +239,6 @@ func.func @test_transpose(%arg0: tensor<13x21x3xi8>, %arg1: tensor<3xi32>) -> te
 }
 
 // -----
-func.func @test_gather(%arg0: tensor<13x21x3xi32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xi32> {
-  // expected-error@+1 {{'tosa.gather' op illegal: requires any of [pro_int] profiles/extensions OR requires specification version compatible with 1.1 (got 1.0) to be specified in the target environment}}
-  %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi32>, tensor<13x26xi32>) -> tensor<13x26x3xi32>
-  return %0 : tensor<13x26x3xi32>
-}
-
-// -----
-func.func @test_scatter(%arg0: tensor<13x27x3xi32>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xi32>) -> tensor<13x27x3xi32> {
-  // expected-error@+1 {{'tosa.scatter' op illegal: requires any of [pro_int] profiles/extensions OR requires specification version compatible with 1.1 (got 1.0) to be specified in the target environment}}
-  %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x27x3xi32>, tensor<13x26xi32>, tensor<13x26x3xi32>) -> tensor<13x27x3xi32>
-  return %0 : tensor<13x27x3xi32>
-}
-
-// -----
 func.func @test_resize(%arg0: tensor<1x32x32x8xi8>) -> tensor<1x64x64x8xi32> {
   %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
   %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
@@ -254,28 +251,28 @@ func.func @test_resize(%arg0: tensor<1x32x32x8xi8>) -> tensor<1x64x64x8xi32> {
 // -----
 func.func @test_cast_i1_i8(%arg0: tensor<13x21x3xi1>) -> tensor<13x21x3xi8> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi1>) -> tensor<13x21x3xi8>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi1>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_i8_i32(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi8>) -> tensor<13x21x3xi32>
   return %0 : tensor<13x21x3xi32>
 }
 
 // -----
 func.func @test_cast_i16_i8(%arg0: tensor<13x21x3xi16>) -> tensor<13x21x3xi8> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi16>) -> tensor<13x21x3xi8>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi16>) -> tensor<13x21x3xi8>
   return %0 : tensor<13x21x3xi8>
 }
 
 // -----
 func.func @test_cast_i32_i16(%arg0: tensor<13x21x3xi32>) -> tensor<13x21x3xi16> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires any of [pro_int] profiles/extensions to be specified in the target environment}}
-  %0 = tosa.cast %arg0 : (tensor<13x21x3xi32>) -> tensor<13x21x3xi16>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<13x21x3xi32>) -> tensor<13x21x3xi16>
   return %0 : tensor<13x21x3xi16>
 }
 

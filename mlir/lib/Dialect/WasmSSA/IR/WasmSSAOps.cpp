@@ -246,6 +246,16 @@ void FuncImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+namespace {
+Operation *getGlobalOpTerminatorOp(GlobalOp gop) {
+  return gop.getInitializer().begin()->getTerminator();
+}
+} // namespace
+
+ReturnOp GlobalOp::getInitTerminator() {
+  return llvm::cast<wasmssa::ReturnOp>(getGlobalOpTerminatorOp(*this));
+}
+
 // Custom formats
 ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr symbolName;
@@ -292,6 +302,10 @@ void GlobalOp::print(OpAsmPrinter &printer) {
   }
 }
 
+LogicalResult GlobalOp::verify() {
+  return success(llvm::isa<ReturnOp>(getGlobalOpTerminatorOp(*this)));
+}
+
 //===----------------------------------------------------------------------===//
 // GlobalGetOp
 //===----------------------------------------------------------------------===//
@@ -314,6 +328,44 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitError("global.get op is considered constant if it's referring "
                      "to a import.global symbol marked non-mutable");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalSetOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GlobalSetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symTabOp = SymbolTable::getNearestSymbolTable(*this);
+  StringRef referencedSymbol = getGlobal();
+  Operation *definitionOp = symbolTable.lookupSymbolIn(
+      symTabOp, StringAttr::get(this->getContext(), referencedSymbol));
+  if (!definitionOp)
+    return emitError() << "symbol @" << referencedSymbol << " is undefined";
+
+  Type globalType;
+  bool isMutable = false;
+  if (auto global = dyn_cast<GlobalOp>(definitionOp)) {
+    globalType = global.getType();
+    isMutable = global.getIsMutable();
+  } else if (auto globalImport = dyn_cast<GlobalImportOp>(definitionOp)) {
+    globalType = globalImport.getType();
+    isMutable = globalImport.getIsMutable();
+  } else {
+    return emitError() << "symbol @" << referencedSymbol
+                       << " is not a global symbol";
+  }
+
+  if (!isMutable)
+    return emitError("global.set target must be mutable");
+
+  Type valueType = getValue().getType();
+  if (globalType != valueType)
+    return emitError("global.set value type does not match target global "
+                     "type: expected ")
+           << globalType << " but got " << valueType;
+
   return success();
 }
 
@@ -362,7 +414,7 @@ Block *IfOp::getLabelTarget() { return getTarget(); }
 
 LogicalResult LocalOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   LocalOp::GenericAdaptor<ValueRange> adaptor{operands, attributes, properties,
                                               regions};
@@ -380,7 +432,7 @@ LogicalResult LocalOp::inferReturnTypes(
 
 LogicalResult LocalGetOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }
@@ -401,7 +453,7 @@ LogicalResult LocalSetOp::verify() {
 
 LogicalResult LocalTeeOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }

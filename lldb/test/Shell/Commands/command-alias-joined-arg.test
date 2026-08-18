@@ -1,0 +1,7 @@
+# Test that command alias with a joined argument (`-P1` in this test) is
+# properly parsed (does not crash).
+
+# RUN: %lldb < %s | FileCheck %s
+command alias vptr frame variable -P1
+help
+# CHECK: {{^ *}}vptr{{ +}}--

@@ -1165,14 +1165,15 @@ public:
       typename = std::enable_if_t<!llvm::is_one_of<
           AttrType, Attribute, ArrayAttr, StringAttr, SymbolRefAttr>::value>>
   OptionalParseResult parseOptionalAttribute(AttrType &result, Type type = {}) {
+    llvm::SMLoc loc = getCurrentLocation();
     Attribute attr;
     OptionalParseResult parseResult = parseOptionalAttribute(attr, type);
     if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
     result = dyn_cast<AttrType>(attr);
     if (!result)
-      return emitError(getCurrentLocation())
-             << "expected attribute of a different type";
+      return emitError(loc) << "expected attribute of type '" << AttrType::name
+                            << "', but found attribute '" << attr << "'";
     return success();
   }
 
@@ -1843,14 +1844,6 @@ ParseResult parseDimensionList(OpAsmParser &parser,
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
-  static inline mlir::AsmDialectResourceHandle getEmptyKey() {
-    return {DenseMapInfo<void *>::getEmptyKey(),
-            DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
-  }
-  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
-    return {DenseMapInfo<void *>::getTombstoneKey(),
-            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
-  }
   static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
     return DenseMapInfo<void *>::getHashValue(handle.getResource());
   }
