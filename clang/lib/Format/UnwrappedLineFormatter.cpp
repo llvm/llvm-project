@@ -938,11 +938,9 @@ private:
     }
 
     if (Line.endsWith(tok::l_brace)) {
-      // Refuse to merge export blocks if the style requires the brace to be on
-      // a new line.
+
       if (Style.BraceWrapping.AfterExportBlock &&
-          Line.First->is(tok::l_brace) && I > AnnotatedLines.begin() &&
-          I[-1]->startsWith(tok::kw_export)) {
+          Line.First->is(TT_ExportLBrace)) {
         return 0;
       }
 

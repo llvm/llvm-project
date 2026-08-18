@@ -1535,6 +1535,15 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterUnion;
+    /// Wrap export blocks.
+    /// \code
+    ///   true:                            false:
+    ///   export             vs.           export {
+    ///   {                                  int foo();
+    ///     int foo();                     }
+    ///   }
+    /// \endcode
+    bool AfterExportBlock;
     /// Wrap extern blocks.
     /// \code
     ///   true:
@@ -1549,15 +1558,7 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterExternBlock; // Partially superseded by IndentExternBlock
-    /// Wrap export blocks.
-    /// \code
-    ///   true:                            false:
-    ///   export                           export {
-    ///   {                                  int foo();
-    ///     int foo();                     }
-    ///   }
-    /// \endcode
-    bool AfterExportBlock;
+
     /// Wrap before `catch`.
     /// \code
     ///   true:
