@@ -2537,7 +2537,7 @@ static mlir::acc::LoopOp createLoopOp(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr("loopAnnotation", la);
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
   }
 
   return loopOp;

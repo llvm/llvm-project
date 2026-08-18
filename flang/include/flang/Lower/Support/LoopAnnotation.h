@@ -14,7 +14,12 @@
 #define FORTRAN_LOWER_SUPPORT_LOOPANNOTATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include <cstdint>
+#include <optional>
+#include <tuple>
 
 namespace Fortran {
 namespace parser {
