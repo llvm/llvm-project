@@ -1104,7 +1104,7 @@ typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>
   return ftell(__file);
 #    elif defined(_AIX)
   return ::__libcpp_ftello64(__file);
-#   elif defined(__GLIBC__)
+#    elif defined(__GLIBC__)
   return ::ftello64(__file);
 #    else
   return ftello(__file);
