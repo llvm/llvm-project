@@ -681,8 +681,10 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
   }
 
   const DeclContext *DC = D->getDeclContext();
+  // A TopLevelStmtDecl (-fincremental-extensions) is not a NamedDecl; mangle
+  // entities it contains as if they were at file scope.
   if (isa<CapturedDecl>(DC) || isa<OMPDeclareReductionDecl>(DC) ||
-      isa<OMPDeclareMapperDecl>(DC)) {
+      isa<OMPDeclareMapperDecl>(DC) || isa<TopLevelStmtDecl>(DC)) {
     return getEffectiveDeclContext(cast<Decl>(DC));
   }
 
