@@ -21,18 +21,6 @@
 // excludes any input file it could not process at all (e.g. one that does
 // not exist on disk).
 //
-// To do so, it defines two sets: 1. InputKeys, every input Replacement, and
-// 2. OutputKeys, the Replacements that survived into the merged output.
-//
-// A conflict cluster is a maximal connected component of InputKeys entries
-// within one file whose byte ranges transitively overlap (length-0 entries
-// never overlap anything, so they never join a cluster). A cluster is
-// reportable if any member is also in OutputKeys. Otherwise its file was
-// already excluded for an unrelated reason, and there is nothing to report.
-//
-// Every member of a reportable cluster is removed from the merged YAML, one
-// stderr summary line is emitted per cluster, and the tool still exits 0.
-//
 //===----------------------------------------------------------------------===//
 
 #include "clang-apply-replacements/Tooling/ApplyReplacements.h"
