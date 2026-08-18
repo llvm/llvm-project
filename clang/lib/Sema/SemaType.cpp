@@ -6343,19 +6343,21 @@ namespace {
   };
 } // end anonymous namespace
 
-static void fillDependentAddressSpaceTypeLoc(ASTContext &Context,
-                                             DependentAddressSpaceTypeLoc DASTL,
-                                             const Declarator &D,
-                                             const DeclaratorChunk &Chunk) {
+static void
+fillDependentAddressSpaceTypeLoc(DependentAddressSpaceTypeLoc DASTL,
+                                 const Declarator &D,
+                                 const DeclaratorChunk &Chunk) {
   // An attribute written after the declarator-id appertains to the declared
-  // entity, so it is applied to the outermost type instead of to the chunk
-  // that is being visited.
-  const ParsedAttributesView *AttrLists[] = {&Chunk.getAttrs(),
-                                             &D.getAttributes()};
+  // entity and is applied to the outermost type rather than to a chunk, so
+  // every attribute list of the declarator has to be searched.
+  const ParsedAttributesView *AttrLists[] = {
+      &Chunk.getAttrs(), &D.getAttributes(), &D.getDeclSpec().getAttributes(),
+      &D.getDeclarationAttributes()};
   for (const ParsedAttributesView *Attrs : AttrLists) {
     for (const ParsedAttr &AL : *Attrs) {
-      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.getNumArgs() != 1 ||
-          !AL.isArgExpr(0))
+      // Invalid or malformed attributes never produce a type.
+      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.isInvalid() ||
+          AL.getNumArgs() != 1 || !AL.isArgExpr(0))
         continue;
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
@@ -6364,7 +6366,8 @@ static void fillDependentAddressSpaceTypeLoc(ASTContext &Context,
     }
   }
 
-  DASTL.initializeLocal(Context, DASTL.getTypePtr()->getAttributeLoc());
+  llvm_unreachable(
+      "no address_space attribute found at the expected location!");
 }
 
 /// Create and instantiate a TypeSourceInfo with type source information.
@@ -6430,7 +6433,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
 
       case TypeLoc::DependentAddressSpace: {
         auto TL = CurrTL.castAs<DependentAddressSpaceTypeLoc>();
-        fillDependentAddressSpaceTypeLoc(S.Context, TL, D, D.getTypeObject(i));
+        fillDependentAddressSpaceTypeLoc(TL, D, D.getTypeObject(i));
         CurrTL = TL.getPointeeTypeLoc().getUnqualifiedLoc();
         break;
       }
