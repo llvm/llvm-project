@@ -1,9 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=slsr -stats -disable-output < %s 2>&1 | FileCheck %s
 
-; The third candidate uses the second as its basis, then compressPath examines
-; the deeper basis. Count both basis selection and path compression.
-;
 ; CHECK: 8 slsr - Number of candidate-basis SCEV differences computed by SLSR
 
 target triple = "nvptx64-nvidia-cuda"
