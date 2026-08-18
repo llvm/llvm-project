@@ -4651,8 +4651,8 @@ ExprResult Sema::SubstConceptTemplateArguments(
       unsigned Depth = TTP->getDepth();
       unsigned Pos = TTP->getPosition();
       ConceptDecl *ResolvedConcept = nullptr;
-      if (Depth < MLTAL.getNumLevels() &&
-          MLTAL.hasTemplateArgument(Depth, Pos)) {
+
+      if (MLTAL.hasTemplateArgument(Depth, Pos)) {
         TemplateArgument Arg = MLTAL(Depth, Pos);
         assert(Arg.getKind() == TemplateArgument::Template);
         ResolvedConcept =
