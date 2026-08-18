@@ -7,19 +7,17 @@ define i64 @test(ptr %buf) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[BUF]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[ARRAYIDX22]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[BUF]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> <i32 24, i32 0, i32 0, i32 0>, [[TMP5]]
-; CHECK-NEXT:    [[TMP17:%.*]] = zext i8 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i8>, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i8> [[TMP8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, <4 x i32> [[TMP17]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 16, i32 0, i32 0, i32 0>, [[TMP20]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, i32 [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <4 x i32> <i32 poison, i32 1, i32 1, i32 1>, <4 x i32> [[TMP17]], <4 x i32> <i32 5, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> <i32 8, i32 0, i32 0, i32 0>, [[TMP22]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or disjoint <4 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load <4 x i8>, ptr [[ARRAYIDX8]], align 1

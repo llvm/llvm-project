@@ -26,7 +26,7 @@ func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
   // CHECK: max version: v1.6
   // CHECK: extensions: [ ]
   // CHECK: capabilities: [ [GroupNonUniformBallot] ]
-  %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+  %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 

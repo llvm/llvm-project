@@ -546,6 +546,19 @@ TEST_F(JSONRPCTransportTest, MalformedRequests) {
   ASSERT_THAT_ERROR(Run(), Succeeded());
 }
 
+TEST_F(JSONRPCTransportTest, MalformedRequestDoesNotDropLaterMessages) {
+  InSequence seq;
+  std::string messages =
+      "notjson\n" + Encode(Message{Request{1, "foo", std::nullopt}});
+  ASSERT_THAT_EXPECTED(input.Write(messages.data(), messages.size()),
+                       Succeeded());
+  EXPECT_CALL(message_handler, OnError(_)).WillOnce([](llvm::Error err) {
+    consumeError(std::move(err));
+  });
+  EXPECT_CALL(message_handler, Received(Request{1, "foo", std::nullopt}));
+  ASSERT_THAT_ERROR(Run(), Succeeded());
+}
+
 TEST_F(JSONRPCTransportTest, Read) {
   Write(Message{Request{1, "foo", std::nullopt}});
   EXPECT_CALL(message_handler, Received(Request{1, "foo", std::nullopt}));
@@ -829,6 +842,34 @@ TEST_F(TransportBinderTest, InBoundAsyncRequestsError) {
                     Succeeded());
   EXPECT_CALL(remote, Received(Response{3, 1, "nope"}));
   Run();
+}
+
+TEST_F(TransportBinderTest, InBoundRequestUnknownMethod) {
+  EXPECT_THAT_ERROR(from_remote->Send(Request{4, "nosuch", MyFnParams{1, 2}}),
+                    Succeeded());
+  EXPECT_CALL(remote, Received(Response{4, MethodNotFound::kErrorCode,
+                                        "method not found: 'nosuch'"}));
+  Run();
+}
+
+TEST_F(TransportBinderTest, FailPendingRequests) {
+  OutgoingRequest<MyFnResult, MyFnParams> addFn =
+      binder->Bind<MyFnResult, MyFnParams>("add");
+  bool replied = false;
+  std::string message;
+  addFn(MyFnParams{1, 2}, [&](Expected<MyFnResult> result) {
+    replied = true;
+    message = toString(result.takeError());
+  });
+
+  // The request is now awaiting a response. FailPendingRequests fires its reply
+  // with an error, synchronously.
+  binder->FailPendingRequests("connection closed");
+  EXPECT_TRUE(replied);
+  EXPECT_THAT(message, HasSubstr("connection closed"));
+
+  // A second call is a no-op: nothing is left pending.
+  binder->FailPendingRequests("again");
 }
 
 // Out-bound binding event handler.

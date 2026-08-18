@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SI,SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SICIVI,GFX89 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -mtriple=amdgpu6.00 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SI,SICIVI %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SICIVI,GFX89 %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}lds_atomic_xchg_ret_i64:
 ; SICIVI: s_mov_b32 m0

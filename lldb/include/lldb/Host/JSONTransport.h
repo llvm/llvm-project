@@ -68,6 +68,8 @@ class InvalidParams : public llvm::ErrorInfo<InvalidParams> {
 public:
   static char ID;
 
+  static constexpr int kErrorCode = -32602;
+
   explicit InvalidParams(std::string method, std::string context)
       : m_method(std::move(method)), m_context(std::move(context)) {}
 
@@ -81,6 +83,25 @@ private:
   /// Additional context from the parsing failure, e.g. "missing value at
   /// (root)[1].str".
   std::string m_context;
+};
+
+/// An error to indicate that an incoming message could not be parsed as a
+/// valid protocol message.
+class InvalidMessage : public llvm::ErrorInfo<InvalidMessage> {
+public:
+  static char ID;
+
+  static constexpr int kErrorCode = -32700;
+
+  explicit InvalidMessage(std::string raw_message, std::string reason)
+      : m_raw_message(std::move(raw_message)), m_reason(std::move(reason)) {}
+
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string m_raw_message;
+  std::string m_reason;
 };
 
 /// An error to indicate that no handler was registered for a given method.
@@ -138,6 +159,14 @@ public:
   virtual llvm::Error Send(const Req &) = 0;
   /// Sends a response to a specific request.
   virtual llvm::Error Send(const Resp &) = 0;
+
+  /// Sends an error response for a message that failed to parse, described by
+  /// \p reason. Sends nothing if no request id can be recovered from it, since
+  /// there is then no request to respond to.
+  virtual llvm::Error ReplyWithParseError(llvm::StringRef raw_message,
+                                          llvm::StringRef reason) {
+    return llvm::Error::success();
+  }
 
   /// Implemented to handle incoming messages. (See `RegisterMessageHandler()`
   /// below).
@@ -245,8 +274,15 @@ private:
         llvm::Expected<Message> message =
             llvm::json::parse<Message>(raw_message);
         if (!message) {
-          handler.OnError(message.takeError());
-          return;
+          // Messages are independent, so one that fails to parse must not
+          // discard those already buffered behind it.
+          std::string reason = llvm::toString(message.takeError());
+          if (llvm::Error error =
+                  this->ReplyWithParseError(raw_message, reason))
+            handler.OnError(std::move(error));
+          handler.OnError(
+              llvm::make_error<InvalidMessage>(raw_message, std::move(reason)));
+          continue;
         }
 
         std::visit([&handler](auto &&msg) { handler.Received(msg); }, *message);
@@ -546,7 +582,7 @@ public:
     auto it = m_event_handlers.find(Proto::KeyFor(evt));
     if (it == m_event_handlers.end()) {
       OnError(llvm::createStringError(
-          llvm::formatv("no handled for event {0}", toJSON(evt))));
+          llvm::formatv("no handler for event {0}", toJSON(evt))));
       return;
     }
     it->second(evt);
@@ -558,7 +594,8 @@ public:
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
     auto it = m_request_handlers.find(Proto::KeyFor(req));
     if (it == m_request_handlers.end()) {
-      reply(Proto::Make(req, llvm::createStringError("method not found")));
+      reply(Proto::Make(req,
+                        llvm::make_error<MethodNotFound>(Proto::KeyFor(req))));
       return;
     }
 
@@ -587,9 +624,31 @@ public:
   }
 
   void OnClosed() override {
+    // The disconnect handler may destroy this Binder -- e.g. the server
+    // removes the disconnected client, which owns the transport and, with it,
+    // this handler.  Move the handler out and release the lock before invoking
+    // it, so we neither run the teardown while holding m_mutex nor destroy a
+    // still-locked mutex.
+    Callback<void()> disconnect_handler;
+    {
+      std::scoped_lock<std::recursive_mutex> guard(m_mutex);
+      disconnect_handler = std::move(m_disconnect_handler);
+    }
+    if (disconnect_handler)
+      disconnect_handler();
+  }
+
+  /// Fails every in-flight outgoing request, invoking its reply with an error.
+  /// Call when the connection is going away, so pending replies are satisfied
+  /// rather than destroyed unanswered.
+  void FailPendingRequests(llvm::StringRef reason) {
     std::scoped_lock<std::recursive_mutex> guard(m_mutex);
-    if (m_disconnect_handler)
-      m_disconnect_handler();
+    std::map<Id, Callback<void(const Resp &)>> pending;
+    std::swap(pending, m_pending_responses);
+    for (auto &entry : pending) {
+      Req req = Proto::Make(entry.first, /*method=*/"", std::nullopt);
+      entry.second(Proto::Make(req, llvm::createStringError(reason)));
+    }
   }
 
 private:

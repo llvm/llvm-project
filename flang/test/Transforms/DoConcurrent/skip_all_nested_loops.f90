@@ -48,7 +48,7 @@ end
 
 ! COMMON: omp.wsloop {
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
-! COMMON:   fir.do_loop {{.*}} iter_args(%[[J_IV:.*]] = {{.*}}) -> {{.*}} {
+! COMMON:   fir.do_loop %[[J_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
 ! HOST:       fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#0
 ! DEVICE:     fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#0
 

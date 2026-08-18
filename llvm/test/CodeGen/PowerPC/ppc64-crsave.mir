@@ -29,8 +29,7 @@ body:             |
     ; SAVEONE-NEXT: renamable $cr2lt = COPY $cr0gt
     ; SAVEONE-NEXT: renamable $cr4lt = COPY $cr0gt
     ; SAVEONE-NEXT: $x12 = LWZ8 8, $x1
-    ; SAVEONE-NEXT: $cr2 = MTOCRF8 $x12
-    ; SAVEONE-NEXT: $cr4 = MTOCRF8 killed $x12
+    ; SAVEONE-NEXT: MTCRF8 40, killed $x12
     ; SAVEONE-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     ;
     ; SAVEALL-LABEL: name: CRAllSave
@@ -42,8 +41,7 @@ body:             |
     ; SAVEALL-NEXT: renamable $cr2lt = COPY $cr0gt
     ; SAVEALL-NEXT: renamable $cr4lt = COPY $cr0gt
     ; SAVEALL-NEXT: $x12 = LWZ8 8, $x1
-    ; SAVEALL-NEXT: $cr2 = MTOCRF8 $x12
-    ; SAVEALL-NEXT: $cr4 = MTOCRF8 killed $x12
+    ; SAVEALL-NEXT: MTCRF8 40, killed $x12
     ; SAVEALL-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     renamable $x3 = ANDI8_rec killed renamable $x3, 1, implicit-def dead $cr0, implicit-def $cr0gt
     renamable $cr2lt = COPY $cr0gt

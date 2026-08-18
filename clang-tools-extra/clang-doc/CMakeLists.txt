@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   )
 add_subdirectory(support)
-add_subdirectory(markdown)
 
 add_clang_library(clangDoc STATIC
   BitcodeReader.cpp
@@ -16,9 +15,7 @@ add_clang_library(clangDoc STATIC
   MDGenerator.cpp
   Representation.cpp
   Serialize.cpp
-  YAMLGenerator.cpp
   JSONGenerator.cpp
-  MDMustacheGenerator.cpp
 
   DEPENDS
   omp_gen

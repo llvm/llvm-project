@@ -391,6 +391,11 @@ void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   addModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
 }
 void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  addModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
+}
+void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
   Type *Int32Ty = Type::getInt32Ty(Context);
   addModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
@@ -424,6 +429,11 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Constant *Val) {
   setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
 }
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
@@ -670,6 +680,30 @@ void Module::setCodeModel(CodeModel::Model CL) {
   // longer jumps) if a larger code model is used with a smaller one.
   // Therefore we will treat attempts to mix code models as an error.
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
+}
+
+LongDoubleFormat Module::getLongDoubleFormat() const {
+  if (auto *Val =
+          dyn_cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+    if (std::optional<LongDoubleFormat> Format =
+            parseLongDoubleFormat(Val->getString()))
+      return *Format;
+  }
+
+  return getTargetTriple().getDefaultLongDoubleFormat();
+}
+
+void Module::setLongDoubleFormat(LongDoubleFormat Format) {
+  addModuleFlag(ModFlagBehavior::Error, "long-double-type",
+                MDString::get(getContext(), getLongDoubleFormatName(Format)));
+}
+
+FloatABI::ABIType Module::getFloatABI() const {
+  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {

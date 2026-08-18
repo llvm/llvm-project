@@ -239,14 +239,12 @@ define <16 x i8> @shuffle4_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x
 ; CHECK-GI-LABEL: shuffle4_v16i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI3_2
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 def $q2_q3
-; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI3_2]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI3_2]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI3_1
-; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI3_1]
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI3_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI3_0
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v4.16b
-; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v5.16b
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b }, v3.16b
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret

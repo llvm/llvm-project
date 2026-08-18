@@ -12,6 +12,7 @@
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -61,6 +62,27 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
   return procRef.hasAlternateReturns();
 }
 
+/// If \p proc refers to a base procedure that carries OpenMP DECLARE VARIANT
+/// entries, return the variant selected for the enclosing OpenMP context: a
+/// direct call to the base is then lowered as a call to that variant. Returns
+/// nullptr when \p proc is not such a base call, or when no variant matches the
+/// context, so the base procedure is used as usual.
+static const Fortran::semantics::Symbol *
+getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
+                           Fortran::lower::AbstractConverter &converter) {
+  const Fortran::semantics::Symbol *symbol = proc.GetSymbol();
+  if (!symbol)
+    return nullptr;
+  const Fortran::semantics::Symbol &ultimate{symbol->GetUltimate()};
+  // Only pay the cost of declare-variant resolution when the callee actually
+  // carries variant entries; this avoids overhead on every other call.
+  const auto *details =
+      ultimate.detailsIf<Fortran::semantics::SubprogramDetails>();
+  if (!details || details->ompDeclareVariants().empty())
+    return nullptr;
+  return Fortran::lower::omp::resolveDeclareVariantCallee(ultimate, converter);
+}
+
 /// Return the binding label (from BIND(C...)) or the mangled name of the
 /// symbol.
 static std::string
@@ -74,11 +96,23 @@ getProcMangledName(const Fortran::evaluate::ProcedureDesignator &proc,
 }
 
 std::string Fortran::lower::CallerInterface::getMangledName() const {
+  // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
+  // This substitution applies only to an actual call to the base procedure.
+  // Other references to the base (e.g. taking its address to pass it as an
+  // actual argument or to associate it with a procedure pointer) go through
+  // getProcMangledName and are intentionally not redirected to the variant.
+  if (const Fortran::semantics::Symbol *variant =
+          getOmpDeclareVariantCallee(procRef.proc(), converter))
+    return converter.mangleName(*variant);
   return getProcMangledName(procRef.proc(), converter);
 }
 
 const Fortran::semantics::Symbol *
 Fortran::lower::CallerInterface::getProcedureSymbol() const {
+  // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
+  if (const Fortran::semantics::Symbol *variant =
+          getOmpDeclareVariantCallee(procRef.proc(), converter))
+    return variant;
   return procRef.proc().GetSymbol();
 }
 
@@ -185,6 +219,36 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
   return Fortran::evaluate::characteristics::DummyDataObject(
       Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
                                                        std::move(shape)));
+}
+
+/// Return true when this dummy is in the subset for which CallInterface may
+/// safely emit the FIR marker that is later translated to LLVM `readonly`.
+///
+/// For non-descriptor arguments, limit this to non-character intrinsic
+/// scalars. Array and derived-type arguments are excluded because
+/// compiler-generated copy-out may write back through a forwarded dummy
+/// argument without an INTENT contract. INTENT(IN) POINTER and ALLOCATABLE
+/// dummies are also supported: in their case, `readonly` only protects the
+/// descriptor storage, not data addressed by the descriptor. ASYNCHRONOUS
+/// memory may change underneath the callee; VOLATILE+INTENT(IN) is prohibited
+/// by the standard (C870) but is excluded defensively. TARGET does not
+/// invalidate `readonly`, which only constrains writes through the argument.
+static bool dummyArgCanUseLLVMReadonly(
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  using TypeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+  const Fortran::common::TypeCategory category = obj.type.type().category();
+  const bool isSupportedIntrinsicScalar =
+      obj.type.Rank() == 0 && !obj.type.attrs().test(TypeAttrs::AssumedRank) &&
+      category != Fortran::common::TypeCategory::Character &&
+      category != Fortran::common::TypeCategory::Derived;
+  const bool isDescriptorDummy =
+      obj.attrs.test(Attrs::Pointer) || obj.attrs.test(Attrs::Allocatable);
+  return obj.intent == Fortran::common::Intent::In &&
+         (isSupportedIntrinsicScalar || isDescriptorDummy) &&
+         !obj.attrs.test(Attrs::Value) &&
+         !obj.attrs.test(Attrs::Asynchronous) &&
+         !obj.attrs.test(Attrs::Volatile);
 }
 
 static Fortran::evaluate::characteristics::DummyArgument
@@ -1088,8 +1152,15 @@ private:
     } else {
       // non-PDT derived type allowed in implicit interface.
       mlir::Type refType = getRefType(dynamicType, obj);
+      llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+      // Propagate the INTENT(IN) contract for by-reference dummies handled by
+      // the implicit-interface path.
+      if (dummyArgCanUseLLVMReadonly(obj))
+        attrs.emplace_back(
+            mlir::StringAttr::get(&mlirContext, fir::getReadOnlyAttrName()),
+            mlir::UnitAttr::get(&mlirContext));
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
-                    dummyNameAttr(entity));
+                    attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     }
   }
@@ -1147,6 +1218,11 @@ private:
       attrs.emplace_back(
           mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
           cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
+
+    // Mark the supported subset of INTENT(IN) by-reference dummies readonly
+    // (see dummyArgCanUseLLVMReadonly).
+    if (dummyArgCanUseLLVMReadonly(obj))
+      addMLIRAttr(fir::getReadOnlyAttrName());
 
     // TODO: intents that require special care (e.g finalization)
 

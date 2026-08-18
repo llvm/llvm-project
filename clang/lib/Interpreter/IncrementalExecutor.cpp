@@ -62,12 +62,21 @@
 #endif
 
 // Address of the host's emulated-TLS runtime entry point, or null if the host
-// cannot provide one. On Darwin, __emutls_get_address lives in the compiler-rt
-// builtins archive; referencing it here force-links the archive member into
-// the binary. The reference must not exist elsewhere: MSVC has no emulated-TLS
-// runtime (the link would fail), and ELF hosts resolve it from libgcc_s /
-// compiler-rt through regular process-symbol lookup.
-#ifdef __APPLE__
+// cannot provide one. clang-repl's JIT always lowers thread_local to emulated
+// TLS (JITTargetMachineBuilder forces EmulatedTLS on), so JIT'd code references
+// __emutls_get_address on every target. That symbol lives in the compiler
+// runtime -- libgcc_s.so on a glibc toolchain, or the compiler-rt builtins
+// static archive on Darwin and on compiler-rt-rtlib toolchains. When it is only
+// in a static archive and nothing else references it, it is never linked in and
+// ORC's process-symbol lookup cannot resolve it. Referencing it here
+// force-links the archive member so it is present regardless of how the host
+// provides it. Excluded where an emulated-TLS runtime is not guaranteed on the
+// link line, so the reference would fail to link: non-Unix (MSVC has no such
+// runtime), Emscripten (the wasm executor below does not use this JIT path),
+// and AIX / z/OS (whose runtimes may not provide the symbol). On those hosts
+// thread_locals instead rely on process-symbol lookup, unchanged from before.
+#if defined(LLVM_ON_UNIX) && !defined(__EMSCRIPTEN__) && !defined(_AIX) &&     \
+    !defined(__MVS__) && !defined(__FreeBSD__)
 extern "C" void *__emutls_get_address(void *);
 static void *getEmuTLSGetAddressPtr() {
   return reinterpret_cast<void *>(&__emutls_get_address);
@@ -404,19 +413,21 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
     if (!JB)
       return JB.takeError();
     JITBuilder = std::move(*JB);
-    // TODO: Switch to native TLS on Darwin once clang-repl can adopt the ORC
-    // runtime (which provides __emutls_get_address and supports the full TLS
+    // TODO: Switch to native TLS once clang-repl can adopt the ORC runtime
+    // (which provides __emutls_get_address and supports the full TLS
     // lifecycle). That will also remove the in-process-only constraint below.
     //
-    // For MachO targets, thread_locals are lowered to emulated TLS, but the
-    // runtime (__emutls_get_address) lives in the compiler-rt builtins archive
-    // and nothing else in this process references it, so it isn't linked in
-    // and process-symbol lookup cannot find it. Define the force-linked host
-    // symbol (see getEmuTLSGetAddressPtr) as an absolute symbol so it is
-    // visible to JIT'd code. In-process execution only: the address is
-    // meaningless in an out-of-process executor.
-    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr();
-        EmuTLSGetAddress && TT.isOSBinFormatMachO())
+    // clang-repl lowers thread_local to emulated TLS on every target (see
+    // JITTargetMachineBuilder), so JIT'd code calls __emutls_get_address. When
+    // the host cannot resolve that symbol through process-symbol lookup
+    // (Darwin, and ELF toolchains that link compiler-rt builtins rather than
+    // libgcc_s), define the force-linked host symbol (see
+    // getEmuTLSGetAddressPtr) as an absolute symbol so it is visible to JIT'd
+    // code. This is harmless where process-symbol lookup would already resolve
+    // it: an already-defined symbol shadows the process-symbols generator.
+    // In-process execution only -- the host address is meaningless in an
+    // out-of-process executor.
+    if (void *EmuTLSGetAddress = getEmuTLSGetAddressPtr())
       JITBuilder->setNotifyCreatedCallback(
           [EmuTLSGetAddress](llvm::orc::LLJIT &J) {
             auto &JD = J.getProcessSymbolsJITDylib()

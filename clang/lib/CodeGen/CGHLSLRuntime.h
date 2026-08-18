@@ -123,20 +123,15 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Cross, cross)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Degrees, degrees)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Saturate, saturate)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Sign, sign)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Step, step)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Radians, radians)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupThreadId, thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupId, group_id)
@@ -151,8 +146,6 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOr, wave_reduce_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitXor, wave_reduce_xor)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitAnd, wave_reduce_and)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(InterlockedAdd, interlocked_add)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(InterlockedOr, interlocked_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMax, wave_reduce_max)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveUMax, wave_reduce_umax)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveMin, wave_reduce_min)
@@ -335,14 +328,18 @@ private:
                                    llvm::GlobalVariable *GV,
                                    HLSLResourceBindingAttr *RBA);
 
-  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B,
+                                         const FunctionDecl *FD,
+                                         llvm::Type *Type,
                                          const clang::DeclaratorDecl *Decl,
                                          HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
                                         HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
-  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B,
+                                    const FunctionDecl *FD, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
                                     HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
@@ -352,6 +349,7 @@ private:
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
+                                 const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
                                  std::optional<unsigned> Index);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
@@ -368,6 +366,12 @@ private:
   llvm::DenseMap<const clang::RecordType *, llvm::StructType *> LayoutTypes;
   unsigned SPIRVLastAssignedInputSemanticLocation = 0;
   unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
+
+  // FIXME: #57928, storing these here and reseting them in the entry is not
+  // very nice and is a temporary until we accumulate the signatures as part of
+  // the mentioned issue.
+  unsigned DXILInputSemanticIndex = 0;
+  unsigned DXILOutputSemanticIndex = 0;
 };
 
 } // namespace CodeGen

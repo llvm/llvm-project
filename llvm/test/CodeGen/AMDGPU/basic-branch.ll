@@ -1,9 +1,9 @@
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope  -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global,+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope  -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu10.10 -mattr=-flat-for-global,+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgpu11.00 -mattr=-flat-for-global,+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefix=GCNNOOPT -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCNOPT -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_branch:
 ; GCNNOOPT: v_writelane_b32

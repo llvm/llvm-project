@@ -1842,6 +1842,9 @@ def OpenACC_ParallelOp
     /// clause for the given device_type.
     bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
 
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
+
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasWaitOnly();
@@ -2172,6 +2175,9 @@ def OpenACC_KernelsOp
     /// Return true if the op has any num_gangs, num_workers, or vector_length
     /// clause for the given device_type.
     bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
+    /// Check whether num_gangs, num_workers, and vector_length are all 1.
+    bool isEffectivelySerial();
 
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.

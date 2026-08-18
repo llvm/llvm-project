@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s
+;RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s
+;RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_format_xyzw v[0:3], off, s[0:3], 0

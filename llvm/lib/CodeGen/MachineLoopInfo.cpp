@@ -37,7 +37,12 @@ AnalysisKey MachineLoopAnalysis::Key;
 MachineLoopAnalysis::Result
 MachineLoopAnalysis::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
-  return MachineLoopInfo(MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  MachineLoopInfo LI;
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.calculate(MF, [&]() -> const MachineDominatorTree & {
+    return MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  });
+  return LI;
 }
 
 PreservedAnalyses
@@ -78,6 +83,13 @@ bool MachineLoopInfo::invalidate(
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
   analyze(MDT);
+}
+
+void MachineLoopInfo::calculate(
+    MachineFunction &MF,
+    function_ref<const DomTreeBase<MachineBasicBlock> &()> GetDomTree) {
+  releaseMemory();
+  analyze(&MF, GetDomTree);
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -274,12 +286,12 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
     if (!MO.readsReg())
       continue;
 
-    assert(MRI->getVRegDef(Reg) &&
-           "Machine instr not mapped for this vreg?!");
+    MachineBasicBlock *DefBlock = MRI->getDefBlock(Reg);
+    assert(DefBlock && "Machine instr not mapped for this vreg?!");
 
     // If the loop contains the definition of an operand, then the instruction
     // isn't loop invariant.
-    if (contains(MRI->getVRegDef(Reg)))
+    if (contains(DefBlock))
       return false;
   }
 

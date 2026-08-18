@@ -227,3 +227,23 @@ namespace DefinitionInBody {
     return 5;
   }
 }
+
+namespace InheritedCtor {
+  struct S {
+    constexpr S(int = ; // both-note {{to match this}} \
+                        // both-error {{expected ';' at end of declaration list}} \
+                        // both-error {{expected expression}}
+  }; // both-error {{expected ')'}}
+
+  struct SS : S {
+    using S::S;
+  };
+
+  SS ss{42};
+}
+
+namespace InvalidStaticInvoker {
+  auto foo = [](bar) { int j; return j; }; // both-error {{unknown type name 'bar'}}
+  constexpr int (*baz)(int) = foo;
+  int i = baz(42);
+}

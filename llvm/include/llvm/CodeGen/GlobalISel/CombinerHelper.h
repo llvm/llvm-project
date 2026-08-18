@@ -309,11 +309,6 @@ public:
   applyCombineBuildVectorOfBitcast(MachineInstr &MI,
                                    SmallVector<Register> &Ops) const;
 
-  /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
-  /// Returns true if MI changed.
-  ///
-  /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
-  LLVM_ABI bool tryCombineShuffleVector(MachineInstr &MI) const;
   /// Check if the G_SHUFFLE_VECTOR \p MI can be replaced by a
   /// concat_vectors.
   /// \p Ops will contain the operands needed to produce the flattened
@@ -1176,6 +1171,9 @@ public:
 
   LLVM_ABI bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
                          Register Y, unsigned TargetOpc) const;
+
+  LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI) const;
+  LLVM_ABI void applyCountZeroToZeroPoison(MachineInstr &MI) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

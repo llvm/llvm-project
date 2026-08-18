@@ -582,6 +582,18 @@ public:
     return true;
   }
 
+  bool VisitImportDecl(const ImportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    for (const auto ModuleLoc : D->getIdentifierLocs()) {
+      H.addToken(ModuleLoc, HighlightingKind::Namespace);
+    }
+    return true;
+  }
+  bool VisitExportDecl(const ExportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    return true;
+  }
+
   bool VisitTagDecl(TagDecl *D) {
     for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());

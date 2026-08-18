@@ -3,7 +3,7 @@ import unittest
 from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Optional, Tuple, Type, TypeVar, Union, cast
 
-from lldbsuite.test.tools.lldb_dap.dap_types import (
+from lldbsuite.test.tools.lldb_dap.types import (
     EmptyBodyResponse,
     Event,
     EventName,

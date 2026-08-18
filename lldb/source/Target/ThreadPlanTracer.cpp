@@ -69,7 +69,7 @@ void ThreadPlanTracer::Log() {
   if (StreamSP stream_sp = GetLogStreamSP()) {
     GetThread().GetStackFrameAtIndex(0)->Dump(stream_sp.get(), show_frame_index,
                                               show_fullpaths);
-    stream_sp->Printf("\n");
+    stream_sp->PutCString("\n");
     stream_sp->Flush();
   }
 }

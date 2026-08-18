@@ -107,19 +107,11 @@ def push_dynamic_library_lookup_path(config, new_path):
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# Choose between lit's internal shell pipeline runner and a real shell.  If
-# LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
-execute_external = use_lit_shell == "0"
-
 # Allow expanding substitutions that are based on other substitutions
 config.recursiveExpansionLimit = 10
 
 # Setup test format.
-config.test_format = lit.formats.ShTest(execute_external)
+config.test_format = lit.formats.ShTest()
 
 target_is_msvc = bool(re.match(r".*-windows-msvc$", config.target_triple))
 target_is_windows = bool(re.match(r".*-windows.*$", config.target_triple))
@@ -976,9 +968,14 @@ else:
 def target_page_size():
     if config.target_arch in ("amdgcn", "nvptx64"):
         return 4096
+    if emulator:
+        # FIXME: Some emulators may support querying the target page size.
+        # For now, avoid advertising page-size features under emulation; only
+        # a few obscure tests depend on this.
+        return None
     try:
         proc = subprocess.Popen(
-            f"{emulator or ''} python3",
+            shlex.quote(config.python_executable),
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -1000,7 +997,9 @@ except ImportError:
         return 4096
 
 
-config.available_features.add(f"page-size-{target_page_size()}")
+page_size = target_page_size()
+if page_size is not None:
+    config.available_features.add(f"page-size-{page_size}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")

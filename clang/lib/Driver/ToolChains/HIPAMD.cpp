@@ -133,6 +133,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
+  TC.addProfileRTLibs(Args, LldArgs);
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
@@ -176,8 +177,8 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     llvm::opt::ArgStringList CmdArgs;
 
     CmdArgs.append({"-cc1", "-triple=spirv64-amd-amdhsa", "-emit-obj",
-                    "-disable-llvm-optzns", LinkedBCFile.getFilename(), "-o",
-                    Output.getFilename()});
+                    "-disable-llvm-optzns", "-mllvm", "-spirv-preserve-auxdata",
+                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
     const char *Exec = Driver.getDriverProgramPath();

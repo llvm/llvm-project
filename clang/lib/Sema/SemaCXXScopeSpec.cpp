@@ -41,7 +41,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
 
 DeclContext *Sema::computeDeclContext(QualType T) {
   if (!T->isDependentType())
-    if (auto *D = T->getAsTagDecl())
+    if (auto *D = T->getAsRecordDecl())
       return D;
   return ::getCurrentInstantiationOf(T, CurContext);
 }

@@ -46,4 +46,6 @@ int main(int, char**) {
     assert(i[0] == 'l');
     TEST_LIBCPP_ASSERT_FAILURE(i[5], "Attempted to subscript an iterator outside its valid range");
   }
+
+  return 0;
 }

@@ -13,6 +13,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -1316,6 +1317,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         << NewConstrainedParm->getTypeSourceInfo()
                ->getTypeLoc()
                .getSourceRange();
+    NewConstrainedParm->setType(TL.getType());
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
@@ -1976,14 +1978,9 @@ DeclResult Sema::CheckClassTemplate(
   if (SS.isNotEmpty() && !SS.isInvalid()) {
     SemanticContext = computeDeclContext(SS, true);
     if (!SemanticContext) {
-      // FIXME: Horrible, horrible hack! We can't currently represent this
-      // in the AST, and historically we have just ignored such friend
-      // class templates, so don't complain here.
-      Diag(NameLoc, TUK == TagUseKind::Friend
-                        ? diag::warn_template_qualified_friend_ignored
-                        : diag::err_template_qualified_declarator_no_match)
+      Diag(NameLoc, diag::err_template_qualified_declarator_no_match)
           << SS.getScopeRep() << SS.getRange();
-      return TUK != TagUseKind::Friend;
+      return true;
     }
 
     if (RequireCompleteDeclContext(SS, SemanticContext))
@@ -2288,8 +2285,10 @@ DeclResult Sema::CheckClassTemplate(
 
   ProcessDeclAttributeList(S, NewClass, Attr);
 
-  if (PrevClassTemplate)
+  if (PrevClassTemplate) {
+    mergeDeclAttributes(NewTemplate, PrevClassTemplate);
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
+  }
 
   AddPushedVisibilityAttribute(NewClass);
   inferGslOwnerPointerAttribute(NewClass);
@@ -3049,6 +3048,8 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       TemplateName Name = TST->getTemplateName();
       if (TemplateDecl *Template = Name.getAsTemplateDecl()) {
         ExpectedTemplateParams = Template->getTemplateParameters();
+        NeedNonemptyTemplateHeader = true;
+      } else if (Name.getAsDependentTemplateName()) {
         NeedNonemptyTemplateHeader = true;
       } else if (Name.getAsDeducedTemplateName()) {
         // FIXME:  We actually could/should check the template arguments here
@@ -4939,7 +4940,7 @@ ExprResult Sema::CheckConceptTemplateId(
     LocalInstantiationScope Scope(*this);
 
     EnterExpressionEvaluationContext EECtx{
-        *this, ExpressionEvaluationContext::Unevaluated, CSD};
+        *this, ExpressionEvaluationContext::Unevaluated};
 
     Error = CheckConstraintSatisfaction(
         NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
@@ -8504,12 +8505,20 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
     if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Ctx)) {
       // C++ [temp.mem]p2:
       //   A local class shall not have member templates.
-      if (RD->isLocalClass())
+
+      // Trace the outer context chain, bypassing nested records and OpenMP
+      // captured regions, to determine if the class in defined inside a
+      // function or method.
+      const DeclContext *OutCtx = RD->getDeclContext();
+      while (isa_and_nonnull<CapturedDecl, CXXRecordDecl>(OutCtx))
+        OutCtx = OutCtx->getParent();
+
+      if (OutCtx && OutCtx->isFunctionOrMethod())
         return Diag(TemplateParams->getTemplateLoc(),
                     diag::err_template_inside_local_class)
-          << TemplateParams->getSourceRange();
-      else
-        return false;
+               << TemplateParams->getSourceRange();
+
+      return false;
     }
   }
 
@@ -9578,6 +9587,15 @@ bool Sema::CheckDependentFunctionTemplateSpecialization(
 
   bool IsFriend = FD->getFriendObjectKind() != Decl::FOK_None;
   if (Previous.empty()) {
+    NestedNameSpecifier FriendQualifier = FD->getQualifier();
+    if (IsFriend && FriendQualifier.isDependent() &&
+        FriendQualifier.getKind() == NestedNameSpecifier::Kind::Type &&
+        FriendQualifier.getAsType()->getAs<TemplateSpecializationType>()) {
+      FD->setDependentTemplateSpecialization(
+          Context, Previous.asUnresolvedSet(), ExplicitTemplateArgs);
+      return false;
+    }
+
     Diag(FD->getLocation(), diag::err_dependent_function_template_spec_no_match)
         << IsFriend;
     for (auto &P : DiscardedCandidates)
@@ -11198,6 +11216,10 @@ TypeResult Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   NestedNameSpecifier NNS = SS.getScopeRep();
   if (!NNS)
+    return true;
+
+  if (TUK == TagUseKind::Friend &&
+      DiagnosePackIndexingInFriendNNS(NameLoc, SS.getWithLocInContext(Context)))
     return true;
 
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);

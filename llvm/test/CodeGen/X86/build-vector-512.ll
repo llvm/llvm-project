@@ -222,43 +222,89 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; AVX-32-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX-32-NEXT:    retl
 ;
-; AVX-64-LABEL: test_buildvector_v64i8:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
-; AVX-64-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX-64-NEXT:    vpmovqb %zmm3, %xmm3
-; AVX-64-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX-64-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX-64-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX-64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX-64-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
-; AVX-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
-; AVX-64-NEXT:    vpmovqb %zmm2, %xmm2
-; AVX-64-NEXT:    vpmovqb %zmm1, %xmm1
-; AVX-64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX-64-NEXT:    vmovd %edi, %xmm2
-; AVX-64-NEXT:    vpinsrb $1, %esi, %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $2, %edx, %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $4, %r8d, %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $5, %r9d, %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX-64-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-64-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX-64-NEXT:    retq
+; AVX512F-64-LABEL: test_buildvector_v64i8:
+; AVX512F-64:       # %bb.0:
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm0
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
+; AVX512F-64-NEXT:    vpmovqw %zmm0, %xmm0
+; AVX512F-64-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512F-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-64-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512F-64-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-64-NEXT:    vpmovqw %zmm2, %xmm1
+; AVX512F-64-NEXT:    vpmovqw %zmm3, %xmm2
+; AVX512F-64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-64-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-64-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512F-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512F-64-NEXT:    vmovd %edi, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $4, %r8d, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $5, %r9d, %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
+; AVX512F-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
+; AVX512F-64-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512F-64-NEXT:    vpmovqw %zmm3, %xmm3
+; AVX512F-64-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512F-64-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
+; AVX512F-64-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512F-64-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512F-64-NEXT:    retq
+;
+; AVX512BW-64-LABEL: test_buildvector_v64i8:
+; AVX512BW-64:       # %bb.0:
+; AVX512BW-64-NEXT:    vmovd %edi, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $3, %ecx, %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $4, %r8d, %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $5, %r9d, %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $8, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $9, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $10, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $11, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $12, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm0, %xmm0
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
+; AVX512BW-64-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512BW-64-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512BW-64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512BW-64-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm2
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm3
+; AVX512BW-64-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm4
+; AVX512BW-64-NEXT:    vpmovqw %zmm3, %xmm3
+; AVX512BW-64-NEXT:    vpmovqw %zmm4, %xmm4
+; AVX512BW-64-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; AVX512BW-64-NEXT:    vpmovqw %zmm1, %xmm1
+; AVX512BW-64-NEXT:    vpmovqw %zmm2, %xmm2
+; AVX512BW-64-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; AVX512BW-64-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
+; AVX512BW-64-NEXT:    vpmovwb %zmm1, %ymm1
+; AVX512BW-64-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512BW-64-NEXT:    retq
   %ins0  = insertelement <64 x i8> undef,  i8 %a0,  i32 0
   %ins1  = insertelement <64 x i8> %ins0,  i8 %a1,  i32 1
   %ins2  = insertelement <64 x i8> %ins1,  i8 %a2,  i32 2

@@ -25,7 +25,7 @@ end subroutine red_integer
 ! The op name must be module-scoped (a mangled "_QQ..." generated name), NOT the
 ! bare operator spelling, so reductions with the same spelling in different
 ! modules do not collide. The directive and clause must reference the same name.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.zzzz\.]] : i32
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.zzzz\.[A-Za-z0-9_.]*]] : i32
 ! CHECK-NOT: omp.declare_reduction @op.zzzz.
 ! CHECK: omp.parallel
 ! CHECK-SAME: reduction(@[[RED]]
