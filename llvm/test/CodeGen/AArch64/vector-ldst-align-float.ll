@@ -1058,7 +1058,7 @@ define void @store_v4half_align8_post8(ptr %ptr, <4 x half> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v4half_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -2734,7 +2734,7 @@ define void @store_v8half_align16_post16(ptr %ptr, <8 x half> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v8half_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -3970,7 +3970,7 @@ define void @store_v4bfloat_align8_post8(ptr %ptr, <4 x bfloat> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4bfloat_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -5646,7 +5646,7 @@ define void @store_v8bfloat_align16_post16(ptr %ptr, <8 x bfloat> %val, ptr %wri
 ;
 ; STRICTALIGN-LABEL: store_v8bfloat_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -6692,7 +6692,7 @@ define void @store_v2float_align8_post8(ptr %ptr, <2 x float> %val, ptr %writeba
 ;
 ; STRICTALIGN-LABEL: store_v2float_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -7987,7 +7987,7 @@ define void @store_v4float_align16_post16(ptr %ptr, <4 x float> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v4float_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -8631,7 +8631,7 @@ define void @store_v1double_align8_post8(ptr %ptr, <1 x double> %val, ptr %write
 ;
 ; STRICTALIGN-LABEL: store_v1double_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.1d }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -9737,7 +9737,7 @@ define void @store_v2double_align16_post16(ptr %ptr, <2 x double> %val, ptr %wri
 ;
 ; STRICTALIGN-LABEL: store_v2double_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;

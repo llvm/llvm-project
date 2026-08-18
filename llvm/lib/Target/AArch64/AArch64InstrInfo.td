@@ -4100,6 +4100,7 @@ def : Pat <(bf16 (load (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))),
 // We must use LD1 to perform vector loads in big-endian, or when the
 // alignment is less than the vector size.
 
+let AddedComplexity = 10 in {
 // Match all load 64 bits width whose type is compatible with FPR64
 let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v2f32 (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
@@ -4175,6 +4176,7 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
   def : Pat<(v8bf16 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
             (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
 }
+} // AddedComplexity = 10
 
 defm LDRHH : LoadUI<0b01, 0, 0b01, GPR32, uimm12s2, "ldrh",
                     [(set GPR32:$Rt,
@@ -4329,6 +4331,7 @@ defm LDURBB
 def : Pat <(bf16 (load (am_unscaled16 GPR64sp:$Rn, simm9:$offset))),
            (LDURHi GPR64sp:$Rn, simm9:$offset)>;
 
+let AddedComplexity = 10 in {
 // Match all load 64 bits width whose type is compatible with FPR64
 let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v2f32 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
@@ -4394,6 +4397,7 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
   def : Pat<(v8f16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
 }
+} // AddedComplexity = 10
 
 //  anyext -> zext
 def : Pat<(i32 (extloadi16 (am_unscaled16 GPR64sp:$Rn, simm9:$offset))),
@@ -5020,6 +5024,7 @@ let AddedComplexity = 10 in {
 // We must use ST1 to store vectors in big-endian, or when the aligmnment is
 // less than the size of the vector.
 
+let AddedComplexity = 10 in {
 // Match all store 64 bits width whose type is compatible with FPR64
 def : Pat<(store (v1i64 FPR64:$Rt),
                  (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
@@ -5128,6 +5133,7 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
                    (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
             (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
 }
+} // AddedComplexity = 10
 
 // truncstorei32 of f64 bitcasted to i64
 def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
@@ -5551,6 +5557,7 @@ def : Pat<(post_truncsti8 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
 def : Pat<(post_store (bf16 FPR16:$Rt), GPR64sp:$addr, simm9:$off),
           (STRHpost FPR16:$Rt, GPR64sp:$addr, simm9:$off)>;
 
+let AddedComplexity = 10 in {
 let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   // We must use ST1 to store vectors in big-endian.
   def : Pat<(post_store(v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
@@ -5624,6 +5631,7 @@ let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
   def : Pat<(post_store_aligned<16> (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
             (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 }
+} // AddedComplexity = 10
 
 //===----------------------------------------------------------------------===//
 // Load/store exclusive instructions.

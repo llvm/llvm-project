@@ -432,7 +432,7 @@ define void @store_v8i8_align8_post8(ptr %ptr, <8 x i8> %val, ptr %writeback) {
 ;
 ; STRICTALIGN-LABEL: store_v8i8_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.8b }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -1052,7 +1052,7 @@ define void @store_v16i8_align16_post16(ptr %ptr, <16 x i8> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v16i8_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.16b }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -2288,7 +2288,7 @@ define void @store_v4i16_align8_post8(ptr %ptr, <4 x i16> %val, ptr %writeback) 
 ;
 ; STRICTALIGN-LABEL: store_v4i16_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.4h }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -3960,7 +3960,7 @@ define void @store_v8i16_align16_post16(ptr %ptr, <8 x i16> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v8i16_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.8h }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -5006,7 +5006,7 @@ define void @store_v2i32_align8_post8(ptr %ptr, <2 x i32> %val, ptr %writeback) 
 ;
 ; STRICTALIGN-LABEL: store_v2i32_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.2s }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -6297,7 +6297,7 @@ define void @store_v4i32_align16_post16(ptr %ptr, <4 x i32> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v4i32_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.4s }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -6941,7 +6941,7 @@ define void @store_v1i64_align8_post8(ptr %ptr, <1 x i64> %val, ptr %writeback) 
 ;
 ; STRICTALIGN-LABEL: store_v1i64_align8_post8:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.1d }, [x0], #8
+; STRICTALIGN-NEXT:    str d0, [x0], #8
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -8043,7 +8043,7 @@ define void @store_v2i64_align16_post16(ptr %ptr, <2 x i64> %val, ptr %writeback
 ;
 ; STRICTALIGN-LABEL: store_v2i64_align16_post16:
 ; STRICTALIGN:       // %bb.0:
-; STRICTALIGN-NEXT:    st1 { v0.2d }, [x0], #16
+; STRICTALIGN-NEXT:    str q0, [x0], #16
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    ret
 ;
