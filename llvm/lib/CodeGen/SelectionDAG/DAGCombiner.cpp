@@ -421,8 +421,7 @@ namespace {
     SDValue visitMERGE_VALUES(SDNode *N);
     SDValue visitADD(SDNode *N);
     SDValue visitADDLike(SDNode *N);
-    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1,
-                                    SDNode *LocReference);
+    SDValue visitADDLikeCommutative(SDValue N0, SDValue N1, const SDLoc &DL);
     SDValue visitPTRADD(SDNode *N);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDSAT(SDNode *N);
@@ -3235,10 +3234,10 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     }
   }
 
-  if (SDValue Combined = visitADDLikeCommutative(N0, N1, N))
+  if (SDValue Combined = visitADDLikeCommutative(N0, N1, DL))
     return Combined;
 
-  if (SDValue Combined = visitADDLikeCommutative(N1, N0, N))
+  if (SDValue Combined = visitADDLikeCommutative(N1, N0, DL))
     return Combined;
 
   return SDValue();
@@ -3478,9 +3477,8 @@ static SDValue foldAddSubMasked1(bool IsAdd, SDValue N0, SDValue N1,
 
 /// Helper for doing combines based on N0 and N1 being added to each other.
 SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
-                                             SDNode *LocReference) {
+                                             const SDLoc &DL) {
   EVT VT = N0.getValueType();
-  SDLoc DL(LocReference);
 
   // fold (add x, shl(0 - y, n)) -> sub(x, shl(y, n))
   SDValue Y, N;
