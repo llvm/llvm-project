@@ -5306,12 +5306,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_Specific(CondVal), m_Value()))))
-    return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
-                CondVal, FalseVal));
+                                           m_Specific(CondVal), m_Value())))) {
+    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
+    // Keep the load at its original position to avoid crossing writes. The new
+    // passthrough must therefore be available there.
+    if (DT.dominates(FalseVal, LoadInst)) {
+      Builder.SetInsertPoint(LoadInst);
+      Instruction *In = Builder.CreateMaskedLoad(
+          TrueVal->getType(), MaskedLoadPtr,
+          LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+      return replaceInstUsesWith(SI, In);
+    }
+  }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
   // bitwidth-1, 1 -> scmp(X, 0)
