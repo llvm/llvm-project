@@ -2415,14 +2415,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return Engine.makeNode(BE, State, Pred);
 
-    if (State != Pred->getState()) {
-      // TODO: This intermediate transition is very likely to be irrelevant,
-      // remove it in a follow-up change.
-      Pred = Engine.makeNode(BE, State, Pred);
-      if (!Pred)
-        return nullptr;
-    }
-
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
     // since we are currently at the block entrance and the current reference
@@ -2439,15 +2431,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, State, Pred);
 
   // ... otherwise, discard this execution path.
-
-  if (State != Pred->getState()) {
-    // TODO: This intermediate transition is very likely to be irrelevant,
-    // remove it in a follow-up change.
-    Pred = Engine.makeNode(BE, State, Pred);
-    if (!Pred)
-      return nullptr;
-  }
-
   static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
   const ExplodedNode *Sink =
       Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);
