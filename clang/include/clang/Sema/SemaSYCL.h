@@ -18,10 +18,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaBase.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
 class Decl;
+class NamespaceDecl;
 class ParsedAttr;
 
 class SemaSYCL : public SemaBase {
@@ -96,6 +98,33 @@ public:
   /// BuildSYCLKernelLaunchIdExpr().
   StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
                                                Expr *LaunchIdExpr);
+
+
+  /// Lookup the sycl namespace declaration. Return nullptr if lookup fails.
+  NamespaceDecl *getSyclNamespace(SourceLocation Loc);
+
+  /// Determines whether Ty has been explicitly marked as device-copyable via
+  /// sycl::is_device_copyable<Ty>
+  bool checkExplicitDeviceCopyable(QualType Ty, SourceLocation Loc);
+
+  // TODO: perhaps a good idea to add a normal checkDeviceCopyable as well, and
+  // not just checking if something's explicitly device-copyable.
+
+  /// Returns true if sycl-device-copyable diagnostics has not been downgraded
+  /// from an error via -Wsycl-device-copyable or -Wno-sycl-device-copyable.
+  /// 'Loc' is needed in case pragmas are used to set -Wsycl-device-copyable or
+  /// -Wno-sycl-device-copyable.
+  bool isEnforcingDeviceCopyable(SourceLocation Loc) const;
+
+private:
+  // Cache used by getSyclNamespace as the lookup is expensive. Since
+  // NamespaceDecls always track a "primary" DeclContext chain, saving this
+  // pointer is fine as future changes to the namespace will still be reachable
+  // via the decl chain. 
+  NamespaceDecl *SyclNamespacePtr = nullptr;
+
+  /// Cache used by checkExplicitDEviceCopyable().
+  llvm::DenseMap<QualType, bool> MarkedDeviceCopyableCache;
 };
 
 } // namespace clang
