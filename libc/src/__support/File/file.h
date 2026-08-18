@@ -165,6 +165,18 @@ protected:
                    static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
+  void reset_stream_state_unlocked(ModeFlags new_mode) {
+    mode = new_mode;
+    pos = 0;
+    prev_op = FileOp::NONE;
+    read_limit = 0;
+    eof = false;
+    err = false;
+    orientation = Orientation::UNORIENTED;
+    mbstate = internal::mbstate();
+    adjust_buf();
+  }
+
 public:
   // We want this constructor to be constexpr so that global file objects
   // like stdout do not require invocation of the constructor which can
@@ -344,18 +356,6 @@ public:
   // OpenMode, ContentType and CreateType.
   static ModeFlags mode_flags(const char *mode);
 
-  void reset_stream_state(ModeFlags new_mode) {
-    mode = new_mode;
-    pos = 0;
-    prev_op = FileOp::NONE;
-    read_limit = 0;
-    eof = false;
-    err = false;
-    orientation = Orientation::UNORIENTED;
-    mbstate = internal::mbstate();
-    adjust_buf();
-  }
-
 private:
   FileIOResult write_unlocked_impl(const void *data, size_t len);
   FileIOResult read_unlocked_impl(void *data, size_t len);
@@ -403,6 +403,9 @@ ErrorOr<File *> openfile(const char *path, const char *mode);
 // object itself, ensuring static streams like stdin/stdout/stderr are
 // preserved.
 int reopenfile(File *f, const char *path, const char *mode);
+// Expected to be implemented by the platform file, will be called after
+// locking.
+int reopenfile_unlocked(File *f, const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.

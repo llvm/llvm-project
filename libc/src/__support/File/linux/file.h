@@ -30,6 +30,8 @@ public:
 
   int get_fd() const { return fd; }
   void set_fd(int new_fd) { fd = new_fd; }
+
+  int reopen_unlocked(const char *path, const char *mode);
 };
 
 // Create a File object and associate it with a fd.
