@@ -603,9 +603,7 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
-  // Verify the reduction dimensions before using them to index into the source
-  // shape below. Out-of-range or repeated entries would otherwise silently
-  // corrupt every consumer of getReductionMask()/isReducedDim().
+  // Verify the reduction dimensions.
   int64_t sourceRank = getSourceVectorType().getRank();
   SmallVector<bool> isReduced(sourceRank, false);
   for (int64_t dim : getReductionDims()) {
