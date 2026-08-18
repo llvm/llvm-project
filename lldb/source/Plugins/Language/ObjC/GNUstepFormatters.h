@@ -12,9 +12,10 @@
 // Like the Apple formatters these never run code in the inferior. Unlike them
 // they do not hardcode ivar offsets: libobjc2 packs instance sizes and the
 // widths of `long`-typed ivars differ between LP64 and LLP64, so ivars are
-// looked up by name through the debug info attached to the value's dynamic
-// type. Small objects (libobjc2's tagged pointers) are decoded from the
-// pointer bits alone.
+// looked up by name - through the debug info attached to the value's dynamic
+// type where there is any, and through libobjc2's own metadata otherwise.
+// Small objects (libobjc2's tagged pointers) are decoded from the pointer
+// bits alone.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,10 +43,29 @@ bool IsGNUstepObjCRuntime(ValueObject &valobj);
 /// runtime-reported class name of a value.
 void LoadGNUstepFormatters(lldb::TypeCategoryImplSP objc_category_sp);
 
-/// Finds the ivar \p name of the object \p valobj points at, using the debug
-/// info of its dynamic type. Returns an empty pointer when the ivar is not
-/// visible, which the callers treat as "cannot format".
+/// Returns the ivar named \p name on \p valobj, or an empty pointer if it
+/// cannot be reached, which the callers treat as "cannot format".
+///
+/// Debug info is preferred, because it is the only source that describes
+/// members *inside* a struct-typed ivar. Where it has nothing - gnustep-base
+/// hides several classes' ivars behind GS_EXPOSE, and a stripped build has
+/// none at all - libobjc2's own metadata is used instead.
 lldb::ValueObjectSP GNUstepGetIvar(ValueObject &valobj, llvm::StringRef name);
+
+/// Finds an ivar using only libobjc2's runtime metadata, for classes whose
+/// ivars debug info does not describe - gnustep-base hides several behind
+/// GS_EXPOSE, and a stripped build has none. Only reaches an ivar the class
+/// or one of its superclasses declares directly: the runtime's encodings
+/// expand struct members positionally, with no field names, so a member
+/// *inside* a struct-typed ivar is not addressable this way.
+lldb::ValueObjectSP GNUstepGetIvarFromRuntime(ValueObject &valobj,
+                                              llvm::StringRef name);
+
+/// Load address of ivar \p name, from the runtime's metadata. Unlike
+/// GNUstepGetIvarFromRuntime this does not need the ivar's type to be
+/// expressible, which libobjc2's encodings cannot manage for a bitfield.
+std::optional<lldb::addr_t> GNUstepGetIvarAddress(ValueObject &valobj,
+                                                  llvm::StringRef name);
 
 /// The value of a floating-point ValueObject as a double, or nullopt if it
 /// cannot be read as one.
@@ -80,6 +100,11 @@ constexpr uint64_t GNUstepSmallObjectMask(uint32_t pointer_size) {
 
 /// GSTinyString packs up to eight 7-bit characters and a 5-bit length into
 /// the pointer (gnustep-base Source/GSString.m, clang CGObjCGNU.cpp).
+/// Whether gnustep-base's `wide` string flag is set in the byte holding it.
+/// It is the first bitfield of its storage unit, so the low bit
+/// little-endian and the high bit big-endian.
+bool GNUstepDecodeWideFlag(uint8_t byte, lldb::ByteOrder byte_order);
+
 std::optional<std::string> GNUstepDecodeTinyString(uint64_t ptr,
                                                    uint32_t pointer_size);
 /// NSSmallInt stores an arithmetically shifted integer (Source/NSNumber.m).
@@ -107,6 +132,9 @@ bool GNUstepNSSetSummaryProvider(ValueObject &valobj, Stream &stream,
                                  const TypeSummaryOptions &options);
 bool GNUstepNSDataSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
+bool GNUstepNSURLSummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &options);
+
 bool GNUstepNSNullSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
 

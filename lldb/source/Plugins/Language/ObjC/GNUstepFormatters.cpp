@@ -54,7 +54,78 @@ ValueObjectSP lldb_private::formatters::GNUstepGetIvar(ValueObject &valobj,
   if (ValueObjectSP dynamic_sp =
           object_sp->GetDynamicValue(lldb::eDynamicDontRunTarget))
     object_sp = dynamic_sp;
-  return object_sp->GetChildMemberWithName(name);
+  if (ValueObjectSP child_sp = object_sp->GetChildMemberWithName(name))
+    return child_sp;
+
+  // Debug info is the better source - it knows about members inside a
+  // struct-typed ivar, which the runtime's encodings cannot express - but it
+  // is not always there. gnustep-base hides several classes' ivars behind
+  // GS_EXPOSE, so a consumer of the installed headers sees an @interface
+  // with no ivars at all, and a stripped build has none either. The runtime
+  // metadata still describes them, so fall back to it.
+  return GNUstepGetIvarFromRuntime(*object_sp, name);
+}
+
+namespace {
+struct FoundIvar {
+  ObjCLanguageRuntime::ClassDescriptor::iVarDescriptor ivar;
+  addr_t object_addr;
+};
+} // namespace
+
+static std::optional<FoundIvar> FindIvarInRuntime(ValueObject &valobj,
+                                                  llvm::StringRef name) {
+  ProcessSP process_sp = valobj.GetProcessSP();
+  if (!process_sp)
+    return std::nullopt;
+  auto *runtime = llvm::dyn_cast_or_null<GNUstepObjCRuntime>(
+      ObjCLanguageRuntime::Get(*process_sp));
+  if (!runtime)
+    return std::nullopt;
+
+  const addr_t object_addr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (object_addr == 0 || object_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  // An ivar declared by a superclass is just as much a part of the object, so
+  // walk up until it is found. Offsets are absolute, so no adjustment is
+  // needed at each step.
+  ObjCLanguageRuntime::ClassDescriptorSP descriptor_sp =
+      runtime->GetClassDescriptor(valobj);
+  // The chain comes from inferior memory, so bound the walk rather than
+  // trusting it to terminate.
+  static constexpr uint32_t g_max_superclass_depth = 256;
+  const ConstString ivar_name(name);
+  for (uint32_t depth = 0; descriptor_sp && depth < g_max_superclass_depth;
+       ++depth, descriptor_sp = descriptor_sp->GetSuperclass()) {
+    const size_t num_ivars = descriptor_sp->GetNumIVars();
+    for (size_t i = 0; i < num_ivars; ++i) {
+      const auto &ivar = descriptor_sp->GetIVarAtIndex(i);
+      if (ivar.m_name == ivar_name)
+        return FoundIvar{ivar, object_addr};
+    }
+  }
+  return std::nullopt;
+}
+
+ValueObjectSP
+lldb_private::formatters::GNUstepGetIvarFromRuntime(ValueObject &valobj,
+                                                    llvm::StringRef name) {
+  std::optional<FoundIvar> found = FindIvarInRuntime(valobj, name);
+  if (!found || !found->ivar.m_type)
+    return {};
+  return valobj.GetSyntheticChildAtOffset(
+      found->ivar.m_offset, found->ivar.m_type,
+      /*can_create=*/true, ConstString(name));
+}
+
+std::optional<addr_t>
+lldb_private::formatters::GNUstepGetIvarAddress(ValueObject &valobj,
+                                                llvm::StringRef name) {
+  std::optional<FoundIvar> found = FindIvarInRuntime(valobj, name);
+  if (!found)
+    return std::nullopt;
+  return found->object_addr + found->ivar.m_offset;
 }
 
 std::optional<double>
@@ -72,6 +143,11 @@ lldb_private::formatters::GNUstepGetFloatValue(ValueObject &valobj) {
 }
 
 // --- Small object decoding -------------------------------------------------
+
+bool lldb_private::formatters::GNUstepDecodeWideFlag(
+    uint8_t byte, lldb::ByteOrder byte_order) {
+  return (byte & (byte_order == lldb::eByteOrderBig ? 0x80 : 0x01)) != 0;
+}
 
 std::optional<std::string>
 lldb_private::formatters::GNUstepDecodeTinyString(uint64_t ptr,
@@ -141,7 +217,56 @@ double lldb_private::formatters::GNUstepDecodeSmallDate(uint64_t ptr) {
   return value;
 }
 
+// A URL relative to a base that is itself relative is real, but a chain
+// longer than this is corrupt or circular.
+static constexpr uint32_t g_max_url_base_depth = 16;
+
 // --- Small providers -------------------------------------------------------
+
+// Recursion is kept out of the registered provider, which must match the
+// summary-callback signature exactly.
+static bool GNUstepNSURLSummary(ValueObject &valobj, Stream &stream,
+                                const TypeSummaryOptions &options,
+                                uint32_t depth) {
+  if (!IsGNUstepObjCRuntime(valobj))
+    return false;
+  // gnustep-base keeps NSURL's ivars behind GS_EXPOSE(NSURL), so a build
+  // against the installed headers has no debug info for them. Reaching them
+  // by name through the runtime's own metadata avoids the fixed offsets
+  // Apple's provider has to use.
+  ValueObjectSP url_sp = GNUstepGetIvar(valobj, "_urlString");
+  if (!url_sp || url_sp->GetValueAsUnsigned(0) == 0)
+    return false;
+
+  // A relative URL keeps the base it was resolved against, which is how
+  // -absoluteString presents it too. The chain is inferior data and a URL
+  // whose base is itself would otherwise recurse until the stack runs out,
+  // and this runs whenever the value is merely displayed.
+  StreamString base_summary;
+  if (depth < g_max_url_base_depth) {
+    ValueObjectSP base_sp = GNUstepGetIvar(valobj, "_baseURL");
+    if (base_sp && base_sp->GetValueAsUnsigned(0) != 0)
+      if (!GNUstepNSURLSummary(*base_sp, base_summary, options, depth + 1))
+        base_summary.Clear();
+  }
+
+  if (base_summary.Empty())
+    return GNUstepNSStringSummaryProvider(*url_sp, stream, options);
+
+  StreamString url_summary;
+  if (!GNUstepNSStringSummaryProvider(*url_sp, url_summary, options))
+    return false;
+  llvm::StringRef url_text = url_summary.GetString();
+  llvm::StringRef base_text = base_summary.GetString();
+  // Both arrive quoted as @"...", and the pair reads better as one string.
+  url_text.consume_front("@\"");
+  url_text.consume_back("\"");
+  base_text.consume_front("@\"");
+  base_text.consume_back("\"");
+  stream.Printf("@\"%s -- %s\"", url_text.str().c_str(),
+                base_text.str().c_str());
+  return true;
+}
 
 bool lldb_private::formatters::GNUstepNSNullSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
@@ -342,9 +467,8 @@ void lldb_private::formatters::LoadGNUstepFormatters(
   AddCXXSummary(objc_category_sp, GNUstepNSNullSummaryProvider,
                 "GNUstep NSNull summary provider", "NSNull", summary_flags);
 
-  // Not covered: NSURL. gnustep-base declares its ivars behind
-  // GS_EXPOSE(NSURL), so they are in neither the debug info nor the
-  // __objc_ivar_offset symbols of a normal build; `po` still describes it.
+  AddCXXSummary(objc_category_sp, GNUstepNSURLSummaryProvider,
+                "GNUstep NSURL summary provider", "NSURL", summary_flags);
 
   // SEL. The Apple registrations skip pointers because SEL* is special-cased
   // when its value is retrieved; mirror that so the two runtimes stay on the
@@ -357,4 +481,12 @@ void lldb_private::formatters::LoadGNUstepFormatters(
   for (const char *name : {"objc_selector *", "SEL *"})
     AddCXXSummary(objc_category_sp, GNUstepObjCSELSummaryProvider<true>,
                   "GNUstep SEL summary provider", name, sel_flags);
+}
+
+bool lldb_private::formatters::GNUstepNSURLSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  // Shared type name with Apple's provider - see GNUstepNSDateSummaryProvider.
+  if (!IsGNUstepObjCRuntime(valobj))
+    return NSURLSummaryProvider(valobj, stream, options);
+  return GNUstepNSURLSummary(valobj, stream, options, /*depth=*/0);
 }

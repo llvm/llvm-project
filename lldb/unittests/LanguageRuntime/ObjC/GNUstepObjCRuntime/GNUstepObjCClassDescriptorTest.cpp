@@ -507,6 +507,23 @@ TEST_P(GNUstepIvarTest, ReadsIvars) {
             static_cast<int32_t>(2 * PointerSize()));
 }
 
+// An ivar whose encoding yields no type (libobjc2's bitfield structs) must
+// still be locatable, so a formatter can read it from memory.
+TEST_P(GNUstepIvarTest, LocatesIvarWithUnrepresentableType) {
+  const IvarSpec ivars[] = {
+      {"_contents", "^v", 0, PointerSize()},
+      {"_flags", "{?=b1b1b2b28}", static_cast<int32_t>(PointerSize()), 4},
+  };
+  GNUstepObjCClassDescriptor descriptor =
+      MakeClassWithIvars(ivars, PointerSize() + 4);
+
+  ASSERT_EQ(descriptor.GetNumIVars(), 2u);
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_name, ConstString("_flags"));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_offset,
+            static_cast<int32_t>(PointerSize()));
+  EXPECT_EQ(descriptor.GetIVarAtIndex(1).m_size, 4u);
+}
+
 // An out-of-range index must be inert rather than reading past the vector.
 TEST_P(GNUstepIvarTest, RejectsOutOfRangeIndex) {
   const IvarSpec ivars[] = {{"_count", "i", 0, 4}};

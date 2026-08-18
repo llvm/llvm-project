@@ -128,6 +128,12 @@ class TestGNUstepDataFormatters(TestBase):
             "frame variable -d run-target someDate", substrs=["2023-11-14 22:13:20 UTC"]
         )
         self.expect("frame variable -d run-target null", substrs=["<null>"])
+        # NSURL keeps its ivars behind GS_EXPOSE, so nothing here has debug
+        # info for them; this only works by reading libobjc2's own metadata.
+        self.expect(
+            "frame variable -d run-target url",
+            substrs=['@"https://www.gnustep.org/resources"'],
+        )
         self.expect("frame variable -d run-target nilObject", substrs=["nil"])
         # A custom class: dynamic type plus formatted ivars, and its class
         # object is not itself presented as an instance.

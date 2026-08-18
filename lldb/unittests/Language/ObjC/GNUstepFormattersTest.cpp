@@ -18,6 +18,23 @@ using namespace lldb_private::formatters;
 // bits) and gnustep-base's encodings; the constants are what the compiler and
 // runtime actually produce, checked against a live process.
 
+// gnustep-base's `wide` is the first bitfield of its storage unit, so which
+// end of the byte it occupies depends on the target's byte order. No test
+// configuration runs big-endian, so this is the only cover it gets.
+TEST(GNUstepFormattersTest, WideFlagFollowsByteOrder) {
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x00, lldb::eByteOrderLittle));
+  EXPECT_TRUE(GNUstepDecodeWideFlag(0x01, lldb::eByteOrderLittle));
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x80, lldb::eByteOrderLittle));
+
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x00, lldb::eByteOrderBig));
+  EXPECT_TRUE(GNUstepDecodeWideFlag(0x80, lldb::eByteOrderBig));
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x01, lldb::eByteOrderBig));
+
+  // The neighbouring `owned` bit must not be mistaken for it either way.
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x02, lldb::eByteOrderLittle));
+  EXPECT_FALSE(GNUstepDecodeWideFlag(0x40, lldb::eByteOrderBig));
+}
+
 TEST(GNUstepFormattersTest, TinyStringDecodesClangEmittedLiteral) {
   // clang emits @"Hello" for the gnustep-2.x ABI as this constant
   // (CGObjCGNU.cpp: 7-bit characters from the top, 5-bit length, tag 4).
