@@ -90,7 +90,9 @@ jobs:
       id: vars
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
+        LLVM_VERSION_MAJOR: ${{ steps.version-from-source.outputs.major }}
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
+        INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -101,7 +103,7 @@ jobs:
       # | X.Y.Z-rcN | -rc N -test-asserts
       # | X.Y.Z     | -final
       run: |
-        trimmed=$(echo ${{ inputs.release-version }} | xargs)
+        trimmed=$(echo "$INPUTS_RELEASE_VERSION" | xargs)
         if [ -n "$trimmed" ]; then
           release_version="$trimmed"
           ref="llvmorg-$release_version"
@@ -113,6 +115,14 @@ jobs:
           fi
           ref="$GITHUB_SHA"
         fi
+
+        if [ "$RUNNER_OS" = "Windows" ] && grep -q 'rc' <<< "$release_version"; then
+          # The Wix installer generator does not support strings in the version number,
+          # so we need to fixup the version number for release candidates.
+          # For Example: 23.1.0-rc2 will become 23.0.0.2
+          release_version="$LLVM_VERSION_MAJOR.0.0.$(cut -d c -f2 <<< $release_version)"
+        fi
+
         if [ -n "${{ inputs.upload }}" ]; then
           upload="${{ inputs.upload }}"
         else
@@ -148,6 +158,13 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
+          else
+            arches=x86_64
+            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
+            # 2-3 hours to build on macOS, much slower than on Linux.
+            # The long build time causes the release build to time out on x86_64,
+            # so we need to disable flang there.
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
@@ -375,7 +392,9 @@ jobs:
       - name: Upload Artifacts
         uses: $/.github/workflows/upload-release-artifact
         with:
-          release-version: ${{ needs.prepare.outputs.release-version }}
+          # We need to use the inputs.release-version here, because on Windows we
+          # need to fixup the rc version that's stored in needs.prepare.outputs.release-version
+          release-version: ${{ inputs.release-version || needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}

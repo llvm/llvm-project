@@ -93,6 +93,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SELECT:            R = ScalarizeVecRes_SELECT(N); break;
   case ISD::SELECT_CC:         R = ScalarizeVecRes_SELECT_CC(N); break;
   case ISD::SETCC:             R = ScalarizeVecRes_SETCC(N); break;
+  case ISD::VECTOR_MATCH:
+    R = ScalarizeVecRes_VECTOR_MATCH(N);
+    break;
   case ISD::POISON:
   case ISD::UNDEF:             R = ScalarizeVecRes_UNDEF(N); break;
   case ISD::VECTOR_SHUFFLE:    R = ScalarizeVecRes_VECTOR_SHUFFLE(N); break;
@@ -981,6 +984,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::CTTZ_ELTS_ZERO_POISON:
     Res = ScalarizeVecOp_CTTZ_ELTS(N);
     break;
+  case ISD::VECTOR_MATCH:
+    Res = ScalarizeVecOp_VECTOR_MATCH(N, OpNo);
+    break;
   case ISD::MASKED_UDIV:
   case ISD::MASKED_SDIV:
   case ISD::MASKED_UREM:
@@ -1318,6 +1324,20 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CTTZ_ELTS(SDNode *N) {
       DAG.getSetCC(SDLoc(N), MVT::i1, Op,
                    DAG.getConstant(0, SDLoc(N), Op.getValueType()), ISD::SETEQ);
   return DAG.getZExtOrTrunc(SetCC, SDLoc(N), N->getValueType(0));
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_VECTOR_MATCH(SDNode *N) {
+  SDLoc DL(N);
+  // Reuse the expansion (which should scalarize).
+  SDValue Mask = TLI.expandVectorMatch(N, DAG);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                     N->getValueType(0).getScalarType(), Mask,
+                     DAG.getVectorIdxConstant(0, DL));
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_MATCH(SDNode *N,
+                                                      unsigned OpNo) {
+  return TLI.expandVectorMatch(N, DAG);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecOp_MaskedBinOp(SDNode *N, unsigned OpNo) {
@@ -1667,6 +1687,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
     SplitVecRes_GET_ACTIVE_LANE_MASK(N, Lo, Hi);
+    break;
+  case ISD::VECTOR_MATCH:
+    SplitVecRes_VECTOR_MATCH(N, Lo, Hi);
     break;
   }
 
@@ -3754,6 +3777,20 @@ void DAGTypeLegalizer::SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, HiVT, HiStartVal, Op1);
 }
 
+void DAGTypeLegalizer::SplitVecRes_VECTOR_MATCH(SDNode *N, SDValue &Lo,
+                                                SDValue &Hi) {
+  SDValue SourceLo, SourceHi;
+  GetSplitVector(N->getOperand(0), SourceLo, SourceHi);
+  SDValue MaskLo, MaskHi;
+  GetSplitVector(N->getOperand(2), MaskLo, MaskHi);
+  SDLoc DL(N);
+
+  Lo = DAG.getNode(ISD::VECTOR_MATCH, DL, MaskLo.getValueType(), SourceLo,
+                   N->getOperand(1), MaskLo, N->getFlags());
+  Hi = DAG.getNode(ISD::VECTOR_MATCH, DL, MaskHi.getValueType(), SourceHi,
+                   N->getOperand(1), MaskHi, N->getFlags());
+}
+
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   unsigned Factor = N->getNumOperands();
 
@@ -3997,6 +4034,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
   case ISD::PARTIAL_REDUCE_FMLA:
     Res = SplitVecOp_PARTIAL_REDUCE_MLA(N);
+    break;
+  case ISD::VECTOR_MATCH:
+    Res = SplitVecOp_VECTOR_MATCH(N, OpNo);
     break;
   }
 
@@ -5208,6 +5248,40 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
                                 MMO, IndexType);
 }
 
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
+  SDLoc DL(N);
+
+  if (OpNo == 0) {
+    EVT LoResVT, HiResVT;
+    std::tie(LoResVT, HiResVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+    SDValue SourceLo, SourceHi;
+    std::tie(SourceLo, SourceHi) = DAG.SplitVectorOperand(N, 0);
+    SDValue MaskLo, MaskHi;
+    std::tie(MaskLo, MaskHi) = DAG.SplitVectorOperand(N, 2);
+
+    SDValue MatchLo = DAG.getNode(ISD::VECTOR_MATCH, DL, LoResVT, SourceLo,
+                                  N->getOperand(1), MaskLo, N->getFlags());
+    SDValue MatchHi = DAG.getNode(ISD::VECTOR_MATCH, DL, HiResVT, SourceHi,
+                                  N->getOperand(1), MaskHi, N->getFlags());
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), MatchLo,
+                       MatchHi);
+  }
+
+  // Note: The Mask (OpNo == 2) should be widened with the result.
+  assert(OpNo == 1 && "Unexpected VECTOR_MATCH operand");
+
+  SDValue NeedleLo, NeedleHi;
+  GetSplitVector(N->getOperand(1), NeedleLo, NeedleHi);
+
+  SDValue MatchLo =
+      DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0), N->getOperand(0),
+                  NeedleLo, N->getOperand(2), N->getFlags());
+  SDValue MatchHi =
+      DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0), N->getOperand(0),
+                  NeedleHi, N->getOperand(2), N->getFlags());
+  return DAG.getNode(ISD::OR, DL, N->getValueType(0), MatchLo, MatchHi);
+}
+
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   SDValue Acc = N->getOperand(0);
   assert(getTypeAction(Acc.getValueType()) != TargetLowering::TypeSplitVector &&
@@ -5349,6 +5423,12 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = WidenVecRes_GET_ACTIVE_LANE_MASK(N);
+    break;
+  case ISD::VECTOR_INTERLEAVE:
+    WidenVecRes_VECTOR_INTERLEAVE(N);
+    break;
+  case ISD::VECTOR_MATCH:
+    Res = WidenVecRes_VECTOR_MATCH(N);
     break;
   case ISD::VECTOR_DEINTERLEAVE:
     WidenVecRes_VECTOR_DEINTERLEAVE(N);
@@ -6615,8 +6695,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
     }
   }
 
-  assert(!WidenVT.isScalableVector() &&
-         "Cannot use build vectors to widen CONCAT_VECTOR result");
+  if (WidenVT.isScalableVector()) {
+    SDValue WideVec = DAG.getPOISON(WidenVT);
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    for (unsigned I = 0; I < NumOperands; ++I)
+      WideVec =
+          DAG.getInsertSubvector(dl, WideVec, N->getOperand(I), I * NumInElts);
+    return WideVec;
+  }
+
   unsigned WidenNumElts = WidenVT.getVectorNumElements();
   unsigned NumInElts = InVT.getVectorNumElements();
 
@@ -7507,6 +7594,57 @@ SDValue DAGTypeLegalizer::WidenVecRes_GET_ACTIVE_LANE_MASK(SDNode *N) {
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), NVT, N->ops());
 }
 
+void DAGTypeLegalizer::WidenVecRes_VECTOR_INTERLEAVE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+  ElementCount OrigEC = VT.getVectorElementCount();
+  unsigned Factor = N->getNumOperands();
+  SDLoc DL(N);
+
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
+
+  SmallVector<SDValue, 8> WidenOps(Factor);
+  for (unsigned Idx = 0U; Idx < Factor; ++Idx)
+    WidenOps[Idx] = GetWidenedVector(N->getOperand(Idx));
+
+  SmallVector<EVT, 8> WidenVTs(Factor, WidenVT);
+  SDValue Interleaved =
+      DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, WidenVTs, WidenOps);
+
+  EVT PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                       WidenEC.multiplyCoefficientBy(Factor));
+  SmallVector<SDValue, 8> Slices(Factor);
+  for (unsigned Idx = 0; Idx != Factor; ++Idx)
+    Slices[Idx] = Interleaved.getValue(Idx);
+
+  SDValue Packed = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedWidenVT, Slices);
+
+  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
+    SDValue Narrow = DAG.getExtractSubvector(
+        DL, VT, Packed, OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
+    SDValue Wide =
+        DAG.getInsertSubvector(DL, DAG.getPOISON(WidenVT), Narrow, /*Idx=*/0U);
+    SetWidenedVector(SDValue(N, Idx), Wide);
+  }
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_MATCH(SDNode *N) {
+  SDLoc DL(N);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  EVT SourceVT = N->getOperand(0).getValueType();
+  EVT WideSourceVT =
+      EVT::getVectorVT(*DAG.getContext(), SourceVT.getVectorElementType(),
+                       WidenVT.getVectorElementCount());
+
+  SDValue WideSource = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideSourceVT),
+                                              N->getOperand(0), 0);
+  SDValue WideMask = DAG.getInsertSubvector(DL, DAG.getConstant(0, DL, WidenVT),
+                                            N->getOperand(2), 0);
+  return DAG.getNode(ISD::VECTOR_MATCH, DL, WidenVT, WideSource,
+                     N->getOperand(1), WideMask, N->getFlags());
+}
+
 void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
@@ -7778,6 +7916,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = WidenVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
+  case ISD::VECTOR_MATCH:
+    Res = WidenVecOp_VECTOR_MATCH(N, OpNo);
     break;
   }
 
@@ -8803,6 +8944,46 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
 
   return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, N->getValueType(0),
                      WideMask);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
+  if (OpNo == 0) {
+    SDLoc DL(N);
+    EVT ResVT = N->getValueType(0);
+    EVT SourceVT = N->getOperand(0).getValueType();
+    EVT WideSourceVT = TLI.getTypeToTransformTo(*DAG.getContext(), SourceVT);
+    EVT WidenVT =
+        EVT::getVectorVT(*DAG.getContext(), ResVT.getVectorElementType(),
+                         WideSourceVT.getVectorElementCount());
+
+    SDValue WideSource = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideSourceVT),
+                                                N->getOperand(0), 0);
+    SDValue WideMask = DAG.getInsertSubvector(
+        DL, DAG.getConstant(0, DL, WidenVT), N->getOperand(2), 0);
+    SDValue WideMatch = DAG.getNode(ISD::VECTOR_MATCH, DL, WidenVT, WideSource,
+                                    N->getOperand(1), WideMask, N->getFlags());
+    return DAG.getExtractSubvector(DL, ResVT, WideMatch, 0);
+  }
+
+  // Note: The Mask (OpNo == 2) should be widened with the result.
+  assert(OpNo == 1 && "Unexpected VECTOR_MATCH operand");
+
+  SDLoc DL(N);
+  SDValue Needle = N->getOperand(1);
+  EVT NeedleVT = Needle.getValueType();
+  if (NeedleVT.getVectorNumElements() == 1)
+    return TLI.expandVectorMatch(N, DAG);
+
+  EVT WidenNeedleVT = TLI.getTypeToTransformTo(*DAG.getContext(), NeedleVT);
+
+  SDValue Fill =
+      DAG.getExtractVectorElt(DL, NeedleVT.getVectorElementType(), Needle, 0);
+  SDValue WideNeedle = DAG.getSplatVector(WidenNeedleVT, DL, Fill);
+  WideNeedle = DAG.getInsertSubvector(DL, WideNeedle, Needle, 0);
+
+  return DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0),
+                     N->getOperand(0), WideNeedle, N->getOperand(2),
+                     N->getFlags());
 }
 
 //===----------------------------------------------------------------------===//

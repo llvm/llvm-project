@@ -217,6 +217,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
+    libc.src.stdlib.realpath
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
@@ -254,6 +255,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
+    libc.src.stdio.tmpfile
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -527,6 +529,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -563,6 +566,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdiml
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmabf16
@@ -850,7 +854,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpxf16
   )
 
-  # if(LIBC_TYPES_HAS_FLOAT128)
+  # if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   #   list(APPEND TARGET_LIBM_ENTRYPOINTS
   #     # math.h C23 mixed _Float16 and _Float128 entrypoints
   #     libc.src.math.f16addf128
@@ -873,12 +877,11 @@ if(LIBC_TYPES_HAS_CFLOAT128)
   )
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
     libc.src.math.canonicalizef128
-    libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -891,7 +894,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
@@ -1024,7 +1026,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpxbf16
 )
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C++23 mixed bfloat16 and _Float128 entrypoints
     libc.src.math.bf16addf128
@@ -1162,6 +1164,19 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sched.__sched_setcpuset
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_xorcpuset
+
+    # semaphore.h entrypoints
+    libc.src.semaphore.sem_clockwait
+    libc.src.semaphore.sem_close
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
+    libc.src.semaphore.sem_open
+    libc.src.semaphore.sem_post
+    libc.src.semaphore.sem_timedwait
+    libc.src.semaphore.sem_trywait
+    libc.src.semaphore.sem_unlink
+    libc.src.semaphore.sem_wait
 
     # strings.h entrypoints
     libc.src.strings.strcasecmp_l
@@ -1325,6 +1340,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # link.h entrypoints
+    libc.src.link._r_debug
     libc.src.link.dl_iterate_phdr
 
     # wchar.h entrypoints

@@ -190,6 +190,10 @@ char NVPTXDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
+NVPTXISelDAGToDAGPass::NVPTXISelDAGToDAGPass(NVPTXTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<NVPTXDAGToDAGISel>(TM, OptLevel)) {}
+
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
     : SelectionDAGISel(tm, OptLevel), TM(tm) {}

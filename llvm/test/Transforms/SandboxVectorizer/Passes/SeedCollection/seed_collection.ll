@@ -18,3 +18,17 @@ define void @collect_seeds_of_diff_types(ptr %ptr) {
   store i8 %ld2, ptr %ptr2
   ret void
 }
+
+; Insertion used to crash because the comparator for upper_bound was broken.
+define void @partitioning_required(ptr %ptr, i64 %offset) {
+  %ptr0 = getelementptr inbounds nuw i8, ptr %ptr, i64 0
+  %ptr1 = getelementptr inbounds nuw i8, ptr %ptr, i64 1
+  %ptr3 = getelementptr inbounds nuw i8, ptr %ptr, i64 %offset
+
+  store i8 42, ptr %ptr0
+  store i8 42, ptr %ptr1
+  store i8 42, ptr %ptr3
+
+  store i8 42, ptr %ptr0
+  ret void
+}

@@ -58,7 +58,7 @@ class Type;
 /// for example 'force', means a decision has been made. So, we need to be
 /// careful NOT to add them if the user hasn't specifically asked so.
 class LoopVectorizeHints {
-  enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED, HK_SCALABLE };
+  enum HintKind { HK_WIDTH, HK_INTERLEAVE, HK_ISVECTORIZED };
 
   /// Hint - associates name and validation with the hint value.
   struct Hint {
@@ -88,8 +88,9 @@ class LoopVectorizeHints {
   /// Vector Predicate; one of ForceKind, carried as a plain value like Force.
   unsigned Predicate;
 
-  /// Says whether we should use fixed width or scalable vectorization.
-  Hint Scalable;
+  /// Scalable vs fixed-width preference; one of ScalableForceKind. Carried as
+  /// a plain value because the enable/disable pair has no operand to validate.
+  unsigned Scalable;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -134,9 +135,8 @@ public:
 
   ElementCount getWidth() const {
     return ElementCount::get(
-        Width.Value,
-        (ScalableForceKind)Scalable.Value == SK_PreferScalable ||
-            (ScalableForceKind)Scalable.Value == SK_AlwaysScalable);
+        Width.Value, (ScalableForceKind)Scalable == SK_PreferScalable ||
+                         (ScalableForceKind)Scalable == SK_AlwaysScalable);
   }
 
   unsigned getInterleave() const {
@@ -159,13 +159,13 @@ public:
 
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
-    return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
+    return (ScalableForceKind)Scalable == SK_FixedWidthOnly;
   }
 
   /// \return true if scalable vectorization is always preferred over
   /// fixed-length when feasible, regardless of cost.
   bool isScalableVectorizationAlwaysPreferred() const {
-    return (ScalableForceKind)Scalable.Value == SK_AlwaysScalable;
+    return (ScalableForceKind)Scalable == SK_AlwaysScalable;
   }
 
   /// When enabling loop hints are provided we allow the vectorizer to change
