@@ -12495,11 +12495,51 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       AllCalleesKnownNow = false;
     }
 
+    // A direct call to a callee that can reach the function holding this call
+    // site closes a call graph cycle that previously existed only through the
+    // function pointer, and nothing downstream undoes that: an alwaysinline
+    // dispatcher stops being inlinable once it is in a cycle, and on a target
+    // without a dynamically sized stack the recursion it leaves behind has no
+    // statically known stack size. Record which callees those are so manifest()
+    // can leave them to the indirect call. The question has to be asked here,
+    // because the solver no longer answers once manifestation starts.
+    //
+    // Only edges the call graph agrees are direct can close such a cycle, so
+    // walk the solver's known edges rather than asking AAInterFnReachability,
+    // which conservatively reaches everything downstream of an unknown callee
+    // and would suppress far more than this.
+    SmallPtrSet<Function *, 4> CalleesReachingCallerNow;
+    if (Function *Caller = CB->getFunction()) {
+      auto KnownEdgesReach = [&](Function *From) {
+        SmallPtrSet<Function *, 16> Visited;
+        SmallVector<Function *, 16> Worklist = {From};
+        while (!Worklist.empty()) {
+          Function *Fn = Worklist.pop_back_val();
+          if (Fn == Caller)
+            return true;
+          if (!Visited.insert(Fn).second)
+            continue;
+          const auto *EdgesAA = A.getAAFor<AACallEdges>(
+              *this, IRPosition::function(*Fn), DepClassTy::REQUIRED);
+          if (!EdgesAA)
+            continue;
+          for (Function *Next : EdgesAA->getOptimisticEdges())
+            Worklist.push_back(Next);
+        }
+        return false;
+      };
+      for (Function *Callee : AssumedCalleesNow)
+        if (Callee == Caller || KnownEdgesReach(Callee))
+          CalleesReachingCallerNow.insert(Callee);
+    }
+
     if (AssumedCalleesNow == AssumedCallees &&
-        AllCalleesKnown == AllCalleesKnownNow)
+        AllCalleesKnown == AllCalleesKnownNow &&
+        CalleesReachingCallerNow == CalleesReachingCaller)
       return ChangeStatus::UNCHANGED;
 
     std::swap(AssumedCallees, AssumedCalleesNow);
+    std::swap(CalleesReachingCaller, CalleesReachingCallerNow);
     AllCalleesKnown = AllCalleesKnownNow;
     return ChangeStatus::CHANGED;
   }
@@ -12534,9 +12574,16 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       return ChangeStatus::CHANGED;
     }
 
+    // Callees that can reach the function holding this call site were recorded
+    // during the update; see there for why they are left to the indirect call.
+    auto ReachesCaller = [&](Function *Callee) {
+      return CalleesReachingCaller.contains(Callee);
+    };
+
     // Special handling for the single callee case.
     if (AllCalleesKnown && AssumedCallees.size() == 1 &&
-        isLegalToPromote(*CB, AssumedCallees.front())) {
+        isLegalToPromote(*CB, AssumedCallees.front()) &&
+        !ReachesCaller(AssumedCallees.front())) {
       promoteCall(*CB, AssumedCallees.front(), nullptr);
       NumIndirectCallsPromoted++;
       return ChangeStatus::CHANGED;
@@ -12560,7 +12607,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       // own operands would not be the call the indirect call performs. Leave it
       // to the indirect fallback, which the !callees metadata below still
       // names.
-      if (!isLegalToPromote(*CB, NewCallee) ||
+      if (!isLegalToPromote(*CB, NewCallee) || ReachesCaller(NewCallee) ||
           !A.shouldSpecializeCallSiteForCallee(*this, *CB, *NewCallee,
                                                AssumedCallees.size())) {
         SkippedAssumedCallees.push_back(NewCallee);
@@ -12680,6 +12727,12 @@ private:
   /// This set contains all currently assumed calllees, which might grow over
   /// time.
   SmallSetVector<Function *, 4> AssumedCallees;
+
+  /// The subset of the assumed callees that can reach the function holding this
+  /// call site, so that specializing for them would make a call graph cycle
+  /// explicit. Determined during the update, where reachability can still be
+  /// queried, and only read when manifesting.
+  SmallPtrSet<Function *, 4> CalleesReachingCaller;
 
   /// Flag to indicate if all possible callees are in the AssumedCallees set or
   /// if there could be others.
