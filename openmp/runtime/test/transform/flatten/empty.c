@@ -28,6 +28,13 @@ int main() {
   printf("single-begin\n");
   flatten(1, 1);
   printf("single-end\n");
+
+  printf("neg-outer-begin\n");
+#pragma omp flatten
+  for (int i = 0; i < -1; ++i)
+    for (int j = 0; j < 3; ++j)
+      printf("i=%d j=%d\n", i, j);
+  printf("neg-outer-end\n");
   return EXIT_SUCCESS;
 }
 
@@ -40,3 +47,5 @@ int main() {
 // CHECK-NEXT: single-begin
 // CHECK-NEXT: i=0 j=0
 // CHECK-NEXT: single-end
+// CHECK-NEXT: neg-outer-begin
+// CHECK-NEXT: neg-outer-end

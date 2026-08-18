@@ -86,4 +86,43 @@ void func(int n) {
   for (int i = 0; i < 7; ++i)
     for (int j = 0; j < 9; ++j)
       body(i, j);
+
+  // Without a depth clause, only the outermost two loops are flattened. Warn
+  // when a deeper perfect nest is left partially unflattened.
+  // expected-warning@+1 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < n; ++j)
+      for (int k = 0; k < n; ++k)
+        body(i, j, k);
+
+  // Flatten applied to reverse/unroll generated loops: those transforms wrap
+  // helper statements around the remaining inner loop, so the nest is no
+  // longer perfectly nested from flatten's point of view.
+  #pragma omp flatten
+  #pragma omp reverse
+  for (int i = 0; i < n; ++i)
+    // expected-error@+1 {{statement after '#pragma omp flatten' must be a for loop}}
+    for (int j = 0; j < n; ++j)
+      body(i, j);
+
+  // Stacked flatten: the inner flatten injects helper statements, so the outer
+  // flatten does not see a perfect nest of remaining loops.
+  #pragma omp flatten
+  // expected-warning@+1 {{'flatten' without a 'depth' clause only combines 2 loops, but 3 or more loops are perfectly nested}}
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < n; ++j)
+      // expected-error@+1 {{statement after '#pragma omp flatten' must be a for loop}}
+      for (int k = 0; k < n; ++k)
+        body(i, j, k);
+
+  // Interchange needs two canonical loops; flatten produces one, so the
+  // leftover inner loop is no longer a perfect nest for interchange.
+  #pragma omp interchange
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < n; ++j)
+      // expected-error@+1 {{statement after '#pragma omp interchange' must be a for loop}}
+      body(i, j);
 }

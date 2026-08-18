@@ -71,4 +71,27 @@ void inst() {
   foo_tmpl<int>();
 }
 
+// depth as a non-type template parameter.
+// PRINT-LABEL: template <int D> void foo_depth_d()
+// DUMP-LABEL:  FunctionTemplateDecl {{.*}} foo_depth_d
+template <int D>
+void foo_depth_d() {
+  // PRINT:     #pragma omp flatten depth(D)
+  // DUMP:      OMPFlattenDirective
+  // DUMP-NEXT: OMPDepthClause
+  #pragma omp flatten depth(D)
+  for (int i = 0; i < 4; ++i)
+    for (int j = 0; j < 4; ++j)
+      for (int k = 0; k < 4; ++k)
+        body(i, j, k);
+}
+
+// PRINT-LABEL: template<> void foo_depth_d<3>()
+// DUMP-LABEL:  FunctionDecl {{.*}} foo_depth_d 'void ()' implicit_instantiation
+// DUMP:        OMPFlattenDirective
+// DUMP-NEXT:   OMPDepthClause
+void inst_d() {
+  foo_depth_d<3>();
+}
+
 #endif
