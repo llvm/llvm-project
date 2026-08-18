@@ -82,6 +82,11 @@ build --build_runfile_links=false
 # See https://bazel.build/docs/bazel-and-cpp#toolchain-features
 build --process_headers_in_dependencies
 
+# Enable __float128 (MPFR_WANT_FLOAT128=2) support in MPFR when built from source.
+build --@mpfr//:enable_float128=no
+build --copt=-DMPFR_WANT_FLOAT128=2
+build --copt=-Dmpfr_float128=__float128
+
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
 # builds using a Clang-based compiler, and default to the `clang` executable on
