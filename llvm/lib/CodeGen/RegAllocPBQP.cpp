@@ -144,7 +144,6 @@ private:
 
   char *customPassID;
 
-  RegisterClassInfo RCI;
   RegSet VRegsToAlloc, EmptyIntervalVRegs;
 
   /// Inst which is a def of an original reg and whose defs are already all
@@ -157,7 +156,8 @@ private:
   void findVRegIntervalsToAlloc(const MachineFunction &MF, LiveIntervals &LIS);
 
   /// Constructs an initial graph.
-  void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller);
+  void initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM, Spiller &VRegSpiller,
+                       const RegisterClassInfo &RCI);
 
   /// Spill the given VReg.
   void spillVReg(Register VReg, SmallVectorImpl<Register> &NewIntervals,
@@ -173,8 +173,8 @@ private:
 
   /// Postprocessing before final spilling. Sets basic block "live in"
   /// variables.
-  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
-                     VirtRegMap &VRM) const;
+  void finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
+                     const RegisterClassInfo &RCI) const;
 
   void postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS);
 };
@@ -551,6 +551,7 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   au.addRequired<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
+  au.addRequired<MachineRegisterClassInfoWrapperPass>();
   au.addRequired<VirtRegMapWrapperLegacy>();
   au.addPreserved<VirtRegMapWrapperLegacy>();
   MachineFunctionPass::getAnalysisUsage(au);
@@ -580,7 +581,8 @@ static bool isACalleeSavedRegister(MCRegister Reg,
 }
 
 void RegAllocPBQP::initializeGraph(PBQPRAGraph &G, VirtRegMap &VRM,
-                                   Spiller &VRegSpiller) {
+                                   Spiller &VRegSpiller,
+                                   const RegisterClassInfo &RCI) {
   MachineFunction &MF = G.getMetadata().MF;
 
   LiveIntervals &LIS = G.getMetadata().LIS;
@@ -742,7 +744,8 @@ bool RegAllocPBQP::mapPBQPToRegAlloc(const PBQPRAGraph &G,
 }
 
 void RegAllocPBQP::finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
-                                 VirtRegMap &VRM) const {
+                                 VirtRegMap &VRM,
+                                 const RegisterClassInfo &RCI) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // First allocate registers for the empty intervals.
@@ -758,10 +761,9 @@ void RegAllocPBQP::finalizeAlloc(MachineFunction &MF, LiveIntervals &LIS,
         bool EmitError = !MF.getProperties().hasFailedRegAlloc();
         if (EmitError) {
           MF.getProperties().setFailedRegAlloc();
-          MF.getFunction().getContext().diagnose(
-              DiagnosticInfoRegAllocFailure(
-                  "no registers from class available to allocate",
-                  MF.getFunction(), DiagnosticLocation()));
+          MF.getFunction().getContext().diagnose(DiagnosticInfoRegAllocFailure(
+              "no registers from class available to allocate", MF.getFunction(),
+              DiagnosticLocation()));
         }
         PReg = RC->getRegisters().front();
       } else {
@@ -807,7 +809,9 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       createInlineSpiller({LIS, LiveStks, MDT, MBFI}, MF, VRM, DefaultVRAI));
 
   MF.getRegInfo().freezeReservedRegs();
-  RCI.runOnMachineFunction(MF);
+
+  const RegisterClassInfo &RCI =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 
@@ -848,7 +852,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
       (void) Round;
 
       PBQPRAGraph G(PBQPRAGraph::GraphMetadata(MF, LIS, MBFI));
-      initializeGraph(G, VRM, *VRegSpiller);
+      initializeGraph(G, VRM, *VRegSpiller, RCI);
       ConstraintsRoot->apply(G);
 
 #ifndef NDEBUG
@@ -872,7 +876,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Finalise allocation, allocate empty ranges.
-  finalizeAlloc(MF, LIS, VRM);
+  finalizeAlloc(MF, LIS, VRM, RCI);
   postOptimization(*VRegSpiller, LIS);
   VRegsToAlloc.clear();
   EmptyIntervalVRegs.clear();
