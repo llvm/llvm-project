@@ -156,7 +156,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
-  the {option}`AllowReferencedInitialValues` option to support the
+  the {option}`AllowReferencedInitialValues` to support the
   `INT09-C-EX1` exception, allowing enumerators initialized by referencing
   another enumerator in the same enum (e.g., `last = first`).
 
