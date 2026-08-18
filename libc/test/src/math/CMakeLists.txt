@@ -539,8 +539,8 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf128
-    libc.src.__support.FPUtil.float128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
