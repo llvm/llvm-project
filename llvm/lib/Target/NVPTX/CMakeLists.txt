@@ -62,9 +62,11 @@ add_llvm_target(NVPTXCodeGen
   CodeGenTypes
   Core
   IPO
+  IRPrinter
   MC
   NVPTXDesc
   NVPTXInfo
+  ObjCARC
   Scalar
   SelectionDAG
   Support
