@@ -114,6 +114,14 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--no-debug-info",
+    dest="no_debug_info",
+    action="store_true",
+    default=False,
+    help="Compile without debug information.  Useful for testing behaviour that has to work from something other than debug info, such as a language runtime's own metadata.",
+)
+
+parser.add_argument(
     "--opt",
     dest="opt",
     default="none",
@@ -307,6 +315,7 @@ class Builder(object):
         self.output = args.output
         self.mode = args.mode
         self.nodefaultlib = args.nodefaultlib
+        self.no_debug_info = args.no_debug_info
         self.verbose = args.verbose
         self.obj_ext = obj_ext
         self.lib_paths = args.libs_dir
@@ -694,7 +703,8 @@ class MsvcBuilder(Builder):
         if self.nodefaultlib:
             args.append("/GS-")
             args.append("/GR-")
-        args.append("/Z7")
+        if not self.no_debug_info:
+            args.append("/Z7")
         if self.toolchain_type == "clang-cl":
             args.append("-Xclang")
             args.append("-fkeep-static-consts")
@@ -764,7 +774,7 @@ class GccBuilder(Builder):
         args = [self.compiler_for_file(source)]
         args = self._add_m_option_if_needed(args)
 
-        args.append("-g")
+        args.append("-g0" if self.no_debug_info else "-g")
         if self.opt == "none":
             args.append("-O0")
         elif self.opt == "basic":
@@ -785,7 +795,9 @@ class GccBuilder(Builder):
                     # CodeView cannot represent Objective-C types, so force
                     # DWARF even though the target is MSVC. The debugger needs
                     # it to recognize classes and resolve dynamic types.
-                    args.extend(["-gdwarf", "-Xclang", "--dependent-lib=msvcrtd"])
+                    if not self.no_debug_info:
+                        args.append("-gdwarf")
+                    args.extend(["-Xclang", "--dependent-lib=msvcrtd"])
         elif self.sysroot:
             args.extend(["--sysroot", self.sysroot])
 
