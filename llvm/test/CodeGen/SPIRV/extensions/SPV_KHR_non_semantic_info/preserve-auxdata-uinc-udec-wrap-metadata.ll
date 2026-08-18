@@ -3,8 +3,8 @@
 ; metadata), all gated on -spirv-preserve-auxdata.
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - \
@@ -18,19 +18,19 @@
 ; RUN:   -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_non_semantic_info \
 ; RUN:   %s -o - -filetype=obj | spirv-val %}
 
-; As in preserve-auxdata-amdgpu-atomic-metadata.ll, the AuxData instructions
-; sit in the module-level section and forward-reference a result <id> defined
-; inside a function body -- here the OpFunctionCall standing in for the
-; atomicrmw. spirv-val does not accept that, so pin the rejection rather than
-; leave the module unvalidated. Drop the "not" and the CHECK-INVALID prefix
-; when the forward reference is resolved.
+; The AuxData forward-reference is encoded as OpExtInstWithForwardRefsKHR, but
+; upstream spirv-val only permits forward refs from debug-info sets, so it still
+; rejects this. Drop the "not"/CHECK-INVALID once
+; https://github.com/KhronosGroup/SPIRV-Tools/pull/6847 lands.
 ; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 \
-; RUN:   -mtriple=spirv64-amd-amdhsa --spirv-ext=+SPV_KHR_non_semantic_info \
+; RUN:   -mtriple=spirv64-amd-amdhsa \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
 ; RUN:   -spirv-preserve-auxdata %s -o - -filetype=obj | not spirv-val 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-INVALID %}
 
 ; CHECK-INVALID: has not been defined
 
+; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
 ; CHECK-DAG: %[[#md_nrm:]] = OpString "amdgpu.no.remote.memory"
@@ -40,11 +40,11 @@
 ; CHECK-DAG: OpDecorate %[[#UDecFn:]] LinkageAttributes "__translate_spirv_atomic_udec_wrap_p1_i32" Import
 
 ; AuxData for the uinc_wrap result.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res:]] %[[#md_nfg]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res]] %[[#md_nrm]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#uinc_res]] %[[#md_nrm]]
 
 ; AuxData for the udec_wrap result.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#udec_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#udec_res:]] %[[#md_nfg]]
 
 ; The function calls themselves.
 ; CHECK-DAG: %[[#uinc_res]] = OpFunctionCall %[[#]] %[[#UIncFn]]

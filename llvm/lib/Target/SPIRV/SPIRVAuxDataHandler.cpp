@@ -78,6 +78,18 @@ void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
   MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
   if (!MAI.ExtInstSetMap.contains(NonSemanticAuxDataSet))
     MAI.ExtInstSetMap[NonSemanticAuxDataSet] = MAI.getNextIDRegister();
+
+  // Instruction metadata forward-references its target, so it needs
+  // OpExtInstWithForwardRefsKHR.
+  if (!MAI.InstrAuxDataRecords.empty()) {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
+      report_fatal_error("-spirv-preserve-auxdata with atomic instruction "
+                         "metadata requires the "
+                         "SPV_KHR_relaxed_extended_instruction extension.");
+    MAI.Reqs.addExtension(
+        SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
+  }
 }
 
 MCRegister
@@ -223,8 +235,10 @@ void SPIRVAuxDataHandler::emitAuxData(SPIRV::ModuleAnalysisInfo &MAI) {
       continue;
     MCRegister MDNameReg =
         getOrEmitString(MAI.getAMDGPUAtomicMDName(Rec.Kind), MAI);
+    // TargetReg is a function-body result emitted after this section, so it is
+    // always a forward reference.
     emitAuxDataExtInst(InstructionMetadataOpcode, VoidTypeReg, ExtSetReg,
-                       {TargetReg, MDNameReg}, MAI);
+                       {TargetReg, MDNameReg}, MAI, /*UseForwardRefs=*/true);
   }
 
   if (LinkagePreservedGOs.empty())
@@ -248,9 +262,11 @@ void SPIRVAuxDataHandler::emitAuxDataExtInst(AuxDataOpcode Opcode,
                                              MCRegister VoidTypeReg,
                                              MCRegister ExtSetReg,
                                              ArrayRef<MCRegister> Operands,
-                                             SPIRV::ModuleAnalysisInfo &MAI) {
+                                             SPIRV::ModuleAnalysisInfo &MAI,
+                                             bool UseForwardRefs) {
   MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExtInst);
+  Inst.setOpcode(UseForwardRefs ? SPIRV::OpExtInstWithForwardRefsKHR
+                                : SPIRV::OpExtInst);
   Inst.addOperand(MCOperand::createReg(MAI.getNextIDRegister()));
   Inst.addOperand(MCOperand::createReg(VoidTypeReg));
   Inst.addOperand(MCOperand::createReg(ExtSetReg));

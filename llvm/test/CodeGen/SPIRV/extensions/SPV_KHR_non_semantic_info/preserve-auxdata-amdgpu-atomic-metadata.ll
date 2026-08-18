@@ -3,7 +3,8 @@
 
 ; Positive: with -spirv-preserve-auxdata, metadata emitted as AuxData.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - | FileCheck %s
 
 ; Negative: without -spirv-preserve-auxdata, no metadata strings.
@@ -20,22 +21,19 @@
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - -filetype=obj \
 ; RUN:   | spirv-val %}
 
-; The AuxData instructions go in the module-level section, but the Target
-; operand of InstructionMetadata is the result <id> of an atomic defined inside
-; a function body, so it is a forward reference. That is intentional -- the
-; instruction is non-semantic and its result is never consumed, and
-; NonSemantic.AuxData.asciidoc permits it -- but spirv-val implements no such
-; relaxation and rejects the module. Pin that down so the day validation starts
-; passing is not silent: drop the "not" and the CHECK-INVALID prefix once
-; SPIRV-Tools accepts the forward reference, or once the instructions are moved
-; into the function body after their target.
+; InstructionMetadata forward-references the atomic's result <id>, encoded as
+; OpExtInstWithForwardRefsKHR. Upstream spirv-val only permits forward refs from
+; debug-info sets, so it still rejects this. Drop the "not"/CHECK-INVALID once
+; https://github.com/KhronosGroup/SPIRV-Tools/pull/6847 lands.
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata \
 ; RUN:   %s -o - -filetype=obj | not spirv-val 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-INVALID %}
 
 ; CHECK-INVALID: has not been defined
 
+; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
 ; CHECK-DAG: %[[#md_nrm:]] = OpString "amdgpu.no.remote.memory"
@@ -43,16 +41,16 @@
 ; CHECK-DAG: %[[#void:]] = OpTypeVoid
 
 ; Integer atomic (add) with two metadata kinds.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#add_res]] %[[#md_nrm]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res]] %[[#md_nrm]]
 
 ; Float atomic (fadd) with all three metadata kinds.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res:]] %[[#md_nfg]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_nrm]]
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_idn]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_nrm]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#fadd_res]] %[[#md_idn]]
 
 ; Atomic (xchg) with only one metadata kind.
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#xchg_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#xchg_res:]] %[[#md_nfg]]
 
 ; The atomic instructions themselves (forward-referenced by AuxData above).
 ; CHECK-DAG: %[[#add_res]] = OpAtomicIAdd

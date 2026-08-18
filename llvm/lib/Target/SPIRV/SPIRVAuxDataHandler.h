@@ -104,9 +104,11 @@ private:
   MCRegister emitOpConstantUInt32(uint32_t Value, MCRegister UInt32TypeReg,
                                   SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitConstant(const Constant *C, SPIRV::ModuleAnalysisInfo &MAI);
+  // UseForwardRefs selects OpExtInstWithForwardRefsKHR instead of OpExtInst.
   void emitAuxDataExtInst(AuxDataOpcode Opcode, MCRegister VoidTypeReg,
                           MCRegister ExtSetReg, ArrayRef<MCRegister> Operands,
-                          SPIRV::ModuleAnalysisInfo &MAI);
+                          SPIRV::ModuleAnalysisInfo &MAI,
+                          bool UseForwardRefs = false);
 };
 
 bool spirvPreserveAuxData();

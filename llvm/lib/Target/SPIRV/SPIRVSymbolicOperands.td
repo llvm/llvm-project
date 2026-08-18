@@ -405,6 +405,7 @@ defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
 defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
+defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<141, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time

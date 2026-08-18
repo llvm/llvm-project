@@ -132,6 +132,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},

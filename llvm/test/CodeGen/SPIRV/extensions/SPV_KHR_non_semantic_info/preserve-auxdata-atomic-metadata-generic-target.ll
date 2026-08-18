@@ -7,9 +7,11 @@
 ; The AMD-target behaviour and the full set of metadata kinds are covered by
 ; preserve-auxdata-amdgpu-atomic-metadata.ll.
 
+; The forward-referencing metadata needs SPV_KHR_relaxed_extended_instruction,
+; which a generic triple (unlike AMD) does not auto-enable, so request it.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown \
-; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
-; RUN:   %s -o - | FileCheck %s
+; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction \
+; RUN:   -spirv-preserve-auxdata %s -o - | FileCheck %s
 
 ; Without the option nothing is emitted, on any target.
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown \
@@ -18,10 +20,11 @@
 
 ; OFF-NOT: amdgpu.no.fine.grained.memory
 
+; CHECK-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; CHECK-DAG: %[[#md_nfg:]] = OpString "amdgpu.no.fine.grained.memory"
 ; CHECK-DAG: %[[#void:]] = OpTypeVoid
-; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
+; CHECK-DAG: %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#add_res:]] %[[#md_nfg]]
 ; CHECK-DAG: %[[#add_res]] = OpAtomicIAdd
 
 ; No spirv-val run with the option on: the AuxData instruction forward-references
