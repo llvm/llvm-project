@@ -45,6 +45,6 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 
 // CHECK-LABEL: define internal void @{{.*}}omp_mapper{{.*}}_QQFmy_testmy_mapper
 // CHECK-NOT: !dbg
-// CHECK: ret void
+// CHECK: ret void{{$}}
 // CHECK-NEXT: }
 
