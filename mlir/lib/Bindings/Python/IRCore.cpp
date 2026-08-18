@@ -3968,11 +3968,7 @@ void populateIRCore(nb::module_ &m) {
                 static_cast<uint32_t>(flags));
           },
           "other"_a, "flags"_a = PyOperationEquivalenceFlags::None,
-          R"(Checks whether two operations are structurally equivalent.
-
-The IGNORE_LOCATIONS, IGNORE_DISCARDABLE_ATTRS, IGNORE_PROPERTIES, and
-IGNORE_COMMUTATIVITY flags ignore locations, discardable attributes, properties,
-and commutativity, respectively. The predicate recursively compares regions.)")
+          R"("Checks whether two operations are structurally equivalent. The predicate recursively compares regions.")")
       .def(
           "structural_hash",
           [](PyOperationBase &self, PyOperationEquivalenceFlags flags) {
@@ -3981,10 +3977,7 @@ and commutativity, respectively. The predicate recursively compares regions.)")
                 self.getOperation().get(), static_cast<uint32_t>(flags));
           },
           "flags"_a = PyOperationEquivalenceFlags::None,
-          R"(Computes a structural hash for the operation.
-
-Use the same flags as is_structurally_equivalent. The hash does not recurse into
-regions, unlike the predicate.)")
+          R"(Computes a structural hash for the operation. The hash does not recurse into regions, unlike the predicate.")")
       .def_prop_ro(
           "attributes",
           [](PyOperationBase &self) {
