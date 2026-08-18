@@ -724,9 +724,21 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index))
-      if (CI->isNullValue() && AccessSize == VecStoreSize)
-        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
+    if (Constant *CI = dyn_cast<Constant>(Index)) {
+      if (CI->isNullValue() && AccessSize == VecStoreSize) {
+        Value *Result =
+            Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
+        // If Result is an instruction in the worklist (e.g. a load from this
+        // alloca), it will later be RAUW'd and deleted. The SSAUpdater holds
+        // a raw Value* that RAUW doesn't update, leaving a dangling pointer.
+        // Wrap in a freeze to create a fresh value the SSAUpdater can safely
+        // hold; the freeze's operand is a proper IR use that RAUW does update.
+        if (auto *RI = dyn_cast<Instruction>(Result))
+          if (llvm::is_contained(AA.Vector.Worklist, RI))
+            Result = Builder.CreateFreeze(Result);
+        return Result;
+      }
+    }
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {

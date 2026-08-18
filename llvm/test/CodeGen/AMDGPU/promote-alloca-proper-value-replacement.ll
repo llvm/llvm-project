@@ -27,3 +27,29 @@ define void @alloca_value_cross_reference() {
   store float 0.000000e+00, ptr addrspace(5) %p, align 4
   ret void
 }
+
+; The full-vector store in %bb2 forwards %v (a load from the same alloca in a
+; dominating block) as bb2's live-out value. If the pass visits bb2 before
+; entry, it hands the not-yet-replaced load to the SSAUpdater; the load is
+; later deleted while the SSAUpdater still references it, causing a crash.
+; The full-vector store now always creates a fresh value so the SSAUpdater
+; never holds a pointer to a worklist instruction.
+define half @forwarded_load_across_blocks() {
+; CHECK-LABEL: define half @forwarded_load_across_blocks()
+; CHECK-NOT: alloca
+; CHECK-NOT: addrspace(5)
+; CHECK: ret half
+entry:
+  %arr = alloca [4 x half], align 8, addrspace(5)
+  store <4 x half> <half 1.0, half 2.0, half 3.0, half 4.0>, ptr addrspace(5) %arr, align 8
+  %v = load <4 x half>, ptr addrspace(5) %arr, align 8
+  br label %bb2
+
+bb2:
+  store <4 x half> %v, ptr addrspace(5) %arr, align 8
+  br label %bb3
+
+bb3:
+  %e = load half, ptr addrspace(5) %arr, align 2
+  ret half %e
+}
