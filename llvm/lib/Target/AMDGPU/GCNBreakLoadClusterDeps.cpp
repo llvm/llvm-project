@@ -247,23 +247,24 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     LRU.stepBackward(*LiveRIt);
   for (MachineBasicBlock::reverse_iterator AccumIt =
            KillerIns->getReverseIterator();
-       AccumIt != MBB.rend(); ++AccumIt)
+       &*AccumIt != DefToRename; ++AccumIt)
     LRU.accumulate(*AccumIt);
   
   // Iterate over registers in physical register class
   const TargetRegisterClass &DefinedRegClass =
       *TRI->getPhysRegBaseClass(OldReg);
   unsigned I;
-  for (I = 0; I < DefinedRegClass.getRegisters().size() &&
-              I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget;
-       I++)
+  for (I = 0; I < DefinedRegClass.getRegisters().size(); I++) {
+    if (TRI->getHWRegIndex(DefinedRegClass.getRegisters()[I]) >=
+        OccupancyBudget)
+      continue;
     if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
         (getVGPR32Lanes(DefinedRegClass.getRegisters()[I]) & BannedRegs).none())
       break;
+  }
 
   // Fail if we couldn't find a suitable free register
-  if (I == DefinedRegClass.getRegisters().size() ||
-      I * DefinedRegClass.getSizeInBits() / 32 >= OccupancyBudget)
+  if (I == DefinedRegClass.getRegisters().size())
     return false;
   
   // Actually rename the register
@@ -353,125 +354,46 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       BannedRegs |= UsesAndDefs.second;
     }
     
-    // Check if we have something to rename
+    // Check if we have something to rename due to WAR
     bitset<AMDGPU::NUM_TARGET_REGS> WarConflicts =
-        InsUses & UsedLoadSourcePhysregs;
+      (InsUses | InsDefs) & (UsedLoadSourcePhysregs | UsedLoadDestPhysregs);
     while (WarConflicts.any()) {
       Register OldReg = WarConflicts._Find_first();
-      bitset<AMDGPU::NUM_TARGET_REGS> OldRegWarConflicts;
-      for (const MachineOperand &Operand : VecLoadIns.operands())
-        if (Operand.isReg() && Operand.isUse() &&
-            TRI->regsOverlap(OldReg, Operand.getReg())) {
-          OldRegWarConflicts |= getVGPR32Lanes(Operand.getReg());
-          if (TRI->getPhysRegBaseClass(Operand.getReg())->getSizeInBits() >
-              TRI->getPhysRegBaseClass(OldReg)->getSizeInBits())
-            OldReg = Operand.getReg();
-        }
-
-      bitset<AMDGPU::NUM_TARGET_REGS> RitRegWarConflicts;
-      for (MachineBasicBlock::reverse_iterator RIt =
-               ++VecLoadIns.getReverseIterator();
-           RIt != MBB.rend(); ++RIt) {
-        if (RIt->modifiesRegister(OldReg, TRI))
-          RitRegWarConflicts |= getUsesAndDefsFor(*RIt).first;
-
-        if ((OldRegWarConflicts & ~RitRegWarConflicts).any())
-          continue;
-
-        // First, make sure we don't modify EXEC before redefining register.
-        bool ExecModified = false, Redefined = false;
-        for (MachineBasicBlock::iterator It = std::next(RIt->getIterator());
-             It != MBB.end(); ++It)
-          if (It->definesRegister(AMDGPU::EXEC, TRI)) {
-            ExecModified = true;
-            break;
-          } else if (It->modifiesRegister(OldReg, TRI)) {
-            Redefined = true;
-          }
-
-        // Can't do anything if EXEC modified
-        if (ExecModified)
+      unsigned OpNum;
+      for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
+        if (VecLoadIns.getOperand(OpNum).isReg() &&
+            TRI->regsOverlap(OldReg, VecLoadIns.getOperand(OpNum).getReg()))
           break;
-
-        LiveRegUnits LRU(*TRI);
-        LRU.addLiveOuts(MBB);
-
-        // If we're live out of the block and the conflicing reg hasn't been
-        // redefined, we can't do this with a block-local analysis.
-        if (!Redefined && !LRU.available(OldReg))
-          break;
-
-        // Find the instruction which kills the def in RIt
-        bitset<AMDGPU::NUM_TARGET_REGS> KilledSubregs;
-        MachineBasicBlock::iterator KillerIns = VecLoadIns;
-        for (MachineBasicBlock::iterator CandidateKiller = KillerIns;
-             CandidateKiller != MBB.end(); ++CandidateKiller) {
-          if (CandidateKiller->modifiesRegister(OldReg, TRI)) {
-            KilledSubregs |= getUsesAndDefsFor(*CandidateKiller).first;
-            if ((RitRegWarConflicts & ~KilledSubregs).none())
-              break;
-          }
-          if (CandidateKiller->readsRegister(OldReg, TRI))
-            KillerIns = CandidateKiller;
-        }
-
-        // See what's free
-        for (MachineBasicBlock::reverse_iterator LiveRIt = MBB.rbegin();
-             &*LiveRIt != &*KillerIns; ++LiveRIt)
-          LRU.stepBackward(*LiveRIt);
-        for (MachineBasicBlock::reverse_iterator AccumIt =
-                 KillerIns->getReverseIterator();
-             AccumIt != MBB.rend(); ++AccumIt)
-          LRU.accumulate(*AccumIt);
-
-        // Iterate over registers in physical register class
-        const TargetRegisterClass &DefinedRegClass =
-            *TRI->getPhysRegBaseClass(OldReg);
-        unsigned I;
-        for (I = 0; I < DefinedRegClass.getRegisters().size() &&
-                    I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget;
-             I++)
-          if (LRU.available(DefinedRegClass.getRegisters()[I]) &&
-              (getVGPR32Lanes(DefinedRegClass.getRegisters()[I]) & BannedRegs)
-                  .none())
-            break;
-
-        // Actually rename the register
-        if (I < DefinedRegClass.getRegisters().size() &&
-            I * DefinedRegClass.getSizeInBits() / 32 < OccupancyBudget) {
-          for (unsigned Op = 0; Op < RIt->getNumExplicitOperands(); Op++)
-            if (RIt->getOperand(Op).isReg() && RIt->getOperand(Op).isDef() &&
-                TRI->regsOverlap(RIt->getOperand(Op).getReg(), OldReg))
-              RIt->getOperand(Op).setReg(
-                  renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                                 RIt->getOperand(Op).getReg()));
-          for (MachineBasicBlock::iterator RenameIt =
-                   std::next(RIt->getIterator());
-               RenameIt != KillerIns; ++RenameIt)
-            for (unsigned Op = 0; Op < RenameIt->getNumExplicitOperands(); Op++)
-              if (RenameIt->getOperand(Op).isReg() &&
-                  TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg))
-                RenameIt->getOperand(Op).setReg(
-                    renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                                   RenameIt->getOperand(Op).getReg()));
-          for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
-            if (KillerIns->getOperand(Op).isReg() &&
-                KillerIns->getOperand(Op).isUse() &&
-                TRI->regsOverlap(KillerIns->getOperand(Op).getReg(), OldReg))
-              KillerIns->getOperand(Op).setReg(
-                  renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                                 KillerIns->getOperand(Op).getReg()));
-        }
-
-        // If we renamed, we're done.  If we didn't rename, we can't get
-        // around this conflict, so we're also done.
+      assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
+             "There should be a conflicting register operand.  Where is it?");
+      if (!findReplaceRegisterOperand(VecLoadIns, OpNum, BannedRegs))
         break;
-      }
-
+      
       tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
-      WarConflicts &= ~getVGPR32Lanes(OldReg);
+      WarConflicts =
+          (InsUses | InsDefs) & (UsedLoadSourcePhysregs | UsedLoadDestPhysregs);
     }
-
+    
+    // Check if we have something to rename due to WAR
+    bitset<AMDGPU::NUM_TARGET_REGS> SelfConflicts = InsUses & InsDefs;
+    while (SelfConflicts.any()) {
+      Register OldReg = SelfConflicts._Find_first();
+      unsigned OpNum;
+      for (OpNum = 0; OpNum < VecLoadIns.getNumExplicitOperands(); OpNum++)
+        if (VecLoadIns.getOperand(OpNum).isReg() &&
+            VecLoadIns.getOperand(OpNum).isUse() &&
+            TRI->regsOverlap(OldReg, VecLoadIns.getOperand(OpNum).getReg()))
+          break;
+      assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
+             "There should be a conflicting register operand.  Where is it?");
+      bitset<AMDGPU::NUM_TARGET_REGS> SelfBannedRegs = BannedRegs | InsDefs;
+      if (!findReplaceRegisterOperand(VecLoadIns, OpNum, SelfBannedRegs))
+        break;
+      
+      tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
+      SelfConflicts = InsUses & InsDefs;
+    }
+    
     // Coda
     UsedLoadDestPhysregs |= InsDefs;
     UsedLoadSourcePhysregs |= InsUses;
