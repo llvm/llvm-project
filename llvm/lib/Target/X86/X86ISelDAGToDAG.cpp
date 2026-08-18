@@ -31,6 +31,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -2824,16 +2825,16 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
 
     // A-(B<<C) can use -B as a scaled index for C in [1,3], which folds the
     // shift into the address as well as the subtract. When B is not a foldable
-    // shift, NegScale stays 1 and this is the plain A-B fold, which only breaks
-    // even on instruction count - a-b is mov+sub either way. Absorbing the
-    // shift saves one:
+    // shift, NegScale stays empty and this is the plain A-B fold, which only
+    // breaks even on instruction count - a-b is mov+sub either way. Absorbing
+    // the shift saves one:
     //
     //   a - (b << 2)    movq %rdi, %rax     ->   negq %rsi
     //                   shlq $2, %rsi            leaq (%rdi,%rsi,4), %rax
     //                   subq %rsi, %rax
     //
     // That pays for the negate, so drop the cost by one.
-    unsigned NegScale = 1;
+    std::optional<unsigned> NegScale;
     if (RHS.getOpcode() == ISD::SHL && RHS.hasOneUse()) {
       if (auto *ShAmt = dyn_cast<ConstantSDNode>(RHS.getOperand(1))) {
         uint64_t ShVal = ShAmt->getZExtValue();
@@ -2852,14 +2853,14 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // not applied to a folded shift, where it is wrong often enough to matter.
     // The multiple-use part still is; see @y_outlives_lea.
     if (!RHS.getNode()->hasOneUse() ||
-        (NegScale == 1 && RHS.getNode()->getOpcode() == ISD::CopyFromReg) ||
+        (!NegScale && RHS.getNode()->getOpcode() == ISD::CopyFromReg) ||
         RHS.getNode()->getOpcode() == ISD::TRUNCATE ||
         RHS.getNode()->getOpcode() == ISD::ANY_EXTEND ||
         (RHS.getNode()->getOpcode() == ISD::ZERO_EXTEND &&
          RHS.getOperand(0).getValueType() == MVT::i32))
       ++Cost;
     // A - (A << C), where the base is itself the value being negated.
-    bool BaseIsNegatedValue = NegScale != 1 &&
+    bool BaseIsNegatedValue = NegScale &&
                               AM.BaseType == X86ISelAddressMode::RegBase &&
                               AM.Base_Reg == RHS;
     // If the base is a register with multiple uses, this transformation may
@@ -2889,7 +2890,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     // was an unprofitable LEA.
     AM.IndexReg = RHS;
     AM.NegateIndex = true;
-    AM.Scale = NegScale;
+    AM.Scale = NegScale.value_or(1);
     return false;
   }
 
