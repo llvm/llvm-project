@@ -376,12 +376,11 @@ const Expr *getDefaultArg(const ParmVarDecl *PVD) {
 HoverInfo::Param toHoverInfoParam(const ParmVarDecl *PVD,
                                   const PrintingPolicy &PP) {
   HoverInfo::Param Out;
-  if (PVD->getASTContext().getLangOpts().HLSL) {
+  if (PVD->getASTContext().getLangOpts().HLSL)
     Out.Type =
         HoverInfo::PrintedType(PVD->getHLSLParamTypeAsWritten(PP).c_str());
-  } else {
+  else
     Out.Type = printType(PVD->getType(), PVD->getASTContext(), PP);
-  }
 
   if (!PVD->getName().empty())
     Out.Name = PVD->getNameAsString();
