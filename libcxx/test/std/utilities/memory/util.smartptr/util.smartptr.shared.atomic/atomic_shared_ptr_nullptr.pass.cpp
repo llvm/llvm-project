@@ -13,7 +13,7 @@
 
 #include <atomic>
 #include <cassert>
-#include <cstddef> // Armv7, Armv8 (-fno-exceptions) require for std::nullptr_t
+#include <cstddef>
 #include <memory>
 #include <type_traits>
 
