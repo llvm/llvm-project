@@ -110,7 +110,7 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
 
   // Check operands.
   ValueRange iterArgs = loop.getRegionIterArgs();
-  auto isLoopVariantValue = [&](Value value) {
+  auto isLoopDependentValue = [&](Value value) {
     // If the loop IV is the operand, this op isn't loop invariant.
     if (iv == value)
       return true;
@@ -119,27 +119,23 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
     if (llvm::is_contained(iterArgs, value))
       return true;
 
-    // If the value was defined in the loop (outside of the if/else region),
-    // and that operation itself wasn't meant to be hoisted, then mark this
-    // operation loop dependent.
+    // A value defined by a non-hoistable op remains inside the loop
+    // and therefore makes this operation loop-dependent.
     Operation *operandSrc = value.getDefiningOp();
     return operandSrc && opsWithUsers.count(operandSrc) &&
            opsToHoist.count(operandSrc) == 0;
   };
 
-  if (llvm::any_of(op.getOperands(), isLoopVariantValue))
+  if (llvm::any_of(op.getOperands(), isLoopDependentValue))
     return false;
 
-  // Check the values the op's regions read from around them. The regions travel
-  // with the op, so a value they capture from inside the loop pins the op in
-  // place just as an operand does. Only the region-carrying ops handled above
-  // have their bodies walked, and even there the walk inspects the nested ops
-  // rather than what they capture.
-  bool capturesLoopVariantValue = false;
+  // A region captured by the operation moves with it when hoisted. Therefore,
+  // capturing a loop-dependent value prevents the operation from being hoisted.
+  bool capturesLoopDependentValue = false;
   visitUsedValuesDefinedAbove(op.getRegions(), [&](OpOperand *operand) {
-    capturesLoopVariantValue |= isLoopVariantValue(operand->get());
+    capturesLoopDependentValue |= isLoopDependentValue(operand->get());
   });
-  if (capturesLoopVariantValue)
+  if (capturesLoopDependentValue)
     return false;
 
   // If no operand was loop variant, mark this op for motion.

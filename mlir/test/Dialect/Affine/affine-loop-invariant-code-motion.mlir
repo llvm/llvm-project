@@ -989,9 +989,9 @@ func.func @unknown_trip_count_store_not_hoisted(%x: i32, %n: index) -> i32 {
 
 // -----
 
-// An op whose regions read a value defined in the loop must stay in the loop.
-// The regions move with the op, so hoisting the `scf.for` below would leave its
-// body referring to `%v`, which stays behind.
+// An operation cannot be hoisted if one of its regions captures a
+// loop-dependent value. Hoisting the operation would move the region outside
+// the scope of the captured value.
 
 // CHECK-LABEL: func @region_capturing_loop_variant_value_not_hoisted
 func.func @region_capturing_loop_variant_value_not_hoisted(%m: memref<4xi64>, %init: i64, %outside: i64) -> i64 {
@@ -1016,9 +1016,6 @@ func.func @region_capturing_loop_variant_value_not_hoisted(%m: memref<4xi64>, %i
 }
 
 // -----
-
-// The same shape, but the region reads only values defined outside the loop, so
-// the op is still hoisted.
 
 // CHECK-LABEL: func @region_capturing_invariant_value_is_hoisted
 func.func @region_capturing_invariant_value_is_hoisted(%init: i64, %outside: i64) -> i64 {
