@@ -13,7 +13,7 @@ once the API churn dies down.**
 
 Welcome to Chapter 3 of the "Building an ORC-based JIT in LLVM" tutorial. This
 chapter discusses lazy JITing and shows you how to enable it by adding an ORC
-CompileOnDemand layer the JIT from [Chapter 2](BuildingAJIT2.html).
+CompileOnDemand layer the JIT from [Chapter 2](BuildingAJIT2.md).
 
 ## Lazy Compilation
 
@@ -86,9 +86,10 @@ public:
 ```
 
 First we need to include the CompileOnDemandLayer.h header, then add two new
-members: a std::unique_ptr\<JITCompileCallbackManager> and a CompileOnDemandLayer,
-to our class. The CompileCallbackManager member is used by the CompileOnDemandLayer
-to create the compile callback needed for each function.
+members: a `std::unique_ptr<JITCompileCallbackManager>` and a
+`CompileOnDemandLayer`, to our class. The CompileCallbackManager member is used
+by the CompileOnDemandLayer to create the compile callback needed for each
+function.
 
 ```c++
 KaleidoscopeJIT()
@@ -181,5 +182,4 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Extreme Laziness -- Using Compile Callbacks to JIT directly from ASTs](BuildingAJIT4.html)
-
+[Next: Extreme Laziness -- Using Compile Callbacks to JIT directly from ASTs](BuildingAJIT4.md)

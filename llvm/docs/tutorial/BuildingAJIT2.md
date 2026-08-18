@@ -13,7 +13,7 @@ changes. Only Chapters 1 and 2 are up-to-date.**
 updated**
 
 Welcome to Chapter 2 of the "Building an ORC-based JIT in LLVM" tutorial. In
-[Chapter 1](BuildingAJIT1.html) of this series we examined a basic JIT
+[Chapter 1](BuildingAJIT1.md) of this series we examined a basic JIT
 class, KaleidoscopeJIT, that could take LLVM IR modules as input and produce
 executable code in memory. KaleidoscopeJIT was able to do this with relatively
 little code by composing two off-the-shelf *ORC layers*: IRCompileLayer and
@@ -24,7 +24,7 @@ IRTransformLayer, to add IR optimization support to KaleidoscopeJIT.
 
 ## Optimizing Modules using the IRTransformLayer
 
-In [Chapter 4](LangImpl04.html) of the "Implementing a language with LLVM"
+In [Chapter 4](LangImpl04.md) of the "Implementing a language with LLVM"
 tutorial series the llvm *FunctionPassManager* is introduced as a means for
 optimizing LLVM IR. Interested readers may read that chapter for details, but
 in short: to optimize a Module we create an llvm::FunctionPassManager
@@ -121,7 +121,7 @@ of definitions in the module that JIT'd code is actively trying to call/access.
 For now we will ignore this argument and use a standard optimization
 pipeline. To do this we set up a FunctionPassManager, add some passes to it, run
 it over every function in the module, and then return the mutated module. The
-specific optimizations are the same ones used in [Chapter 4](LangImpl04.html)
+specific optimizations are the same ones used in [Chapter 4](LangImpl04.md)
 of the "Implementing a language with LLVM" tutorial series. Readers may visit
 that chapter for a more in-depth discussion of these, and of IR optimization in
 general.
@@ -248,7 +248,7 @@ one-size-fits all solution to them, but by providing composable layers we leave
 the decisions to the person implementing the JIT, and make it easy for them to
 experiment with different configurations.
 
-[Next: Adding Per-function Lazy Compilation](BuildingAJIT3.html)
+[Next: Adding Per-function Lazy Compilation](BuildingAJIT3.md)
 
 ## Full Code Listing
 

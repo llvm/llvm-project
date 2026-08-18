@@ -12,7 +12,7 @@ Welcome to Chapter 1 of the "Building an ORC-based JIT in LLVM" tutorial. This
 tutorial runs through the implementation of a JIT compiler using LLVM's
 On-Request-Compilation (ORC) APIs. It begins with a simplified version of the
 KaleidoscopeJIT class used in the
-[Implementing a language with LLVM](LangImpl01.html) tutorials and then
+[Implementing a language with LLVM](LangImpl01.md) tutorials and then
 introduces new features like concurrent compilation, optimization, lazy
 compilation and remote execution.
 
@@ -25,19 +25,19 @@ The structure of the tutorial is:
 - Chapter #1: Investigate the simple KaleidoscopeJIT class. This will
   introduce some of the basic concepts of the ORC JIT APIs, including the
   idea of an ORC *Layer*.
-- [Chapter #2](BuildingAJIT2.html): Extend the basic KaleidoscopeJIT by adding
+- [Chapter #2](BuildingAJIT2.md): Extend the basic KaleidoscopeJIT by adding
   a new layer that will optimize IR and generated code.
-- [Chapter #3](BuildingAJIT3.html): Further extend the JIT by adding a
+- [Chapter #3](BuildingAJIT3.md): Further extend the JIT by adding a
   Compile-On-Demand layer to lazily compile IR.
-- [Chapter #4](BuildingAJIT4.html): Improve the laziness of our JIT by
+- [Chapter #4](BuildingAJIT4.md): Improve the laziness of our JIT by
   replacing the Compile-On-Demand layer with a custom layer that uses the ORC
   Compile Callbacks API directly to defer IR-generation until functions are
   called.
-- [Chapter #5](BuildingAJIT5.html): Add process isolation by JITing code into
+- [Chapter #5](https://llvm.org/docs/tutorial/BuildingAJIT5.html): Add process isolation by JITing code into
   a remote process with reduced privileges using the JIT Remote APIs.
 
 To provide input for our JIT we will use a lightly modified version of the
-Kaleidoscope REPL from [Chapter 7](LangImpl07.html) of the "Implementing a
+Kaleidoscope REPL from [Chapter 7](LangImpl07.md) of the "Implementing a
 language in LLVM tutorial".
 
 Finally, a word on API generations: ORC is the 3rd generation of LLVM JIT API.
@@ -79,8 +79,8 @@ representations (e.g. ASTs) to be added to the JIT.
 
 In the previous section we described our API, now we examine a simple
 implementation of it: The KaleidoscopeJIT class [^footnote-1] that was used in the
-[Implementing a language with LLVM](LangImpl01.html) tutorials. We will use
-the REPL code from [Chapter 7](LangImpl07.html) of that tutorial to supply the
+[Implementing a language with LLVM](LangImpl01.md) tutorials. We will use
+the REPL code from [Chapter 7](LangImpl07.md) of that tutorial to supply the
 input for our JIT: Each time the user enters an expression the REPL will add a
 new IR module containing the code for that expression to the JIT. If the
 expression is a top-level expression like '1+1' or 'sin(x)', the REPL will also
@@ -251,7 +251,7 @@ executable within the context of your JIT process. In the next chapter we'll
 look at how to extend this JIT to produce better quality code, and in the
 process take a deeper look at the ORC layer concept.
 
-[Next: Extending the KaleidoscopeJIT](BuildingAJIT2.html)
+[Next: Extending the KaleidoscopeJIT](BuildingAJIT2.md)
 
 ## Full Code Listing
 

@@ -3,7 +3,7 @@
 ## Tutorial Conclusion
 
 Welcome to the final chapter of the "[Implementing a language with
-LLVM](index.html)" tutorial. In the course of this tutorial, we have
+LLVM](index.md)" tutorial. In the course of this tutorial, we have
 grown our little Kaleidoscope language from being a useless toy, to
 being a semi-interesting (but probably still useless) toy. :)
 
@@ -38,14 +38,14 @@ For example, try adding:
   Different languages have different ways of handling this. The easiest
   way is to require the user to specify types for every variable
   definition, and record the type of the variable in the symbol table
-  along with its Value\*.
+  along with its `Value*`.
 - **arrays, structs, vectors, etc** - Once you add types, you can start
   extending the type system in all sorts of interesting ways. Simple
   arrays are very easy and are quite useful for many different
   applications. Adding them is mostly an exercise in learning how the
-  LLVM [getelementptr](../../LangRef.html#getelementptr-instruction) instruction
+  LLVM [getelementptr](../../LangRef.md#getelementptr-instruction) instruction
   works: it is so nifty/unconventional, it [has its own
-  FAQ](../../GetElementPtr.html)!
+  FAQ](../../GetElementPtr.rst)!
 - **standard runtime** - Our current language allows the user to access
   arbitrary external functions, and we use it for things like "printd"
   and "putchard". As you extend the language to add higher-level
@@ -58,10 +58,10 @@ For example, try adding:
   memory, either with calls to the standard libc malloc/free interface
   or with a garbage collector. If you would like to use garbage
   collection, note that LLVM fully supports [Accurate Garbage
-  Collection](../../GarbageCollection.html) including algorithms that
+  Collection](../../GarbageCollection.md) including algorithms that
   move objects and need to scan/update the stack.
 - **exception handling support** - LLVM supports generation of [zero
-  cost exceptions](../../ExceptionHandling.html) which interoperate with
+  cost exceptions](../../ExceptionHandling.md) which interoperate with
   code compiled in other languages. You could also generate code by
   implicitly making every function return an error value and checking
   it. You could also make explicit use of setjmp/longjmp. There are
@@ -235,4 +235,3 @@ if you want. It requires your front-end to convert the code into
 [Continuation Passing
 Style](http://en.wikipedia.org/wiki/Continuation-passing_style) and
 the use of tail calls (which LLVM also supports).
-

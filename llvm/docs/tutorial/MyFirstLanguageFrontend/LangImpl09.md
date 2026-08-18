@@ -3,7 +3,7 @@
 ## Chapter 9 Introduction
 
 Welcome to Chapter 9 of the "[Implementing a language with
-LLVM](index.html)" tutorial. In chapters 1 through 8, we've built a
+LLVM](index.md)" tutorial. In chapters 1 through 8, we've built a
 decent little programming language with functions and variables.
 What happens if something goes wrong though, how do you debug your
 program?
@@ -449,5 +449,5 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Conclusion and other useful LLVM tidbits](LangImpl10.html)
+[Next: Conclusion and other useful LLVM tidbits](LangImpl10.md)
 

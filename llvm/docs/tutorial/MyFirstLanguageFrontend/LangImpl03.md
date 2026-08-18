@@ -3,8 +3,8 @@
 ## Chapter 3 Introduction
 
 Welcome to Chapter 3 of the "[Implementing a language with
-LLVM](index.html)" tutorial. This chapter shows you how to transform
-the [Abstract Syntax Tree](LangImpl02.html), built in Chapter 2, into
+LLVM](index.md)" tutorial. This chapter shows you how to transform
+the [Abstract Syntax Tree](LangImpl02.md), built in Chapter 2, into
 LLVM IR. This will teach you a little bit about how LLVM does things, as
 well as demonstrate how easy it is to use. It's much more work to build
 a lexer and parser than it is to generate LLVM IR code. :)
@@ -90,8 +90,8 @@ and has methods to create new instructions.
 `TheModule` is an LLVM construct that contains functions and global
 variables. In many ways, it is the top-level structure that the LLVM IR
 uses to contain code. It will own the memory for all of the IR that we
-generate, which is why the codegen() method returns a raw Value\*,
-rather than a unique_ptr\<Value>.
+generate, which is why the codegen() method returns a raw `Value*`,
+rather than a `unique_ptr<Value>`.
 
 The `NamedValues` map keeps track of which values are defined in the
 current scope and what their LLVM representation is. (In other words, it
@@ -142,8 +142,8 @@ values that can be in the `NamedValues` map are function arguments.
 This code simply checks to see that the specified name is in the map (if
 not, an unknown variable is being referenced) and returns the value for
 it. In future chapters, we'll add support for [loop induction
-variables](LangImpl05.html#for-loop-expression) in the symbol table, and for [local
-variables](LangImpl07.html#user-defined-local-variables).
+variables](LangImpl05.md#for-loop-expression) in the symbol table, and for [local
+variables](LangImpl07.md#user-defined-local-variables).
 
 ```c++
 Value *BinaryExprAST::codegen() {
@@ -188,22 +188,22 @@ automatically provide each one with an increasing, unique numeric
 suffix. Local value names for instructions are purely optional, but it
 makes it much easier to read the IR dumps.
 
-[LLVM instructions](../../LangRef.html#instruction-reference) are constrained by strict
+[LLVM instructions](../../LangRef.md#instruction-reference) are constrained by strict
 rules: for example, the Left and Right operands of an [add
-instruction](../../LangRef.html#add-instruction) must have the same type, and the
+instruction](../../LangRef.md#add-instruction) must have the same type, and the
 result type of the add must match the operand types. Because all values
 in Kaleidoscope are doubles, this makes for very simple code for add,
 sub and mul.
 
 On the other hand, LLVM specifies that the [fcmp
-instruction](../../LangRef.html#fcmp-instruction) always returns an 'i1' value (a
+instruction](../../LangRef.md#fcmp-instruction) always returns an 'i1' value (a
 one bit integer). The problem with this is that Kaleidoscope wants the
 value to be a 0.0 or 1.0 value. In order to get these semantics, we
 combine the fcmp instruction with a [uitofp
-instruction](../../LangRef.html#uitofp-to-instruction). This instruction converts its
+instruction](../../LangRef.md#uitofp-to-instruction). This instruction converts its
 input integer into a floating point value by treating the input as an
 unsigned value. In contrast, if we used the [sitofp
-instruction](../../LangRef.html#sitofp-to-instruction), the Kaleidoscope '\<' operator
+instruction](../../LangRef.md#sitofp-to-instruction), the Kaleidoscope `<` operator
 would return 0.0 and -1.0, depending on the input value.
 
 ```c++
@@ -236,14 +236,14 @@ can use the LLVM symbol table to resolve function names for us.
 
 Once we have the function to call, we recursively codegen each argument
 that is to be passed in, and create an LLVM [call
-instruction](../../LangRef.html#call-instruction). Note that LLVM uses the native C
+instruction](../../LangRef.md#call-instruction). Note that LLVM uses the native C
 calling conventions by default, allowing these calls to also call into
 standard library functions like "sin" and "cos", with no additional
 effort.
 
 This wraps up our handling of the four basic expressions that we have so
 far in Kaleidoscope. Feel free to go in and add some more. For example,
-by browsing the [LLVM language reference](../../LangRef.html) you'll find
+by browsing the [LLVM language reference](../../LangRef.md) you'll find
 several other interesting instructions that are really easy to plug into
 our basic framework.
 
@@ -269,7 +269,7 @@ Function *PrototypeAST::codegen() {
 ```
 
 This code packs a lot of power into a few lines. Note first that this
-function returns a "Function\*" instead of a "Value\*". Because a
+function returns a `Function*` instead of a `Value*`. Because a
 "prototype" really talks about the external interface for a function
 (not the value computed by an expression), it makes sense for it to
 return the LLVM Function it corresponds to when codegen'd.
@@ -286,7 +286,7 @@ are, so you don't "new" a type, you "get" it.
 The final line above actually creates the IR Function corresponding to
 the Prototype. This indicates the type, linkage and name to use, as
 well as which module to insert into. "[external
-linkage](../../LangRef.html#linkage)" means that the function may be
+linkage](../../LangRef.md#linkage-types)" means that the function may be
 defined outside the current module and/or that it is callable by
 functions outside the module. The Name passed in is the name the user
 specified: since "`TheModule`" is specified, this name is registered
@@ -352,7 +352,7 @@ end of the new basic block. Basic blocks in LLVM are an important part
 of functions that define the [Control Flow
 Graph](http://en.wikipedia.org/wiki/Control_flow_graph). Since we
 don't have any control flow, our functions will only contain one block
-at this point. We'll fix this in [Chapter 5](LangImpl05.html) :).
+at this point. We'll fix this in [Chapter 5](LangImpl05.md) :).
 
 Next we add the function arguments to the NamedValues map (after first clearing
 it out) so that they're accessible to `VariableExprAST` nodes.
@@ -373,7 +373,7 @@ Once the insertion point has been set up and the NamedValues map populated,
 we call the `codegen()` method for the root expression of the function. If no
 error happens, this emits code to compute the expression into the entry block
 and returns the value that was computed. Assuming no error, we then create an
-LLVM [ret instruction](../../LangRef.html#ret-instruction), which completes the function.
+LLVM [ret instruction](../../LangRef.md#ret-instruction), which completes the function.
 Once the function is built, we call `verifyFunction`, which is
 provided by LLVM. This function does a variety of consistency checks on
 the generated code, to determine if our compiler is doing everything
@@ -425,10 +425,10 @@ entry:
 
 Note how the parser turns the top-level expression into anonymous
 functions for us. This will be handy when we add [JIT
-support](LangImpl04.html#adding-a-jit-compiler) in the next chapter. Also note that the
+support](LangImpl04.md#adding-a-jit-compiler) in the next chapter. Also note that the
 code is very literally transcribed, no optimizations are being performed
 except simple constant folding done by IRBuilder. We will [add
-optimizations](LangImpl04.html#trivial-constant-folding) explicitly in the next
+optimizations](LangImpl04.md#trivial-constant-folding) explicitly in the next
 chapter.
 
 ```
@@ -481,10 +481,10 @@ entry:
 
 This shows an extern for the libm "cos" function, and a call to it.
 
-```{eval-rst}
-.. TODO:: Abandon Pygments' horrible `llvm` lexer. It just totally gives up
-   on highlighting this due to the first line.
-```
+:::{todo}
+Abandon Pygments' horrible `llvm` lexer. It just totally gives up
+on highlighting this due to the first line.
+:::
 
 ```
 ready> ^D
@@ -531,7 +531,7 @@ functions referencing each other.
 
 This wraps up the third chapter of the Kaleidoscope tutorial. Up next,
 we'll describe how to [add JIT codegen and optimizer
-support](LangImpl04.html) to this so we can actually start running
+support](LangImpl04.md) to this so we can actually start running
 code!
 
 ## Full Code Listing
@@ -555,5 +555,4 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Adding JIT and Optimizer Support](LangImpl04.html)
-
+[Next: Adding JIT and Optimizer Support](LangImpl04.md)

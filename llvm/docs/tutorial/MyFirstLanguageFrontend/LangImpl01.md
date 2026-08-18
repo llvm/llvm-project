@@ -44,7 +44,7 @@ atan2(sin(.4), cos(42))
 
 A more interesting example is included in Chapter 6 where we write a
 little Kaleidoscope application that [displays a Mandelbrot
-Set](LangImpl06.html#kicking-the-tires) at various levels of magnification.
+Set](LangImpl06.md#kicking-the-tires) at various levels of magnification.
 
 Let's dive into the implementation of this language!
 
@@ -177,11 +177,11 @@ file. These are handled with this code:
 ```
 
 With this, we have the complete lexer for the basic Kaleidoscope
-language (the [full code listing](LangImpl02.html#full-code-listing) for the Lexer
-is available in the [next chapter](LangImpl02.html) of the tutorial).
+language (the [full code listing](LangImpl02.md#full-code-listing) for the Lexer
+is available in the [next chapter](LangImpl02.md) of the tutorial).
 Next we'll [build a simple parser that uses this to build an Abstract
-Syntax Tree](LangImpl02.html). When we have that, we'll include a
+Syntax Tree](LangImpl02.md). When we have that, we'll include a
 driver so that you can use the lexer and parser together.
 
-[Next: Implementing a Parser and AST](LangImpl02.html)
+[Next: Implementing a Parser and AST](LangImpl02.md)
 

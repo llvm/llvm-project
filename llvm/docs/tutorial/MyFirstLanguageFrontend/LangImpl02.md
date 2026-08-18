@@ -3,8 +3,8 @@
 ## Chapter 2 Introduction
 
 Welcome to Chapter 2 of the "[Implementing a language with
-LLVM](index.html)" tutorial. This chapter shows you how to use the
-lexer, built in [Chapter 1](LangImpl01.html), to build a full
+LLVM](index.md)" tutorial. This chapter shows you how to use the
+lexer, built in [Chapter 1](LangImpl01.md), to build a full
 [parser](http://en.wikipedia.org/wiki/Parsing) for our Kaleidoscope
 language. Once we have a parser, we'll define and build an [Abstract
 Syntax Tree](http://en.wikipedia.org/wiki/Abstract_syntax_tree) (AST).
@@ -304,7 +304,7 @@ Now that we have all of our simple expression-parsing logic in place, we
 can define a helper function to wrap it together into one entry point.
 We call this class of expressions "primary" expressions, for reasons
 that will become more clear [later in the
-tutorial](LangImpl06.html#user-defined-unary-operators). In order to parse an arbitrary
+tutorial](LangImpl06.md#user-defined-unary-operators). In order to parse an arbitrary
 primary expression, we need to determine what sort of expression it is:
 
 ```c++
@@ -696,7 +696,7 @@ $
 
 There is a lot of room for extension here. You can define new AST nodes,
 extend the language in many ways, etc. In the [next
-installment](LangImpl03.html), we will describe how to generate LLVM
+installment](LangImpl03.md), we will describe how to generate LLVM
 Intermediate Representation (IR) from the AST.
 
 ## Full Code Listing
@@ -716,5 +716,5 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Implementing Code Generation to LLVM IR](LangImpl03.html)
+[Next: Implementing Code Generation to LLVM IR](LangImpl03.md)
 

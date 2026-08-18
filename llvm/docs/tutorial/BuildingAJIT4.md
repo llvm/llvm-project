@@ -9,7 +9,7 @@ we welcome any feedback.
 Welcome to Chapter 4 of the "Building an ORC-based JIT in LLVM" tutorial. This
 chapter introduces custom MaterializationUnits and Layers, and the lazy
 reexports API. Together these will be used to replace the CompileOnDemandLayer
-from [Chapter 3](BuildingAJIT3.html) with a custom lazy-JITing scheme that JITs
+from [Chapter 3](BuildingAJIT3.md) with a custom lazy-JITing scheme that JITs
 directly from Kaleidoscope ASTs.
 
 **To be done:**
@@ -39,5 +39,5 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Remote-JITing -- Process-isolation and laziness-at-a-distance](BuildingAJIT5.html)
+[Next: Remote-JITing -- Process-isolation and laziness-at-a-distance](https://llvm.org/docs/tutorial/BuildingAJIT5.html)
 

@@ -3,7 +3,7 @@
 ## Chapter 6 Introduction
 
 Welcome to Chapter 6 of the "[Implementing a language with
-LLVM](index.html)" tutorial. At this point in our tutorial, we now
+LLVM](index.md)" tutorial. At this point in our tutorial, we now
 have a fully functional language that is fairly minimal, but also
 useful. There is still one big problem with it, however. Our language
 doesn't have many useful operators (like division, logical negation, or
@@ -34,7 +34,7 @@ The point of going into user-defined operators in a tutorial like this
 is to show the power and flexibility of using a hand-written parser.
 Thus far, the parser we have been implementing uses recursive descent
 for most parts of the grammar and operator precedence parsing for the
-expressions. See [Chapter 2](LangImpl02.html) for details. By
+expressions. See [Chapter 2](LangImpl02.md) for details. By
 using operator precedence parsing, it is very easy to allow
 the programmer to introduce new operators into the grammar: the grammar
 is dynamically extensible as the JIT runs.
@@ -105,7 +105,7 @@ static int gettok() {
 ```
 
 This just adds lexer support for the unary and binary keywords, like we
-did in [previous chapters](LangImpl05.html#lexer-extensions-for-if-then-else). One nice thing
+did in [previous chapters](LangImpl05.md#lexer-extensions-for-if-then-else). One nice thing
 about our current AST, is that we represent binary operators with full
 generalisation by using their ASCII code as the opcode. For our extended
 operators, we'll use this same representation, so we don't need any new
@@ -724,7 +724,7 @@ side-effects, but it can't actually define and mutate a variable itself.
 
 Strikingly, variable mutation is an important feature of some languages,
 and it is not at all obvious how to [add support for mutable
-variables](LangImpl07.html) without having to add an "SSA construction"
+variables](LangImpl07.md) without having to add an "SSA construction"
 phase to your front-end. In the next chapter, we will describe how you
 can add variable mutation without building SSA in your front-end.
 
@@ -754,5 +754,5 @@ Here is the code:
 ```
 
 [Next: Extending the language: mutable variables / SSA
-construction](LangImpl07.html)
+construction](LangImpl07.md)
 

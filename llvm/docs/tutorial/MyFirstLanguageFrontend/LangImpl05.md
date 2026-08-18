@@ -3,7 +3,7 @@
 ## Chapter 5 Introduction
 
 Welcome to Chapter 5 of the "[Implementing a language with
-LLVM](index.html)" tutorial. Parts 1-4 described the implementation of
+LLVM](index.md)" tutorial. Parts 1-4 described the implementation of
 the simple Kaleidoscope language and included support for generating
 LLVM IR, followed by optimizations and a JIT compiler. Unfortunately, as
 presented, Kaleidoscope is mostly useless: it has no control flow other
@@ -204,7 +204,7 @@ ifcont:     ; preds = %else, %then
 To visualize the control flow graph, you can use a nifty feature of the
 LLVM '[opt](https://llvm.org/cmds/opt.html)' tool. If you put this LLVM
 IR into "t.ll" and run "`llvm-as < t.ll | opt -passes=view-cfg`", [a
-window will pop up](../../ProgrammersManual.html#viewing-graphs-while-debugging-code) and you'll
+window will pop up](../../ProgrammersManual.md#viewing-graphs-while-debugging-code) and you'll
 see this graph:
 
 :::{figure} LangImpl05-cfg.png
@@ -259,7 +259,7 @@ Phi nodes:
 2. Values that are implicit in the structure of your AST, such as the
    Phi node in this case.
 
-In [Chapter 7](LangImpl07.html) of this tutorial ("mutable variables"),
+In [Chapter 7](LangImpl07.md) of this tutorial ("mutable variables"),
 we'll talk about #1 in depth. For now, just believe me that you don't
 need SSA construction to handle this case. For #2, you have the choice
 of using the techniques that we will describe for #1, or you can insert
@@ -773,7 +773,7 @@ of the tutorial. In this chapter we added two control flow constructs,
 and used them to motivate a couple of aspects of the LLVM IR that are
 important for front-end implementors to know. In the next chapter of our
 saga, we will get a bit crazier and add [user-defined
-operators](LangImpl06.html) to our poor innocent language.
+operators](LangImpl06.md) to our poor innocent language.
 
 ## Full Code Listing
 
@@ -793,5 +793,5 @@ Here is the code:
 :language: c++
 ```
 
-[Next: Extending the language: user-defined operators](LangImpl06.html)
+[Next: Extending the language: user-defined operators](LangImpl06.md)
 
