@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class ImplicitNullChecksPass : public PassInfoMixin<ImplicitNullChecksPass> {
+class ImplicitNullChecksPass
+    : public OptionalPassInfoMixin<ImplicitNullChecksPass> {
 public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
