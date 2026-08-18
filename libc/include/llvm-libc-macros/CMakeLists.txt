@@ -353,6 +353,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_sysmacros_macros
+  HDR
+    sys-sysmacros-macros.h
+)
+
+add_macro_header(
   termios_macros
   HDR
     termios-macros.h

@@ -405,6 +405,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/sysmacros.h entrypoints
+    libc.src.sys.sysmacros.makedev
+    libc.src.sys.sysmacros.major
+    libc.src.sys.sysmacros.minor
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
