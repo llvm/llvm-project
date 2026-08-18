@@ -8154,10 +8154,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     //   explicitly.
     // Core issue: 'static' is not implied if the variable is declared
     //   'extern'.
-    if (NewVD->hasLocalStorage() &&
-        (SCSpec != DeclSpec::SCS_unspecified ||
-         TSCS != DeclSpec::TSCS_thread_local ||
-         !DC->isInsideFunctionOrMethod()))
+    if (NewVD->hasLocalStorage() && (SCSpec != DeclSpec::SCS_unspecified ||
+                                     TSCS != DeclSpec::TSCS_thread_local ||
+                                     !DC->isInsideFunctionOrMethod()))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
