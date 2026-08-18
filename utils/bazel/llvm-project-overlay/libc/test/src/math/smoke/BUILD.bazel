@@ -98,11 +98,17 @@ math_test(
 math_test(
     name = "ceill",
     hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
     name = "ceilf128",
     hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
