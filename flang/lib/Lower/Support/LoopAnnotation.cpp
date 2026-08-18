@@ -11,9 +11,9 @@
 #include "flang/Parser/parse-tree.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
-  // For unroll directives without a value, force full unrolling.
-  // For unroll directives with a value, if the value is greater than 1,
-  // force unrolling with the given factor. Otherwise, disable unrolling.
+// For unroll directives without a value, force full unrolling.
+// For unroll directives with a value, if the value is greater than 1,
+// force unrolling with the given factor. Otherwise, disable unrolling.
 static mlir::LLVM::LoopUnrollAttr
 genLoopUnrollAttr(mlir::MLIRContext *context,
                   std::optional<std::uint64_t> directiveArg) {

@@ -2532,6 +2532,7 @@ static mlir::acc::LoopOp createLoopOp(
 
   // Apply `!dir$` loop directives associated with the DO statement as a
   // discardable LLVM loop annotation attribute on the acc.loop.
+  // TODO: consider limiting to directives that are reasonable to apply
   if (Fortran::lower::pft::Evaluation *doStmtEval =
           getAccLoopDoStmtEval(eval)) {
     if (mlir::LLVM::LoopAnnotationAttr la =
@@ -5473,7 +5474,7 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
     if (mlir::LLVM::LoopAnnotationAttr la =
             Fortran::lower::genLoopAnnotationAttr(builder.getContext(),
                                                   doStmtEval->dirs))
-      loopOp->setDiscardableAttr("loopAnnotation", la);
+      loopOp->setDiscardableAttr(mlir::LLVM::LoopAnnotationAttr::name, la);
   }
 
   return loopOp;
