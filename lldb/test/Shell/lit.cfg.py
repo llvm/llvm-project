@@ -68,14 +68,31 @@ toolchain.use_support_substitutions(config)
 if re.match(r"^arm(hf.*-linux)|(.*-linux-gnuabihf)", config.target_triple):
     config.available_features.add("armhf-linux")
 
-if re.match(r".*-(windows|mingw32)", config.target_triple):
+# These describe what test inferiors are built as, which is what a test
+# gating on them cares about. Everywhere except a cross-configured build
+# LLDB_TEST_TRIPLE is the build triple, so this reads the same as it always
+# did. Two other triples matter to a handful of tests and are kept distinct:
+# the one LLDB itself was built for, and the host's.
+inferior_triple = getattr(config, "test_triple", None) or config.target_triple
+
+if re.match(r".*-(windows|mingw32)", inferior_triple):
     config.available_features.add("target-windows")
 
-if re.match(r".*-(windows-msvc)$", config.target_triple):
+if re.match(r".*-(windows-msvc)$", inferior_triple):
     config.available_features.add("windows-msvc")
 
-if re.match(r".*-(windows-gnu|mingw32)$", config.target_triple):
+if re.match(r".*-(windows-gnu|mingw32)$", inferior_triple):
     config.available_features.add("windows-gnu")
+
+# What LLDB assumes for a PE that says nothing about its own ABI, which is
+# the thing ObjectFile/PECOFF's default-triple tests exist to pin.
+if re.match(r".*-(windows-gnu|mingw32)$", config.target_triple):
+    config.available_features.add("lldb-default-triple-windows-gnu")
+
+# %clang_host builds for the host, so a test choosing linker syntax for one
+# of its own binaries needs this rather than either of the above.
+if re.match(r".*-(windows-msvc)$", config.host_triple):
+    config.available_features.add("host-windows-msvc")
 
 if config.targets_to_build:
     for arch in config.targets_to_build.split(";"):
