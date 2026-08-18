@@ -120,10 +120,16 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
 // Some opcodes use Src1 for DPP instead of Src0, because the sequencer
 // transforms them and reverse the order of their operands at runtime.
 //
+// Documentation is incomplete on which instructions are effected, so
+// much is derived from experimentation.
+//
 // Listed as target-independent pseudos; the per-subtarget MC opcodes
 // (V_SUBREV_NC_U32_e32_gfx11 and friends) are all reached through these.
-static bool isSrc1DPPRevOpcode(unsigned Opc) {
+static bool isSrc1DPPRevOpcode(unsigned Opc, const GCNSubtarget *ST) {
   switch (Opc) {
+  // v_subrev_u16 (gfx9)
+  case AMDGPU::V_SUBREV_U16_e32:
+  case AMDGPU::V_SUBREV_U16_e64:
   // v_subrev_u32 (gfx9) / v_subrev_nc_u32 (gfx10+)
   case AMDGPU::V_SUBREV_U32_e32:
   case AMDGPU::V_SUBREV_U32_e64:
@@ -133,13 +139,24 @@ static bool isSrc1DPPRevOpcode(unsigned Opc) {
   // v_subbrev_u32 (gfx9) / v_subrev_co_ci_u32 (gfx10+)
   case AMDGPU::V_SUBBREV_U32_e32:
   case AMDGPU::V_SUBBREV_U32_e64:
-  // v_subrev_f32
-  case AMDGPU::V_SUBREV_F32_e32:
-  case AMDGPU::V_SUBREV_F32_e64:
-  // v_subrev_f16
-  case AMDGPU::V_SUBREV_F16_e32:
-  case AMDGPU::V_SUBREV_F16_e64:
     return true;
+  // REV shift opcodes worked this way before GFX10.3
+  case AMDGPU::V_ASHRREV_I16_e32:
+  case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_ASHRREV_I32_e32:
+  case AMDGPU::V_ASHRREV_I32_e64:
+  case AMDGPU::V_ASHRREV_I64_e64:
+  case AMDGPU::V_LSHLREV_B16_e32:
+  case AMDGPU::V_LSHLREV_B16_e64:
+  case AMDGPU::V_LSHLREV_B32_e32:
+  case AMDGPU::V_LSHLREV_B32_e64:
+  case AMDGPU::V_LSHLREV_B64_e64:
+  case AMDGPU::V_LSHRREV_B16_e32:
+  case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64:
+  case AMDGPU::V_LSHRREV_B64_e64:
+    return !ST->hasGFX10_3Insts();
   default:
     return false;
   }
@@ -780,7 +797,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     // get commuted into one.
     int FoldedOp =
         (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
-    if (FoldedOp < 0 || isSrc1DPPRevOpcode(FoldedOp)) {
+    if (FoldedOp < 0 || isSrc1DPPRevOpcode(FoldedOp, ST)) {
       LLVM_DEBUG(
           dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
       break;
