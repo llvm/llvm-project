@@ -18,10 +18,10 @@
 
 namespace Fortran::runtime {
 class Descriptor;
-class IoStatementState;
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
+class IoStatementState;
 
 // A NAMELIST group is a named ordered collection of distinct variable names.
 // It is packaged by lowering into an instance of this class.

@@ -828,6 +828,11 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "CPU can fuse FCMP and FCSEL operations",
     [], InlineIgnore>;
 
+def FeatureFuseFMinFMax : SubtargetFeature<
+    "fuse-fmin-fmax", "HasFuseFMinFMax", "true",
+    "CPU can fuse FMIN and FMAX operations",
+    [], InlineIgnore>;
+
 def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
     "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",

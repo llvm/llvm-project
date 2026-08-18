@@ -62,7 +62,7 @@ macro (add_ctx_profile_tests_for_arch arch)
   add_library(${CTX_PROFILE_TEST_RUNTIME} STATIC ${CTX_PROFILE_TEST_RUNTIME_OBJECTS})
   set_target_properties(${CTX_PROFILE_TEST_RUNTIME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "compiler-rt Runtime tests")
   set(CTX_PROFILE_TEST_OBJECTS)
   generate_compiler_rt_tests(CTX_PROFILE_TEST_OBJECTS
     CtxProfileUnitTests "CtxProfile-${arch}-UnitTest" ${arch}
@@ -75,7 +75,7 @@ macro (add_ctx_profile_tests_for_arch arch)
 endmacro()
 
 add_custom_target(CtxProfileUnitTests)
-set_target_properties(CtxProfileUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(CtxProfileUnitTests PROPERTIES FOLDER "compiler-rt Tests")
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST CTX_PROFILE_SUPPORTED_ARCH)
   # CtxProfile unit tests are only run on the host machine.
   foreach(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})

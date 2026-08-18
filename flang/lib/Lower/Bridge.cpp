@@ -288,14 +288,14 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
                          renamesAttr, hasOnlyWithRenamesAttr);
 }
 
-/// Emit fir.module_debug_imports for USE statements in a module.
+/// Emit fir.module_debug_imports for USE statements in a module. The operation
+/// is emitted for every module, even one with no USE statement, because its
+/// location is also what tells AddDebugInfo the line of the MODULE statement.
 static void
 emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
                        mlir::OpBuilder &builder, mlir::Location loc,
                        const Fortran::lower::pft::ModuleLikeUnit &mod) {
   if (!converter.getLoweringOptions().getPreserveUseDebugInfo())
-    return;
-  if (mod.preservedUseStmts.empty())
     return;
 
   const Fortran::semantics::Scope &modScope = mod.getScope();
@@ -614,14 +614,15 @@ public:
     // Generate the `main` entry point if necessary
     if (hasMainProgram)
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        fir::runtime::genMain(*builder, toLocation(),
-                              bridge.getEnvironmentDefaults(),
-                              (getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDA) &&
-                               getFoldingContext().languageFeatures().IsEnabled(
-                                   Fortran::common::LanguageFeature::CUDAInit)),
-                              getFoldingContext().languageFeatures().IsEnabled(
-                                  Fortran::common::LanguageFeature::Coarray));
+        fir::runtime::genMain(
+            *builder, toLocation(), bridge.getEnvironmentDefaults(),
+            (getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDA) &&
+             getFoldingContext().languageFeatures().IsEnabled(
+                 Fortran::common::LanguageFeature::CUDAInit)),
+            getFoldingContext().languageFeatures().IsEnabled(
+                Fortran::common::LanguageFeature::Coarray),
+            bridge.getLoweringOptions().getFPExceptionTraps());
       });
 
     finalizeOpenMPLowering(globalOmpRequiresSymbols);
@@ -820,6 +821,9 @@ public:
               Fortran::lower::StatementContext &context,
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
   }
@@ -829,6 +833,9 @@ public:
                Fortran::lower::StatementContext &context,
                mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprValue of coarray reference.");
     return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
                                               context);
   }
@@ -836,6 +843,9 @@ public:
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
+    auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
+    if (coarrayRef.has_value())
+      TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
   }
@@ -2432,8 +2442,7 @@ private:
     Fortran::lower::omp::ReductionProcessor rp;
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
-        reduceVarByRef, reductionDeclSymbols, info.reduceSymList,
-        /*reductionObjects=*/{}, getSymbolMap());
+        reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
     if (!result)
       TODO(toLocation(), "Lowering unrecognised reduction type");
 
@@ -5270,13 +5279,44 @@ private:
     return false;
   }
 
+  // Return true if the right-hand side of the assignment is a reference to a
+  // function whose result carries a managed, unified, or device CUDA data
+  // attribute. Such a result may be produced by an asynchronous kernel, so
+  // consuming it in an assignment must be a synchronizing data transfer rather
+  // than a plain host assignment. A whole-allocatable left-hand side is
+  // excluded: it has reallocation semantics and is performed on the host.
+  bool
+  isCUDAFunctionResultTransfer(const Fortran::evaluate::Assignment &assign) {
+    if (Fortran::evaluate::IsAllocatableDesignator(assign.lhs))
+      return false;
+    const Fortran::evaluate::ProcedureRef *procRef =
+        Fortran::evaluate::UnwrapProcedureRef(assign.rhs);
+    if (!procRef)
+      return false;
+    auto procedure =
+        Fortran::evaluate::characteristics::Procedure::Characterize(
+            procRef->proc(), getFoldingContext(), /*emitError=*/false);
+    if (!procedure || !procedure->functionResult ||
+        !procedure->functionResult->cudaDataAttr)
+      return false;
+    Fortran::common::CUDADataAttr attr =
+        *procedure->functionResult->cudaDataAttr;
+    return attr == Fortran::common::CUDADataAttr::Managed ||
+           attr == Fortran::common::CUDADataAttr::Unified ||
+           attr == Fortran::common::CUDADataAttr::Device;
+  }
+
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
                            hlfir::Entity &lhs, hlfir::Entity &rhs,
                            bool isWholeAllocatableAssignment,
                            bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
-    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
+    // A managed/unified/device function result is not visible to the symbol
+    // collection used by HasCUDADeviceAttrs (a ProcedureRef contributes no
+    // symbols), so treat such a result as a device side for transfer direction.
+    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs) ||
+                       isCUDAFunctionResultTransfer(assign);
     mlir::UnitAttr hasManagedOrUnifedSymbols =
         (Fortran::evaluate::GetNbOfCUDAManagedOrUnifiedSymbols(assign.lhs) >
              0 ||
@@ -5459,8 +5499,9 @@ private:
         getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::DoConcurrentOffload));
 
-    bool isCUDATransfer =
-        IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
+    bool isCUDATransfer = (IsCUDADataTransfer(assign.lhs, assign.rhs) ||
+                           isCUDAFunctionResultTransfer(assign)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         isCUDATransfer &&
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
@@ -5468,6 +5509,10 @@ private:
 
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
+
+    if (Fortran::evaluate::ExtractCoarrayRef(assign.lhs) ||
+        Fortran::evaluate::ExtractCoarrayRef(assign.rhs))
+      TODO(loc, "coarray: assignment");
 
     // Gather some information about the assignment that will impact how it is
     // lowered.
@@ -5558,9 +5603,22 @@ private:
           if (lhs.getDefiningOp())
             attachInlineAttributes(*lhs.getDefiningOp(), dirs);
         }
-        hlfir::AssignOp::create(builder, loc, rhs, lhs,
-                                isWholeAllocatableAssignment,
-                                keepLhsLengthInAllocatableAssignment);
+        if (isCUDATransfer && hasCUDAImplicitTransfer &&
+            Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs)) {
+          auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, lhs);
+          hlfir::AssignOp::create(builder, loc, rhs, temp,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+          auto transferKindAttr = cuf::DataTransferKindAttr::get(
+              builder.getContext(), cuf::DataTransferKind::HostDevice);
+          cuf::DataTransferOp::create(builder, loc, temp, lhs,
+                                      /*shape=*/mlir::Value{},
+                                      transferKindAttr);
+        } else {
+          hlfir::AssignOp::create(builder, loc, rhs, lhs,
+                                  isWholeAllocatableAssignment,
+                                  keepLhsLengthInAllocatableAssignment);
+        }
       }
       if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();

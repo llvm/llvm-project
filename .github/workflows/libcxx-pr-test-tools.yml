@@ -1,0 +1,54 @@
+# This workflow exercises libc++ tools whose testing doesn't belong in the conformance
+# suite or in `check-cxx` proper.
+#
+# The actual logic lives in `libcxx/utils/ci/run-buildbot test-tools`, which is also how
+# failures can be reproduced locally (after installing libcxx/utils/requirements.txt):
+#
+#     CC=clang CXX=clang++ libcxx/utils/ci/run-buildbot test-tools
+
+name: "[libc++] Test tools"
+
+on:
+  pull_request:
+    paths:
+      - 'libcxx/**'
+      - 'libcxxabi/**'
+      - 'libunwind/**'
+      - 'runtimes/**'
+      - 'cmake/**'
+      - '.github/workflows/libcxx-pr-test-tools.yml'
+  schedule:
+    # Match the main libc++ CI cron
+    - cron: '0 8 * * *'
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-tools:
+    if: github.repository_owner == 'llvm'
+    runs-on: llvm-premerge-libcxx-runners
+    env:
+      CC: clang-23
+      CXX: clang++-23
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # some tools need full git history
+          fetch-tags: true
+
+      - name: Set up Python dependencies
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r libcxx/utils/requirements.txt
+
+      - name: Run the tooling smoke test
+        run: |
+          source .venv/bin/activate
+          libcxx/utils/ci/run-buildbot test-tools

@@ -33,8 +33,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z15my_basic_memsetPcS_c(ptr %ptr, ptr %end, i8 %value) {
 ; CHECK-LABEL: @_Z15my_basic_memsetPcS_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR2:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64, !dbg [[DBG15]]
+; CHECK-NEXT:    [[PTR2:%.*]] = ptrtoaddr ptr [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64, !dbg [[DBG15]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[PTR]], [[END]], !dbg [[DBG15]]
 ; CHECK-NEXT:      #dbg_value(i1 [[CMP3]], [[META9:![0-9]+]], !DIExpression(), [[DBG15]])
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg [[DBG16:![0-9]+]]

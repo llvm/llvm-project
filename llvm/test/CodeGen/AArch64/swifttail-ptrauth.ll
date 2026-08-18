@@ -51,17 +51,17 @@ define swifttailcc void @caller_to0_from0() "branch-protection-pauth-lr" "sign-r
 ; COMPAT-NEXT:   adrp x16, .Ltmp0
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp0
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 ; COMPAT-NEXT:   hint #29
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp0
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp0
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 0, 0
 ; V83A-NEXT:     autiasp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_set_ra_state 0, 0
 ; V9A-NEXT:      autiasppc .Ltmp0
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autiasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -115,17 +115,17 @@ define swifttailcc void @caller_to0_from8([8 x i64], i64) "branch-protection-pau
 ; COMPAT-NEXT:   adrp x16, .Ltmp1
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 ; COMPAT-NEXT:   hint #29
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp1
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 0, 0
 ; V83A-NEXT:     autiasp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_set_ra_state 0, 0
 ; V9A-NEXT:      autiasppc .Ltmp1
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autiasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -178,23 +178,23 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 ; COMPAT-NEXT:   adrp x15, .Ltmp2
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp2
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 ; COMPAT-NEXT:   mov x30, x17
 
 ; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp2
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp2
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_set_ra_state 0, 0
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 ; V83A-NEXT:     mov x30, x17
 
 ; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp2
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp2
-; V9A-NEXT:      .cfi_set_ra_state 0, 0
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 ; V9A-NEXT:      mov x30, x17
 
 ; PAUTH-NEXT:    autia x30, x16
