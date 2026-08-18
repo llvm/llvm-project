@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // These compilers do not support __builtin_type_order
 // UNSUPPORTED: clang-21, clang-22, clang-23, apple-clang-21
@@ -21,7 +21,6 @@
 
 #include <compare>
 #include <concepts>
-#include "test_macros.h"
 
 template <class T, class U>
 constexpr bool test_order(std::strong_ordering expected) {
@@ -46,8 +45,8 @@ static_assert(std::same_as<std::type_order<A, A>::value_type, std::strong_orderi
 static_assert(std::same_as<decltype(std::type_order<A, A>::value), const std::strong_ordering>);
 static_assert(std::same_as<decltype(std::type_order_v<A, A>), const std::strong_ordering>);
 
-ASSERT_NOEXCEPT((std::type_order<int, int>()()));
-ASSERT_NOEXCEPT((static_cast<std::strong_ordering>(std::type_order<int, int>())));
+static_assert(noexcept(std::type_order<int, int>()()));
+static_assert(noexcept(static_cast<std::strong_ordering>(std::type_order<int, int>())));
 
 static_assert(ne<int, const int>);
 static_assert(ne<int, int&>);
@@ -56,7 +55,7 @@ static_assert(ne<int&, int&&>);
 static_assert(eq<A, A>);
 static_assert(ne<A, B> && ne<B, A>);
 
-// since we do lexicographical compare of the mangled names and both A and B
+// Since we do lexicographical compare of the mangled names and both A and B
 // are class types, A must compare less than B regardless of ABI
 static_assert(lt<A, B>);
 static_assert(gt<B, A>);

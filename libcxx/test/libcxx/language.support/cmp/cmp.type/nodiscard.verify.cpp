@@ -12,19 +12,11 @@
 // UNSUPPORTED: clang-21, clang-22, clang-23, apple-clang-21
 // UNSUPPORTED: gcc-15
 
-// <compare>
-
-// template<class T, class U>
-//   struct type_order;
+// Check that type_order::operator() is marked [[nodiscard]]
 
 #include <compare>
 
-#if !__has_warning("-Winvalid-specializations")
-// expected-no-diagnostics
-#else
-template <>
-struct std::type_order<int, int>; // expected-error {{cannot be specialized}}
-
-template <class T>
-struct std::type_order<T, int>; // expected-error {{cannot be specialized}}
-#endif
+void test() {
+  std::type_order<int, char>()();
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
