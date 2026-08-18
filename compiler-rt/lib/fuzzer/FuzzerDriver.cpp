@@ -671,6 +671,17 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     return 0;
   }
 
+  std::unique_ptr<FILE, int(*)(FILE*)> log_file(0, &fclose);
+  if (Flags.log_file) {
+    FILE * f = fopen(Flags.log_file, "w");
+    if (!f) {
+      Printf("ERROR: unable to open log_file [%s]: %s\n", Flags.log_file, strerror(errno));
+      return 1;
+    }
+    log_file.reset(f);
+    SetOutputFile(f);
+  }
+
   if (Flags.close_fd_mask & 2)
     DupAndCloseStderr();
   if (Flags.close_fd_mask & 1)
