@@ -320,7 +320,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_fp_sum_reassociation, false))
     opts.SplitSumExpressionTree = 1;
 
-  // Loop interchange is only enabled by default at -O3.
   opts.InterchangeLoops = args.hasFlag(clang::options::OPT_floop_interchange,
                                        clang::options::OPT_fno_loop_interchange,
                                        opts.OptimizationLevel == 3);
