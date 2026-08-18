@@ -28010,6 +28010,9 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
     LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
     if ((LoadNode->getMemoryVT() == MVT::i8 && width == 8)
        || (LoadNode->getMemoryVT() == MVT::i16 && width == 16)) {
+      if (LoadNode->getExtensionType() != ISD::SEXTLOAD &&
+          LoadNode->getExtensionType() != ISD::ZEXTLOAD)
+        return false;
       ExtType = LoadNode->getExtensionType();
       return true;
     }
