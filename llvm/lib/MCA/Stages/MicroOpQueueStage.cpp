@@ -109,8 +109,8 @@ static void moveWrites(Instruction &First, Instruction &Second) {
 }
 
 // Move all reads from Second to First instruction.
-static void moveReads(Instruction &First, Instruction &Second) {
-  for (ReadState &SecondUse : Second.getUses()) {
+static void moveReads(Instruction &First, const Instruction &Second) {
+  for (const ReadState &SecondUse : Second.getUses()) {
     bool AlreadyUsed = false;
     for (ReadState &FirstUse : First.getUses()) {
       if (SecondUse.getRegisterID() == FirstUse.getRegisterID()) {
