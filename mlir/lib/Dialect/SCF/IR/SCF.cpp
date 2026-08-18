@@ -1009,9 +1009,13 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ForOpTensorCastFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ForOp::getOperationName());
+  // Inline single-iteration loops before applying the generic region branch op
+  // canonicalizations, which may otherwise remove tied iter_args and results
+  // independently.
   populateRegionBranchOpInterfaceInliningPattern(
       results, ForOp::getOperationName(),
-      /*replBuilderFn=*/[](OpBuilder &builder, Location loc, Value value) {
+      /*replBuilderFn=*/
+      [](OpBuilder &builder, Location loc, Value value) {
         // scf.for has only one non-successor input value: the loop induction
         // variable. In case of a single acyclic path through the op, the IV can
         // be safely replaced with the lower bound.
@@ -1019,7 +1023,9 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
         assert(blockArg.getArgNumber() == 0 && "expected induction variable");
         auto forOp = cast<ForOp>(blockArg.getOwner()->getParentOp());
         return forOp.getLowerBound();
-      });
+      },
+      /*matcherFn=*/::mlir::detail::defaultMatcherFn,
+      /*benefit=*/2);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {

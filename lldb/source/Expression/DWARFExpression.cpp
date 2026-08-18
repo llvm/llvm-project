@@ -1925,6 +1925,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (llvm::Error err =
               Evaluate_DW_OP_fbreg(eval_ctx, op->getRawOperand(0)))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_nop:

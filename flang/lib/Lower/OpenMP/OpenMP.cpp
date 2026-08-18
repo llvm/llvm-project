@@ -3688,9 +3688,6 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallDenseSet<const semantics::Symbol *> condLpSymSet(
       condLpSyms.begin(), condLpSyms.end());
 
-  // Track whether any non-conditional lastprivate copy-backs were emitted.
-  bool hasNonCondLastprivate = false;
-
   if (!lastprivates.empty()) {
     mlir::Region &sectionsBody = sectionsOp.getRegion();
     assert(sectionsBody.hasOneBlock());
@@ -3712,7 +3709,6 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
         // Skip conditional LP symbols — handled by the reduction path.
         if (condLpSymSet.count(sym))
           continue;
-        hasNonCondLastprivate = true;
         if (const auto *common =
                 sym->detailsIf<semantics::CommonBlockDetails>()) {
           for (const auto &obj : common->objects())
@@ -3727,16 +3723,9 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Perform DataSharingProcessor's step2 out of SECTIONS
   builder.setInsertionPointAfter(sectionsOp.getOperation());
   dsp.processStep2(sectionsOp, false);
-  // Emit barrier when nowait is present and there are lastprivate copy-backs
-  // (either non-conditional or conditional).  The barrier ensures all threads
-  // have completed their work before lastprivate values are read/copied.
-  //
-  // NOTE: The LLVM OpenMP runtime currently imposes an implicit barrier
-  // inside __kmpc_reduce for tree reductions.  If the runtime were modified
-  // to release losing threads early when nowait is specified, we could use
-  // the return value from the tree reduction (case 1 = winner) to let the
-  // winner thread perform the copy-back without a separate barrier.
-  if (clauseOps.nowait && (hasNonCondLastprivate || !condLpSyms.empty()))
+  // Emit barrier when nowait is present and conditional lastprivate reduction
+  // results must be finalized before copy-back.
+  if (clauseOps.nowait && !condLpSyms.empty())
     mlir::omp::BarrierOp::create(builder, loc);
 
   // Copy-back: copy winning values from the shared reduction struct to the
