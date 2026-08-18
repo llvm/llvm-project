@@ -456,6 +456,7 @@ cc_library(
             "-pthread",
             "-ldl",
         ],
+        "@platforms//os:emscripten": [],
         "//conditions:default": [
             "-pthread",
             "-ldl",
@@ -4973,6 +4974,7 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -5548,6 +5550,7 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
