@@ -13,7 +13,7 @@
 // bool is_lock_free() const noexcept;
 
 #include <atomic>
-#include <concepts> // needed on Armv7/Armv8 with -fmodules
+#include <concepts>
 #include <memory>
 
 #include "../atomic_smart_ptr_test_types.h"
