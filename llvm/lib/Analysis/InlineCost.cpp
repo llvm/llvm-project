@@ -2010,6 +2010,8 @@ bool CallAnalyzer::allowSizeGrowth(CallBase &Call) {
   // For now, we are not handling this corner case here as it is rare in real
   // code. In future, we should elaborate this based on BPI and BFI in more
   // general threshold adjusting heuristics in updateThreshold().
+  if (TTI.allowInliningSizeGrowthInUnreachableBlock())
+    return true;
   if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
     if (isa<UnreachableInst>(II->getNormalDest()->getTerminator()))
       return false;
