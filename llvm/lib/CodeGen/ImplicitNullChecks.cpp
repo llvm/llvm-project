@@ -25,6 +25,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -76,7 +77,7 @@ STATISTIC(NumImplicitNullChecks,
 
 namespace {
 
-class ImplicitNullChecks : public MachineFunctionPass {
+class ImplicitNullChecks {
   /// Return true if \c computeDependence can process \p MI.
   static bool canHandle(const MachineInstr *MI);
 
@@ -212,11 +213,26 @@ class ImplicitNullChecks : public MachineFunctionPass {
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
 
 public:
+  ImplicitNullChecks(MachineFunction &MF, AliasAnalysis *AA)
+      : TII(MF.getSubtarget().getInstrInfo()),
+        TRI(MF.getRegInfo().getTargetRegisterInfo()), AA(AA),
+        MFI(&MF.getFrameInfo()) {}
+
+  bool run(MachineFunction &MF);
+};
+
+class ImplicitNullChecksLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  ImplicitNullChecks() : MachineFunctionPass(ID) {}
+  ImplicitNullChecksLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+    return ImplicitNullChecks(MF, AA).run(MF);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
@@ -295,11 +311,7 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
   return true;
 }
 
-bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
-  TII = MF.getSubtarget().getInstrInfo();
-  TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MFI = &MF.getFrameInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+bool ImplicitNullChecks::run(MachineFunction &MF) {
 
   SmallVector<NullCheck, 16> NullCheckList;
 
@@ -801,12 +813,25 @@ void ImplicitNullChecks::rewriteNullChecks(
   }
 }
 
-char ImplicitNullChecks::ID = 0;
+char ImplicitNullChecksLegacy::ID = 0;
 
-char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
+char &llvm::ImplicitNullChecksID = ImplicitNullChecksLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(ImplicitNullChecksLegacy, DEBUG_TYPE,
                       "Implicit null checks", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(ImplicitNullChecks, DEBUG_TYPE,
+INITIALIZE_PASS_END(ImplicitNullChecksLegacy, DEBUG_TYPE,
                     "Implicit null checks", false, false)
+
+PreservedAnalyses
+ImplicitNullChecksPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  bool Changed = ImplicitNullChecks(MF, &AA).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}
