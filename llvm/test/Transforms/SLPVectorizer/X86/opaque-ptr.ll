@@ -75,3 +75,30 @@ define void @test2(ptr %a, ptr %b) {
   store i64 %add2, ptr %a2, align 8
   ret void
 }
+
+define void @test3(ptr %a, ptr %b) {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr [[A1]] to i64
+; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 3
+; CHECK-NEXT:    [[I2:%.*]] = ptrtoaddr ptr [[B3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[A1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[I1]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[I2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[A1]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a1 = getelementptr inbounds i64, ptr %a, i64 1
+  %a2 = getelementptr inbounds i64, ptr %a, i64 2
+  %i1 = ptrtoaddr ptr %a1 to i64
+  %b3 = getelementptr inbounds i64, ptr %b, i64 3
+  %i2 = ptrtoaddr ptr %b3 to i64
+  %v1 = load i64, ptr %a1, align 8
+  %v2 = load i64, ptr %a2, align 8
+  %add1 = add i64 %i1, %v1
+  %add2 = add i64 %i2, %v2
+  store i64 %add1, ptr %a1, align 8
+  store i64 %add2, ptr %a2, align 8
+  ret void
+}
