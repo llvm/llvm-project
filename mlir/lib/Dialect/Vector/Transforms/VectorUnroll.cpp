@@ -385,8 +385,7 @@ struct UnrollMultiReductionPattern
 
     // A target shape with fewer dimensions than the source vector applies to
     // its trailing dimensions. Add leading unit dimensions so that it can be
-    // used to slice the source and to index its dimensions, the same way
-    // UnrollElementwisePattern does.
+    // used to slice the source and to index its dimensions.
     SmallVector<int64_t> adjustedTargetShape(originalSize.size(), 1);
     llvm::copy(*targetShape, adjustedTargetShape.end() - targetShape->size());
 
