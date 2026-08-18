@@ -248,6 +248,14 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
+  struct AndMaskResult {
+    int64_t Mask;
+    Register Reg;
+    unsigned RegIdx;
+  };
+
+  std::optional<AndMaskResult> getAndMaskRegOperand(MachineInstr &AndMI) const;
+
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAnd(MachineInstr &ChildMI) const;
@@ -1855,6 +1863,27 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
+// Extract mask, register, and register operand index from an AND instruction.
+// Immediate can be in operand 1 or 2.
+std::optional<SIFoldOperandsImpl::AndMaskResult>
+SIFoldOperandsImpl::getAndMaskRegOperand(MachineInstr &AndMI) const {
+  unsigned Opc = AndMI.getOpcode();
+  if (Opc != AMDGPU::V_AND_B32_e64 && Opc != AMDGPU::V_AND_B32_e32 &&
+      Opc != AMDGPU::S_AND_B32)
+    return std::nullopt;
+
+  std::optional<int64_t> MaskImm =
+      TII->getImmOrMaterializedImm(AndMI.getOperand(1));
+  if (MaskImm && AndMI.getOperand(2).isReg())
+    return AndMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+
+  MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
+  if (MaskImm && AndMI.getOperand(1).isReg())
+    return AndMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+
+  return std::nullopt;
+}
+
 // Eliminate redundant AND operations by detecting when ChildMI's mask contains
 // ParentMI's mask.
 //
@@ -1870,40 +1899,17 @@ bool SIFoldOperandsImpl::tryFoldRedundantAnd(MachineInstr &ChildMI) const {
   if (!ChildMI.allImplicitDefsAreDead())
     return false;
 
-  // Helper to extract mask, register, and register operand index from an AND
-  // instruction. Mask can be detected in either operand 1 or 2. Returns {mask,
-  // register, operand_index}.
-  auto getMaskAndReg = [this](MachineInstr &AndMI)
-      -> std::optional<std::tuple<int64_t, Register, unsigned>> {
-    unsigned Opc = AndMI.getOpcode();
-    if (Opc != AMDGPU::V_AND_B32_e64 && Opc != AMDGPU::V_AND_B32_e32 &&
-        Opc != AMDGPU::S_AND_B32)
-      return std::nullopt;
-
-    std::optional<int64_t> MaskImm =
-        TII->getImmOrMaterializedImm(AndMI.getOperand(1));
-    if (MaskImm && AndMI.getOperand(2).isReg())
-      return std::make_tuple(*MaskImm, AndMI.getOperand(2).getReg(), 2);
-
-    MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
-    if (MaskImm && AndMI.getOperand(1).isReg())
-      return std::make_tuple(*MaskImm, AndMI.getOperand(1).getReg(), 1);
-
-    return std::nullopt;
-  };
-
-  auto ChildMaskAndReg = getMaskAndReg(ChildMI);
-  if (!ChildMaskAndReg)
+  std::optional<AndMaskResult> ChildResult = getAndMaskRegOperand(ChildMI);
+  if (!ChildResult)
     return false;
 
-  auto [ChildMask, ChildReg, ChildRegIdx] = *ChildMaskAndReg;
-  MachineInstr *ParentMI = MRI->getVRegDef(ChildReg);
+  MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
 
   int64_t ParentMask;
-  auto ParentMaskAndReg = getMaskAndReg(*ParentMI);
-  if (ParentMaskAndReg) {
+  std::optional<AndMaskResult> ParentResult = getAndMaskRegOperand(*ParentMI);
+  if (ParentResult) {
     // Parent is an AND - extract its mask.
-    ParentMask = std::get<0>(*ParentMaskAndReg);
+    ParentMask = ParentResult->Mask;
   } else if (ST->zeroesHigh16BitsOfDest(ParentMI->getOpcode())) {
     // Parent instruction implicitly zeros high 16 bits.
     ParentMask = 0xffff;
@@ -1912,15 +1918,15 @@ bool SIFoldOperandsImpl::tryFoldRedundantAnd(MachineInstr &ChildMI) const {
   }
 
   // Check if ChildMI is not redundant.
-  if ((ParentMask & ChildMask) != ParentMask)
+  if ((ParentMask & ChildResult->Mask) != ParentMask)
     return false;
 
   Register Dst = ChildMI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, ChildReg);
+  MRI->replaceRegWith(Dst, ChildResult->Reg);
 
   // Clear kill flags if the register operand is not marked as kill.
-  if (!ChildMI.getOperand(ChildRegIdx).isKill())
-    MRI->clearKillFlags(ChildReg);
+  if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
+    MRI->clearKillFlags(ChildResult->Reg);
 
   ChildMI.eraseFromParent();
   return true;
