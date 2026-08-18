@@ -73,6 +73,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -119,6 +120,9 @@ DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
 static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
+
+STATISTIC(NumSCEVCandidateDifferences,
+          "Number of SCEV candidate differences computed by SLSR");
 
 namespace {
 
@@ -691,6 +695,7 @@ Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
     const SCEV *BasisPart =
         (K == Candidate::BaseDelta) ? Basis.Base : Basis.StrideSCEV;
     const SCEV *CandPart = (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
+    ++NumSCEVCandidateDifferences;
     const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
     return getNearestValueOfSCEV(Diff, C.Ins);
   }
