@@ -364,6 +364,9 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
     addr.setStrictfp(true);
   }
 
+  if (const auto *ipa = varDecl->getAttr<InitPriorityAttr>())
+    addr.setInitPriority(ipa->getPriority());
+
   emitCXXSpecialVarDeclInit(varDecl, addr, performInit, addr.getCtorRegion(),
                             addr.getDtorRegion());
 }

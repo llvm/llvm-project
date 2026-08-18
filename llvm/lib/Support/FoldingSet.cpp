@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
@@ -31,8 +30,6 @@ bool FoldingSetNodeIDRef::operator==(FoldingSetNodeIDRef RHS) const {
   return memcmp(Data, RHS.Data, Size * sizeof(*Data)) == 0;
 }
 
-/// Used to compare the "ordering" of two nodes as defined by the
-/// profiled bits and their ordering defined by memcmp().
 bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
   if (Size != RHS.Size)
     return Size < RHS.Size;
@@ -42,8 +39,6 @@ bool FoldingSetNodeIDRef::operator<(FoldingSetNodeIDRef RHS) const {
 //===----------------------------------------------------------------------===//
 // FoldingSetNodeID Implementation
 
-/// Add* - Add various data types to Bit data.
-///
 void FoldingSetNodeID::AddString(StringRef String) {
   unsigned Size = String.size();
 
@@ -108,25 +103,18 @@ void FoldingSetNodeID::AddString(StringRef String) {
   Bits.push_back(V);
 }
 
-// AddNodeID - Adds the Bit data of another ID to *this.
 void FoldingSetNodeID::AddNodeID(const FoldingSetNodeID &ID) {
   Bits.append(ID.Bits.begin(), ID.Bits.end());
 }
 
-/// operator== - Used to compare two nodes to each other.
-///
 bool FoldingSetNodeID::operator==(const FoldingSetNodeID &RHS) const {
   return *this == FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
 }
 
-/// operator== - Used to compare two nodes to each other.
-///
 bool FoldingSetNodeID::operator==(FoldingSetNodeIDRef RHS) const {
   return FoldingSetNodeIDRef(Bits.data(), Bits.size()) == RHS;
 }
 
-/// Used to compare the "ordering" of two nodes as defined by the
-/// profiled bits and their ordering defined by memcmp().
 bool FoldingSetNodeID::operator<(const FoldingSetNodeID &RHS) const {
   return *this < FoldingSetNodeIDRef(RHS.Bits.data(), RHS.Bits.size());
 }
@@ -135,9 +123,6 @@ bool FoldingSetNodeID::operator<(FoldingSetNodeIDRef RHS) const {
   return FoldingSetNodeIDRef(Bits.data(), Bits.size()) < RHS;
 }
 
-/// Intern - Copy this node's data to a memory region allocated from the
-/// given allocator and return a FoldingSetNodeIDRef describing the
-/// interned data.
 FoldingSetNodeIDRef
 FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
   unsigned *New = Allocator.Allocate<unsigned>(Bits.size());
@@ -178,7 +163,7 @@ static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
   return Buckets + BucketNum;
 }
 
-/// AllocateBuckets - Allocated initialized bucket memory.
+/// AllocateBuckets - Allocate initialized bucket memory.
 static void **AllocateBuckets(unsigned NumBuckets) {
   void **Buckets =
       static_cast<void **>(safe_calloc(NumBuckets + 1, sizeof(void *)));
@@ -239,7 +224,6 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
   // Clear out new buckets.
   Buckets = AllocateBuckets(NewBucketCount);
-  // Set NumBuckets only if allocation of new buckets was successful.
   NumBuckets = NewBucketCount;
   NumNodes = 0;
 
@@ -266,8 +250,6 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   free(OldBuckets);
 }
 
-/// GrowHashTable - Double the size of the hash table and rehash everything.
-///
 void FoldingSetBase::GrowHashTable(const FoldingSetInfo &Info) {
   GrowBucketCount(NumBuckets * 2, Info);
 }
@@ -281,9 +263,6 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }
 
-/// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
-/// return it.  If not, return the insertion token that will make insertion
-/// faster.
 FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
     const FoldingSetNodeID &ID, void *&InsertPos, const FoldingSetInfo &Info) {
   unsigned IDHash = ID.ComputeHash();
@@ -306,9 +285,6 @@ FoldingSetBase::Node *FoldingSetBase::FindNodeOrInsertPos(
   return nullptr;
 }
 
-/// InsertNode - Insert the specified node into the folding set, knowing that it
-/// is not already in the map.  InsertPos must be obtained from
-/// FindNodeOrInsertPos.
 void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
                                 const FoldingSetInfo &Info) {
   assert(!N->getNextInBucket());
@@ -338,8 +314,6 @@ void FoldingSetBase::InsertNode(Node *N, void *InsertPos,
   *Bucket = N;
 }
 
-/// RemoveNode - Remove a node from the folding set, returning true if one was
-/// removed or false if the node was not in the folding set.
 bool FoldingSetBase::RemoveNode(Node *N) {
   // Because each bucket is a circular list, we don't need to compute N's hash
   // to remove it.
@@ -379,12 +353,8 @@ bool FoldingSetBase::RemoveNode(Node *N) {
   }
 }
 
-/// GetOrInsertNode - If there is an existing simple Node exactly
-/// equal to the specified node, return it.  Otherwise, insert 'N' and it
-/// instead.
 FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N,
-                                const FoldingSetInfo &Info) {
+FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
   FoldingSetNodeID ID;
   Info.GetNodeProfile(this, N, ID);
   void *IP;
