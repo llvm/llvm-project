@@ -69,6 +69,28 @@ static bool tryToImproveAlign(
   if (!II)
     return false;
 
+  if (auto *MI = dyn_cast<MemIntrinsic>(II)) {
+    bool Changed = false;
+
+    Align OldDestAlign = MI->getDestAlign().valueOrOne();
+    Align NewDestAlign = Fn(MI->getRawDest(), OldDestAlign, Align(1));
+    if (NewDestAlign > OldDestAlign) {
+      MI->setDestAlignment(NewDestAlign);
+      Changed = true;
+    }
+
+    if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
+      Align OldSourceAlign = MTI->getSourceAlign().valueOrOne();
+      Align NewSourceAlign = Fn(MTI->getRawSource(), OldSourceAlign, Align(1));
+      if (NewSourceAlign > OldSourceAlign) {
+        MTI->setSourceAlignment(NewSourceAlign);
+        Changed = true;
+      }
+    }
+
+    return Changed;
+  }
+
   // TODO: Handle more memory intrinsics.
   switch (II->getIntrinsicID()) {
   case Intrinsic::masked_load:
