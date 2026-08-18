@@ -81,6 +81,11 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
   return Changed;
 }
 
+} // end anonymous namespace
+
+namespace llvm {
+namespace AMDGPU {
+
 /// Helper class that determines the relationship between incoming values of a
 /// phi in the control flow graph to determine where an incoming value can
 /// simply be taken as a scalar lane mask as-is, and where it needs to be
@@ -368,7 +373,8 @@ private:
   }
 };
 
-} // End anonymous namespace.
+} // namespace AMDGPU
+} // namespace llvm
 
 Register llvm::AMDGPU::createLaneMaskReg(
     MachineRegisterInfo *MRI, MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
@@ -451,9 +457,8 @@ AMDGPU::PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
 
 void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
     Register DstReg, MachineBasicBlock &MBB,
-    SmallVectorImpl<Incoming> &Incomings, MachineIDFSSAUpdater &SSAUpdater) {
-  LoopFinder LF(*DT, *PDT);
-  PhiIncomingAnalysis PIA(*PDT, TII);
+    SmallVectorImpl<Incoming> &Incomings, MachineIDFSSAUpdater &SSAUpdater,
+    LoopFinder &LF, PhiIncomingAnalysis &PIA) {
   LF.initialize(MBB);
 
   // Sort the incomings such that incoming values that dominate other incoming
@@ -467,7 +472,7 @@ void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
 
   // Values in a loop that are observed outside the loop receive a simple but
   // conservatively correct treatment.
-  std::vector<MachineBasicBlock *> DomBlocks = {&MBB};
+  SmallVector<MachineBasicBlock *, 4> DomBlocks = {&MBB};
   for (MachineInstr &Use : MRI->use_instructions(DstReg))
     DomBlocks.push_back(Use.getParent());
 
@@ -542,6 +547,9 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
+  LoopFinder LF(*DT, *PDT);
+  PhiIncomingAnalysis PIA(*PDT, TII);
+
   DT->updateDFSNumbers();
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
@@ -558,7 +566,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 #endif
 
     MachineIDFSSAUpdater SSAUpdater(*DT, *MF, DstReg);
-    mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater);
+    mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
     if (NewReg != DstReg) {
@@ -573,7 +581,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  LoopFinder LF(*DT, *PDT);
+  AMDGPU::LoopFinder LF(*DT, *PDT);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : *MF) {
