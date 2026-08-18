@@ -38,20 +38,13 @@ public:
   /// call was inlined.  In all other cases it will be false.
   const bool wasInlined;
 
-  CheckerContext(NodeBuilder &builder,
-                 ExprEngine &eng,
-                 ExplodedNode *pred,
-                 const ProgramPoint &loc,
-                 bool wasInlined = false)
-    : Eng(eng),
-      Pred(pred),
-      Changed(false),
-      Location(loc),
-      NB(builder),
-      wasInlined(wasInlined) {
+  CheckerContext(NodeBuilder &Builder, ExprEngine &Eng, ExplodedNode *Pred,
+                 const ProgramPoint &Loc, bool WasInlined = false)
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), NB(Builder),
+        wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
-    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+    assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
                            "must be tagged with the active checker.");
   }
 
