@@ -1901,7 +1901,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = op->getRawOperand(0);
-      tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
+      tmp.GetScalar() = to_generic(tmp.GetScalar().ULongLong());
+      tmp.GetScalar() += to_generic(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -1913,7 +1914,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
 
       int64_t breg_offset = op->getRawOperand(1);
-      tmp.GetScalar() += static_cast<uint64_t>(breg_offset);
+      tmp.GetScalar() = to_generic(tmp.GetScalar().ULongLong());
+      tmp.GetScalar() += to_generic(breg_offset);
       tmp.ClearContext();
       stack.push_back(tmp);
       stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -1923,6 +1925,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       if (llvm::Error err =
               Evaluate_DW_OP_fbreg(eval_ctx, op->getRawOperand(0)))
         return err;
+      stack.back().GetScalar() =
+          to_generic(stack.back().GetScalar().ULongLong());
       break;
 
     case DW_OP_nop:

@@ -7023,7 +7023,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
       }
     }
   }
-  assert(TargetLabel);
+
+  if (!TargetLabel)
+    return false;
 
   for (VariableScope<Emitter> *C = VarScope; C != ContinueScope;
        C = C->getParent()) {
