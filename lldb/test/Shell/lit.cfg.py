@@ -201,10 +201,12 @@ def runtime_exports(directory, symbol):
 if config.objc_gnustep_dir:
     config.available_features.add("objc-gnustep")
     if platform.system() == "Windows":
-        # objc.dll must be in PATH since Windows has no rpath
+        # No rpath on Windows. MSVC libobjc2 installs the DLL in lib/, MinGW
+        # in bin/.
         config.environment["PATH"] = os.path.pathsep.join(
             (
                 os.path.join(config.objc_gnustep_dir, "lib"),
+                os.path.join(config.objc_gnustep_dir, "bin"),
                 config.environment.get("PATH", ""),
             )
         )
