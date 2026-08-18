@@ -33,6 +33,9 @@ public:
 
 class X86LbrCounter : public pfm::CounterGroup {
 public:
+  // Checks whether the host supports LBR with cycles. On a hybrid CPU this also
+  // pins the process to the P-cores, and that pinning persists so that the
+  // later measurement runs stay on a CPU where the event is scheduled.
   static Error checkLbrSupport();
 
   explicit X86LbrCounter(pfm::PerfEvent &&Event);

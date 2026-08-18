@@ -14,8 +14,12 @@
 // FIXME: Use appropriate wrappers for poll.h and mman.h
 // to support Windows and remove this linux-only guard.
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 #include <perfmon/perf_event.h>
 #include <perfmon/pfmlib.h>
@@ -29,6 +33,7 @@
 #include <memory>
 
 #include <poll.h>
+#include <sched.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -44,13 +49,75 @@ static const size_t kDataBufferSize = kBufferPages * getpagesize();
 // the next page, so we allocate one more page.
 static const size_t kMappedBufferSize = (kBufferPages + 1) * getpagesize();
 
+// The event is disabled before we poll, so a sample either is already in the
+// ring buffer -- wakeup_events == 1 leaves POLLIN asserted -- or it will never
+// arrive. One poll is therefore conclusive, and the retries only absorb wake-up
+// latency. This used to be 160 * 10s, which turned a host without working LBR
+// into a 27 minute hang.
+constexpr int kPollTimeoutMs = 1000;
+constexpr int kMaxTimeouts = 2;
+
 // Waits for the LBR perf events.
 static int pollLbrPerfEvent(const int FileDescriptor) {
   struct pollfd PollFd;
   PollFd.fd = FileDescriptor;
   PollFd.events = POLLIN;
   PollFd.revents = 0;
-  return poll(&PollFd, 1 /* num of fds */, 10000 /* timeout in ms */);
+  return poll(&PollFd, 1 /* num of fds */, kPollTimeoutMs);
+}
+
+// Pins the process to the P-cores of a hybrid CPU (Alder Lake and newer).
+//
+// Such CPUs have one PMU per core type -- "cpu_core" for the P-cores and
+// "cpu_atom" for the E-cores -- rather than a single "cpu" PMU. The event below
+// is a P-core encoding and "cpu_core" claims PERF_TYPE_RAW, so the kernel never
+// schedules it while we run on an E-core. perf_event_open() succeeds there all
+// the same, so the event silently records nothing at all and we just poll until
+// we give up. Pinning also keeps a measurement from migrating mid-flight.
+static Error pinToLbrCapableCpus() {
+  // sysfs misreports the size of its files, so read this one as a stream. It
+  // only exists on a hybrid CPU; anywhere else every core can run the event.
+  auto BufferOrErr = MemoryBuffer::getFileAsStream(
+      "/sys/bus/event_source/devices/cpu_core/cpus");
+  if (!BufferOrErr)
+    return Error::success();
+  StringRef Cpus = (*BufferOrErr)->getBuffer().trim();
+
+  cpu_set_t Current;
+  if (sched_getaffinity(0, sizeof(Current), &Current) != 0)
+    return make_error<StringError>("Cannot read the CPU affinity.",
+                                   errc::io_error);
+
+  // A list of ranges, e.g. "0-15" or "0,2,4-7". Intersecting it with the
+  // affinity mask lets an affinity the user set with taskset(1) still win.
+  cpu_set_t PCores;
+  CPU_ZERO(&PCores);
+  SmallVector<StringRef, 4> Ranges;
+  Cpus.split(Ranges, ',');
+  for (StringRef Range : Ranges) {
+    auto [FirstStr, LastStr] = Range.split('-');
+    // A bare "N" is the same as the range "N-N".
+    if (LastStr.empty())
+      LastStr = FirstStr;
+    unsigned First, Last;
+    if (FirstStr.getAsInteger(10, First) || LastStr.getAsInteger(10, Last))
+      return make_error<StringError>("Cannot parse the P-core CPU list '" +
+                                         Cpus + "'",
+                                     errc::invalid_argument);
+    for (unsigned I = First; I <= Last && I < CPU_SETSIZE; ++I)
+      if (CPU_ISSET(I, &Current))
+        CPU_SET(I, &PCores);
+  }
+
+  if (CPU_COUNT(&PCores) == 0)
+    return make_error<StringError>(
+        "LBR measurements have to run on a P-core, but the CPU affinity mask "
+        "of this process selects E-cores only.",
+        errc::not_supported);
+  if (sched_setaffinity(0, sizeof(PCores), &PCores) != 0)
+    return make_error<StringError>("Cannot pin the process to the P-cores.",
+                                   errc::io_error);
+  return Error::success();
 }
 
 // Copies the data-buffer into Buf, given the pointer to MMapped.
@@ -122,7 +189,9 @@ X86LbrPerfEvent::X86LbrPerfEvent(unsigned SamplingPeriod) {
   Attr = new perf_event_attr();
   Attr->size = sizeof(*Attr);
   Attr->type = PERF_TYPE_RAW;
-  // FIXME This is SKL's encoding. Not sure if it'll change.
+  // FIXME This is SKL's encoding. Not sure if it'll change. It is also a
+  // P-core encoding, so on a hybrid CPU this only counts while running on a
+  // P-core; see pinToLbrCapableCpus().
   Attr->config = 0x20c4; // BR_INST_RETIRED.NEAR_TAKEN
   Attr->sample_type = PERF_SAMPLE_BRANCH_STACK;
   // Don't need to specify "USER" because we've already excluded HV and Kernel.
@@ -155,6 +224,11 @@ void X86LbrCounter::start() {
 }
 
 Error X86LbrCounter::checkLbrSupport() {
+  // Make sure we do not run on an E-core, where the event would silently
+  // record nothing at all.
+  if (Error E = pinToLbrCapableCpus())
+    return E;
+
   // Do a sample read and check if the results contain non-zero values.
 
   X86LbrCounter counter(X86LbrPerfEvent(123));
@@ -209,9 +283,6 @@ X86LbrCounter::readOrError(StringRef FunctionBytes) const {
 
 Expected<SmallVector<int64_t, 4>>
 X86LbrCounter::doReadCounter(const void *From, const void *To) const {
-  // The max number of time-outs/retries before we give up.
-  static constexpr int kMaxTimeouts = 160;
-
   // Parses the LBR buffer and fills CycleArray with the sequence of cycle
   // counts from the buffer.
   SmallVector<int64_t, 4> CycleArray;
