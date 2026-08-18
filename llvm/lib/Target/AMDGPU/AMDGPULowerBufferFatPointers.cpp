@@ -2230,9 +2230,8 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   if (Width <= BufferOffsetWidth) {
     RsrcInt = Constant::getNullValue(RsrcIntTy);
   } else {
-    Value *RsrcPart = IRB.CreateLShr(
-        Int,
-        ConstantExpr::getIntegerValue(IntTy, APInt(Width, BufferOffsetWidth)));
+    Value *RsrcPart =
+        IRB.CreateLShr(Int, ConstantInt::get(IntTy, BufferOffsetWidth));
     RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
   }
   Value *Rsrc = IRB.CreateIntToPtr(RsrcInt, RsrcTy, IP.getName() + ".rsrc");
