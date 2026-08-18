@@ -38,7 +38,7 @@ public:
 
 enum class Flag : std::uint16_t { Off = 0, Stale = 4099, On = 60000 };
 
-// --- Distinct shared states for compare/exchange style tests ------------------------
+// Distinct shared states for compare/exchange style tests.
 
 template <class T>
 struct SpValues;
