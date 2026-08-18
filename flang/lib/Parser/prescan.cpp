@@ -196,19 +196,21 @@ void Prescanner::Statement() {
       }
       tokens.CloseToken();
       SkipSpaces();
-      if (InConditionalLine() && inFixedForm_ && !tabInCurrentLine_ &&
-          column_ == 6 && *at_ != '\n') {
-        // !$   0   - turn '0' into a space
-        // !$   1   - turn '1' into '&'
+      if ((InConditionalLine() || IsOpenMPDirective()) && inFixedForm_ &&
+          !tabInCurrentLine_ && column_ == 6 && *at_ != '\n') {
         if (int n{IsSpace(at_)}; n || *at_ == '0') {
+          // !$   0   - turn '0' into a space
           at_ += n ? n : 1;
-        } else {
+          ++column_;
+          SkipSpaces();
+        } else if (InConditionalLine()) {
+          // !$   1   - turn '1' into '&'
           ++at_;
           EmitChar(tokens, '&');
           tokens.CloseToken();
+          ++column_;
+          SkipSpaces();
         }
-        ++column_;
-        SkipSpaces();
       }
     }
     break;
