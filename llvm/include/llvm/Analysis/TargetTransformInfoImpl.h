@@ -1144,8 +1144,12 @@ public:
     return true;
   }
 
-  virtual bool canSplatOperand(unsigned Opcode, int Operand) const {
-    return false;
+  virtual TargetTransformInfo::VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<
+          bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+          GatherUseOps) const {
+    return TargetTransformInfo::VectorInstrContext::None;
   }
 
   virtual bool isElementTypeLegalForScalableVector(Type *Ty) const {

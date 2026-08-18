@@ -1544,10 +1544,6 @@ public:
   LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
                                                      const Value *Y);
 
-  /// Return true if a vector instruction with opcode \p Opcode can lower to a
-  /// target instruction able to splat operand \p Operand.
-  LLVM_ABI bool canSplatOperand(unsigned Opcode, int Operand) const;
-
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
   /// From Agner Fog's guides, reciprocal throughput is "the average number of
