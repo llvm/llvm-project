@@ -1567,9 +1567,11 @@ static bool areInnerLoopLatchPHIsSupported(Loop *InnerLoop,
 
   // Bail if a PHI node other than the induction PHIs feeds the cloned
   // instructions, walking the operand trees within the inner loop.
+  SmallPtrSet<Instruction *, 4> InductionPHISet(InductionPHIs.begin(),
+                                                InductionPHIs.end());
   for (unsigned I = 0; I < Worklist.size(); ++I) {
     Instruction *Cur = Worklist[I];
-    if (isa<PHINode>(Cur) && !is_contained(InductionPHIs, Cur))
+    if (isa<PHINode>(Cur) && !InductionPHISet.contains(Cur))
       return false;
     for (Value *Op : Cur->operands())
       if (auto *OpI = dyn_cast<Instruction>(Op))
