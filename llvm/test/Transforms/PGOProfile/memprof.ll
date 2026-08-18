@@ -3,6 +3,8 @@
 
 ;; -stats requires asserts
 ; REQUIRES: asserts
+;; MEMPROFRAND2 checks fail on windows, possibly due to different rand implementations
+; UNSUPPORTED: system-windows
 
 ;; Generate indexed profiles of all combinations:
 ; RUN: llvm-profdata merge %t/a.yaml -o %t/a.memprofdata
