@@ -190,6 +190,23 @@ m_GFCstOrSplat(std::optional<FPValueAndVReg> &FPValReg) {
   return GFCstOrSplatGFCstMatch(FPValReg);
 }
 
+/// Matches an FP constant whose value satisfies the given predicate.
+template <typename Pred> struct GFCstPredMatch {
+  Pred P;
+  GFCstPredMatch(Pred P) : P(P) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    if (const ConstantFP *FPImm = getConstantFPVRegVal(Reg, MRI))
+      return P(FPImm->getValueAPF());
+    return false;
+  }
+};
+template <typename Pred> GFCstPredMatch(Pred) -> GFCstPredMatch<Pred>;
+
+/// Matches a floating-point positive zero.
+inline auto m_PosZeroFP() {
+  return GFCstPredMatch([](const APFloat &V) { return V.isPosZero(); });
+}
+
 /// Matcher for a specific constant value.
 struct SpecificConstantMatch {
   APInt RequestedVal;

@@ -319,6 +319,11 @@ struct VPlanTransforms {
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
 
+  /// Check \p Plan's live-ins and replace them with constants, if they can be
+  /// simplified via SCEV.
+  static void simplifyLiveInsWithSCEV(VPlan &Plan,
+                                      PredicatedScalarEvolution &PSE);
+
   /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
   /// possible.
   static void
