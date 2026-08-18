@@ -154,6 +154,14 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23s64 \
 // RUN:   | FileCheck -check-prefix=RVA23S64 %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rva23p1s64 -menable-experimental-extensions \
+// RUN:   | FileCheck -check-prefix=RVA23P1S64 %s
+// RVA23P1S64: "-target-feature" "+ssccfg"
+// RVA23P1S64: "-target-feature" "+sscsrind"
+// RVA23P1S64: "-target-feature" "+ssctr"
+// RVA23P1S64: "-target-feature" "+ssdbltrp"
+// RVA23P1S64: "-target-feature" "+ssqosid"
+// RVA23P1S64: "-target-feature" "+svrsw60t59b"
 // RVA23S64: "-target-feature" "+m"
 // RVA23S64: "-target-feature" "+a"
 // RVA23S64: "-target-feature" "+f"
@@ -249,6 +257,14 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23s64 \
 // RUN:   | FileCheck -check-prefix=RVB23S64 %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23p1s64 -menable-experimental-extensions \
+// RUN:   | FileCheck -check-prefix=RVB23P1S64 %s
+// RVB23P1S64: "-target-feature" "+ssccfg"
+// RVB23P1S64: "-target-feature" "+sscsrind"
+// RVB23P1S64: "-target-feature" "+ssctr"
+// RVB23P1S64: "-target-feature" "+ssdbltrp"
+// RVB23P1S64: "-target-feature" "+ssqosid"
+// RVB23P1S64: "-target-feature" "+svrsw60t59b"
 // RVB23S64: "-target-feature" "+m"
 // RVB23S64: "-target-feature" "+a"
 // RVB23S64: "-target-feature" "+f"
@@ -333,6 +349,14 @@
 
 // RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva22u64zfa | FileCheck -check-prefix=INVALID-ADDITIONAL %s
 // INVALID-ADDITIONAL: error: invalid arch name 'rva22u64zfa', additional extensions must be after separator '_'
+
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rva23p1s64 | FileCheck -check-prefix=RVA23P1-EXPERIMENTAL-NOFLAG %s
+// RVA23P1-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rva23p1s64'
+// RVA23P1-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rva23p1s64'
+
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -march=rvb23p1s64 | FileCheck -check-prefix=RVB23P1-EXPERIMENTAL-NOFLAG %s
+// RVB23P1-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rvb23p1s64'
+// RVB23P1-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions' for profile 'rvb23p1s64'
 
 // RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rvm23u32 | FileCheck -check-prefix=EXPERIMENTAL-NOFLAG %s
 // EXPERIMENTAL-NOFLAG: error: invalid arch name 'rvm23u32'

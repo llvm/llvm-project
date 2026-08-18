@@ -85,6 +85,13 @@ defvar RVA23S64BaseFeatures = !listconcat(RVA22S64BaseFeatures,
 defvar RVA23S64Features = !listconcat(RVA23U64Features,
                                       RVA23S64BaseFeatures);
 
+defvar RVA23P1S64Features = !listconcat(RVA23S64Features,
+                                        [FeatureStdExtSvrsw60t59b,
+                                         FeatureStdExtSsdbltrp,
+                                         FeatureStdExtSsccfg,
+                                         FeatureStdExtSsctr,
+                                         FeatureStdExtSsqosid]);
+
 // RVB Profile Family
 
 defvar RVB23U64Features = !listconcat(RVA20U64BaseFeatures,
@@ -119,6 +126,13 @@ defvar RVB23S64Features = !listconcat(RVB23U64Features,
                                        FeatureStdExtSstc,
                                        FeatureStdExtSscofpmf,
                                        FeatureStdExtSsu64xl]);
+
+defvar RVB23P1S64Features = !listconcat(RVB23S64Features,
+                                        [FeatureStdExtSvrsw60t59b,
+                                         FeatureStdExtSsdbltrp,
+                                         FeatureStdExtSsccfg,
+                                         FeatureStdExtSsctr,
+                                         FeatureStdExtSsqosid]);
 
 // RVM Profile Family
 
@@ -160,4 +174,6 @@ def RVA23U64 : RISCVProfile<"rva23u64", RVA23U64Features>;
 def RVA23S64 : RISCVProfile<"rva23s64", RVA23S64Features>;
 def RVB23U64 : RISCVProfile<"rvb23u64", RVB23U64Features>;
 def RVB23S64 : RISCVProfile<"rvb23s64", RVB23S64Features>;
+def RVA23P1S64 : RISCVExperimentalProfile<"rva23p1s64", RVA23P1S64Features>;
+def RVB23P1S64 : RISCVExperimentalProfile<"rvb23p1s64", RVB23P1S64Features>;
 def RVM23U32 : RISCVExperimentalProfile<"rvm23u32", RVM23U32Features>;
