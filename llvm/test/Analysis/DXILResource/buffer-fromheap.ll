@@ -120,7 +120,7 @@ define void @test_typedbuffer() {
 ; CHECK-NEXT:   Buffer Stride: 16
 ; CHECK-NEXT:   Alignment: 0
 
-; Make sure this was the last SRV resource in the list.
+; Make sure this was the last UAV resource in the list.
 ; CHECK-NOT: Class: UAV
 
   ; struct P { float a; };
@@ -151,7 +151,8 @@ define void @test_typedbuffer() {
 ; CHECK-NEXT:   Kind: CBuffer
 ; CHECK-NEXT:   CBuffer size: 36
 
-; CHECK-NOT: Class: CVB
+; Make sure this was the last CBV resource in the list.
+; CHECK-NOT: Class: CBV
 
 ; Duplicated resources should not be added to the list
 ; (created from heap with the same index).

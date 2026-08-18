@@ -439,7 +439,7 @@ public:
     return Binding.value();
   }
 
-  uint32_t getSize() const { return Binding ? Binding->Size : 1; }
+  uint32_t getSize() const { return hasBinding() ? Binding->Size : 1; }
 
   TargetExtType *getHandleTy() const { return HandleTy; }
   StringRef getName() const { return Name; }
