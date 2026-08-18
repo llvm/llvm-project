@@ -164,7 +164,7 @@ jobs:
       - name: Build and Test
         timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
-        shel: pwsh
+        shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
