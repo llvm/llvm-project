@@ -16,8 +16,8 @@
 
 ! CHECK-LABEL: IR Dump Before HostOpFilteringPass: omp-host-op-filter
 ! CHECK: llvm.func{{.*}}@__mlir_math_ipowi_i32
-! CHECK-SAME: attributes{{.*}}omp.declare_target{{.*}}device_type =
-! CHECK-NOT: (host)
+! CHECK-SAME: attributes{{.*}}omp.declare_target = #omp.declaretarget<
+! CHECK-NOT: device_type = host
 
 module m
 contains

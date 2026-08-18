@@ -363,7 +363,7 @@ static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
              << "omp.declare_target 'automap' is not valid on functions";
 
     // TODO: Disallow the `local` clause (OpenMP 6.0).
-    if (declareTargetAttr.getCaptureClause().getValue() ==
+    if (declareTargetAttr.getCaptureClause() ==
         mlir::omp::DeclareTargetCaptureClause::link)
       return op->emitOpError()
              << "omp.declare_target 'link' is not valid on functions";
