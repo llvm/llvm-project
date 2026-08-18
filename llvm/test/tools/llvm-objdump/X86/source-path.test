@@ -30,9 +30,9 @@
 ; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o -DSEP=%{fs-sep}
 
 ;; The compilation directory is spelled with '/' but is joined to the file name
-;; with the host separator, so on Windows the recorded path mixes the two.
-;; Normalization replaces every separator with [[SEP]], the one native to this
-;; host.
+;; with the preferred directory separator. On Windows, when
+;; LLVM_WINDOWS_PREFER_FORWARD_SLASH is not enabled, this means the path
+;; contains a mix of slash directions, which llvm-objdump then normalises.
 ; SOURCE-MISSING: warning: '[[FILE]]': failed to find source [[SEP]]wrong[[SEP]]Inputs[[SEP]]source-interleave-x86_64.c
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong %/p %t.o | \
@@ -159,22 +159,17 @@
 ; LINE-SUBST-PREFIX: ; [[PREFIX]][[SEP]]Inputs[[SEP]]source-interleave-x86_64.c:3
 ; LINE-SUBST-PREFIX-NEXT: movq
 
-;; Objects built on Windows may record source paths with '\' separators, which
-;; are not separators on a POSIX host. Such a path is only ever a string here:
-;; no file of that name exists on either host, and --line-numbers reports the
-;; path without looking for it.
+;; Source paths recorded in objects may use either path separator. They are
+;; treated as strings here: --line-numbers reports them without accessing the
+;; named file.
 ;;
-;; The compilation directory below mixes the two separators, so whichever host
-;; reads the object, one of them is not a separator there. llc keeps it as
-;; spelled and joins the file name on with the host separator, so what reaches
-;; llvm-objdump is of a mixed style on any host. The '\' is doubled for sed.
+;; The compilation directory deliberately contains mixed separators. llc
+;; preserves it as spelled and appends the file name using the host separator,
+;; so the resulting path may also have mixed separators. The '\' is doubled
+;; for sed. llvm-objdump then normalizes the slash direction when printing.
 
 ; RUN: sed -e 's,SRC_COMPDIR,dx12\\compute/no_rs,g' %p/Inputs/source-interleave.ll > %t-winpath.ll
 ; RUN: llc -o %t-winpath.o -filetype=obj -mtriple=x86_64-pc-linux %t-winpath.ll
-
-;; The path has to come back out spelled with [[SEP]] throughout, the separator
-;; native to this host, which is what would regress if it stopped being
-;; normalized.
 ; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t-winpath.o | \
 ; RUN:   FileCheck %s --check-prefix=WINPATH-LINE -DSEP=%{fs-sep}
 

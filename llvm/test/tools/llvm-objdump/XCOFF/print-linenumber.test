@@ -1,8 +1,8 @@
 # Test that the `llvm-objdump -l` can print correct line numbers.
 
-## The path recorded in these objects is "/basic.c". Source paths are normalized
-## to the host separator before printing, so the leading separator is the one
-## sys::path::native() produces here, which [[SEP]] expands to.
+## The path recorded in these objects is "/basic.c". Source paths are
+## normalized to the preferred directory separator before printing,
+## so use a FileCheck variable to check for that in a portable manner.
 
 # RUN: llvm-objdump -d -l %p/Inputs/basic32.o | FileCheck %s --check-prefix=LINES32 -DSEP=%{fs-sep}
 # RUN: llvm-objdump -d -l %p/Inputs/basic64.o | FileCheck %s --check-prefix=LINES64 -DSEP=%{fs-sep}

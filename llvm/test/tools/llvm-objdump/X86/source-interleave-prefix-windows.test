@@ -8,12 +8,10 @@
 ; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
 ; RUN: llvm-objdump --prefix 'myprefix/\' --source %t.o 2>&1 | FileCheck %s -DFILE=%t.o -DPREFIX='myprefix' -DSEP=%{fs-sep}
 
-;; The compilation directory '/Inputs' is joined to the file name with the
-;; preferred separator, so the path recorded in the debug info mixes '/' and
-;; '\'. It is normalized before --prefix is applied, so every separator below is
-;; [[SEP]], the one native to this host: output that still mixed the two, or
-;; that used the other style, would not match. sys::path::append then
-;; concatenates the path onto the prefix without inserting a separator, because
-;; it already starts with one.
+;; The compilation directory '/Inputs' is joined to the file name using the
+;; preferred separator, producing a mixed-style path. It is normalized before
+;; --prefix is applied, so all separators after the prefix are the host's preferred value.
+;; sys::path::append then joins it to the prefix without adding a separator
+;; because the path already starts with one.
 ; CHECK: warning: '[[FILE]]': failed to find source [[PREFIX]][[SEP]]Inputs[[SEP]]source-interleave-x86_64.c
 

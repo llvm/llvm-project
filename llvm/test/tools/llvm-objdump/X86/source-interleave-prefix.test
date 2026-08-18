@@ -28,7 +28,7 @@
 ; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t-correct-prefix.ll
 ; RUN: llc -o %t-correct-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-correct-prefix.ll
 ;; The compilation directory is written with '/' but is normalized, so the
-;; reported path is %p rather than %/p. sys::path::append does not insert a
+;; reported path is %p rather than %/p. llvm-objdump does not insert a
 ;; separator between the prefix and a path that has a root name.
 ; RUN: llvm-objdump --prefix myprefix --source %t-correct-prefix.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%p -DSEP=%{fs-sep}

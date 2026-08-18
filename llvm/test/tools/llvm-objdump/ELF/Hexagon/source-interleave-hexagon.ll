@@ -67,9 +67,7 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocation(line: 8, column: 3, scope: !14)
 ; LINES: <main>:
 ; LINES-NEXT: main():
-;; The compilation directory is spelled with '/', so on Windows the recorded
-;; path mixes separators. It is normalized to the host separator before being
-;; printed, and [[SEP]] is that separator, not "either of the two".
+;; Show that directory separators are normalized to the preferred character.
 ; LINES-NEXT: Inputs[[SEP]]source-interleave-hexagon.c:6
 
 ; SOURCE: <main>:
