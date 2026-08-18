@@ -320,8 +320,7 @@ TEST_F(LlvmLibcFreopenTest, StdoutFailureTest) {
 #endif
 
 TEST_F(LlvmLibcFreopenTest, NullStreamFailure) {
-  const auto FILENAME =
-      libc_make_test_file_path("freopen_null_stream.test");
+  const auto FILENAME = libc_make_test_file_path("freopen_null_stream.test");
   const char *fn = FILENAME;
 
   EXPECT_DEATH([=] { LIBC_NAMESPACE::freopen(fn, "r", nullptr); },
