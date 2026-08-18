@@ -1257,7 +1257,6 @@ public:
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
-    CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -1842,7 +1841,12 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
                             computeScalarTypeForInstruction(Opcode, Operands),
                             Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {
+    assert(flagsValidForOpcode(Opcode) &&
+           "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode) &&
+           "Opcode requires specific flags to be set");
+  }
 
   ~VPWidenRecipe() override = default;
 

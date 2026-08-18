@@ -2057,12 +2057,9 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     return;
   if (!TuneCPU->empty()) {
     CmdArgs.push_back("-tune-cpu");
-    if (*TuneCPU == "native")
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      // TuneCPU might or might not be the original -mtune string, so we
-      // have to create a new copy here.
-      CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
+    // TuneCPU might or might not be the original -mtune string, so we
+    // have to create a new copy here.
+    CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   // Handle -mrvv-vector-bits=<bits>

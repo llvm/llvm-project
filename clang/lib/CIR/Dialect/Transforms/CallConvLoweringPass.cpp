@@ -246,8 +246,7 @@ static mlir::Type abiTypeToCIR(const llvm::abi::Type *ty, MLIRContext *ctx) {
         // Coercion types are plain register tuples, not the source record.
         return cir::StructType::get(
             ctx, fieldTypes, /*packed=*/false,
-            /*padded=*/false, /*is_class=*/false,
-            cir::RecordType::getAllDataKinds(fieldTypes));
+            /*is_class=*/false, cir::RecordType::getAllDataKinds(fieldTypes));
       })
       .Default([](const llvm::abi::Type *) -> mlir::Type { return nullptr; });
 }

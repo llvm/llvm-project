@@ -57,6 +57,9 @@ math_mpfr_test(
 math_mpfr_test(
     name = "ceilf128",
     hdrs = ["CeilTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_mpfr_test(name = "cos")

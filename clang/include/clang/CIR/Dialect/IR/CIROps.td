@@ -3761,8 +3761,8 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    !record_type = !cir.struct<"S" packed {!u64i, !u16i,
+                                           pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -3852,7 +3852,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    !cir.struct<"S" packed {!u64i, !u16i,
+                            pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
