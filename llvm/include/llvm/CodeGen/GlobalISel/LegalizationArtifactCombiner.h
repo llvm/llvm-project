@@ -262,7 +262,7 @@ public:
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
 
-    Builder.setInstr(MI);
+    Builder.setInstrAndDebugLoc(MI);
     Register DstReg = MI.getOperand(0).getReg();
     const LLT DstTy = MRI.getType(DstReg);
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
