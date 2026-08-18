@@ -32,6 +32,28 @@
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}} "-E" {{.*}}
 // BUFF: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"
 
+// GlobalISel is not yet supported by the New PM CodeGen pipeline, so the driver
+// force-disables it at cc1 when GlobalISel is requested.
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -fglobal-isel %s 2>&1 | FileCheck -check-prefix=NPM_GISEL %s
+// NPM_GISEL: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-fenable-new-pm-codegen=force-disable"
+
+// Check that the force-disable reaches the device cc1 when clang runs the backend
+// directly instead of the default lld/LTO path.
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu --offload-arch=gfx900 -fglobal-isel --cuda-device-only -c %s 2>&1 | FileCheck -check-prefix=NPM_GISEL_BACKEND %s
+// NPM_GISEL_BACKEND: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"{{.*}} "-fenable-new-pm-codegen=force-disable"{{.*}} "-emit-obj"
+
+// Without GlobalISel the driver leaves the New PM CodeGen option untouched at cc1.
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu %s 2>&1 | FileCheck -check-prefix=NPM_DEFAULT %s
+// NPM_DEFAULT-NOT: -fenable-new-pm-codegen
+
+// GlobalISel also force-disables the New PM for the device LTO backend.
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -foffload-lto=full -fglobal-isel %s 2>&1 | FileCheck -check-prefix=NPM_LTO_GISEL %s
+// NPM_LTO_GISEL: "--device-linker=amdgcn-amd-amdhsa=-plugin-opt=-enable-npm-for-backend=force-disable"
+
+// Without GlobalISel the device LTO backend option is left untouched.
+// RUN: %clang -### -nogpulib -nogpuinc --target=x86_64-unknown-linux-gnu -foffload-lto=full %s 2>&1 | FileCheck -check-prefix=NPM_LTO_DEFAULT %s
+// NPM_LTO_DEFAULT-NOT: -enable-npm-for-backend
+
 // RUN: %clang -### -x hip -nogpulib -nogpuinc --target=x86_64-pc-windows-msvc -fms-extensions \
 // RUN:   -mllvm -amdgpu-early-inline-all=true  %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MLLVM %s
