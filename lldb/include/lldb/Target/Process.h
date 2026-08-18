@@ -1647,6 +1647,9 @@ public:
   ///     of the slice indicates how many bytes were read successfully. Partial
   ///     reads are always performed from the start of the requested range,
   ///     never from the middle or end.
+  ///
+  ///     A repeated range is read once and each repeat returns the same slice,
+  ///     so callers must treat the slices as read-only.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buffer);

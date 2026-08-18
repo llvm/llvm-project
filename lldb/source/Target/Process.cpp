@@ -11,6 +11,7 @@
 #include <mutex>
 #include <optional>
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -2082,14 +2083,37 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
-  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
-  fixed_ranges.reserve(ranges.size());
-  for (const Range<lldb::addr_t, size_t> &range : ranges)
-    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
-                              range.GetByteSize());
-  if (!GetDisableMemoryCache())
-    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
-  return DoReadMemoryRanges(fixed_ranges, buffer);
+  // Callers can name the same range twice, when several objects share a value.
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> unique_ranges;
+  llvm::SmallVector<unsigned> range_to_unique;
+  llvm::DenseMap<std::pair<lldb::addr_t, size_t>, unsigned> unique_index;
+  unique_ranges.reserve(ranges.size());
+  range_to_unique.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges) {
+    Range<lldb::addr_t, size_t> fixed(FixAnyAddress(range.GetRangeBase()),
+                                      range.GetByteSize());
+    auto [pos, inserted] = unique_index.try_emplace(
+        {fixed.GetRangeBase(), fixed.GetByteSize()}, unique_ranges.size());
+    if (inserted)
+      unique_ranges.push_back(fixed);
+    range_to_unique.push_back(pos->second);
+  }
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> unique_results =
+      GetDisableMemoryCache()
+          ? DoReadMemoryRanges(unique_ranges, buffer)
+          : m_memory_cache.ReadRanges(unique_ranges, buffer);
+  assert(unique_results.size() == unique_ranges.size() &&
+         "expected one result per unique range");
+
+  if (unique_ranges.size() == ranges.size())
+    return unique_results;
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
+  results.reserve(ranges.size());
+  for (unsigned idx : range_to_unique)
+    results.push_back(unique_results[idx]);
+  return results;
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>

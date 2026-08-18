@@ -468,9 +468,11 @@ public:
   // reading smaller chunks until it gets nothing back.
   bool read_less_than_requested = false;
   bool read_more_than_requested = false;
+  size_t num_reads = 0;
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
+    num_reads++;
     if (read_less_than_requested && size > 0)
       size--;
     if (read_more_than_requested)
@@ -489,6 +491,47 @@ public:
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
   llvm::StringRef GetPluginName() override { return "Dummy"; }
 };
+
+TEST_F(MemoryTest, TestReadMemoryRangesDeduplicatesRepeatedRanges) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  auto process_sp =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+      {0x1000, 64}, {0x2000, 64}, {0x1000, 64},
+      {0x3000, 64}, {0x1000, 64}, {0x2000, 64}};
+  llvm::SmallVector<uint8_t, 0> buffer(64 * ranges.size(), 0);
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process_sp->ReadMemoryRanges(ranges, buffer);
+
+  ASSERT_EQ(read_results.size(), ranges.size());
+  for (auto [range, memory] : llvm::zip(ranges, read_results)) {
+    ASSERT_EQ(memory.size(), 64u);
+    addr_t range_base = range.GetRangeBase();
+    for (auto [idx, byte] : llvm::enumerate(memory))
+      ASSERT_EQ(byte, static_cast<uint8_t>(range_base + idx));
+  }
+
+  // Only the three distinct ranges reached the inferior, and each repeat got
+  // the slice its first occurrence was read into.
+  EXPECT_EQ(process_sp->num_reads, 3u);
+
+  EXPECT_EQ(read_results[0].data(), read_results[2].data());
+  EXPECT_EQ(read_results[0].data(), read_results[4].data());
+  EXPECT_EQ(read_results[1].data(), read_results[5].data());
+}
 
 TEST_F(MemoryTest, TestReadMemoryRanges) {
   ArchSpec arch("x86_64-apple-macosx-");
