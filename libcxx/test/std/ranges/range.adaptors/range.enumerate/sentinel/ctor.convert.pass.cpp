@@ -28,32 +28,54 @@
 #include "test_iterators.h"
 
 #include "../types.h"
+#include "../../range_adaptor_types.h"
 
 template <class T>
 struct convertible_sentinel_wrapper {
-    explicit convertible_sentinel_wrapper() = default;
-    contexpr convertible_sentinel_wrapper(const T& it) : it_(it) {}
+  explicit convertible_sentinel_wrapper() = default;
+  constexpr convertible_sentinel_wrapper(const T& it) : it_(it) {}
 
-    template <class U>
-        requires std::convertible_to<const U&, T>
-    constexpr convertible_sentinel_wrapper(const convertible_sentinel_wrapper<U>& other) : it_(other.it_) {}
+  template <class U>
+    requires std::convertible_to<const U&, T>
+  constexpr convertible_sentinel_wrapper(const convertible_sentinel_wrapper<U>& other) : it_(other.it_) {}
 
-    constexpr friend bool operator==(convertible_sentinel_wrapper const& self, const T& other) {
-        return self.it_ == other;
-    }
-    T it_;
+  constexpr friend bool operator==(convertible_sentinel_wrapper const& self, const T& other) {
+    return self.it_ == other;
+  }
+  T it_;
 };
 
 struct NonSimpleNonCommonConvertibleView : IntBufferView {
-    using IntBufferView::IntBufferView;
+  using IntBufferView::IntBufferView;
 
-    constexpr int* begin() { return buffer_; }
-    constexpr const int* begin() const { return buffer_; }
-    constexpr convertible_sentinel_wrapper<int*> end() { return convertible_sentinel_wrapper<int*>(buffer_ + size_; }
-    constexpr convertible_sentinel_wrapper<const int*> end() const {
-        return convertible_sentinel_wrapper<const int*>(buffer_ + size_);
-    }
+  constexpr int* begin() { return buffer_; }
+  constexpr const int* begin() const { return buffer_; }
+  constexpr convertible_sentinel_wrapper<int*> end() { return convertible_sentinel_wrapper<int*>(buffer_ + size_); }
+  constexpr convertible_sentinel_wrapper<const int*> end() const {
+    return convertible_sentinel_wrapper<const int*>(buffer_ + size_);
+  }
 };
+
+// convertible_to<sentinel<false>, sentinel<Const>>
+static_assert(std::convertible_to< //
+              std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView>>,
+              std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView> const>>);
+
+constexpr void test_SFINAE() {
+  int buffer[3] = {1, 2, 3};
+
+  // Underlying non-const to const not convertible.
+  {
+    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
+    auto sent1 = v.end();
+    auto sent2 = std::as_const(v).end();
+
+    static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
+
+    static_assert(!std::is_constructible_v<decltype(sent1), decltype(sent2)>);
+    static_assert(!std::is_constructible_v<decltype(sent2), decltype(sent1)>); // this assert fails
+  }
+}
 
 template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr void test() {
@@ -72,7 +94,7 @@ constexpr void test() {
 
   std::array array{0, 1, 2, 3, 84};
   auto view = make_enumerate_view(array.begin(), array.end());
-  
+
   {
     // Assigning a non-const sentinel to a const-sentinel-typed variable invokes
     // the converting constructor.
@@ -88,6 +110,8 @@ constexpr void test() {
 }
 
 constexpr bool test() {
+  test_SFINAE();
+
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
