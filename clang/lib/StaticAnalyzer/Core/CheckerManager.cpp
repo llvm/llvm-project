@@ -539,17 +539,31 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
-/// Run checkers for end of path.
-// Note, We do not chain the checker output (like in expandGraphWithCheckers)
-// for this callback since end of path nodes are expected to be final.
+/// Run checkers for end of a function (either the entrypoint or another
+/// function that was inlined). Note that this function places the
+/// checker activations on separate execution paths:
+///        /-[checker1]-> N1 ...
+///   Pred --[checker2]-> N2 ...
+///        \-[checker3]-> N3 ...
+/// (If none of the checkers produce a transition, we continue with 'Pred'.)
+///
+/// This differs from the handling of all the other checker callbacks, where
+/// the checker activations are chained sequentially on a single path:
+///   Pred --[checker1]-> N1 --[checker2]-> N2 --[checker3]-> N3 ...
+///
+/// This difference has historical reasons: originally this callback was called
+/// 'EndPath' and only activated at the end of an execution paths, and
+/// (according to an old comment) those 'EndPath' checkers expected that they
+/// create an "end of path" node which will be final.
+/// TODO: Check whether this exceptional behavior is still justified.
 void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
-  // We define the builder outside of the loop because if at least one checker
-  // creates a successor for Pred, we do not need to generate an
-  // autotransition for it.
+  // By default, continue from 'Pred' -- this will be removed from 'Dst' if any
+  // checker generates a transition from it.
   Dst.insert(Pred);
+ 
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
