@@ -4,6 +4,7 @@
 
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -252,6 +253,24 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
 
 if is_configured("test_triple"):
     dotest_cmd += ["--triple", config.test_triple]
+
+# Same spelling as lldb/test/Shell/lit.cfg.py and lldb/test/Shell/CMakeLists.txt.
+is_mingw_target = platform.system() == "Windows" and re.search(
+    r"windows-gnu|mingw", is_configured("test_triple") or ""
+)
+
+# A MinGW inferior needs its toolchain's runtime DLLs, and lldbtest clears the
+# inferior's PATH, so hand back the sysroot's bin/.
+if is_mingw_target and is_configured("cmake_sysroot"):
+    dotest_cmd += [
+        "--inferior-env",
+        "PATH=" + os.path.join(config.cmake_sysroot, "bin"),
+    ]
+
+# A MinGW PE carries no ABI marker; LLDB assumes the one it was built for.
+# --setting lands in setUp, before the test creates its target.
+if is_mingw_target:
+    dotest_cmd += ["--setting", "plugin.object-file.pe-coff.abi=gnu"]
 
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]

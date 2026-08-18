@@ -146,6 +146,16 @@ endif
 # Use -target to pass the triple to the compiler.
 ARCH_CFLAGS := -target $(TRIPLE)
 
+# $(OS) is Windows_NT for both Windows ABIs, so anything that differs between
+# them has to ask the triple.
+ifeq "$(OS)" "Windows_NT"
+  ifeq "$(findstring -gnu,$(TRIPLE))$(findstring mingw,$(TRIPLE))" ""
+    WINDOWS_ABI := msvc
+  else
+    WINDOWS_ABI := gnu
+  endif
+endif
+
 #----------------------------------------------------------------------
 # CC defaults to clang.
 #
@@ -559,10 +569,19 @@ ifneq "$(strip $(OBJC_GNUSTEP_DIR))" ""
 		ifeq "$(OS)" "Linux"
 			LDFLAGS +=-Wl,-rpath,$(OBJC_GNUSTEP_DIR)/lib
 		endif
-		ifeq "$(OS)" "Windows_NT"
+		ifeq "$(WINDOWS_ABI)" "msvc"
 			# Keep the DWARF sections and emit a COFF symbol table; the
 			# default CodeView route cannot represent Objective-C types.
 			LDFLAGS +=-Wl,/debug:dwarf
+			GNUSTEP_NEEDS_DLL_COPY := 1
+		endif
+		ifeq "$(WINDOWS_ABI)" "gnu"
+			# MinGW emits DWARF and a COFF symbol table without being asked,
+			# but ld.bfd cannot resolve libobjc2's .objc_selector_* comdats.
+			# @catch reaches the C++ ABI's __cxa_* entry points, which the
+			# C++ driver links for us - naming the library here would pick
+			# the wrong one under a libc++ distribution such as CLANG64.
+			LDFLAGS +=-fuse-ld=lld
 			GNUSTEP_NEEDS_DLL_COPY := 1
 		endif
 		# gnustep-base (Foundation) on top of the runtime, for tests of the
@@ -584,7 +603,7 @@ ifneq "$(strip $(OBJC_GNUSTEP_DIR))" ""
 			ifeq "$(OS)" "Linux"
 				LDFLAGS +=-Wl,-rpath,$(OBJC_GNUSTEP_BASE_DIR)/lib
 			endif
-			ifeq "$(OS)" "Windows_NT"
+			ifeq "$(WINDOWS_ABI)" "msvc"
 				GNUSTEP_NEEDS_BASE_DLL_COPY := 1
 			endif
 		endif
@@ -780,16 +799,27 @@ print-%:
 # would otherwise fold the tab-indented lines of the next conditional block
 # into this rule's recipe.
 ifeq "$(GNUSTEP_NEEDS_DLL_COPY)" "1"
-all: objc.dll
+GNUSTEP_RUNTIME_DLL := $(firstword $(wildcard \
+	$(OBJC_GNUSTEP_DIR)/lib/objc.dll \
+	$(OBJC_GNUSTEP_DIR)/lib/libobjc*.dll \
+	$(OBJC_GNUSTEP_DIR)/bin/objc.dll \
+	$(OBJC_GNUSTEP_DIR)/bin/libobjc*.dll))
 
-objc.dll: $(OBJC_GNUSTEP_DIR)/lib/objc.dll
+ifneq "$(strip $(GNUSTEP_RUNTIME_DLL))" ""
+all: $(notdir $(GNUSTEP_RUNTIME_DLL))
+
+$(notdir $(GNUSTEP_RUNTIME_DLL)): $(GNUSTEP_RUNTIME_DLL)
 	cp $< $@
+endif
 endif
 
 # Likewise for gnustep-base and the runtime DLLs it depends on, which the
 # tools-windows-msvc layout keeps under bin/. Their PDBs come along: the
 # runtime's small-object class table is a hidden symbol that LLDB can only
 # see through the PDB, and tagged pointers cannot be typed without it.
+#
+# MSVC only: a MinGW gnustep-base has no PDBs (the cp would fail), and its
+# bin/ holds a whole toolchain, so that directory goes on PATH instead.
 ifeq "$(GNUSTEP_NEEDS_BASE_DLL_COPY)" "1"
 all: gnustep-base-dlls
 
