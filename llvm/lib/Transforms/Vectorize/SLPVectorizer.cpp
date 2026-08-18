@@ -28680,8 +28680,9 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     // and all the lanes are gathered back. A single outside use may still be a
     // part of the larger vectorizable graph, same for the values, fed by the
     // loads, where the vector loads may pay off the gathering. Two outside uses
-    // may still be part of the same tree when they are local carry deps (cmp/add
-    // in the same block); reject 3+ outside users or 2 non-local outside users.
+    // may still be part of the same tree when they are local carry deps
+    // (cmp/add in the same block); reject 3+ outside users or 2 non-local
+    // outside users.
     auto IsBenignOutsideUser = [](Instruction *V, User *U) {
       auto *UI = dyn_cast<Instruction>(U);
       if (!UI || UI->getParent() != V->getParent())
