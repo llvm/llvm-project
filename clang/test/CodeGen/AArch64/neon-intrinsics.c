@@ -12468,34 +12468,6 @@ uint64x1_t test_vcvtp_u64_f64(float64x1_t a) {
   return vcvtp_u64_f64(a);
 }
 
-// CHECK-LABEL: define dso_local <1 x i64> @test_vcvtm_s64_f64(
-// CHECK-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CHECK-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTM_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CHECK-NEXT:    [[VCVTM1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double> [[VCVTM_I]])
-// CHECK-NEXT:    ret <1 x i64> [[VCVTM1_I]]
-//
-int64x1_t test_vcvtm_s64_f64(float64x1_t a) {
-  return vcvtm_s64_f64(a);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vcvtm_u64_f64(
-// CHECK-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CHECK-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
-// CHECK-NEXT:    [[VCVTM_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
-// CHECK-NEXT:    [[VCVTM1_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double> [[VCVTM_I]])
-// CHECK-NEXT:    ret <1 x i64> [[VCVTM1_I]]
-//
-uint64x1_t test_vcvtm_u64_f64(float64x1_t a) {
-  return vcvtm_u64_f64(a);
-}
-
 // CHECK-LABEL: define dso_local <1 x i64> @test_vcvta_s64_f64(
 // CHECK-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

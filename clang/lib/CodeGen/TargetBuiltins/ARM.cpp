@@ -6403,12 +6403,12 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vcvta");
   }
   case NEON::BI__builtin_neon_vcvtm_s16_f16:
-  case NEON::BI__builtin_neon_vcvtm_s32_v:
   case NEON::BI__builtin_neon_vcvtmq_s16_f16:
-  case NEON::BI__builtin_neon_vcvtmq_s32_v:
   case NEON::BI__builtin_neon_vcvtm_u16_f16:
-  case NEON::BI__builtin_neon_vcvtm_u32_v:
   case NEON::BI__builtin_neon_vcvtmq_u16_f16:
+  case NEON::BI__builtin_neon_vcvtm_s32_v:
+  case NEON::BI__builtin_neon_vcvtmq_s32_v:
+  case NEON::BI__builtin_neon_vcvtm_u32_v:
   case NEON::BI__builtin_neon_vcvtmq_u32_v:
   case NEON::BI__builtin_neon_vcvtm_s64_v:
   case NEON::BI__builtin_neon_vcvtmq_s64_v:
