@@ -11,47 +11,149 @@
 // <ranges>
 
 //   V models forward_range:
-//     class iterator;
 
-//     using iterator::iterator_category = input_iterator_tag;
-//     using iterator::iterator_concept = see below;
-//     using iterator::value_type = decltype(views::take(subrange(current_, end_), n_));
-//     using iterator::difference_type = range_difference_t<Base>;
+//     using iterator_category = ...;
+//     using iterator_concept = ...;
+//     using value_type = decltype(views::take(subrange(current_, end_), n_));
+//     using difference_type = range_difference_t<Base>;
 
 #include <concepts>
 #include <iterator>
 #include <ranges>
 
 #include "test_iterators.h"
-#include "test_range.h"
-
-template <template <class...> class Iter>
-using ChunkViewFor = std::ranges::chunk_view<test_view<Iter>>;
-
-template <template <class...> class Iter>
-using ChunkIteratorFor = std::ranges::iterator_t<ChunkViewFor<Iter>>;
-
-template <template <class...> class Iter>
-constexpr void test_iterator_types() {
-  using ChunkView     = ChunkViewFor<Iter>;
-  using ChunkIterator = ChunkIteratorFor<Iter>;
-
-  static_assert(std::same_as<typename ChunkIterator::iterator_category, std::input_iterator_tag>);
-  static_assert(std::same_as<typename ChunkIterator::value_type, std::ranges::range_value_t<ChunkView>>);
-  static_assert(
-      std::same_as<typename ChunkIterator::difference_type, std::ranges::range_difference_t<test_view<Iter>>>);
-}
 
 constexpr void test() {
-  test_iterator_types<forward_iterator>();
-  test_iterator_types<bidirectional_iterator>();
-  test_iterator_types<random_access_iterator>();
-  test_iterator_types<contiguous_iterator>();
+  // Test `using iterator_category = ...`
+  // Test `using iterator_concept = ...`
+  // Test `using value_type = decltype(view::take(subrange(current_, end_), n_))`
+  // Test `using difference_type = range_difference_t<Base>`
+  {
+    // forward_iterator
+    {
+      static_assert(
+          std::same_as< typename std::ranges::iterator_t< std::ranges::chunk_view<
+                            std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>::
+                            iterator_category,
+                        std::input_iterator_tag>);
+      static_assert(
+          std::same_as< typename std::ranges::iterator_t< std::ranges::chunk_view<
+                            std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>::
+                            iterator_concept,
+                        std::forward_iterator_tag>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t< std::ranges::chunk_view<
+                  std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>::value_type,
+              std::ranges::range_value_t<std::ranges::chunk_view<
+                  std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>>);
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>::
+                          difference_type,
+                      std::ranges::range_difference_t<
+                          std::ranges::subrange<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>>>);
+    }
 
-  static_assert(std::same_as<ChunkIteratorFor<forward_iterator>::iterator_concept, std::forward_iterator_tag>);
-  static_assert(
-      std::same_as<ChunkIteratorFor<bidirectional_iterator>::iterator_concept, std::bidirectional_iterator_tag>);
-  static_assert(
-      std::same_as<ChunkIteratorFor<random_access_iterator>::iterator_concept, std::random_access_iterator_tag>);
-  static_assert(std::same_as<ChunkIteratorFor<contiguous_iterator>::iterator_concept, std::random_access_iterator_tag>);
+    // bidirectional_iterator
+    {
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<bidirectional_iterator<int*>,
+                                                sentinel_wrapper<bidirectional_iterator<int*>>>>>::iterator_category,
+                      std::input_iterator_tag>);
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<bidirectional_iterator<int*>,
+                                                sentinel_wrapper<bidirectional_iterator<int*>>>>>::iterator_concept,
+                      std::bidirectional_iterator_tag>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t< std::ranges::chunk_view<
+                  std::ranges::subrange<bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>>>::
+                  value_type,
+              std::ranges::range_value_t<std::ranges::chunk_view<
+                  std::ranges::subrange<bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>>>>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t< std::ranges::chunk_view<
+                  std::ranges::subrange<bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>>>::
+                  difference_type,
+              std::ranges::range_difference_t<
+                  std::ranges::subrange<bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>>>);
+    }
+
+    // random_access_iterator
+    {
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<random_access_iterator<int*>,
+                                                sentinel_wrapper<random_access_iterator<int*>>>>>::iterator_category,
+                      std::input_iterator_tag>);
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<random_access_iterator<int*>,
+                                                sentinel_wrapper<random_access_iterator<int*>>>>>::iterator_concept,
+                      std::random_access_iterator_tag>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t< std::ranges::chunk_view<
+                  std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>>::
+                  value_type,
+              std::ranges::range_value_t<std::ranges::chunk_view<
+                  std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>>>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t< std::ranges::chunk_view<
+                  std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>>::
+                  difference_type,
+              std::ranges::range_difference_t<
+                  std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>>);
+    }
+
+    // contiguous_iterator
+    {
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<contiguous_iterator<int*>,
+                                                sentinel_wrapper<contiguous_iterator<int*>>>>>::iterator_category,
+                      std::input_iterator_tag>);
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                          std::ranges::subrange<contiguous_iterator<int*>,
+                                                sentinel_wrapper<contiguous_iterator<int*>>>>>::iterator_concept,
+                      std::random_access_iterator_tag>);
+      static_assert(std::same_as<
+                    typename std::ranges::iterator_t< std::ranges::chunk_view<
+                        std::ranges::subrange<contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>>>>::
+                        value_type,
+                    std::ranges::range_value_t<std::ranges::chunk_view<
+                        std::ranges::subrange<contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>>>>>);
+      static_assert(std::same_as<
+                    typename std::ranges::iterator_t< std::ranges::chunk_view<
+                        std::ranges::subrange<contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>>>>::
+                        difference_type,
+                    std::ranges::range_difference_t<
+                        std::ranges::subrange<contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>>>>);
+    }
+
+    // int*
+    {
+      static_assert(std::same_as<typename std::ranges::iterator_t<std::ranges::chunk_view<
+                                    std::ranges::subrange<int*, sentinel_wrapper<int*>>>>::iterator_category,
+                                std::input_iterator_tag>);
+      static_assert(std::same_as<typename std::ranges::iterator_t<std::ranges::chunk_view<
+                                    std::ranges::subrange<int*, sentinel_wrapper<int*>>>>::iterator_concept,
+                                std::random_access_iterator_tag>);
+      static_assert(
+          std::same_as<
+              typename std::ranges::iterator_t<
+                  std::ranges::chunk_view<std::ranges::subrange<int*, sentinel_wrapper<int*>>>>::value_type,
+              std::ranges::range_value_t<std::ranges::chunk_view<std::ranges::subrange<int*, sentinel_wrapper<int*>>>>>);
+      static_assert(
+          std::same_as<typename std::ranges::iterator_t<
+                          std::ranges::chunk_view<std::ranges::subrange<int*, sentinel_wrapper<int*>>>>::difference_type,
+                      std::ranges::range_difference_t<std::ranges::subrange<int*, sentinel_wrapper<int*>>>>);
+    }
+  }
 }
