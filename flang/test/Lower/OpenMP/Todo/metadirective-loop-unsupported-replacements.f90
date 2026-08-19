@@ -70,7 +70,7 @@
 ! EMPTY: not yet implemented: loop-associated METADIRECTIVE without associated
 ! EMPTY-SAME: DO
 ! TRAILING: not yet implemented: loop-associated METADIRECTIVE with content following the associated DO
-! NESTING: not yet implemented: BARRIER closely nested in loop-associated METADIRECTIVE variant
+! NESTING: error: `BARRIER` region may not be closely nested
 
 !--- mixed-association.f90
 subroutine test_single_fallback(flag, n, a)

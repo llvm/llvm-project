@@ -754,6 +754,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
+  auto branches{GetReachableMetadirectiveReplacements(x.v.Clauses())};
+  CheckMetadirectiveReplacementNesting(branches);
+  pendingMetadirectiveReplacements_.push_back(
+      {metadirectiveLoopVariants_.size(), std::move(branches)});
   EnterDirectiveNest(MetadirectiveNest);
 }
 
@@ -761,12 +765,37 @@ void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
 }
 
+void OmpStructureChecker::Enter(
+    const parser::OmpDelimitedMetadirectiveDirective &x) {
+  auto branches{GetReachableMetadirectiveReplacements(x.BeginDir().Clauses())};
+  CheckMetadirectiveReplacementNesting(branches);
+  llvm::SmallVector<EffectiveDirectivePath, 4> paths;
+  for (const MetadirectiveReplacementBranch &branch : branches) {
+    EffectiveDirectivePath path{branch.enclosingPath};
+    if (branch.spec) {
+      path.insert(
+          path.begin(), {branch.spec->DirId(), std::nullopt, branch.spec});
+    }
+    paths.push_back(std::move(path));
+  }
+  activeMetadirectiveReplacements_.push_back(
+      {dirContext_.size(), std::move(paths)});
+}
+
+void OmpStructureChecker::Leave(
+    const parser::OmpDelimitedMetadirectiveDirective &) {
+  CHECK(!activeMetadirectiveReplacements_.empty());
+  activeMetadirectiveReplacements_.pop_back();
+}
+
 // Check a loop-associated metadirective's variants against the loop nest they
 // apply to. The nest is not attached to the directive in the parse tree. It is
 // the next executable construct, either a following sibling or the first
 // execution-part construct for a declarative metadirective.
 void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
-  if (metadirectiveLoopVariants_.empty()) {
+  executionPartReplacementCounts_.push_back(0);
+  if (metadirectiveLoopVariants_.empty() &&
+      pendingMetadirectiveReplacements_.empty()) {
     return;
   }
   if (parser::Unwrap<parser::CompilerDirective>(x)) {
@@ -786,6 +815,27 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   std::vector<MetadirectiveLoopVariant> variants;
   variants.swap(metadirectiveLoopVariants_);
 
+  std::vector<PendingMetadirectiveReplacement> pending;
+  pending.swap(pendingMetadirectiveReplacements_);
+  for (PendingMetadirectiveReplacement &replacement : pending) {
+    llvm::SmallVector<EffectiveDirectivePath, 4> paths;
+    for (const MetadirectiveReplacementBranch &branch : replacement.branches) {
+      EffectiveDirectivePath path{branch.enclosingPath};
+      const parser::OmpDirectiveSpecification *spec{branch.spec};
+      if (spec) {
+        llvm::omp::Association association{
+            llvm::omp::getDirectiveAssociation(spec->DirId())};
+        if (association == llvm::omp::Association::LoopNest ||
+            association == llvm::omp::Association::LoopSeq) {
+          path.insert(path.begin(), {spec->DirId(), std::nullopt, spec});
+        }
+      }
+      paths.push_back(std::move(path));
+    }
+    activeMetadirectiveReplacements_.push_back(
+        {dirContext_.size(), std::move(paths)});
+    ++executionPartReplacementCounts_.back();
+  }
   unsigned version{context_.langOptions().OpenMPVersion};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
   const parser::DoConstruct &rootLoop{*parser::Unwrap<parser::DoConstruct>(x)};
@@ -867,6 +917,15 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Leave(const parser::ExecutionPartConstruct &) {
+  CHECK(!executionPartReplacementCounts_.empty());
+  std::size_t count{executionPartReplacementCounts_.back()};
+  executionPartReplacementCounts_.pop_back();
+  CHECK(count <= activeMetadirectiveReplacements_.size());
+  activeMetadirectiveReplacements_.resize(
+      activeMetadirectiveReplacements_.size() - count);
+}
+
 // Diagnose loop-associated metadirective variants that are not followed by a
 // loop nest, either because the metadirective is the last construct in the
 // execution part or because a non-loop construct follows it. Variants that
@@ -874,6 +933,10 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     std::size_t firstVariant) {
   CHECK(firstVariant <= metadirectiveLoopVariants_.size());
+  llvm::erase_if(pendingMetadirectiveReplacements_,
+      [firstVariant](const PendingMetadirectiveReplacement &replacement) {
+        return replacement.firstLoopVariant >= firstVariant;
+      });
   std::vector<MetadirectiveLoopVariant> variants;
   if (firstVariant == 0) {
     variants.swap(metadirectiveLoopVariants_);

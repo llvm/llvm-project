@@ -273,6 +273,7 @@ void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
   // nested one such as an interface body does not reset them.
   if (partStack_.empty()) {
     metadirectiveLoopVariants_.clear();
+    pendingMetadirectiveReplacements_.clear();
   }
   partStack_.push_back(PartKind::SpecificationPart);
 }
@@ -650,44 +651,257 @@ void OmpStructureChecker::ClearLabels() {
   targetLabels_.clear();
 }
 
-bool OmpStructureChecker::IsCloselyNestedRegion(
-    const llvm::omp::DirectiveSet &set) {
-  // Definition of close nesting:
-  //
-  // `A region nested inside another region with no parallel region nested
-  // between them`
-  //
-  // Examples:
-  //   non-parallel construct 1
-  //    non-parallel construct 2
-  //      parallel construct
-  //        construct 3
-  // In the above example, construct 3 is NOT closely nested inside construct 1
-  // or 2
-  //
-  //   non-parallel construct 1
-  //    non-parallel construct 2
-  //        construct 3
-  // In the above example, construct 3 is closely nested inside BOTH construct 1
-  // and 2
-  //
-  // Algorithm:
-  // Starting from the parent context, Check in a bottom-up fashion, each level
-  // of the context stack. If we have a match for one of the (supplied)
-  // violating directives, `close nesting` is satisfied. If no match is there in
-  // the entire stack, `close nesting` is not satisfied. If at any level, a
-  // `parallel` region is found, `close nesting` is not satisfied.
+llvm::SmallVector<OmpStructureChecker::EffectiveDirectivePath, 4>
+OmpStructureChecker::GetEnclosingDirectivePaths(
+    bool currentDirectiveOnStack) const {
+  int actualIndex{
+      static_cast<int>(dirContext_.size()) - (currentDirectiveOnStack ? 2 : 1)};
+  std::size_t depth{0};
+  llvm::SmallVector<EffectiveDirectivePath, 4> paths(1);
+  if (!activeMetadirectiveReplacements_.empty()) {
+    const MetadirectiveReplacementContext &frame{
+        activeMetadirectiveReplacements_.back()};
+    depth = frame.directiveContextDepth;
+    paths = frame.paths;
+  }
 
-  if (CurrentDirectiveIsNested()) {
-    int index = dirContext_.size() - 2;
-    while (index != -1) {
-      if (set.test(dirContext_[index].directive)) {
-        return true;
-      } else if (llvm::omp::allParallelSet.test(dirContext_[index].directive)) {
-        return false;
+  EffectiveDirectivePath actualContexts;
+  while (actualIndex >= static_cast<int>(depth)) {
+    std::size_t index{static_cast<std::size_t>(actualIndex--)};
+    const DirectiveContext &context{dirContext_[index]};
+    // A metadirective is replaced, so it is transparent in the effective
+    // nesting path.
+    if (context.directive == llvm::omp::Directive::OMPD_metadirective)
+      continue;
+    actualContexts.push_back({context.directive, index, nullptr});
+  }
+  for (EffectiveDirectivePath &path : paths)
+    path.insert(path.begin(), actualContexts.begin(), actualContexts.end());
+  return paths;
+}
+
+llvm::SmallVector<OmpStructureChecker::MetadirectiveReplacementBranch, 4>
+OmpStructureChecker::GetReachableMetadirectiveReplacements(
+    const parser::OmpClauseList &clauses) {
+  llvm::SmallVector<MetadirectiveReplacementBranch, 4> result;
+
+  for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
+    std::size_t firstBranch{result.size()};
+    llvm::omp::VariantMatchInfo constructVMI;
+    for (auto context{path.rbegin()}; context != path.rend(); ++context)
+      omp::AppendConstructTraitsForDirective(context->directive, constructVMI);
+    llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits(
+        constructVMI.ConstructTraits.begin(),
+        constructVMI.ConstructTraits.end());
+    omp::OmpVariantMatchContext matchContext{context_, constructTraits};
+    if (auto candidates{omp::BuildMetadirectiveCandidateSet(
+            clauses, context_, matchContext)}) {
+      for (const parser::OmpDirectiveSpecification *spec :
+          omp::GetReachableMetadirectiveVariants(
+              *candidates, matchContext, context_)) {
+        if (spec && spec->DirId() == llvm::omp::Directive::OMPD_nothing)
+          spec = nullptr;
+        result.push_back({path, spec});
       }
-      index--;
+      if (result.size() == firstBranch)
+        result.push_back({path, nullptr});
+      continue;
     }
+
+    // Unsupported selector features are diagnosed elsewhere. Conservatively
+    // retain every replacement for each path so nesting validation does not
+    // miss one or combine it with a different path.
+    for (const parser::OmpClause &clause : clauses.v) {
+      const parser::OmpDirectiveSpecification *spec{nullptr};
+      if (const auto *when{std::get_if<parser::OmpClause::When>(&clause.u)}) {
+        const auto &optionalSpec{std::get<1>(when->v.t)};
+        if (optionalSpec)
+          spec = &optionalSpec->value();
+      } else if (const auto *otherwise{
+                     std::get_if<parser::OmpClause::Otherwise>(&clause.u)}) {
+        if (otherwise->v && otherwise->v->v)
+          spec = &otherwise->v->v->value();
+      } else if (const auto *defaultVariant{
+                     std::get_if<parser::OmpClause::DefaultVariant>(
+                         &clause.u)}) {
+        spec = &defaultVariant->v.v.value();
+      } else {
+        continue;
+      }
+      if (spec && spec->DirId() == llvm::omp::Directive::OMPD_nothing)
+        spec = nullptr;
+      result.push_back({path, spec});
+    }
+    if (result.size() == firstBranch)
+      result.push_back({path, nullptr});
+  }
+  return result;
+}
+
+void OmpStructureChecker::CheckMetadirectiveReplacementNesting(
+    llvm::ArrayRef<MetadirectiveReplacementBranch> branches) {
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      worksharingDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      masterDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      barrierDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8> simdDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      orderedDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      orderedSinkDiagnosed;
+  llvm::SmallPtrSet<const parser::OmpDirectiveSpecification *, 8>
+      cancellationChecked;
+
+  for (const MetadirectiveReplacementBranch &branch : branches) {
+    const parser::OmpDirectiveSpecification *spec{branch.spec};
+    if (!spec)
+      continue;
+    llvm::omp::Directive directive{spec->DirId()};
+    parser::CharBlock source{spec->DirName().source};
+
+    if (llvm::omp::workShareSet.test(directive) &&
+        !llvm::omp::allParallelSet.test(directive) &&
+        IsCloselyNestedRegion(
+            branch.enclosingPath, llvm::omp::nestedWorkshareErrSet) &&
+        worksharingDiagnosed.insert(spec).second) {
+      context_.Say(source,
+          "A worksharing region may not be closely nested inside a "
+          "worksharing, explicit task, taskloop, critical, ordered, atomic, "
+          "or master region"_err_en_US);
+    }
+    if (directive == llvm::omp::Directive::OMPD_master &&
+        IsCloselyNestedRegion(
+            branch.enclosingPath, llvm::omp::nestedMasterErrSet) &&
+        masterDiagnosed.insert(spec).second) {
+      context_.Say(source,
+          "`MASTER` region may not be closely nested inside of "
+          "`WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, or `ATOMIC` "
+          "region."_err_en_US);
+    }
+    if (directive == llvm::omp::Directive::OMPD_barrier &&
+        IsCloselyNestedRegion(
+            branch.enclosingPath, llvm::omp::nestedBarrierErrSet) &&
+        barrierDiagnosed.insert(spec).second) {
+      context_.Say(source,
+          "`BARRIER` region may not be closely nested inside of "
+          "`WORKSHARING`, `LOOP`, `TASK`, `TASKLOOP`, `CRITICAL`, "
+          "`ORDERED`, `ATOMIC` or `MASTER` region."_err_en_US);
+    }
+
+    if (directive == llvm::omp::Directive::OMPD_ordered_standalone) {
+      const parser::OmpClause *depend{
+          parser::omp::FindClause(*spec, llvm::omp::Clause::OMPC_depend)};
+      bool validParent{!branch.enclosingPath.empty()};
+      if (depend && validParent) {
+        const EffectiveDirectiveContext &parent{branch.enclosingPath.front()};
+        validParent =
+            llvm::omp::nestedOrderedDoAllowedSet.test(parent.directive);
+        const parser::OmpClause *ordered{FindClauseInEffectiveContext(
+            parent, llvm::omp::Clause::OMPC_ordered)};
+        if (validParent && ordered) {
+          const auto &orderedClause{
+              std::get<parser::OmpClause::Ordered>(ordered->u)};
+          const auto orderedValue{GetIntValue(orderedClause.v)};
+          validParent = orderedValue > 0;
+          if (validParent &&
+              !CheckOrderedDependClause(orderedValue, *spec,
+                  /*emitDiagnostic=*/false) &&
+              orderedSinkDiagnosed.insert(spec).second) {
+            CheckOrderedDependClause(orderedValue, *spec);
+          }
+        } else {
+          validParent = false;
+        }
+      }
+      if (depend && !validParent && orderedDiagnosed.insert(spec).second) {
+        context_.Say(depend->source,
+            "An ORDERED construct with the DEPEND clause must be closely "
+            "nested in a worksharing-loop (or parallel worksharing-loop) "
+            "construct with ORDERED clause with a parameter"_err_en_US);
+      }
+    }
+
+    if ((directive == llvm::omp::Directive::OMPD_cancel ||
+            directive == llvm::omp::Directive::OMPD_cancellation_point) &&
+        cancellationChecked.insert(spec).second) {
+      llvm::SmallVector<EffectiveDirectivePath, 4> enclosingPaths;
+      for (const MetadirectiveReplacementBranch &candidate : branches) {
+        if (candidate.spec == spec)
+          enclosingPaths.push_back(candidate.enclosingPath);
+      }
+      if (auto type{GetCancelType(directive, source, spec->Clauses())}) {
+        CheckCancellationNestInPaths(source, directive, *type, enclosingPaths);
+      }
+    }
+
+    if (!IsCloselyNestedRegion(branch.enclosingPath, llvm::omp::allSimdSet))
+      continue;
+    bool eligibleSimd{directive == llvm::omp::Directive::OMPD_atomic ||
+        directive == llvm::omp::Directive::OMPD_do_simd ||
+        directive == llvm::omp::Directive::OMPD_loop ||
+        directive == llvm::omp::Directive::OMPD_scan ||
+        directive == llvm::omp::Directive::OMPD_simd};
+    if (directive == llvm::omp::Directive::OMPD_ordered_blockassoc ||
+        directive == llvm::omp::Directive::OMPD_ordered_standalone) {
+      eligibleSimd = parser::omp::FindClause(
+                         *spec, llvm::omp::Clause::OMPC_simd) != nullptr;
+    }
+    if (!eligibleSimd && simdDiagnosed.insert(spec).second) {
+      context_.Say(source,
+          "The only OpenMP constructs that can be encountered during "
+          "execution of a 'SIMD' region are the `ATOMIC` construct, the "
+          "`LOOP` construct, the `SIMD` construct, the `SCAN` construct "
+          "and the `ORDERED` construct with the `SIMD` clause."_err_en_US);
+    }
+  }
+}
+
+bool OmpStructureChecker::HasClauseInEffectiveContext(
+    const EffectiveDirectiveContext &context, llvm::omp::Clause type) const {
+  if (FindClauseInEffectiveContext(context, type))
+    return true;
+  if (context.actualContextIndex) {
+    const DirectiveContext &actual{dirContext_[*context.actualContextIndex]};
+    return llvm::is_contained(actual.endDirectiveClauses, type);
+  }
+  return false;
+}
+
+const parser::OmpClause *OmpStructureChecker::FindClauseInEffectiveContext(
+    const EffectiveDirectiveContext &context, llvm::omp::Clause type) const {
+  if (context.spec)
+    return parser::omp::FindClause(*context.spec, type);
+  if (context.actualContextIndex) {
+    const DirectiveContext &actual{dirContext_[*context.actualContextIndex]};
+    auto found{actual.clauseInfo.find(type)};
+    if (found != actual.clauseInfo.end())
+      return found->second;
+  }
+  return nullptr;
+}
+
+bool OmpStructureChecker::IsCloselyNestedRegion(
+    const EffectiveDirectivePath &path,
+    const llvm::omp::DirectiveSet &set) const {
+  for (const EffectiveDirectiveContext &context : path) {
+    if (set.test(context.directive))
+      return true;
+    if (llvm::omp::allParallelSet.test(context.directive))
+      break;
+  }
+  return false;
+}
+
+bool OmpStructureChecker::IsCloselyNestedRegion(
+    const llvm::omp::DirectiveSet &set, bool currentDirectiveOnStack) {
+  // A region is closely nested when a matching region occurs on any effective
+  // replacement path before an intervening parallel region.
+  for (const EffectiveDirectivePath &path :
+      GetEnclosingDirectivePaths(currentDirectiveOnStack)) {
+    if (IsCloselyNestedRegion(path, set))
+      return true;
   }
   return false;
 }
@@ -1353,14 +1567,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
       x.u);
 
   // Simd Construct with Ordered Construct Nesting check.
-  if (CurrentDirectiveIsNested()) {
-    if (GetDirectiveNest(SIMDNest) > 0) {
-      CheckSIMDNest(x);
-    }
-    if (GetDirectiveNest(TargetNest) > 0) {
-      CheckTargetNest(x);
-    }
-  }
+  if (dirName.v != llvm::omp::Directive::OMPD_metadirective &&
+      (GetDirectiveNest(SIMDNest) > 0 ||
+          IsCloselyNestedRegion(llvm::omp::allSimdSet)))
+    CheckSIMDNest(x);
+  if (CurrentDirectiveIsNested() && GetDirectiveNest(TargetNest) > 0)
+    CheckTargetNest(x);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
@@ -1550,9 +1762,6 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     if (llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
       HasInvalidTeamsNesting(beginSpec.DirId(), beginSpec.source);
     }
-    if (GetContext().directive == llvm::omp::Directive::OMPD_master) {
-      CheckMasterNesting(x);
-    }
     // A teams region can only be strictly nested within the implicit parallel
     // region or a target region.
     if (GetContext().directive == llvm::omp::Directive::OMPD_teams &&
@@ -1579,6 +1788,9 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
           ContextDirectiveAsFortran());
     }
   }
+
+  if (GetContext().directive == llvm::omp::Directive::OMPD_master)
+    CheckMasterNesting(x);
 
   CheckNoBranching(block, beginSpec.DirId(), beginSpec.source);
 
@@ -1734,69 +1946,90 @@ void OmpStructureChecker::ChecksOnOrderedAsBlock() {
     return;
   }
 
-  bool isNestedInDo{false};
-  bool isNestedInDoSIMD{false};
-  bool isNestedInSIMD{false};
-  bool noOrderedClause{false};
-  bool isOrderedClauseWithPara{false};
-  bool isCloselyNestedRegion{true};
-  if (CurrentDirectiveIsNested()) {
-    for (int i = (int)dirContext_.size() - 2; i >= 0; i--) {
-      if (llvm::omp::nestedOrderedErrSet.test(dirContext_[i].directive)) {
-        context_.Say(GetContext().directiveSource,
-            "`ORDERED` region may not be closely nested inside of `CRITICAL`, "
-            "`ORDERED`, explicit `TASK` or `TASKLOOP` region."_err_en_US);
+  bool nestedErrorDiagnosed{false};
+  bool closeNestingDiagnosed{false};
+  bool simdNestingDiagnosed{false};
+  bool simdThreadsNestingDiagnosed{false};
+  bool orderedClauseDiagnosed{false};
+  bool hasSimdClause{FindClause(llvm::omp::Clause::OMPC_simd) != nullptr};
+  bool hasThreadsClause{FindClause(llvm::omp::Clause::OMPC_threads) != nullptr};
+
+  for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
+    bool isNestedInDo{false};
+    bool isNestedInDoSIMD{false};
+    bool isNestedInSIMD{false};
+    bool noOrderedClause{false};
+    bool isOrderedClauseWithPara{false};
+    bool isCloselyNestedRegion{true};
+    bool hasNestedError{false};
+
+    for (const EffectiveDirectiveContext &enclosing : path) {
+      if (llvm::omp::nestedOrderedErrSet.test(enclosing.directive)) {
+        if (!nestedErrorDiagnosed) {
+          context_.Say(GetContext().directiveSource,
+              "`ORDERED` region may not be closely nested inside of "
+              "`CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` "
+              "region."_err_en_US);
+          nestedErrorDiagnosed = true;
+        }
+        hasNestedError = true;
         break;
-      } else if (llvm::omp::allDoSet.test(dirContext_[i].directive)) {
+      } else if (llvm::omp::allDoSet.test(enclosing.directive)) {
         isNestedInDo = true;
-        isNestedInDoSIMD =
-            llvm::omp::allDoSimdSet.test(dirContext_[i].directive);
-        if (const auto *clause{
-                FindClause(dirContext_[i], llvm::omp::Clause::OMPC_ordered)}) {
+        isNestedInDoSIMD = llvm::omp::allDoSimdSet.test(enclosing.directive);
+        if (const auto *clause{FindClauseInEffectiveContext(
+                enclosing, llvm::omp::Clause::OMPC_ordered)}) {
           const auto &orderedClause{
               std::get<parser::OmpClause::Ordered>(clause->u)};
-          const auto orderedValue{GetIntValue(orderedClause.v)};
-          isOrderedClauseWithPara = orderedValue > 0;
+          isOrderedClauseWithPara = GetIntValue(orderedClause.v) > 0;
         } else {
           noOrderedClause = true;
         }
         break;
-      } else if (llvm::omp::allSimdSet.test(dirContext_[i].directive)) {
+      } else if (llvm::omp::allSimdSet.test(enclosing.directive)) {
         isNestedInSIMD = true;
         break;
       } else if (llvm::omp::nestedOrderedParallelErrSet.test(
-                     dirContext_[i].directive)) {
+                     enclosing.directive)) {
         isCloselyNestedRegion = false;
         break;
       }
     }
-  }
+    if (hasNestedError)
+      continue;
 
-  if (!isCloselyNestedRegion) {
-    context_.Say(GetContext().directiveSource,
-        "An ORDERED directive without the DEPEND clause must be closely nested "
-        "in a SIMD, worksharing-loop, or worksharing-loop SIMD "
-        "region"_err_en_US);
-  } else {
-    if (CurrentDirectiveIsNested() &&
-        FindClause(llvm::omp::Clause::OMPC_simd) &&
+    if (!isCloselyNestedRegion) {
+      if (!closeNestingDiagnosed) {
+        context_.Say(GetContext().directiveSource,
+            "An ORDERED directive without the DEPEND clause must be closely "
+            "nested in a SIMD, worksharing-loop, or worksharing-loop SIMD "
+            "region"_err_en_US);
+        closeNestingDiagnosed = true;
+      }
+    } else if (!path.empty() && hasSimdClause &&
         (!isNestedInDoSIMD && !isNestedInSIMD)) {
-      context_.Say(GetContext().directiveSource,
-          "An ORDERED directive with SIMD clause must be closely nested in a "
-          "SIMD or worksharing-loop SIMD region"_err_en_US);
-    } else if (CurrentDirectiveIsNested() &&
-        FindClause(llvm::omp::Clause::OMPC_simd) &&
-        FindClause(llvm::omp::Clause::OMPC_threads) && isNestedInSIMD &&
-        !isNestedInDoSIMD) {
-      context_.Say(GetContext().directiveSource,
-          "An ORDERED directive with SIMD and THREADS clauses must be closely "
-          "nested in a worksharing-loop SIMD region"_err_en_US);
+      if (!simdNestingDiagnosed) {
+        context_.Say(GetContext().directiveSource,
+            "An ORDERED directive with SIMD clause must be closely nested in "
+            "a SIMD or worksharing-loop SIMD region"_err_en_US);
+        simdNestingDiagnosed = true;
+      }
+    } else if (!path.empty() && hasSimdClause && hasThreadsClause &&
+        isNestedInSIMD && !isNestedInDoSIMD) {
+      if (!simdThreadsNestingDiagnosed) {
+        context_.Say(GetContext().directiveSource,
+            "An ORDERED directive with SIMD and THREADS clauses must be "
+            "closely nested in a worksharing-loop SIMD region"_err_en_US);
+        simdThreadsNestingDiagnosed = true;
+      }
     }
-    if (isNestedInDo && (noOrderedClause || isOrderedClauseWithPara)) {
+    if (isNestedInDo && (noOrderedClause || isOrderedClauseWithPara) &&
+        !orderedClauseDiagnosed) {
       context_.Say(GetContext().directiveSource,
           "An ORDERED directive without the DEPEND clause must be closely "
-          "nested in a worksharing-loop (or worksharing-loop SIMD) region with "
-          "ORDERED clause without the parameter"_err_en_US);
+          "nested in a worksharing-loop (or worksharing-loop SIMD) region "
+          "with ORDERED clause without the parameter"_err_en_US);
+      orderedClauseDiagnosed = true;
     }
   }
 }
@@ -2915,12 +3148,15 @@ void OmpStructureChecker::CheckScan(
     context_.Say(x.source,
         "Exactly one of EXCLUSIVE or INCLUSIVE clause is expected"_err_en_US);
   }
-  if (!CurrentDirectiveIsNested() ||
-      !llvm::omp::scanParentAllowedSet.test(GetContextParent().directive)) {
-    context_.Say(x.source,
-        "Orphaned SCAN directives are prohibited; perhaps you forgot "
-        "to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING "
-        "LOOP SIMD or a SIMD directive."_err_en_US);
+  for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
+    if (path.empty() ||
+        !llvm::omp::scanParentAllowedSet.test(path.front().directive)) {
+      context_.Say(x.source,
+          "Orphaned SCAN directives are prohibited; perhaps you forgot "
+          "to enclose the directive in to a WORKSHARING LOOP, a WORKSHARING "
+          "LOOP SIMD or a SIMD directive."_err_en_US);
+      break;
+    }
   }
 }
 
@@ -2982,19 +3218,25 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     visitDoacross(doaClause.v.v, clause->source);
   }
 
-  bool isNestedInDoOrderedWithPara{false};
-  if (CurrentDirectiveIsNested() &&
-      llvm::omp::nestedOrderedDoAllowedSet.test(GetContextParent().directive)) {
-    if (const auto *clause{
-            FindClause(GetContextParent(), llvm::omp::Clause::OMPC_ordered)}) {
-      const auto &orderedClause{
-          std::get<parser::OmpClause::Ordered>(clause->u)};
-      const auto orderedValue{GetIntValue(orderedClause.v)};
-      if (orderedValue > 0) {
-        isNestedInDoOrderedWithPara = true;
-        CheckOrderedDependClause(orderedValue);
-      }
+  bool isNestedInDoOrderedWithPara{true};
+  for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
+    if (path.empty() ||
+        !llvm::omp::nestedOrderedDoAllowedSet.test(path.front().directive)) {
+      isNestedInDoOrderedWithPara = false;
+      continue;
     }
+    const auto *clause{FindClauseInEffectiveContext(
+        path.front(), llvm::omp::Clause::OMPC_ordered)};
+    if (!clause) {
+      isNestedInDoOrderedWithPara = false;
+      continue;
+    }
+    const auto &orderedClause{std::get<parser::OmpClause::Ordered>(clause->u)};
+    const auto orderedValue{GetIntValue(orderedClause.v)};
+    if (orderedValue > 0)
+      CheckOrderedDependClause(orderedValue, *dirStack_.back());
+    else
+      isNestedInDoOrderedWithPara = false;
   }
 
   if (FindClause(llvm::omp::Clause::OMPC_depend) &&
@@ -3006,28 +3248,35 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
   }
 }
 
-void OmpStructureChecker::CheckOrderedDependClause(
-    std::optional<int64_t> orderedValue) {
+bool OmpStructureChecker::CheckOrderedDependClause(
+    std::optional<int64_t> orderedValue,
+    const parser::OmpDirectiveSpecification &spec, bool emitDiagnostic) {
+  bool valid{true};
   auto visitDoacross{[&](const parser::OmpDoacross &doa,
                          const parser::CharBlock &src) {
     if (auto *sinkVector{std::get_if<parser::OmpDoacross::Sink>(&doa.u)}) {
       int64_t numVar = sinkVector->v.v.size();
       if (orderedValue != numVar) {
-        context_.Say(src,
-            "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+        valid = false;
+        if (emitDiagnostic)
+          context_.Say(src,
+              "The number of variables in the SINK iteration vector does "
+              "not match the parameter specified in ORDERED clause"_err_en_US);
       }
     }
   }};
-  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_depend)) {
-    auto &dependClause{std::get<parser::OmpClause::Depend>(clause->u)};
-    if (auto *doAcross{std::get_if<parser::OmpDoacross>(&dependClause.v.u)}) {
-      visitDoacross(*doAcross, clause->source);
+  for (const parser::OmpClause &clause : spec.Clauses().v) {
+    if (const auto *dependClause{
+            std::get_if<parser::OmpClause::Depend>(&clause.u)}) {
+      if (const auto *doAcross{
+              std::get_if<parser::OmpDoacross>(&dependClause->v.u)})
+        visitDoacross(*doAcross, clause.source);
+    } else if (const auto *doaClause{
+                   std::get_if<parser::OmpClause::Doacross>(&clause.u)}) {
+      visitDoacross(doaClause->v.v, clause.source);
     }
   }
-  for (auto [_, clause] : FindClauses(llvm::omp::Clause::OMPC_doacross)) {
-    auto &doaClause{std::get<parser::OmpClause::Doacross>(clause->u)};
-    visitDoacross(doaClause.v.v, clause->source);
-  }
+  return valid;
 }
 
 void OmpStructureChecker::CheckTargetUpdate() {
@@ -3368,37 +3617,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPCancelConstruct &x) {
   if (auto maybeConstruct{GetCancelType(
           llvm::omp::Directive::OMPD_cancel, x.source, maybeClauses)}) {
     CheckCancellationNest(dirName.source, *maybeConstruct);
-
-    if (CurrentDirectiveIsNested()) {
-      // nowait can be put on the end directive rather than the start directive
-      // so we need to check both
-      auto getParentClauses{[&]() {
-        const DirectiveContext &parent{GetContextParent()};
-        return llvm::concat<const llvm::omp::Clause>(
-            parent.actualClauses, parent.endDirectiveClauses);
-      }};
-
-      if (llvm::omp::nestedCancelDoAllowedSet.test(*maybeConstruct)) {
-        for (llvm::omp::Clause clause : getParentClauses()) {
-          if (clause == llvm::omp::Clause::OMPC_nowait) {
-            context_.Say(dirName.source,
-                "The CANCEL construct cannot be nested inside of a worksharing construct with the NOWAIT clause"_err_en_US);
-          }
-          if (clause == llvm::omp::Clause::OMPC_ordered) {
-            context_.Say(dirName.source,
-                "The CANCEL construct cannot be nested inside of a worksharing construct with the ORDERED clause"_err_en_US);
-          }
-        }
-      } else if (llvm::omp::nestedCancelSectionsAllowedSet.test(
-                     *maybeConstruct)) {
-        for (llvm::omp::Clause clause : getParentClauses()) {
-          if (clause == llvm::omp::Clause::OMPC_nowait) {
-            context_.Say(dirName.source,
-                "The CANCEL construct cannot be nested inside of a worksharing construct with the NOWAIT clause"_err_en_US);
-          }
-        }
-      }
-    }
   }
 }
 
@@ -3539,13 +3757,19 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
   if (!maybeClauses) {
     return std::nullopt;
   }
+  return GetCancelType(cancelDir, cancelSource, *maybeClauses);
+}
+
+std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
+    llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
+    const parser::OmpClauseList &clauses) {
   // Given clauses from CANCEL or CANCELLATION_POINT, identify the construct
   // to which the cancellation applies.
   unsigned version{context_.langOptions().OpenMPVersion};
   std::optional<llvm::omp::Directive> cancelee;
   std::string cancelName{parser::omp::GetUpperName(cancelDir, version)};
 
-  for (const parser::OmpClause &clause : maybeClauses->v) {
+  for (const parser::OmpClause &clause : clauses.v) {
     using CancellationConstructType =
         parser::OmpClause::CancellationConstructType;
     if (auto *cctype{std::get_if<CancellationConstructType>(&clause.u)}) {
@@ -3569,10 +3793,107 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
   return cancelee;
 }
 
+bool OmpStructureChecker::CheckCancellationNestInPaths(parser::CharBlock source,
+    llvm::omp::Directive cancelDir, llvm::omp::Directive type,
+    llvm::ArrayRef<EffectiveDirectivePath> enclosingPaths) {
+  const llvm::omp::DirectiveSet *allowedParents{nullptr};
+  switch (type) {
+  case llvm::omp::Directive::OMPD_sections:
+    allowedParents = &llvm::omp::nestedCancelSectionsAllowedSet;
+    break;
+  case llvm::omp::Directive::OMPD_do:
+    allowedParents = &llvm::omp::nestedCancelDoAllowedSet;
+    break;
+  case llvm::omp::Directive::OMPD_parallel:
+    allowedParents = &llvm::omp::nestedCancelParallelAllowedSet;
+    break;
+  default:
+    return false;
+  }
+
+  bool hasNowait{false};
+  bool hasOrdered{false};
+  for (const EffectiveDirectivePath &path : enclosingPaths) {
+    if (!path.empty()) {
+      hasNowait = hasNowait ||
+          HasClauseInEffectiveContext(
+              path.front(), llvm::omp::Clause::OMPC_nowait);
+      hasOrdered = hasOrdered ||
+          HasClauseInEffectiveContext(
+              path.front(), llvm::omp::Clause::OMPC_ordered);
+    }
+  }
+  if (cancelDir == llvm::omp::Directive::OMPD_cancel) {
+    if (hasNowait &&
+        (type == llvm::omp::Directive::OMPD_do ||
+            type == llvm::omp::Directive::OMPD_sections)) {
+      context_.Say(source,
+          "The CANCEL construct cannot be nested inside of a worksharing "
+          "construct with the NOWAIT clause"_err_en_US);
+    }
+    if (hasOrdered && type == llvm::omp::Directive::OMPD_do) {
+      context_.Say(source,
+          "The CANCEL construct cannot be nested inside of a worksharing "
+          "construct with the ORDERED clause"_err_en_US);
+    }
+  }
+
+  bool orphaned{false};
+  std::optional<llvm::omp::Directive> invalidParent;
+  for (const EffectiveDirectivePath &path : enclosingPaths) {
+    if (path.empty()) {
+      orphaned = true;
+    } else if (!allowedParents->test(path.front().directive)) {
+      invalidParent = path.front().directive;
+    }
+  }
+  if (!orphaned && !invalidParent)
+    return true;
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  std::string cancelName{parser::omp::GetUpperName(cancelDir, version)};
+  std::string typeName{parser::omp::GetUpperName(type, version)};
+  if (orphaned) {
+    switch (type) {
+    case llvm::omp::Directive::OMPD_sections:
+      context_.Say(source,
+          "%s %s directive is not closely nested inside SECTION or "
+          "SECTIONS"_err_en_US,
+          cancelName, typeName);
+      break;
+    case llvm::omp::Directive::OMPD_do:
+      context_.Say(source,
+          "%s %s directive is not closely nested inside the construct that "
+          "matches the DO clause type"_err_en_US,
+          cancelName, typeName);
+      break;
+    case llvm::omp::Directive::OMPD_parallel:
+      context_.Say(source,
+          "%s %s directive is not closely nested inside the construct that "
+          "matches the PARALLEL clause type"_err_en_US,
+          cancelName, typeName);
+      break;
+    default:
+      llvm_unreachable("unexpected cancellation type");
+    }
+  } else {
+    context_.Say(source,
+        "With %s clause, %s construct cannot be closely nested inside %s "
+        "construct"_err_en_US,
+        typeName, cancelName,
+        parser::omp::GetUpperName(*invalidParent, version));
+  }
+  return true;
+}
+
 void OmpStructureChecker::CheckCancellationNest(
     const parser::CharBlock &source, llvm::omp::Directive type) {
   unsigned version{context_.langOptions().OpenMPVersion};
   std::string typeName{parser::omp::GetUpperName(type, version)};
+
+  auto paths{GetEnclosingDirectivePaths()};
+  if (CheckCancellationNestInPaths(source, GetContext().directive, type, paths))
+    return;
 
   if (CurrentDirectiveIsNested()) {
     // If construct-type-clause is taskgroup, the cancellation construct must be

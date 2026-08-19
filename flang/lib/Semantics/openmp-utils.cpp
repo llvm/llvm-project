@@ -2426,7 +2426,7 @@ UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
 // `target` adds `construct_target_target`, `target teams` adds both
 // `construct_target_target` and `construct_teams_teams`) to \p vmi. This
 // decomposes combined/composite construct selectors into their leaf traits.
-static void AppendConstructTraitsForDirective(
+void AppendConstructTraitsForDirective(
     llvm::omp::Directive dir, llvm::omp::VariantMatchInfo &vmi) {
   auto add = [&](llvm::omp::TraitProperty prop) {
     vmi.addTrait(prop, llvm::omp::getOpenMPContextTraitPropertyName(prop, ""));

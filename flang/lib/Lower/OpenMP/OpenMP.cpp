@@ -2763,17 +2763,6 @@ static void genWsloopClauses(
 //===----------------------------------------------------------------------===//
 // Code generation functions for leaf constructs
 //===----------------------------------------------------------------------===//
-static bool isCloselyNestedInWorksharingOrSimdLoop(mlir::Operation *op) {
-  for (; op; op = op->getParentOp()) {
-    // A parallel region encountered before the loop wrapper breaks close
-    // nesting with the enclosing worksharing or SIMD loop.
-    if (mlir::isa<mlir::omp::ParallelOp>(op))
-      return false;
-    if (mlir::isa<mlir::omp::WsloopOp, mlir::omp::SimdOp>(op))
-      return true;
-  }
-  return false;
-}
 
 static mlir::omp::AllocateDirOp genAllocateDirOp(
     lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx,
@@ -2805,16 +2794,7 @@ genBarrierOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
              mlir::Location loc, const ConstructQueue &queue,
              ConstructQueue::const_iterator item) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  // Semantic nesting checks cannot yet see a metadirective's selected
-  // replacement. Check the realized operation ancestry at the common BARRIER
-  // emission point so direct directives, replacement directives, and
-  // directives in nested metadirective bodies follow the same rule.
-  if (isCloselyNestedInWorksharingOrSimdLoop(
-          builder.getInsertionBlock()->getParentOp()))
-    TODO(loc,
-         "BARRIER closely nested in loop-associated METADIRECTIVE variant");
-  return mlir::omp::BarrierOp::create(builder, loc);
+  return mlir::omp::BarrierOp::create(converter.getFirOpBuilder(), loc);
 }
 
 static mlir::omp::CancelOp genCancelOp(lower::AbstractConverter &converter,

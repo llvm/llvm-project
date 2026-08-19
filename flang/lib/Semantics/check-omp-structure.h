@@ -161,8 +161,11 @@ public:
 
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
+  void Enter(const parser::OmpDelimitedMetadirectiveDirective &);
+  void Leave(const parser::OmpDelimitedMetadirectiveDirective &);
 
   void Enter(const parser::ExecutionPartConstruct &);
+  void Leave(const parser::ExecutionPartConstruct &);
   void Leave(const parser::OmpClause::When &);
 
   void Enter(const parser::OmpContextSelector &);
@@ -374,7 +377,41 @@ private:
   bool HasInvalidWorksharingNesting(
       const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &);
 
-  bool IsCloselyNestedRegion(const llvm::omp::DirectiveSet &set);
+  struct EffectiveDirectiveContext {
+    llvm::omp::Directive directive;
+    std::optional<std::size_t> actualContextIndex;
+    const parser::OmpDirectiveSpecification *spec{nullptr};
+  };
+  using EffectiveDirectivePath =
+      llvm::SmallVector<EffectiveDirectiveContext, 8>;
+
+  struct MetadirectiveReplacementBranch {
+    EffectiveDirectivePath enclosingPath;
+    const parser::OmpDirectiveSpecification *spec{nullptr};
+  };
+  struct MetadirectiveReplacementContext {
+    std::size_t directiveContextDepth;
+    llvm::SmallVector<EffectiveDirectivePath, 4> paths;
+  };
+  struct PendingMetadirectiveReplacement {
+    std::size_t firstLoopVariant;
+    llvm::SmallVector<MetadirectiveReplacementBranch, 4> branches;
+  };
+
+  llvm::SmallVector<EffectiveDirectivePath, 4> GetEnclosingDirectivePaths(
+      bool currentDirectiveOnStack = true) const;
+  llvm::SmallVector<MetadirectiveReplacementBranch, 4>
+  GetReachableMetadirectiveReplacements(const parser::OmpClauseList &);
+  void CheckMetadirectiveReplacementNesting(
+      llvm::ArrayRef<MetadirectiveReplacementBranch>);
+  bool HasClauseInEffectiveContext(
+      const EffectiveDirectiveContext &, llvm::omp::Clause) const;
+  const parser::OmpClause *FindClauseInEffectiveContext(
+      const EffectiveDirectiveContext &, llvm::omp::Clause) const;
+  bool IsCloselyNestedRegion(
+      const EffectiveDirectivePath &, const llvm::omp::DirectiveSet &) const;
+  bool IsCloselyNestedRegion(
+      const llvm::omp::DirectiveSet &set, bool currentDirectiveOnStack = true);
   bool IsNestedInDirective(llvm::omp::Directive directive);
   bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
@@ -444,8 +481,14 @@ private:
   std::optional<llvm::omp::Directive> GetCancelType(
       llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
       const std::optional<parser::OmpClauseList> &maybeClauses);
+  std::optional<llvm::omp::Directive> GetCancelType(
+      llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
+      const parser::OmpClauseList &clauses);
   void CheckCancellationNest(
       const parser::CharBlock &source, llvm::omp::Directive type);
+  bool CheckCancellationNestInPaths(parser::CharBlock source,
+      llvm::omp::Directive cancelDir, llvm::omp::Directive type,
+      llvm::ArrayRef<EffectiveDirectivePath> enclosingPaths);
   void CheckReductionObjects(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool CheckReductionOperator(const parser::OmpReductionIdentifier &ident,
@@ -460,7 +503,8 @@ private:
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);
   void CheckScan(const parser::OpenMPSimpleStandaloneConstruct &x);
   void ChecksOnOrderedAsStandalone();
-  void CheckOrderedDependClause(std::optional<std::int64_t> orderedValue);
+  bool CheckOrderedDependClause(std::optional<std::int64_t> orderedValue,
+      const parser::OmpDirectiveSpecification &, bool emitDiagnostic = true);
   void CheckReductionArraySection(
       const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId);
   void CheckArraySection(const parser::ArrayElement &arrayElement,
@@ -547,6 +591,10 @@ private:
   };
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;
+  std::vector<PendingMetadirectiveReplacement>
+      pendingMetadirectiveReplacements_;
+  std::vector<MetadirectiveReplacementContext> activeMetadirectiveReplacements_;
+  std::vector<std::size_t> executionPartReplacementCounts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{
       nullptr};
 
