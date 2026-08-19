@@ -505,6 +505,7 @@ public:
   bool hasEmptyWorkList() const { return !Engine.getWorkList()->hasWork(); }
   bool hasWorkRemaining() const { return Engine.hasWorkRemaining(); }
 
+  CoreEngine &getCoreEngine() { return Engine; }
   const CoreEngine &getCoreEngine() const { return Engine; }
 
 public:

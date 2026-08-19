@@ -31,7 +31,13 @@ class CheckerContext {
   bool Changed;
   /// The tagged location, which is used to generate all new nodes.
   const ProgramPoint Location;
-  NodeBuilder NB;
+  /// At the end of the checker evaluation, the analysis will continue from the
+  /// nodes in this set. When the checker adds a transition, freshly created
+  /// non-sink nodes are added to the `Frontier` and the node that was the
+  /// source of the transition is unconditionally removed from the `Frontier`
+  /// (it is superseded, even if the node creation fails or produces a sink).
+  /// At the beginning, the `Frontier` usually contains `Pred`.
+  ExplodedNodeSet &Frontier;
 
 public:
   /// If we are post visiting a call, this flag will be set if the
@@ -41,7 +47,7 @@ public:
   CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
                  const ProgramPoint &Loc, bool WasInlined = false)
       : Eng(Eng), Pred(Pred), Changed(false), Location(Loc),
-        NB(Dst, Eng.getBuilderContext()), wasInlined(WasInlined) {
+        Frontier(Dst), wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
     assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
@@ -447,7 +453,12 @@ private:
     if (!P)
       P = Pred;
 
-    return NB.generateNode(LocalLoc, State, P, MarkAsSink);
+    Frontier.erase(P);
+    ExplodedNode *N = Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+
+    Frontier.insert(N);
+
+    return N;
   }
 };
 
