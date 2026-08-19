@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -1404,7 +1405,7 @@ private:
 
     static bool classof(const MapHNode *) { return true; }
 
-    using NameToNodeAndLoc = StringMap<std::pair<HNode *, SMRange>>;
+    using NameToNodeAndLoc = MapVector<StringRef, std::pair<HNode *, SMRange>>;
 
     NameToNodeAndLoc Mapping;
     SmallVector<std::string, 6> ValidKeys;
