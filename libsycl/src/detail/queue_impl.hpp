@@ -80,8 +80,8 @@ public:
   void throwAsynchronous();
 
   /// Enqueues a kernel to liboffload.
-  /// Kernel parameters like dependencies and range must be passed in advance by
-  /// calling setKernelParameters.
+  /// Kernel dependencies and range must be passed in advance by calling
+  /// setKernelDependencies and setKernelRange.
   /// \param KernelInfo a kernel info that is uniform between different
   /// submissions of the same kernel.
   /// \param ArgData a pointer to kernel argument.
@@ -97,12 +97,15 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// Sets kernel parameters to be used in the next submitKernelImpl call.
+  /// Sets event dependencies to be used in the next submitKernelImpl call.
   /// Must be called prior to a submitKernelImpl call.
   /// \param Events a collection of events that the kernel depends on.
+  void setKernelDependencies(std::vector<EventImplPtr> &&Events);
+
+  /// Sets execution range to be used in the next submitKernelImpl call.
+  /// Must be called prior to a submitKernelImpl call.
   /// \param Range a unified range view of the execution range.
-  void setKernelParameters(std::vector<EventImplPtr> &&Events,
-                           const detail::UnifiedRangeView &Range);
+  void setKernelRange(const detail::UnifiedRangeView &Range);
 
   /// \return the async_handler associated with this queue.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
@@ -116,6 +119,8 @@ public:
   /// \return an event impl object that represents the status of the operation.
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
+
+  EventImplPtr submitWithHandler(const TypelessCGF &CGF);
 
 private:
   void handleEventDependencies(const std::vector<EventImplPtr> &Dep);
@@ -131,9 +136,12 @@ private:
 
   // Submit data.
   struct KernelSubmitInfo {
+    KernelSubmitInfo() : Handler(nullptr) {}
+
     EventImplPtr LastEvent;
     ol_kernel_launch_size_args_t Range;
     std::vector<EventImplPtr> DepEvents;
+    handler *Handler;
   };
   inline static thread_local KernelSubmitInfo MCurrentSubmitInfo = {};
 };

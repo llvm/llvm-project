@@ -42,7 +42,8 @@ createEventImplWithHandle(detail::PlatformImpl &PlatformImpl,
 class sycl::detail::MockQueue : public sycl::queue {
 public:
   using sycl::queue::getLastEvent;
-  using sycl::queue::setKernelParameters;
+  using sycl::queue::setKernelDependencies;
+  using sycl::queue::setKernelRange;
   using sycl::queue::sycl_kernel_launch;
 };
 
@@ -121,7 +122,7 @@ TEST(Event, GetWaitListWithSetKernelParametersAndLaunch) {
 
   std::vector<event> DepEvents = {Dep1, Dep2};
 
-  Q.setKernelParameters(DepEvents);
+  Q.setKernelDependencies(DepEvents);
   Q.sycl_kernel_launch<class TestKernelWithDeps>(TestKernelWithDeps, Data);
   event KernelEvent = Q.getLastEvent();
 

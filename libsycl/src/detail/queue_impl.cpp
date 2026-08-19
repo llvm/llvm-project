@@ -20,6 +20,25 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+thread_local bool NestedCallsDetector = false;
+class NestedCallsTracker {
+public:
+  NestedCallsTracker() {
+    if (NestedCallsDetectorRef)
+      throw sycl::exception(
+          make_error_code(errc::invalid),
+          "Calls to sycl::queue::submit cannot be nested. Command group "
+          "function objects should use the sycl::handler API instead.");
+    NestedCallsDetectorRef = true;
+  }
+
+  ~NestedCallsTracker() { NestedCallsDetectorRef = false; }
+
+private:
+  // Cache the TLS location to decrease amount of TLS accesses.
+  bool &NestedCallsDetectorRef = NestedCallsDetector;
+};
+
 static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
                                 ol_kernel_launch_size_args_t &ArgsToSet) {
   assert(Range.MDims < 4 && "Invalid dimensions.");
@@ -113,16 +132,12 @@ static void checkEventsPlatformMatch(const std::vector<EventImplPtr> &Events,
   }
 }
 
-void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
-                                    const detail::UnifiedRangeView &Range) {
+void QueueImpl::setKernelDependencies(std::vector<EventImplPtr> &&Events) {
   checkEventsPlatformMatch(Events, MDevice.getPlatformImpl());
-
-  // It is done at the beginning of a new submission to ensure that we can still
-  // submit a kernel properly if the previous submission throws.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
-
   MCurrentSubmitInfo.DepEvents = std::move(Events);
+}
+
+void QueueImpl::setKernelRange(const detail::UnifiedRangeView &Range) {
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
@@ -143,11 +158,15 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
-  if (isFailed(Result))
+
+  MCurrentSubmitInfo.Range = {};
+  if (isFailed(Result)) {
+    MCurrentSubmitInfo.DepEvents = {};
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
                               KernelInfo.getName().data() + ") failed with " +
                               formatCodeString(Result));
+  }
 
   MCurrentSubmitInfo.LastEvent =
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
@@ -223,6 +242,24 @@ EventImplPtr QueueImpl::createEvent(std::vector<EventImplPtr> &&Deps) {
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
   return EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
                                           std::move(Deps));
+}
+
+EventImplPtr QueueImpl::submitWithHandler(const TypelessCGF &CGF) {
+  // detail::handler_impl HandlerImplVal(*this);
+  // handler Handler(HandlerImplVal);
+  handler Handler(*this);
+  // struct HandlerSetter {
+  //   handler *Handler;
+  //   HandlerSetter(handler *H) : Handler(H) { MCurrentSubmitInfo.Handler = H;
+  //   } ~HandlerSetter() { MCurrentSubmitInfo.Handler = nullptr; }
+  // } Setter(&Handler);
+
+  {
+    NestedCallsTracker tracker;
+    CGF(Handler);
+  }
+
+  return Handler.finalize();
 }
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

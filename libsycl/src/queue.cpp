@@ -51,14 +51,21 @@ event queue::getLastEvent() {
   return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
 }
 
-void queue::setKernelParameters(const std::vector<event> &Events,
-                                const detail::UnifiedRangeView &Range) {
-  return impl->setKernelParameters(detail::getSyclObjImpls(Events), Range);
+void queue::setKernelDependencies(const std::vector<event> &Events) {
+  return impl->setKernelDependencies(detail::getSyclObjImpls(Events));
+}
+
+void queue::setKernelRange(const detail::UnifiedRangeView &Range) {
+  return impl->setKernelRange(Range);
 }
 
 void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
                              void *ArgData, size_t ArgSize) {
   impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
+event queue::submitWithHandler(const TypelessCGF &CGF) {
+  return detail::createSyclObjFromImpl<event>(impl->submitWithHandler(CGF));
 }
 
 _LIBSYCL_END_NAMESPACE_SYCL
