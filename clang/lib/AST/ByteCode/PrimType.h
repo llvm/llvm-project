@@ -105,6 +105,7 @@ static_assert(sizeof(OptPrimType) == sizeof(PrimType));
 enum class CastKind : uint8_t {
   Reinterpret,
   ReinterpretLike,
+  ReinterpretPtrToInt,
   Volatile,
   Dynamic,
 };
@@ -113,6 +114,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
+  case interp::CastKind::ReinterpretPtrToInt:
     OS << "reinterpret_cast";
     break;
   case interp::CastKind::ReinterpretLike:
