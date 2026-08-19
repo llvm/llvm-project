@@ -337,10 +337,7 @@ public:
 
   void endTransientScope() { transientAllocator.reset(); }
 
-  bool isInTransientScope() const {
-    assert(!transientAllocator || !getContext()->isMultithreadingEnabled());
-    return transientAllocator != nullptr;
-  }
+  bool isInTransientScope() const { return transientAllocator != nullptr; }
 
 private:
   /// Used to allocate distinct attribute storages in base layer.

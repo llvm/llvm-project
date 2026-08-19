@@ -111,25 +111,30 @@ TEST(StorageUniquerTest, DestructorOnEndTransientScope) {
     }
   };
 
-  StorageUniquer uniquer;
-  uniquer.registerParametricStorageType<NonTrivialStorage>();
-
   bool baseDestructed = false;
-  NonTrivialStorage::get(uniquer, &baseDestructed);
-
-  uniquer.beginTransientScope();
-
   bool transientDestructed = false;
-  NonTrivialStorage::get(uniquer, &transientDestructed);
+  {
+    StorageUniquer uniquer;
+    uniquer.registerParametricStorageType<NonTrivialStorage>();
 
-  EXPECT_FALSE(baseDestructed);
-  EXPECT_FALSE(transientDestructed);
+    NonTrivialStorage::get(uniquer, &baseDestructed);
 
-  // Ending transient scope should destroy only the transient instance.
-  uniquer.endTransientScope();
+    uniquer.beginTransientScope();
 
-  EXPECT_FALSE(baseDestructed);
-  EXPECT_TRUE(transientDestructed);
+    NonTrivialStorage::get(uniquer, &transientDestructed);
+
+    EXPECT_FALSE(baseDestructed);
+    EXPECT_FALSE(transientDestructed);
+
+    // Ending transient scope should destroy only the transient instance.
+    uniquer.endTransientScope();
+
+    EXPECT_FALSE(baseDestructed);
+    EXPECT_TRUE(transientDestructed);
+  }
+
+  // Destroying uniquer should destroy the remaining base instance.
+  EXPECT_TRUE(baseDestructed);
 }
 
 TEST(StorageUniquerTest, MutableStorageInTransientScope) {

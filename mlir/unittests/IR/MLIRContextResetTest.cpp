@@ -88,6 +88,7 @@ TEST(MLIRContextResetTest, AttributeTransientScopeAndReset) {
   EXPECT_EQ(transientArray, builder.getArrayAttr({baseInt, transientInt}));
   EXPECT_EQ(transientDict, builder.getDictionaryAttr(
                                {builder.getNamedAttr("key", transientStr)}));
+  EXPECT_EQ(transientDistinct.getReferencedAttr(), transientInt);
 
   // End transient scope.
   ctx.endTransientScope();
@@ -177,7 +178,7 @@ TEST(MLIRContextResetTest, MultithreadedTransientScopeAndReset) {
 
   // Allocate again in parallel across multiple threads.
   for (int i = 0; i < 20; ++i) {
-    pool.async([&ctx, i, i32Type]() {
+    pool.async([i, i32Type]() {
       for (int j = 0; j < 50; ++j) {
         Type ty = VectorType::get({i + 1, j + 1}, i32Type);
         EXPECT_TRUE(isa<VectorType>(ty));
