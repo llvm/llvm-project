@@ -196,7 +196,7 @@ define void @bound_is_addrec_of_sibling_loop(ptr %a, ptr %b, i64 %n, i64 %d, i1 
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
 ; CHECK-NEXT:    IR   %4 = udiv i64 %n, %d
 ; CHECK-NEXT:    IR   %5 = shl i64 %4, 2
-; CHECK-NEXT:    IR   %6 = shl i64 %iv.1, 2
+; CHECK-NEXT:    IR   %6 = shl i64 %iv.1.lcssa, 2
 ; CHECK-NEXT:    IR   %7 = add i64 %6, %5
 ; CHECK-NEXT:    IR   %scevgep = getelementptr i8, ptr %b, i64 %7
 ; CHECK-NEXT:    IR   %8 = shl i64 %n, 2
