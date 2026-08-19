@@ -336,8 +336,6 @@ public:
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 
-  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
-
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
     // Using overflow ops for overflow checks only should beneficial on
