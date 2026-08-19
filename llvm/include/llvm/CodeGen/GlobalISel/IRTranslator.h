@@ -55,7 +55,6 @@ private:
 };
 
 class IRTranslatorPass : public RequiredPassInfoMixin<IRTranslatorPass> {
-  CodeGenOptLevel OptLevel;
   std::unique_ptr<IRTranslatorImpl> Impl;
 
 public:

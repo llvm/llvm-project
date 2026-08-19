@@ -5263,7 +5263,7 @@ bool IRTranslatorLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 IRTranslatorPass::IRTranslatorPass(CodeGenOptLevel OptLevel)
-    : OptLevel(OptLevel), Impl(std::make_unique<IRTranslatorImpl>(OptLevel)) {}
+    : Impl(std::make_unique<IRTranslatorImpl>(OptLevel)) {}
 
 IRTranslatorPass::~IRTranslatorPass() = default;
 IRTranslatorPass::IRTranslatorPass(IRTranslatorPass &&) = default;
