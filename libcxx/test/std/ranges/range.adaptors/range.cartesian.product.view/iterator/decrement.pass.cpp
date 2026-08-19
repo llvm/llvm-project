@@ -13,6 +13,7 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <ranges>
 #include <tuple>
 
@@ -81,6 +82,52 @@ constexpr bool test() {
     std::ranges::cartesian_product_view v(BidiCommonView{a}, BidiNonCommonView{b});
     using Iter = std::ranges::iterator_t<decltype(v)>;
     static_assert(!CanDecrement<Iter>);
+  }
+
+  { // non-simple bases -- -- must instantiate __iterator<false>; __prev calls
+    // __cartesian_common_arg_end on a *non-const* base
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
+    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
+    static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+
+    auto it    = v.end();
+    using Iter = decltype(it);
+    static_assert(std::is_same_v<decltype(--it), Iter&>);
+    static_assert(std::is_same_v<decltype(it--), Iter>);
+
+    --it;
+    assert(*it == std::tuple(3, 20));
+    --it;
+    assert(*it == std::tuple(3, 10));
+    --it; // borrow from a
+    assert(*it == std::tuple(2, 20));
+
+    auto copy = it--;
+    assert(*copy == std::tuple(2, 20));
+    assert(*it == std::tuple(2, 10));
+    --it; // borrow from a
+    assert(*it == std::tuple(1, 20));
+    --it;
+    assert(*it == std::tuple(1, 10));
+    assert(it == v.begin());
+  }
+
+  { // non-simple bases, 3 ranges -- reaches the intermediate __prev<1> recursion
+    std::array c{100, 200};
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b}, NonSimpleCommon{c});
+    static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+
+    auto it = v.end();
+    --it;
+    assert(*it == std::tuple(3, 20, 200));
+    --it;
+    assert(*it == std::tuple(3, 20, 100));
+    --it; // borrow from b
+    assert(*it == std::tuple(3, 10, 200));
+    --it;
+    assert(*it == std::tuple(3, 10, 100));
+    --it; // borrow through b from a
+    assert(*it == std::tuple(2, 20, 200));
   }
 
   return true;
