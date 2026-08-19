@@ -2673,8 +2673,8 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       of the allocation granularity (4). The minimum value is interpreted as the
                                                       minimum required number of AGPRs for the function to allocate (that is, the
                                                       function requires no more than min registers). If only one value is specified,
-                                                      it is interpreted as the minimum register budget. The maximum will restrict
-                                                      allocation to use no more than max AGPRs.
+                                                      it is interpreted as the minimum and maximum register budget. The maximum 
+                                                      will restrict allocation to use no more than max AGPRs.
 
                                                       The values may be ignored if satisfying it would violate other allocation
                                                       constraints.
@@ -2685,6 +2685,22 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       any AGPRs.
 
                                                       This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
+
+     "amdgpu-accum-offset"="n"                        Bounds the number of architectural VGPRs the function may allocate, 
+                                                      and therefore the position of the boundary between architectural VGPRs 
+                                                      and AGPRs in the register file.
+
+                                                      The value is rounded down (the inverse of amdgpu-agpr-alloc) 
+                                                      to a multiple of the allocation granularity (4) and clamped 
+                                                      to the addressable number of architectural VGPRs. Values below 
+                                                      the granularity are treated as 4, the smallest representable offset.
+                                                      as 4, the smallest representable offset.
+
+                                                      The behavior is undefined if a function which allocates more
+                                                      architectural VGPRs than this bound is reached through any
+                                                      function marked with a lower value of this attribute.
+
+                                                      This is only relevant on targets with accum_offset (gfx90a+).
 
      "amdgpu-sgpr-hazard-boundary-cull"               Enable insertion of SGPR hazard cull sequences at function call boundaries.
                                                       Cull sequence reduces future hazard waits, but has a performance cost.

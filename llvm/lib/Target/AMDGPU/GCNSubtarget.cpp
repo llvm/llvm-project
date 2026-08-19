@@ -659,39 +659,49 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   // VGPRs and AGPRs. Hence, in an entry function without calls and without
   // AGPRs used within it, it is possible to use the whole vector register
   // budget for VGPRs.
-  //
-  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
-  //       register file accordingly.
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
+    unsigned VGPRCap = ~0u;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+    const  unsigned DefaultAccumOffset = ~0u;
 
     // TODO: The lower bound should probably force the number of required
     // registers up, overriding amdgpu-waves-per-eu.
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
-
+    VGPRCap = F.getFnAttributeAsParsedInteger("amdgpu-accum-offset",DefaultAccumOffset);
+    if (VGPRCap == DefaultAccumOffset) {
+      MaxNumVGPRs = MaxVectorRegs / 2;
+    }
+    else {
+      MaxNumVGPRs = alignDown(VGPRCap, 4);
+    }
     if (MinNumAGPRs == DefaultNumAGPR.first) {
-      // Default to splitting half the registers if AGPRs are required.
-      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+       MaxNumAGPRs = MaxVectorRegs / 2;
+       MinNumAGPRs = 0;
     } else {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
       MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+      // Since we can't know for sure how many availible AGPRs we have, an unset MaxNumAGPRs does not imply that we can use MaxVectorRegs - MaxNumVGPRs number of AGPRs
+      if (MaxNumAGPRs == DefaultNumAGPR.second && !AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+        MaxNumAGPRs = MinNumAGPRs;
     }
-
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
+    MaxNumVGPRs =
+        std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, MaxNumVGPRs});
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
 
+    LLVM_DEBUG(dbgs() << "MaxNumVGPRs: " << MaxNumVGPRs << ", MaxNumAGPRs: "
+                      << MaxNumAGPRs << " (" << F.getName() << ")\n");
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
            MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
            "invalid register counts");
