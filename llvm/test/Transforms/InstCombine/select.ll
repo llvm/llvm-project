@@ -5805,9 +5805,9 @@ define i1 @select_chain_reduce_bitcast_icmp(<2 x i4> %x, <2 x i4> %y) {
 ; CHECK-LABEL: define i1 @select_chain_reduce_bitcast_icmp(
 ; CHECK-SAME: <2 x i4> [[X:%.*]], <2 x i4> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <2 x i1> [[CMP]], i64 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <2 x i1> [[CMP]], i64 1
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i1> [[CMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i1> [[TMP1]] to i2
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i2 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %cmp = icmp sgt <2 x i4> %x, %y
@@ -5821,9 +5821,10 @@ define i1 @select_chain_missing_lane(<4 x i4> %x, <4 x i4> %y) {
 ; CHECK-LABEL: define i1 @select_chain_missing_lane(
 ; CHECK-SAME: <4 x i4> [[X:%.*]], <4 x i4> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i4> [[X]], [[Y]]
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x i1> [[CMP]], i64 0
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x i1> [[CMP]], i64 2
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B2]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[CMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
+; CHECK-NEXT:    [[TMP3:%.*]] = and i4 [[TMP2]], 5
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i4 [[TMP3]], 5
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %cmp = icmp sgt <4 x i4> %x, %y
