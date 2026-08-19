@@ -464,7 +464,7 @@ static FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 static InstructionCost
 getMaskedDivRemCost(const TargetTransformInfo &TTI, unsigned Opcode,
                     Type *ScalarTy, unsigned NumElts,
-                    TTI::TargetCostKind CostKind,
+                    const TTI::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr) {
   FixedVectorType *PaddedVecTy =
       getMaskedDivRemType(TTI, Opcode, ScalarTy, NumElts);
@@ -2761,9 +2761,10 @@ private:
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
   /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
   /// be a FixedVectorType in ReVec mode or an adjusted type due to MinBWs.
-  InstructionCost getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
-                                           Type *VecTy, Type *FinalVecTy,
-                                           TTI::TargetCostKind CostKind) const;
+  InstructionCost
+  getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy, Type *VecTy,
+                           Type *FinalVecTy,
+                           const TTI::TargetCostKind CostKind) const;
 
   /// This is the recursive part of buildTree.
   void buildTreeRec(ArrayRef<Value *> Roots, unsigned Depth, const EdgeInfo &EI,
@@ -6137,7 +6138,7 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 static InstructionCost getScalarizationOverhead(
     const TargetTransformInfo &TTI, Type *ScalarTy, VectorType *Ty,
     const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
+    const TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
     ArrayRef<Value *> VL = {},
     TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) {
   assert(!isa<ScalableVectorType>(Ty) &&
@@ -6171,7 +6172,7 @@ static InstructionCost getScalarizationOverhead(
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
 static InstructionCost getVectorInstrCost(
     const TargetTransformInfo &TTI, Type *ScalarTy, unsigned Opcode, Type *Val,
-    TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
+    const TTI::TargetCostKind CostKind, unsigned Index, Value *Scalar,
     ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) {
   if (Opcode == Instruction::ExtractElement) {
     if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
@@ -6188,11 +6189,10 @@ static InstructionCost getVectorInstrCost(
 
 /// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
-static InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
-                                                unsigned Opcode, Type *Dst,
-                                                VectorType *VecTy,
-                                                unsigned Index,
-                                                TTI::TargetCostKind CostKind) {
+static InstructionCost
+getExtractWithExtendCost(const TargetTransformInfo &TTI, unsigned Opcode,
+                         Type *Dst, VectorType *VecTy, unsigned Index,
+                         const TTI::TargetCostKind CostKind) {
   if (isVectorizedTy(Dst)) {
     assert(SLPReVec && "Only supported by REVEC.");
     auto *SubTp = cast<FixedVectorType>(
@@ -6280,16 +6280,15 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
-static bool
-isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
-                     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
-                     const DataLayout &DL, ScalarEvolution &SE,
-                     AssumptionCache &AC, const DominatorTree &DT,
-                     const TargetLibraryInfo &TLI, TTI::TargetCostKind CostKind,
-                     const function_ref<bool(Value *)> AreAllUsersVectorized,
-                     bool &IsMasked, unsigned &InterleaveFactor,
-                     SmallVectorImpl<int> &CompressMask,
-                     VectorType *&LoadVecTy) {
+static bool isMaskedLoadCompress(
+    ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+    ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
+    const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
+    const DominatorTree &DT, const TargetLibraryInfo &TLI,
+    const TTI::TargetCostKind CostKind,
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool &IsMasked,
+    unsigned &InterleaveFactor, SmallVectorImpl<int> &CompressMask,
+    VectorType *&LoadVecTy) {
   InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
@@ -6426,7 +6425,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                      ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,
                      const DataLayout &DL, ScalarEvolution &SE,
                      AssumptionCache &AC, const DominatorTree &DT,
-                     const TargetLibraryInfo &TLI, TTI::TargetCostKind CostKind,
+                     const TargetLibraryInfo &TLI,
+                     const TTI::TargetCostKind CostKind,
                      const function_ref<bool(Value *)> AreAllUsersVectorized) {
   bool IsMasked;
   unsigned InterleaveFactor;
@@ -9867,7 +9867,7 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
                    const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
-                   TTI::TargetCostKind CostKind) {
+                   const TTI::TargetCostKind CostKind) {
   auto Shape = VFShape::get(CI->getFunctionType(),
                             ElementCount::getFixed(getNumElements(VecTy)),
                             false /*HasGlobalPred*/);
@@ -13602,7 +13602,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       TTI::TargetCostKind CostKind);
+                                       const TTI::TargetCostKind CostKind);
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -14405,7 +14405,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       TTI::TargetCostKind CostKind) {
+                                       const TTI::TargetCostKind CostKind) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -15709,7 +15709,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
 
   public:
     ShuffleCostBuilder(const TargetTransformInfo &TTI,
-                       TTI::TargetCostKind CostKind)
+                       const TTI::TargetCostKind CostKind)
         : TTI(TTI), CostKind(CostKind) {}
     ~ShuffleCostBuilder() = default;
     InstructionCost createShuffleVector(Value *V1, Value *,
@@ -16562,7 +16562,7 @@ uint64_t BoUpSLP::getEntryEffectiveScale(const TreeEntry &TE, Instruction *U) {
 InstructionCost
 BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
                                   Type *VecTy, Type *FinalVecTy,
-                                  TTI::TargetCostKind CostKind) const {
+                                  const TTI::TargetCostKind CostKind) const {
   InstructionCost SpillsReloads = 0;
 
   // Estimate vector register pressure per target register class: operand
@@ -31805,7 +31805,7 @@ private:
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
       DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
-    TTI::TargetCostKind CostKind = R.getCostKind();
+    const TTI::TargetCostKind CostKind = R.getCostKind();
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
     FixedVectorType *VectorTy = R.getReductionType();
