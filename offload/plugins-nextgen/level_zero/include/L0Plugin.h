@@ -64,6 +64,8 @@ private:
   struct DeviceInfoTy {
     L0DeviceIdTy Id;
     L0ContextTy *Driver;
+    uint32_t DriverVersion;
+    ze_driver_uuid_t DriverUuid;
     bool isRoot() const { return Id.SubId < 0 && Id.CCSId < 0; }
   };
   llvm::SmallVector<DeviceInfoTy> DetectedDevices;
@@ -111,6 +113,8 @@ public:
   uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }
   Triple::ArchType getTripleArch() const override { return Triple::spirv64; }
   const char *getName() const override { return GETNAME(TARGET_NAME); }
+  uint32_t getNumContextGroups() const override { return ContextList.size(); }
+  std::string getDriverVersion(int32_t DeviceId) const;
 
   Expected<bool> isELFCompatible(uint32_t DeviceId,
                                  StringRef Image) const override;

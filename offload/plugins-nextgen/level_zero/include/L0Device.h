@@ -185,6 +185,10 @@ public:
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
 
+  uint32_t getContextGroupOffset() const override {
+    return L0Context.getContextGroupIdx();
+  }
+
   bool supportsCooperativeKernels() const {
     return QueueConfig.SupportsCooperativeKernels;
   }

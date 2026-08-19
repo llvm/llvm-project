@@ -10,9 +10,9 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-DeviceInfoProperties JustSupportedProperties =
-    mergeProperties({BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
-                     IrrelevantForHostGTUint32Properties});
+DeviceInfoProperties JustSupportedProperties = mergeProperties(
+    {BoolProperties, IrrelevantForHostGTCapabilitiesProperties,
+     IrrelevantForHostGTUint32Properties, ContextGroupIndexProperties});
 
 DeviceInfoProperties NonZeroProperties =
     mergeProperties({RelevantGTCapabilitiesProperties,
@@ -89,6 +89,13 @@ TEST_P(olGetHostDeviceInfoTest, SuccessPlatform) {
   ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
                                  sizeof(ol_platform_handle_t), &Platform));
   ASSERT_NE(Platform, nullptr);
+}
+
+TEST_P(olGetHostDeviceInfoTest, SuccessContextGroupIndex) {
+  uint32_t ContextGroupIndex = 0;
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
+                                 sizeof(ContextGroupIndex),
+                                 &ContextGroupIndex));
 }
 
 TEST_P(olGetHostDeviceInfoTest, InvalidNullHandleDevice) {

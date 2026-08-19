@@ -66,7 +66,7 @@ QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
                      const property_list &propList, PrivateTag)
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
       MDevice(deviceImpl),
-      MContext(MDevice.getPlatformImpl().getDefaultContext()) {
+      MContext(MDevice.getPlatformImpl().getDefaultContext(MDevice)) {
   assert(MContext.getOLHandleRef() &&
          "Queue must be associated with a valid offload context");
   callAndThrow(olCreateQueue, MContext.getOLHandleRef(), MDevice.getOLHandle(),

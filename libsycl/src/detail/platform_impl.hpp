@@ -132,11 +132,8 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
-  // TODO: liboffload doesn't support context now, l0 plugin creates default
-  // context for all devices on its level. This method should be removed or
-  // reimplemented once native context support is added to liboffload.
-  /// \return the default context that represents all devices in platform.
-  ContextImpl &getDefaultContext();
+  /// \return the default context compatible with Device.
+  ContextImpl &getDefaultContext(const DeviceImpl &Device);
 
 private:
   /// \return reference to collection of root devices for platform
@@ -150,7 +147,11 @@ private:
 
   std::vector<DeviceImplUPtr> MRootDevices;
 
-  std::shared_ptr<ContextImpl> MDefaultContext;
+  struct DefaultContextEntry {
+    uint32_t ContextGroupIndex;
+    std::shared_ptr<ContextImpl> Context;
+  };
+  std::vector<DefaultContextEntry> MDefaultContexts;
 
   // Single initialization of platforms and devices doesn't allow to implement
   // unittests for this behavior. This flag and friend class allows to force

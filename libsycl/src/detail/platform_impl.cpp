@@ -16,6 +16,7 @@
 #include <detail/platform_impl.hpp>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -93,13 +94,16 @@ PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
                       Device, *this, DeviceImpl::PrivateTag{}));
                 });
 
-  std::vector<DeviceImpl *> DeviceImpls;
-  DeviceImpls.reserve(MRootDevices.size());
+  std::map<uint32_t, std::vector<DeviceImpl *>> GroupedDevices;
   for (const auto &Device : MRootDevices)
-    DeviceImpls.push_back(Device.get());
+    GroupedDevices[Device->getContextGroupIndex()].push_back(Device.get());
 
-  MDefaultContext = ContextImpl::create(std::move(DeviceImpls),
-                                        defaultAsyncHandler, property_list{});
+  MDefaultContexts.reserve(GroupedDevices.size());
+  for (auto &[GroupIdx, DeviceImpls] : GroupedDevices) {
+    MDefaultContexts.push_back(
+        {GroupIdx, ContextImpl::create(std::move(DeviceImpls),
+                                       defaultAsyncHandler, property_list{})});
+  }
 }
 
 const std::vector<DeviceImplUPtr> &PlatformImpl::getRootDevices() const {
@@ -144,10 +148,18 @@ void PlatformImpl::iterateDevices(
   }
 }
 
-ContextImpl &PlatformImpl::getDefaultContext() {
-  assert(MDefaultContext &&
-         "Default context for platform must be created in platform ctor");
-  return *MDefaultContext.get();
+ContextImpl &PlatformImpl::getDefaultContext(const DeviceImpl &Device) {
+  assert(!MDefaultContexts.empty() &&
+         "Default contexts must be created in platform ctor");
+
+  uint32_t GroupIdx = Device.getContextGroupIndex();
+  for (auto &Entry : MDefaultContexts) {
+    if (Entry.ContextGroupIndex == GroupIdx)
+      return *Entry.Context;
+  }
+
+  assert(false && "No default context for device's context group");
+  __builtin_unreachable();
 }
 
 } // namespace detail

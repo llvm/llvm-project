@@ -50,6 +50,9 @@ class L0ContextTy {
   /// Level Zero Driver handle.
   ze_driver_handle_t zeDriver = nullptr;
 
+  /// Context group index within the Level Zero plugin.
+  uint32_t ContextGroupIdx;
+
   /// Common Level Zero context.
   ze_context_handle_t zeContext = nullptr;
 
@@ -121,6 +124,8 @@ public:
   }
 
   ze_driver_handle_t getZeDriver() const { return zeDriver; }
+
+  uint32_t getContextGroupIdx() const { return ContextGroupIdx; }
 
   /// Return context associated with the driver.
   ze_context_handle_t getZeContext() const { return zeContext; }

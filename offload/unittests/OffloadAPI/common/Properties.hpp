@@ -98,6 +98,11 @@ inline const DeviceInfoProp PropUint32{
 inline const DeviceInfoProperties Uint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), PropUint32);
 
+inline const DeviceInfoProp PropContextGroupIndex{
+    OL_DEVICE_INFO_CONTEXT_GROUP_INDEX};
+inline const DeviceInfoProperties ContextGroupIndexProperties =
+    createPropertiesWithSizeContainer(sizeof(uint32_t), PropContextGroupIndex);
+
 inline const DeviceInfoProp PropUint64{
     OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
     OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE};
