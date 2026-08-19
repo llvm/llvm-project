@@ -27,6 +27,12 @@ lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
 SyntheticChildrenFrontEnd *
 GenericInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                lldb::ValueObjectSP valobj_sp);
+
+// std::queue / std::stack / std::priority_queue. The underlying container
+// is the standard protected member `c`.
+SyntheticChildrenFrontEnd *
+GenericContainerAdaptorFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP valobj_sp);
 } // namespace formatters
 } // namespace lldb_private
 

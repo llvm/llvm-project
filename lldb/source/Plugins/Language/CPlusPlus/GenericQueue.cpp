@@ -1,4 +1,4 @@
-//===-- LibCxxQueue.cpp ---------------------------------------------------===//
+//===-- GenericQueue.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LibCxx.h"
+#include "Generic.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
