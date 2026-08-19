@@ -938,7 +938,6 @@ private:
     }
 
     if (Line.endsWith(tok::l_brace)) {
-
       if (Style.BraceWrapping.AfterExportBlock &&
           Line.First->is(TT_ExportLBrace)) {
         return 0;
