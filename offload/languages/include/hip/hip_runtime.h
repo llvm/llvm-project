@@ -17,6 +17,9 @@
 
 #include "../kernel/UndefineLanguageNames.inc"
 
+// we dont rename the math symbols
+#include "../kernel/LanguageMath.h"
+
 #undef LANGUAGE
 
 #define hipHostMallocDefault hipHostAllocDefault

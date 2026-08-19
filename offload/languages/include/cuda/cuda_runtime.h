@@ -17,6 +17,9 @@
 
 #include "../kernel/UndefineLanguageNames.inc"
 
+// we dont rename the math symbols
+#include "../kernel/LanguageMath.h"
+
 #undef LANGUAGE
 
 using cudaDeviceProp = cudaDeviceProp_t;

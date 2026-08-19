@@ -9911,6 +9911,60 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
            ShouldForwardForToolChain(A, TC);
   };
 
+  bool ShouldLinkGPULibC =
+      Args.hasFlag(options::OPT_offloadlib, OPT_no_offloadlib, true) &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_r,
+                   options::OPT_nodefaultlibs, options::OPT_nolibc,
+                   options::OPT_nogpulibc);
+
+  auto GetGPULibCPathForToolChain =
+      [&](const ToolChain &TC) -> std::optional<std::string> {
+    StringRef TripleString = TC.getTripleString();
+    llvm::Triple Triple(TripleString.ends_with("-llvm")
+                            ? TripleString.drop_back(5)
+                            : TripleString);
+
+    // GPU libc is installed under the canonical target triple, not the
+    // -foffload-via-llvm internal triple with an LLVM environment suffix.
+    if (Triple.getEnvironment() == llvm::Triple::LLVM)
+      Triple.setEnvironment(llvm::Triple::UnknownEnvironment);
+    else if (std::optional<std::string> Path = TC.getStdlibPath())
+      return Path;
+
+    auto GetPathForTriple =
+        [&](const llvm::Triple &LibCTriple) -> std::optional<std::string> {
+      SmallString<128> Path(C.getDriver().Dir);
+      llvm::sys::path::append(Path, "..", "lib", LibCTriple.str());
+      if (TC.getVFS().exists(Path))
+        return std::string(Path);
+      return std::nullopt;
+    };
+
+    if (std::optional<std::string> Path = GetPathForTriple(Triple))
+      return Path;
+
+    // Handle the current AMDGPU spelling as well as the legacy amdgcn one.
+    if (Triple.getArchName() == "amdgcn") {
+      llvm::Triple Canon(Triple);
+      Canon.setArchName("amdgpu");
+      if (std::optional<std::string> Path = GetPathForTriple(Canon))
+        return Path;
+    }
+
+    return std::nullopt;
+  };
+  auto AddGPULibCLinkerArgs = [&](const ToolChain &TC,
+                                  ArgStringList &LinkerArgs) {
+    if (!ShouldLinkGPULibC ||
+        (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU()))
+      return;
+    if (std::optional<std::string> LibCPath = GetGPULibCPathForToolChain(TC)) {
+      LinkerArgs.emplace_back(Args.MakeArgString(Twine("-L") + *LibCPath));
+      LinkerArgs.emplace_back("-lc");
+      LinkerArgs.emplace_back("-lm");
+    }
+  };
+
   ArgStringList CmdArgs;
   for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP,
                                    Action::OFK_HIP, Action::OFK_SYCL}) {
@@ -9945,6 +9999,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
           (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
         LinkerArgs.emplace_back("-lompdevice");
+
+      if (Kind == Action::OFK_OpenMP ||
+          TC->getTripleString().ends_with("-llvm"))
+        AddGPULibCLinkerArgs(*TC, LinkerArgs);
+
+      if (Kind == Action::OFK_OpenMP &&
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()) &&
+          ShouldLinkGPULibC) {
+        if (ToolChainHasRT(*TC, "builtins"))
+          LinkerArgs.emplace_back("-lclang_rt.builtins");
+
+        bool HasFlangRT = getToolChain().getVFS().exists(
+            TC->getCompilerRT(Args, "runtime", ToolChain::FT_Static,
+                              /*IsFortran=*/true));
+        if (HasFlangRT && C.getDriver().IsFlangMode())
+          LinkerArgs.emplace_back("-lflang_rt.runtime");
+      }
 
       // For SPIR-V, pass some extra flags to `spirv-link`, the out-of-tree
       // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
@@ -10066,42 +10137,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_save_temps_EQ) ||
       Args.hasArg(options::OPT_save_temps))
     CmdArgs.push_back("--save-temps");
-
-  // Pass in the C library for GPUs if present and not disabled.
-  if (Args.hasFlag(options::OPT_offloadlib, OPT_no_offloadlib, true) &&
-      !Args.hasArg(options::OPT_nostdlib, options::OPT_r,
-                   options::OPT_nodefaultlibs, options::OPT_nolibc,
-                   options::OPT_nogpulibc)) {
-    forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
-      // The device C library is only available for NVPTX and AMDGPU targets
-      // and we only link it by default for OpenMP currently.
-      if ((!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU()) ||
-          !JA.isHostOffloading(Action::OFK_OpenMP))
-        return;
-      bool HasLibC = TC.getStdlibIncludePath().has_value();
-      if (HasLibC) {
-        CmdArgs.push_back(Args.MakeArgString(
-            "--device-linker=" + TC.getTripleString() + "=" + "-lc"));
-        CmdArgs.push_back(Args.MakeArgString(
-            "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
-      }
-      auto HasCompilerRT = getToolChain().getVFS().exists(
-          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static,
-                           /*IsFortran=*/false));
-      if (HasCompilerRT)
-        CmdArgs.push_back(
-            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
-                               "-lclang_rt.builtins"));
-
-      bool HasFlangRT = getToolChain().getVFS().exists(
-          TC.getCompilerRT(Args, "runtime", ToolChain::FT_Static,
-                           /*IsFortran=*/true));
-      if (HasFlangRT && C.getDriver().IsFlangMode())
-        CmdArgs.push_back(
-            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
-                               "-lflang_rt.runtime"));
-    });
-  }
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +

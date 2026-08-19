@@ -107,6 +107,7 @@ install(FILES ${LLVM_OFFLOAD_KERNEL_PER_THREAD_DEFAULT_STREAM_OBJECT}
 install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/DefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageErrors.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageMath.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/LanguageRuntime.h
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/kernel/UndefineLanguageNames.inc
         ${CMAKE_CURRENT_SOURCE_DIR}/include/LanguageLaunch.h
