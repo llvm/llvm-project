@@ -6655,6 +6655,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (Instruction::isCast(VPI.getOpcode()) &&
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
+      // No processing needed for the uniform branch preserved by the
+      // predicator.
+      if (VPI.getOpcode() == VPInstruction::BranchOnCond)
+        continue;
 
       // Only VPInstrutions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())

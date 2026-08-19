@@ -1442,11 +1442,15 @@ void vputils::detail::pullOutPermutationsImpl(
 // Implements the algorithm described in "Simple and Efficient Construction of
 // Static Single Assignment Form" by Braun et al.
 VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
-                                 DenseMap<VPBasicBlock *, VPValue *> &Defs) {
+                                 DenseMap<VPBasicBlock *, VPValue *> &Defs,
+                                 bool CreateWidenPhis) {
   assert(!Defs.empty() && "Defs shouldn't be empty");
-  assert(
-      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
-      "VPBB isn't reachable from entry");
+  assert(is_contained(vp_depth_first_shallow(
+                          VPBB->getParent()
+                              ? VPBB->getParent()->getEntry()
+                              : VPBB->getPlan()->getEntry()),
+                      VPBB) &&
+         "VPBB isn't reachable from entry");
   if (VPValue *Def = Defs.lookup(VPBB))
     return Def;
   // If the entry block is reached and there's still no def, then Defs is
@@ -1454,28 +1458,41 @@ VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
   assert(VPBB->getNumPredecessors() && "Not all paths have def");
 
   if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
-    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs);
+    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs, CreateWidenPhis);
 
   // Multiple predecessors, create a join.
   Type *Ty = Defs.begin()->second->getScalarType();
-  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
-                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
-  Defs[VPBB] = Phi;
-  for (auto *Pred : VPBB->predecessors())
-    Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
+  VPPhiAccessors *Phi;
+  VPSingleDefRecipe *PhiR;
+  if (CreateWidenPhis) {
+    Phi = new VPWidenPHIRecipe(Ty);
+    PhiR = static_cast<VPWidenPHIRecipe *>(Phi);
+  } else {
+    Phi = new VPPhi({}, VPIRFlags::getDefaultFlags(Instruction::PHI, Ty),
+                    DebugLoc::getUnknown(), "", Ty);
+    PhiR = static_cast<VPPhi *>(Phi);
+  }
+  VPBB->insert(PhiR, VPBB->getFirstNonPhi());
+  Defs[VPBB] = PhiR->getVPSingleValue();
+  for (auto *Pred : VPBB->predecessors()) {
+    VPValue *Incoming =
+        reconstructSSA(cast<VPBasicBlock>(Pred), Defs, CreateWidenPhis);
+    Phi->addIncoming(Incoming);
+  }
 
   // Fold away trivial phis.
   // TODO: Remove phi users which have become trivial too.
   if (all_equal(Phi->incoming_values())) {
     VPValue *Common = Phi->getIncomingValue(0);
-    Phi->replaceAllUsesWith(Common);
+    VPValue *PhiValue = PhiR->getVPSingleValue();
+    PhiR->replaceAllUsesWith(Common);
     for (auto &[_, V] : Defs)
-      if (V == Phi)
+      if (V == PhiValue)
         V = Common;
+    PhiR->eraseFromParent();
     Defs[VPBB] = Common;
-    Phi->eraseFromParent();
     return Common;
   }
 
-  return Phi;
+  return PhiR;
 }
