@@ -124,7 +124,7 @@ public:
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const override;
+                       const TTI::TargetCostKind CostKind) const override;
   InstructionCost
   getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
                             TTI::TargetCostKind CostKind) const override;
