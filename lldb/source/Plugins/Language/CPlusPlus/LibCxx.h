@@ -209,8 +209,11 @@ SyntheticChildrenFrontEnd *
 LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                    lldb::ValueObjectSP);
 
-SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
-                                                      lldb::ValueObjectSP);
+// std::queue / std::stack / std::priority_queue. The underlying container
+// is the standard protected member `c`.
+SyntheticChildrenFrontEnd *
+GenericContainerAdaptorFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *LibcxxTupleFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);
