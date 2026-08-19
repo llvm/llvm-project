@@ -60,6 +60,8 @@ constexpr bool test() {
     assert(std::ranges::equal(*it, std::vector{3, 4}));
     it += 2;
     assert(std::ranges::equal(*it, std::vector{7, 8}));
+    it += -1;
+    assert(std::ranges::equal(*it, std::vector{5, 6}));
   }
 
   return true;
