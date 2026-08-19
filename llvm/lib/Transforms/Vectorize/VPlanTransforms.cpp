@@ -256,6 +256,15 @@ static bool
 canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
+  // Predicated memory motion currently only handles a linear VPlan CFG. A
+  // preserved uniform branch may put FirstBB and LastBB on different paths;
+  // conservatively decline the transformation in that case.
+  VPBlockBase *BB = FirstBB;
+  while (BB && BB != LastBB)
+    BB = BB->getSingleSuccessor();
+  if (BB != LastBB)
+    return false;
+
   bool CheckReads = SinkInfo.has_value();
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {

@@ -1616,28 +1616,61 @@ define void @sink_stores_cse_select_dropping_fmf(ptr %dst, ptr %src, ptr %invar.
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT1]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
+; CHECK:       [[VECTOR_BODY1]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH20:.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SRC]], align 4, !alias.scope [[META119:![0-9]+]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP10]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN15:.*]], label %[[ELSE10:.*]]
+; CHECK:       [[ELSE10]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT]], splat (float 3.000000e+00)
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    store float [[TMP8]], ptr [[TMP5]], align 4, !alias.scope [[META122:![0-9]+]], !noalias [[META124:![0-9]+]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
+; CHECK:       [[PRED_STORE_IF13]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    store float [[TMP9]], ptr [[TMP6]], align 4, !alias.scope [[META122]], !noalias [[META124]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
+; CHECK:       [[PRED_STORE_CONTINUE14]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH20]]
+; CHECK:       [[THEN15]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul nnan <2 x float> [[BROADCAST_SPLAT]], splat (float 2.000000e+00)
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17:.*]]
+; CHECK:       [[PRED_STORE_IF16]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C]], float [[TMP4]], float [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul nnan float [[TMP6]], 5.000000e+00
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK-NEXT:    store float [[TMP4]], ptr [[TMP5]], align 4, !alias.scope [[META122]], !noalias [[META124]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
+; CHECK:       [[PRED_STORE_CONTINUE17]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF18:.*]], label %[[VECTOR_BODY:.*]]
+; CHECK:       [[PRED_STORE_IF18]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[TMP3]], i64 0
+; CHECK-NEXT:    store float [[TMP12]], ptr [[TMP6]], align 4, !alias.scope [[META122]], !noalias [[META124]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP8]]
-; CHECK-NEXT:    store float [[TMP6]], ptr [[TMP9]], align 4, !alias.scope [[META122:![0-9]+]], !noalias [[META124:![0-9]+]]
-; CHECK-NEXT:    store float [[TMP6]], ptr [[TMP10]], align 4, !alias.scope [[META122]], !noalias [[META124]]
+; CHECK-NEXT:    br label %[[LOOP_LATCH20]]
+; CHECK:       [[LOOP_LATCH20]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x float> [ [[TMP2]], %[[PRED_STORE_CONTINUE14]] ], [ poison, %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x float> [ poison, %[[PRED_STORE_CONTINUE14]] ], [ [[TMP3]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i1> [ zeroinitializer, %[[PRED_STORE_CONTINUE14]] ], [ [[BROADCAST_SPLAT1]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x float> [[TMP14]], <2 x float> [[TMP13]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul nnan <2 x float> [[PREDPHI]], splat (float 5.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP16]], i64 1
+; CHECK-NEXT:    store float [[TMP17]], ptr [[INVAR_DST]], align 4, !alias.scope [[META126:![0-9]+]], !noalias [[META119]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP126:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP127:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    store float [[TMP7]], ptr [[INVAR_DST]], align 4, !alias.scope [[META127:![0-9]+]], !noalias [[META119]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

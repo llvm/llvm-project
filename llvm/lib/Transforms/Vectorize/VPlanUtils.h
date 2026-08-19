@@ -226,9 +226,11 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 /// reconstructed value at VPBB. Use if the CFG has been modified such that a
 /// def no longer dominates all its uses. Every block leading to VPBB must be
 /// reachable from the entry and the plan must be plain-CFG (not contain any
-/// regions).
+/// regions). If \p CreateWidenPhis is true, create widen-phi recipes instead
+/// of scalar phi recipes.
 LLVM_ABI_FOR_TEST VPValue *
-reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs);
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> &Defs,
+               bool CreateWidenPhis = false);
 
 namespace detail {
 

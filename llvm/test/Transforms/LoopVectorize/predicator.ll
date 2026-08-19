@@ -83,36 +83,58 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c3, i1 %c4, i1 %c6)
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[C6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i1> poison, i1 [[C4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT3]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i1> poison, i1 [[C1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT5]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i1> poison, i1 [[C0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT7]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT8]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[BROADCAST_SPLAT6]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT6]], splat (i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[BROADCAST_SPLAT6]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[BROADCAST_SPLAT4]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[BROADCAST_SPLAT8]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT8]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i1> poison, i1 [[C6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT8]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP26:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB816:.*]] ]
+; CHECK-NEXT:    br i1 [[C0]], label %[[BB110:.*]], label %[[BB29:.*]]
+; CHECK:       [[BB29]]:
+; CHECK-NEXT:    br label %[[BB612:.*]]
+; CHECK:       [[BB110]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[BB313:.*]], label %[[BB411:.*]]
+; CHECK:       [[BB411]]:
+; CHECK-NEXT:    br i1 [[C4]], label %[[BB514:.*]], label %[[BB612]]
+; CHECK:       [[BB612]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB29]] ], [ [[TMP3]], %[[BB411]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ [[TMP7]], %[[BB29]] ], [ zeroinitializer, %[[BB411]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP13]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP14]], [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP5]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    br i1 [[C6]], label %[[PRED_STORE_CONTINUE12:.*]], label %[[BB816]]
+; CHECK:       [[BB313]]:
+; CHECK-NEXT:    br i1 [[C3]], label %[[BB816]], label %[[BB514]]
+; CHECK:       [[BB514]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x i1> [ [[TMP3]], %[[BB411]] ], [ zeroinitializer, %[[BB313]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB411]] ], [ [[TMP4]], %[[BB313]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[BROADCAST_SPLAT4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP20]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12:.*]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; CHECK:       [[PRED_STORE_CONTINUE12]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE12]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB514]] ], [ [[TMP5]], %[[BB612]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i1> [ [[TMP12]], %[[BB514]] ], [ zeroinitializer, %[[BB612]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP15]], <4 x i1> [[BROADCAST_SPLAT9]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP17]], [[TMP16]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[P]], i32 [[TMP26]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[PREDPHI]], ptr align 4 [[TMP27]], <4 x i1> [[TMP12]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[PREDPHI]], ptr align 4 [[TMP27]], <4 x i1> [[TMP18]])
+; CHECK-NEXT:    br label %[[BB816]]
+; CHECK:       [[BB816]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP26]], 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_STORE_CONTINUE12]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -186,10 +208,17 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB35:.*]] ]
+; CHECK-NEXT:    br i1 [[C0]], label %[[BB13:.*]], label %[[BB24:.*]]
+; CHECK:       [[BB13]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[BB35]], label %[[BB24]]
+; CHECK:       [[BB24]]:
+; CHECK-NEXT:    br label %[[BB35]]
+; CHECK:       [[BB35]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB13]] ], [ [[TMP3]], %[[BB24]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -241,14 +270,31 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C1]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <4 x i32> poison, i32 [[Y]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH11:.*]] ]
+; CHECK-NEXT:    br i1 [[C1]], label %[[A8:.*]], label %[[B5:.*]]
+; CHECK:       [[B5]]:
+; CHECK-NEXT:    br i1 [[C3]], label %[[F4:.*]], label %[[E3:.*]]
+; CHECK:       [[E3]]:
+; CHECK-NEXT:    br label %[[F4]]
+; CHECK:       [[F4]]:
+; CHECK-NEXT:    br label %[[LATCH11]]
+; CHECK:       [[A8]]:
+; CHECK-NEXT:    br i1 [[C2]], label %[[C10:.*]], label %[[D9:.*]]
+; CHECK:       [[D9]]:
+; CHECK-NEXT:    br label %[[LATCH11]]
+; CHECK:       [[C10]]:
+; CHECK-NEXT:    br label %[[LATCH11]]
+; CHECK:       [[LATCH11]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i1> [ zeroinitializer, %[[F4]] ], [ [[BROADCAST_SPLAT]], %[[D9]] ], [ [[BROADCAST_SPLAT]], %[[C10]] ]
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI7]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -296,29 +342,38 @@ exit:
   ret void
 }
 
+;; Uniform control flow preservation tests
 define void @outermost_uniform_branch(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @outermost_uniform_branch(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB42:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB42]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[MIDDLE_BLOCK:.*]], label %[[BB42]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[TMP3]], <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[U0]], <4 x i64> [[TMP4]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    br label %[[BB42]]
+; CHECK:       [[BB42]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP8]], <4 x i64> [[TMP6]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -366,30 +421,117 @@ exit:
   ret void
 }
 
+define void @outermost_uniform_branch_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @outermost_uniform_branch_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB42:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB42]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB11:.*]], label %[[BB42]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP1]], ptr align 4 [[TMP0]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP4]], ptr align 4 [[TMP0]], <4 x i1> [[TMP3]])
+; CHECK-NEXT:    br label %[[BB42]]
+; CHECK:       [[BB42]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (u)
+;         /    \
+;       bb1 (v) \
+;       / |      |
+;     bb2 |      |
+;       \ |      |
+;       bb3      |
+;          \    /
+;           bb4
+; bb0's uniform branch can be easily preserved.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb4 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %add0 = add i64 %iv, 0
+  store i64 %add0, ptr %gep
+  br i1 %u0, label %bb1, label %bb4
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb2, label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb3
+
+bb3:
+  br label %bb4
+
+bb4:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @outermost_uniform_branch_more_blocks(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @outermost_uniform_branch_more_blocks(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB63:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB63]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br label %[[BB63]]
+; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> [[TMP4]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 5)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[U0]], <4 x i64> [[TMP5]], <4 x i64> [[TMP1]]
+; CHECK-NEXT:    br label %[[BB63]]
+; CHECK:       [[BB63]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB22]] ]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP10]], <4 x i64> [[TMP8]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -444,30 +586,127 @@ exit:
   ret void
 }
 
+define void @outermost_uniform_branch_more_blocks_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @outermost_uniform_branch_more_blocks_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB63:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB63]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    br label %[[BB63]]
+; CHECK:       [[BB22]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP8]], ptr align 4 [[TMP1]], <4 x i1> [[TMP7]])
+; CHECK-NEXT:    br label %[[BB63]]
+; CHECK:       [[BB63]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (u)
+;         /      \
+;       bb2 (v)  bb1
+;       / \       |
+;     bb4  bb3    |
+;       \  /      |
+;       bb5       |
+;          \     /
+;           bb6
+; Similar to above, but with extra blocks on some edges. Probably doesn't
+; require any extra handling but nice to test explicitly.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb6
+
+bb2:
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  br label %bb6
+
+bb6:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_after_varying_branch(ptr %a, i1 %u1) {
 ; CHECK-LABEL: define void @uniform_branch_after_varying_branch(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB32:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB32]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB21:.*]], label %[[BB32]]
+; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U1]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    br label %[[BB32]]
+; CHECK:       [[BB32]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[BB21]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[BB21]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x i64> [[TMP7]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP5]], <4 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -517,30 +756,121 @@ exit:
   ret void
 }
 
+define void @uniform_branch_after_varying_branch_no_phi(ptr %a, i1 %u1) {
+; CHECK-LABEL: define void @uniform_branch_after_varying_branch_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB32:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP3]], ptr align 4 [[TMP0]], <4 x i1> [[TMP2]])
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB21:.*]], label %[[BB32]]
+; CHECK:       [[BB21]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP0]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    br label %[[BB32]]
+; CHECK:       [[BB32]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP0]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (v)
+;          /    \
+;        bb4   bb1 (u)
+;         |    / |
+;         |  bb2 |
+;         |    \ |
+;         |    bb3
+;          \   /
+;          bb5
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb4, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br i1 %u1, label %bb2, label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb3
+
+bb3:
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_after_varying_branch_more_blocks(ptr %a, i1 %u1) {
 ; CHECK-LABEL: define void @uniform_branch_after_varying_branch_more_blocks(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB32:.*]], label %[[BB21:.*]]
+; CHECK:       [[BB21]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB32]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U1]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP2]], %[[BB21]] ], [ poison, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ poison, %[[BB21]] ], [ [[TMP3]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB21]] ], [ [[BROADCAST_SPLAT]], %[[BB32]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP8]], <4 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP5]], <4 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -595,30 +925,130 @@ exit:
   ret void
 }
 
+define void @uniform_branch_after_varying_branch_more_blocks_no_phi(ptr %a, i1 %u1) {
+; CHECK-LABEL: define void @uniform_branch_after_varying_branch_more_blocks_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB32:.*]], label %[[BB21:.*]]
+; CHECK:       [[BB21]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP1]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB32]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP7]], ptr align 4 [[TMP1]], <4 x i1> [[TMP6]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP8]], ptr align 4 [[TMP1]], <4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;         bb0 (v)
+;         /     \
+;       bb5    bb1 (u)
+;        |     /  \
+;        |   bb3  bb2
+;        |     \  /
+;        |     bb4
+;         \   /
+;          bb6
+; Similar to above, but with extra blocks on some edges. Probably doesn't
+; require any extra handling but nice to test explicitly.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb5, label %bb1
+
+bb1:
+  br i1 %u1, label %bb3, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb4
+
+bb4:
+  br label %bb6
+
+bb5:
+  %add5 = add i64 %iv, 5
+  store i64 %add5, ptr %gep
+  br label %bb6
+
+bb6:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_after_varying_branch_more_blocks_mirrored(ptr %a, i1 %u2) {
 ; CHECK-LABEL: define void @uniform_branch_after_varying_branch_more_blocks_mirrored(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB53:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB53]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br i1 [[U2]], label %[[BB42:.*]], label %[[BB31:.*]]
+; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    br label %[[BB53]]
+; CHECK:       [[BB42]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U2]], <4 x i64> [[TMP4]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    br label %[[BB53]]
+; CHECK:       [[BB53]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ [[TMP3]], %[[BB31]] ], [ poison, %[[BB42]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ poison, %[[BB31]] ], [ [[TMP4]], %[[BB42]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB31]] ], [ [[BROADCAST_SPLAT]], %[[BB42]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP8]], <4 x i64> [[TMP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 5)
 ; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP1]], <4 x i64> [[TMP5]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -673,6 +1103,95 @@ exit:
   ret void
 }
 
+define void @uniform_branch_after_varying_branch_more_blocks_mirrored_no_phi(ptr %a, i1 %u2) {
+; CHECK-LABEL: define void @uniform_branch_after_varying_branch_more_blocks_mirrored_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB53:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB53]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP4]], ptr align 4 [[TMP1]], <4 x i1> [[TMP3]])
+; CHECK-NEXT:    br i1 [[U2]], label %[[BB42:.*]], label %[[BB31:.*]]
+; CHECK:       [[BB31]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[TMP5]])
+; CHECK-NEXT:    br label %[[BB53]]
+; CHECK:       [[BB42]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP8]], ptr align 4 [[TMP1]], <4 x i1> [[TMP7]])
+; CHECK-NEXT:    br label %[[BB53]]
+; CHECK:       [[BB53]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (v)
+;          /   \
+;      bb2 (u)  bb1
+;      /  \      |
+;    bb4  bb3    |
+;      \  /      |
+;       bb5      |
+;          \    /
+;           bb6
+; Mirror of the above test so that "(u)" block would be processed before/after
+; the other "(v)" destination by the RPOT.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb6 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb6
+
+bb2:
+  br i1 %u2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  br label %bb6
+
+bb6:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-LABEL: define void @uniform_branch_on_masked_def(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[UNI_PTR1:%.*]]) {
@@ -694,7 +1213,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META11:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META16:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i1> poison, i1 [[TMP2]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
@@ -702,7 +1221,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; CHECK:       [[PRED_LOAD_IF2]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META11]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META16]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i1> [[TMP4]], i1 [[TMP6]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; CHECK:       [[PRED_LOAD_CONTINUE3]]:
@@ -710,7 +1229,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
 ; CHECK:       [[PRED_LOAD_IF4]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META16]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i1> [[TMP8]], i1 [[TMP10]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
 ; CHECK:       [[PRED_LOAD_CONTINUE5]]:
@@ -718,7 +1237,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_LOAD_IF6:.*]], label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK:       [[PRED_LOAD_IF6]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META16]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i1> [[TMP12]], i1 [[TMP14]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK:       [[PRED_LOAD_CONTINUE7]]:
@@ -726,7 +1245,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
@@ -734,7 +1253,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 4)
 ; CHECK-NEXT:    [[PREDPHI8:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> [[TMP20]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[PREDPHI8]], i64 3
-; CHECK-NEXT:    store i64 [[TMP21]], ptr [[A]], align 4, !alias.scope [[META15:![0-9]+]], !noalias [[META11]]
+; CHECK-NEXT:    store i64 [[TMP21]], ptr [[A]], align 4, !alias.scope [[META20:![0-9]+]], !noalias [[META16]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[BB0:.*]]
@@ -761,7 +1280,7 @@ define void @uniform_branch_on_masked_def(ptr %a, ptr %uni.ptr1) {
 ; CHECK-NEXT:    store i64 [[PHI5]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 128
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[BB0]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[BB0]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -814,6 +1333,149 @@ exit:
   ret void
 }
 
+define void @uniform_branch_on_masked_def_no_phi(ptr %a, ptr %uni.ptr1) {
+; CHECK-LABEL: define void @uniform_branch_on_masked_def_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[UNI_PTR1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 1024
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[UNI_PTR1]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[UNI_PTR1]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE7:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE7]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i64> [[VEC_IND]], ptr [[TMP0]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META26:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
+; CHECK:       [[PRED_LOAD_IF]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META26]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> poison, i1 [[TMP3]], i64 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
+; CHECK:       [[PRED_LOAD_CONTINUE]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i1> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
+; CHECK:       [[PRED_LOAD_IF2]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META26]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i1> [[TMP5]], i1 [[TMP7]], i64 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
+; CHECK:       [[PRED_LOAD_CONTINUE3]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ [[TMP5]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP8]], %[[PRED_LOAD_IF2]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i64 2
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
+; CHECK:       [[PRED_LOAD_IF4]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META26]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i1> [[TMP9]], i1 [[TMP11]], i64 2
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
+; CHECK:       [[PRED_LOAD_CONTINUE5]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i1> [ [[TMP9]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP12]], %[[PRED_LOAD_IF4]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_LOAD_IF6:.*]], label %[[PRED_LOAD_CONTINUE7]]
+; CHECK:       [[PRED_LOAD_IF6]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = load i1, ptr [[UNI_PTR1]], align 1, !alias.scope [[META26]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[TMP15]], i64 3
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
+; CHECK:       [[PRED_LOAD_CONTINUE7]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i1> [ [[TMP13]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP16]], %[[PRED_LOAD_IF6]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
+; CHECK-NEXT:    [[TMP19:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP18]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP20:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP20]], ptr align 4 [[TMP0]], <4 x i1> [[TMP19]]), !alias.scope [[META23]], !noalias [[META26]]
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP17]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP22:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP22]], ptr align 4 [[TMP0]], <4 x i1> [[TMP21]]), !alias.scope [[META23]], !noalias [[META26]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[BB0:.*]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[BB5:.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[ADD0:%.*]] = add i64 [[IV]], 0
+; CHECK-NEXT:    store i64 [[ADD0]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = icmp sle i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[V0]], label %[[BB5]], label %[[BB1:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[CU1:%.*]] = load i1, ptr [[UNI_PTR1]], align 1
+; CHECK-NEXT:    br i1 [[CU1]], label %[[BB3:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    store i64 [[ADD2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    br label %[[BB4:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[ADD3:%.*]] = add i64 [[IV]], 3
+; CHECK-NEXT:    store i64 [[ADD3]], ptr [[GEP]], align 4
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br label %[[BB5]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 128
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[BB0]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (v)
+;           /   \
+;          |    bb1 (br i1 (load i1 %uni.ptr))
+;          |   /  \
+;          | bb3  bb2
+;          |    \ /
+;          |    bb4
+;           \  /
+;            bb5
+; bb1's condition is uniform, but its value is loaded only along one path of
+; bb0's varying branch. It cannot be preserved trivially, because some the load
+; may never be executed.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %add0 = add i64 %iv, 0
+  store i64 %add0, ptr %gep
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb5, label %bb1
+
+bb1:
+  %cu1 = load i1, ptr %uni.ptr1
+  br i1 %cu1, label %bb3, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb4
+
+bb4:
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_unstructured_merge1(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @uniform_branch_unstructured_merge1(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
@@ -825,24 +1487,37 @@ define void @uniform_branch_unstructured_merge1(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB33:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB33]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br label %[[BB33]]
+; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    br label %[[BB33]]
+; CHECK:       [[BB33]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i64> [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP3]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[TMP11]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP6]], [[TMP0]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i64> [[TMP7]], <4 x i64> [[TMP14]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP13]], <4 x i64> [[TMP8]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -893,6 +1568,89 @@ exit:
   ret void
 }
 
+define void @uniform_branch_unstructured_merge1_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @uniform_branch_unstructured_merge1_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB33:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB33]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    br label %[[BB33]]
+; CHECK:       [[BB22]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP3]], ptr align 4 [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[TMP5]])
+; CHECK-NEXT:    br label %[[BB33]]
+; CHECK:       [[BB33]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP31:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+; All @uniform_branch_unstructured_merge[0-4] below have the same structure of uniform
+; control flow merging into the middle of the varying diamond, but "covering"
+; different potential RPOT traversals.
+;          bb0 (u)
+;         /       \
+;      bb2 (v)   bb1
+;       /   \     /
+;     bb4     bb3
+;       \   /
+;        bb5
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_unstructured_merge2(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @uniform_branch_unstructured_merge2(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
@@ -904,24 +1662,36 @@ define void @uniform_branch_unstructured_merge2(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP6]], [[TMP0]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP3]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i64> [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP3]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[TMP4]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP16]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i1> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i64> [[TMP7]], <4 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 4)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP12]], <4 x i64> [[TMP8]], <4 x i64> [[TMP13]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -971,6 +1741,88 @@ exit:
   ret void
 }
 
+define void @uniform_branch_unstructured_merge2_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @uniform_branch_unstructured_merge2_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB22]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP3]], ptr align 4 [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[TMP5]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (u)
+;         /       \
+;      bb2 (v)   bb1
+;       /   \     /
+;      |   +-\---+
+;      |  /   \
+;      bb4   bb3
+;       \    /
+;         bb5
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb4
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb4, label %bb3
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb5
+
+bb4:
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_unstructured_merge3(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @uniform_branch_unstructured_merge3(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
@@ -982,24 +1834,36 @@ define void @uniform_branch_unstructured_merge3(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB32:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB32]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i64> [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i1> [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP16]], <4 x i1> [[TMP10]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[BROADCAST_SPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP5]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i64> [[TMP13]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 4)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP11]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -1047,6 +1911,86 @@ exit:
   ret void
 }
 
+define void @uniform_branch_unstructured_merge3_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @uniform_branch_unstructured_merge3_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB32:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP1]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB32]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;         bb0 (u)
+;         /  \
+;      bb3   bb1 (v)
+;        \   /  \
+;        bb4     bb2
+;           \   /
+;            bb5
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb3, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb4, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb5
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb4
+
+bb4:
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_unstructured_merge4(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @uniform_branch_unstructured_merge4(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
@@ -1058,24 +2002,37 @@ define void @uniform_branch_unstructured_merge4(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB23:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB23]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB32:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    br label %[[BB23]]
+; CHECK:       [[BB32]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    br label %[[BB23]]
+; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB32]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i1> [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB32]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = xor <4 x i1> [[TMP17]], splat (i1 true)
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[BROADCAST_SPLAT]], [[TMP6]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP5]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i64> [[TMP14]], <4 x i64> [[TMP13]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 2)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP8]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -1125,6 +2082,88 @@ exit:
   ret void
 }
 
+define void @uniform_branch_unstructured_merge4_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @uniform_branch_unstructured_merge4_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB23:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB23]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB32:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP1]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    br label %[[BB23]]
+; CHECK:       [[BB32]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    br label %[[BB23]]
+; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;         bb0 (u)
+;         /  \
+;      bb3   bb1 (v)
+;        \   /    \
+;         +-/--+   \
+;          /    \   \
+;        bb4      bb2
+;           \    /
+;             bb5
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb3, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  %v1 = icmp sle i64 %iv, 1
+  br i1 %v1, label %bb4, label %bb2
+
+bb2:
+  br label %bb5
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb2
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @uniform_branch_shared_join_with_varying(ptr %a, i1 %u0) {
 ; CHECK-LABEL: define void @uniform_branch_shared_join_with_varying(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
@@ -1135,22 +2174,33 @@ define void @uniform_branch_shared_join_with_varying(ptr %a, i1 %u0) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB22]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP3]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP2]], <4 x i64> [[TMP1]]
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP4]], <4 x i64> [[TMP5]], <4 x i64> [[PREDPHI]]
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB22]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP2]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP5]], %[[BB22]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[TMP4]], %[[BB22]] ]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP12]], <4 x i64> [[TMP10]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <4 x i1> [[TMP9]], <4 x i64> [[TMP8]], <4 x i64> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[PREDPHI1]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -1194,6 +2244,84 @@ exit:
   ret void
 }
 
+define void @uniform_branch_shared_join_with_varying_no_phi(ptr %a, i1 %u0) {
+; CHECK-LABEL: define void @uniform_branch_shared_join_with_varying_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB43:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB43]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB22:.*]], label %[[BB11:.*]]
+; CHECK:       [[BB11]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP2]], ptr align 4 [[TMP1]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB22]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP3]], ptr align 4 [[TMP1]], <4 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP6]], ptr align 4 [[TMP1]], <4 x i1> [[TMP5]])
+; CHECK-NEXT:    br label %[[BB43]]
+; CHECK:       [[BB43]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP39:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;          bb0 (u)
+;         /     \
+;      bb2 (v)   bb1
+;       / |     /
+;     bb3 |    /
+;       \ |   /
+;         bb4
+; Theoretically can be done, but would require a combination of a blend and a phi.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb4 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb4
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  %v2 = icmp sle i64 %iv, 2
+  br i1 %v2, label %bb3, label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br label %bb4
+
+bb4:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @unstructured_uniform_only(ptr %a, i1 %u0, i1 %u2) {
 ; CHECK-LABEL: define void @unstructured_uniform_only(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]], i1 [[U2:%.*]]) {
@@ -1204,27 +2332,44 @@ define void @unstructured_uniform_only(ptr %a, i1 %u0, i1 %u2) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i1> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB57:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB57]] ]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB24:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    br label %[[BB35:.*]]
+; CHECK:       [[BB24]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U0]], <4 x i64> [[TMP6]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    br i1 [[U2]], label %[[BB46:.*]], label %[[BB35]]
+; CHECK:       [[BB35]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i64> [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ poison, %[[BB24]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i64> [ poison, %[[MIDDLE_BLOCK]] ], [ [[TMP6]], %[[BB24]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i1> [ zeroinitializer, %[[MIDDLE_BLOCK]] ], [ [[BROADCAST_SPLAT2]], %[[BB24]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i1> [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ zeroinitializer, %[[BB24]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = or <4 x i1> [[TMP2]], [[TMP17]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP7]], <4 x i64> [[TMP15]], <4 x i64> [[TMP10]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 3)
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP3]], <4 x i64> [[TMP8]], <4 x i64> [[TMP7]]
+; CHECK-NEXT:    br label %[[BB57]]
+; CHECK:       [[BB46]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    br label %[[BB57]]
+; CHECK:       [[BB57]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i64> [ [[TMP11]], %[[BB46]] ], [ poison, %[[BB35]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ poison, %[[BB46]] ], [ [[TMP8]], %[[BB35]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB46]] ], [ [[TMP18]], %[[BB35]] ]
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP14]], <4 x i64> [[TMP13]], <4 x i64> [[TMP12]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[PREDPHI3]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP40:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK1]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -1272,6 +2417,91 @@ exit:
   ret void
 }
 
+define void @unstructured_uniform_only_no_phi(ptr %a, i1 %u0, i1 %u2) {
+; CHECK-LABEL: define void @unstructured_uniform_only_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U0:%.*]], i1 [[U2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U2]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[U0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB57:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB57]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    br i1 [[U0]], label %[[BB24:.*]], label %[[BB13:.*]]
+; CHECK:       [[BB13]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP3]], ptr align 4 [[TMP2]], <4 x i1> [[TMP0]])
+; CHECK-NEXT:    br label %[[BB35:.*]]
+; CHECK:       [[BB24]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP4]], ptr align 4 [[TMP2]], <4 x i1> [[BROADCAST_SPLAT2]])
+; CHECK-NEXT:    br i1 [[U2]], label %[[BB46:.*]], label %[[BB35]]
+; CHECK:       [[BB35]]:
+; CHECK-NEXT:    br label %[[BB57]]
+; CHECK:       [[BB46]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP2]], <4 x i1> [[TMP1]])
+; CHECK-NEXT:    br label %[[BB57]]
+; CHECK:       [[BB57]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;             bb0 (u)
+;            /    \
+;         bb2 (u)  bb1
+;          /   \   /
+;        bb4    bb3
+;          \   /
+;           bb5
+; Triviallly preservable, but detection might not be easy.
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb5 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  br i1 %u0, label %bb2, label %bb1
+
+bb1:
+  %add1 = add i64 %iv, 1
+  store i64 %add1, ptr %gep
+  br label %bb3
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br i1 %u2, label %bb4, label %bb3
+
+bb3:
+  br label %bb5
+
+bb4:
+  %add4 = add i64 %iv, 4
+  store i64 %add4, ptr %gep
+  br label %bb5
+
+bb5:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
 define void @unstructured_uniform_only_sese_region(ptr %a, i1 %u1, i1 %u3) {
 ; CHECK-LABEL: define void @unstructured_uniform_only_sese_region(
 ; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]], i1 [[U3:%.*]]) {
@@ -1282,33 +2512,51 @@ define void @unstructured_uniform_only_sese_region(ptr %a, i1 %u1, i1 %u3) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB77:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB77]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB34:.*]], label %[[BB23:.*]]
+; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    br label %[[BB45:.*]]
+; CHECK:       [[BB34]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP4]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[U1]], <4 x i64> [[TMP7]], <4 x i64> [[TMP5]]
+; CHECK-NEXT:    br i1 [[U3]], label %[[BB56:.*]], label %[[BB45]]
+; CHECK:       [[BB45]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x i64> [ [[TMP5]], %[[BB23]] ], [ poison, %[[BB34]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ poison, %[[BB23]] ], [ [[TMP7]], %[[BB34]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB23]] ], [ [[BROADCAST_SPLAT2]], %[[BB34]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB23]] ], [ [[TMP6]], %[[BB34]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i1> [ [[TMP4]], %[[BB23]] ], [ zeroinitializer, %[[BB34]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP21]], [[TMP20]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP9]], <4 x i64> [[TMP8]], <4 x i64> [[TMP19]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i64> [[PREDPHI]], splat (i64 4)
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP11]], <4 x i64> [[TMP8]]
+; CHECK-NEXT:    br label %[[BB77]]
+; CHECK:       [[BB56]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
+; CHECK-NEXT:    br label %[[BB77]]
+; CHECK:       [[BB77]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i64> [ [[TMP15]], %[[BB56]] ], [ poison, %[[BB45]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i64> [ poison, %[[BB56]] ], [ [[TMP11]], %[[BB45]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = phi <4 x i1> [ zeroinitializer, %[[BB56]] ], [ [[TMP23]], %[[BB45]] ]
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP18]], <4 x i64> [[TMP17]], <4 x i64> [[TMP16]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = add <4 x i64> [[PREDPHI3]], splat (i64 7)
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 6)
 ; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP3]], <4 x i64> [[TMP12]], <4 x i64> [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[PREDPHI4]], i64 3
 ; CHECK-NEXT:    store i64 [[TMP14]], ptr [[A]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP42:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -1365,6 +2613,113 @@ bb7:
 bb8:
   %phi8 = phi i64 [ %add6, %bb6 ], [ %add7, %bb7 ]
   store i64 %phi8, ptr %a
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @unstructured_uniform_only_sese_region_no_phi(ptr %a, i1 %u1, i1 %u3) {
+; CHECK-LABEL: define void @unstructured_uniform_only_sese_region_no_phi(
+; CHECK-SAME: ptr [[A:%.*]], i1 [[U1:%.*]], i1 [[U3:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[U1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[U3]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[BB77:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[BB77]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sle <4 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    br i1 [[U1]], label %[[BB34:.*]], label %[[BB23:.*]]
+; CHECK:       [[BB23]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP5]], ptr align 4 [[TMP1]], <4 x i1> [[TMP4]])
+; CHECK-NEXT:    br label %[[BB45:.*]]
+; CHECK:       [[BB34]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 3)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP7]], ptr align 4 [[TMP1]], <4 x i1> [[TMP6]])
+; CHECK-NEXT:    br i1 [[U3]], label %[[BB56:.*]], label %[[BB45]]
+; CHECK:       [[BB45]]:
+; CHECK-NEXT:    br label %[[BB77]]
+; CHECK:       [[BB56]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[BROADCAST_SPLAT2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 5)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP9]], ptr align 4 [[TMP1]], <4 x i1> [[TMP8]])
+; CHECK-NEXT:    br label %[[BB77]]
+; CHECK:       [[BB77]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 6)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i64.p0(<4 x i64> [[TMP10]], ptr align 4 [[TMP1]], <4 x i1> [[TMP2]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP43:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb0
+
+bb0:
+;             bb0 (v)
+;            /       \
+;         bb6       bb1 (u)
+;          |        /     \
+;          |     bb3 (u)   bb2
+;          |      /   \   /
+;          |    bb5   bb4
+;          |      \   /
+;          |       bb7
+;           \     /
+;            \   /
+;             bb8
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb8 ]
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %v0 = icmp sle i64 %iv, 0
+  br i1 %v0, label %bb6, label %bb1
+
+bb1:
+  br i1 %u1, label %bb3, label %bb2
+
+bb2:
+  %add2 = add i64 %iv, 2
+  store i64 %add2, ptr %gep
+  br label %bb4
+
+bb3:
+  %add3 = add i64 %iv, 3
+  store i64 %add3, ptr %gep
+  br i1 %u3, label %bb5, label %bb4
+
+bb4:
+  br label %bb7
+
+bb5:
+  %add5 = add i64 %iv, 5
+  store i64 %add5, ptr %gep
+  br label %bb7
+
+bb6:
+  %add6 = add i64 %iv, 6
+  store i64 %add6, ptr %gep
+  br label %bb8
+
+bb7:
+  br label %bb8
+
+bb8:
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 128
   br i1 %ec, label %exit, label %bb0

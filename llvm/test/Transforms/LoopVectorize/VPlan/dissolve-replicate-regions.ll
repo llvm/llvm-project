@@ -32,6 +32,10 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
 ; SCALAR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
 ; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
+; SCALAR-NEXT:    Successor(s): if.then, loop.latch
+; SCALAR-EMPTY:
+; SCALAR-NEXT:    if.then:
+; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
 ; SCALAR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:    pred.load.if:
@@ -40,19 +44,23 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; SCALAR-NEXT:    Successor(s): pred.load.continue
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:    pred.load.continue:
-; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ ir<%lv>, pred.load.if ]
+; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP9:%[0-9]+]]> = phi [ ir<poison>, if.then ], [ ir<%lv>, pred.load.if ]
 ; SCALAR-NEXT:      EMIT branch-on-cond ir<%c>
 ; SCALAR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:    pred.load.if:
-; SCALAR-NEXT:      CLONE ir<%gep>.1 = getelementptr ir<%ptr>, vp<[[VP7]]>
-; SCALAR-NEXT:      CLONE ir<%lv>.1 = load ir<%gep>.1
 ; SCALAR-NEXT:    Successor(s): pred.load.continue
 ; SCALAR-EMPTY:
 ; SCALAR-NEXT:    pred.load.continue:
-; SCALAR-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ ir<%lv>.1, pred.load.if ]
-; SCALAR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%9>/ir<%c>
-; SCALAR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%11>/ir<%c>
+; SCALAR-NEXT:    Successor(s): loop.latch
+; SCALAR-EMPTY:
+; SCALAR-NEXT:    loop.latch:
+; SCALAR-NEXT:      WIDEN-PHI vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP9]]>, pred.load.continue ]
+; SCALAR-NEXT:      WIDEN-PHI vp<[[VP12:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP9]]>, pred.load.continue ]
+; SCALAR-NEXT:      WIDEN-PHI vp<[[VP13:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ ir<%c>, pred.load.continue ]
+; SCALAR-NEXT:      WIDEN-PHI vp<[[VP14:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ ir<%c>, pred.load.continue ]
+; SCALAR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%11>/vp<[[VP13]]>
+; SCALAR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%12>/vp<[[VP14]]>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP6]]>
 ; SCALAR-NEXT:      CLONE ir<%gep.dst>.1 = getelementptr ir<%dst>, vp<[[VP7]]>
 ; SCALAR-NEXT:      CLONE store ir<%pred.val>, ir<%gep.dst>
@@ -109,6 +117,10 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:    vector.body:
 ; VECTOR-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
 ; VECTOR-NEXT:      EMIT branch-on-cond ir<%c>
+; VECTOR-NEXT:    Successor(s): if.then, loop.latch
+; VECTOR-EMPTY:
+; VECTOR-NEXT:    if.then:
+; VECTOR-NEXT:      EMIT branch-on-cond ir<%c>
 ; VECTOR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.if:
@@ -119,7 +131,7 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:    Successor(s): pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.continue:
-; VECTOR-NEXT:      WIDEN-PHI vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP10]]>, pred.load.if ]
+; VECTOR-NEXT:      WIDEN-PHI vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, if.then ], [ vp<[[VP10]]>, pred.load.if ]
 ; VECTOR-NEXT:      EMIT branch-on-cond ir<%c>
 ; VECTOR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
@@ -136,35 +148,31 @@ define void @predicated_load(i1 %c, ptr %ptr, ptr %dst) {
 ; VECTOR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.if:
-; VECTOR-NEXT:      vp<[[VP17:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>, vp<[[VP0]]>
-; VECTOR-NEXT:      CLONE ir<%gep>.2 = getelementptr ir<%ptr>, vp<[[VP17]]>
-; VECTOR-NEXT:      CLONE ir<%lv>.2 = load ir<%gep>.2
-; VECTOR-NEXT:      EMIT vp<[[VP18:%[0-9]+]]> = insertelement ir<poison>, ir<%lv>.2, ir<0>
 ; VECTOR-NEXT:    Successor(s): pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.continue:
-; VECTOR-NEXT:      WIDEN-PHI vp<[[VP19:%[0-9]+]]> = phi [ ir<poison>, pred.load.continue ], [ vp<[[VP18]]>, pred.load.if ]
 ; VECTOR-NEXT:      EMIT branch-on-cond ir<%c>
 ; VECTOR-NEXT:    Successor(s): pred.load.if, pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.if:
-; VECTOR-NEXT:      EMIT vp<[[VP21:%[0-9]+]]> = add vp<[[VP0]]>, ir<1>
-; VECTOR-NEXT:      vp<[[VP22:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>, vp<[[VP21]]>
-; VECTOR-NEXT:      CLONE ir<%gep>.3 = getelementptr ir<%ptr>, vp<[[VP22]]>
-; VECTOR-NEXT:      CLONE ir<%lv>.3 = load ir<%gep>.3
-; VECTOR-NEXT:      EMIT vp<[[VP23:%[0-9]+]]> = insertelement vp<[[VP19]]>, ir<%lv>.3, ir<1>
 ; VECTOR-NEXT:    Successor(s): pred.load.continue
 ; VECTOR-EMPTY:
 ; VECTOR-NEXT:    pred.load.continue:
-; VECTOR-NEXT:      WIDEN-PHI vp<[[VP24:%[0-9]+]]> = phi [ vp<[[VP19]]>, pred.load.continue ], [ vp<[[VP23]]>, pred.load.if ]
-; VECTOR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%15>/vp<[[VP5]]>
-; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%24>/vp<[[VP5]]>
+; VECTOR-NEXT:    Successor(s): loop.latch
+; VECTOR-EMPTY:
+; VECTOR-NEXT:    loop.latch:
+; VECTOR-NEXT:      WIDEN-PHI vp<[[VP18:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP15]]>, pred.load.continue ]
+; VECTOR-NEXT:      WIDEN-PHI vp<[[VP19:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP15]]>, pred.load.continue ]
+; VECTOR-NEXT:      WIDEN-PHI vp<[[VP20:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ vp<[[VP5]]>, pred.load.continue ]
+; VECTOR-NEXT:      WIDEN-PHI vp<[[VP21:%[0-9]+]]> = phi [ ir<false>, vector.body ], [ vp<[[VP5]]>, pred.load.continue ]
+; VECTOR-NEXT:      BLEND ir<%pred.val> = ir<0> vp<%18>/vp<[[VP20]]>
+; VECTOR-NEXT:      BLEND ir<%pred.val>.1 = ir<0> vp<%19>/vp<[[VP21]]>
 ; VECTOR-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, vp<[[VP7]]>
-; VECTOR-NEXT:      EMIT vp<[[VP25:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
-; VECTOR-NEXT:      vp<[[VP26:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>
-; VECTOR-NEXT:      vp<[[VP27:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>, vp<[[VP25]]>
-; VECTOR-NEXT:      WIDEN store vp<[[VP26]]>, ir<%pred.val>
-; VECTOR-NEXT:      WIDEN store vp<[[VP27]]>, ir<%pred.val>.1
+; VECTOR-NEXT:      EMIT vp<[[VP22:%[0-9]+]]> = mul nuw nsw vp<[[VP0]]>, ir<1>
+; VECTOR-NEXT:      vp<[[VP23:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>
+; VECTOR-NEXT:      vp<[[VP24:%[0-9]+]]> = vector-pointer i8, ir<%gep.dst>, ir<1>, vp<[[VP22]]>
+; VECTOR-NEXT:      WIDEN store vp<[[VP23]]>, ir<%pred.val>
+; VECTOR-NEXT:      WIDEN store vp<[[VP24]]>, ir<%pred.val>.1
 ; VECTOR-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; VECTOR-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; VECTOR-NEXT:    No successors
