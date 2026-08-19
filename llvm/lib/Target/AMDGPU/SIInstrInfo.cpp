@@ -173,6 +173,15 @@ splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
 bool SIInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
 
+  // Restrict V_LSHL_ADD_U64 to the degenerate zero-shift form, where it is
+  // just a 64-bit add. A non-zero shift is equally safe to rematerialize, but
+  // keeping the scope narrow limits the effect on existing codegen.
+  if (MI.getOpcode() == AMDGPU::V_LSHL_ADD_U64_e64) {
+    const MachineOperand *Shift = getNamedOperand(MI, AMDGPU::OpName::src1);
+    if (!Shift || !Shift->isImm() || Shift->getImm() != 0)
+      return false;
+  }
+
   if (canRemat(MI)) {
     // Normally VALU use of exec would block the rematerialization, but that
     // is OK in this case to have an implicit exec read as all VALU do.
