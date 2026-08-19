@@ -444,7 +444,7 @@ private:
     if (TheLine->Last->is(tok::l_brace) && FirstNonComment != TheLine->Last &&
         (FirstNonComment->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
                                   TT_ForEachMacro) ||
-         (TheLine->startsWithExportBlock() &&
+         (TheLine->Last->is(TT_ExportLBrace) &&
           !Style.BraceWrapping.AfterExportBlock))) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
@@ -893,7 +893,7 @@ private:
         Line.First->isOneOf(tok::kw_try, tok::kw___try, tok::kw_catch,
                             tok::kw___finally, tok::r_brace,
                             Keywords.kw___except) ||
-        Line.startsWithExportBlock()) {
+        Line.First->is(TT_ExportLBrace) || Line.Last->is(TT_ExportLBrace)) {
       if (IsSplitBlock)
         return 0;
       // Don't merge when we can't except the case when

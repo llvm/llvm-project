@@ -219,8 +219,8 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
     IO.mapOptional("AfterEnum", Wrapping.AfterEnum);
-    IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterExportBlock", Wrapping.AfterExportBlock);
+    IO.mapOptional("AfterExternBlock", Wrapping.AfterExternBlock);
     IO.mapOptional("AfterFunction", Wrapping.AfterFunction);
     IO.mapOptional("AfterNamespace", Wrapping.AfterNamespace);
     IO.mapOptional("AfterObjCDeclaration", Wrapping.AfterObjCDeclaration);
