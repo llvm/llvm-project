@@ -424,35 +424,21 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
   if (NumElts < 2)
     return nullptr;
 
-  // Walk the insertelement chain outermost-first, so the first value seen for
-  // an index is the one that survives
-  SmallVector<Value *> Elts(NumElts, nullptr);
-  unsigned NumFound = 0;
-  for (Value *V = EI.getVectorOperand(); NumFound != NumElts;) {
-    auto *IE = dyn_cast<InsertElementInst>(V);
-    if (!IE)
-      return nullptr;
-    auto *IdxC = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!IdxC || IdxC->uge(NumElts))
-      return nullptr;
-    unsigned Idx = IdxC->getZExtValue();
-    if (!Elts[Idx]) {
-      Elts[Idx] = IE->getOperand(1);
-      ++NumFound;
-    }
-    V = IE->getOperand(0);
-  }
-
-  // Every element must be the same base pointer plus a constant byte offset
+  // Every lane must resolve to the same base pointer plus a constant byte
+  // offset. findScalarElement returns poison for a lane the vector never
+  // defines; that poison is its own base, so a vector mixing defined and
+  // undefined lanes fails the base comparison below.
   unsigned IdxWidth = DL.getIndexTypeSizeInBits(VecTy->getElementType());
   Value *Base = nullptr;
   SmallVector<APInt> Offsets;
-  for (Value *Elt : Elts) {
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Value *Elt = findScalarElement(EI.getVectorOperand(), I);
+    if (!Elt)
+      return nullptr;
     APInt Offset(IdxWidth, 0);
-    Value *EltBase =
-        Elt->stripAndAccumulateConstantOffsets(DL, Offset,
-                                               /*AllowNonInbounds=*/true);
-    if (!Base)
+    Value *EltBase = Elt->stripAndAccumulateConstantOffsets(
+        DL, Offset, /*AllowNonInbounds=*/true);
+    if (I == 0)
       Base = EltBase;
     else if (Base != EltBase)
       return nullptr;
@@ -474,16 +460,10 @@ foldExtractOfStridedPointerVector(ExtractElementInst &EI,
   // a lane the extract never selects. The base is an operand of every element
   // and the new GEP has no flags, so the result is never more poisonous.
   Type *IdxTy = DL.getIndexType(VecTy->getElementType());
-  Constant *BaseOff = ConstantInt::get(IdxTy, Offsets[0]);
-  if (Stride.isZero())
-    return Offsets[0].isZero()
-               ? Base
-               : Builder.CreateGEP(Builder.getInt8Ty(), Base, BaseOff);
-
   Value *Idx = Builder.CreateZExtOrTrunc(EI.getIndexOperand(), IdxTy);
-  Value *ByteOff = Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride));
-  if (!Offsets[0].isZero())
-    ByteOff = Builder.CreateAdd(ByteOff, BaseOff);
+  Value *ByteOff =
+      Builder.CreateAdd(Builder.CreateMul(Idx, ConstantInt::get(IdxTy, Stride)),
+                        ConstantInt::get(IdxTy, Offsets[0]));
   return Builder.CreateGEP(Builder.getInt8Ty(), Base, ByteOff);
 }
 
