@@ -23,7 +23,7 @@ struct S2 {
   unsigned long f3:6;
 };
 
-// CIR-DAG: !rec_S2 = !cir.struct<"S2" padded {data !u16i, data !u16i, data !u8i, pad !cir.array<!u8i x 3>}>
+// CIR-DAG: !rec_S2 = !cir.struct<"S2" {data !u16i, data !u16i, data !u8i, pad !cir.array<!u8i x 3>}>
 // LLVM-DAG: %struct.S2 = type { i16, i16, i8, [3 x i8] }
 // OGCG-DAG: %struct.S2 = type { i16, i16, i8, [3 x i8] }
 

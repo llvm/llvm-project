@@ -44,6 +44,7 @@ lit_expand_template(
         "@LLVM_INCLUDE_SPIRV_TOOLS_TESTS@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
         "@MLIR_ENABLE_CUDA_RUNNER@": "0",
+        "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "0",
         "@MLIR_ENABLE_LEVELZERO_RUNNER@": "0",
         "@MLIR_ENABLE_PYTHON_STABLE_ABI@": "0",
         "@MLIR_ENABLE_ROCM_RUNNER@": "0",
@@ -61,7 +62,14 @@ lit_expand_template(
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_X86_AMX_TESTS@": "0",
         "@MLIR_RUN_X86_TESTS@": "0",
-    },
+    } | select({
+        "//mlir:enable_expensive_pattern_api_checks_config": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "1",
+        },
+        "//conditions:default": {
+            "@MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS@": "0",
+        },
+    }),
     template = "lit.site.cfg.py.in",
 )
 

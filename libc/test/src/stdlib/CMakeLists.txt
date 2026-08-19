@@ -391,6 +391,7 @@ add_libc_test(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.utility
+    libc.src.__support.c_string
     libc.src.__support.fixedvector
     libc.src.__support.libc_assert
     libc.src.__support.libc_errno
@@ -577,6 +578,18 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
     DEPENDS
       libc.include.stdlib
       libc.src.stdlib.quick_exit
+  )
+
+  add_libc_test(
+    system_test
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      system_test.cpp
+    DEPENDS
+      libc.hdr.sys_wait_macros
+      libc.src.stdlib.system
+      libc.test.UnitTest.ErrnoCheckingTest
   )
 endif()
 

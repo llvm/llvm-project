@@ -1140,6 +1140,18 @@ bool Archive::Symbol::isECSymbol() const {
          SymbolIndex < SymbolCount + Parent->getNumberOfECSymbols();
 }
 
+uint32_t Archive::Symbol::getZOSAttributes() const {
+  assert(Parent->kind() == K_ZOS && "Cannot get z/OS attributes for non-z/OS "
+                                    "archives");
+  if (SymbolIndex >= Parent->getNumberOfSymbols())
+    return 0;
+
+  // The z/OS symbol table layout is:
+  //   NumSyms * { uint32_t member_offset, uint32_t attrs }  (big-endian)
+  const char *Buf = Parent->getSymbolTable().begin();
+  return read32be(Buf + sizeof(uint32_t) + SymbolIndex * 8 + sizeof(uint32_t));
+}
+
 StringRef Archive::Symbol::getName() const {
   if (isECSymbol())
     return Parent->ECSymbolTable.begin() + StringIndex;

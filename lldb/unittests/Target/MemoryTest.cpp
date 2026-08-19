@@ -97,8 +97,8 @@ public:
   void RefreshStateAfterStop() override {}
   // Required by Target::ReadMemory() to call Process::ReadMemory()
   bool IsAlive() override { return true; }
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     if (m_bytes_left == 0)
       return 0;
 
@@ -469,8 +469,9 @@ public:
   bool read_less_than_requested = false;
   bool read_more_than_requested = false;
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    lldb::addr_t vm_addr = process_addr.GetValue();
     if (read_less_than_requested && size > 0)
       size--;
     if (read_more_than_requested)
@@ -539,6 +540,117 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
       for (auto [idx, byte] : llvm::enumerate(memory))
         ASSERT_EQ(byte, static_cast<uint8_t>(range_base + idx));
     }
+  }
+}
+
+TEST_F(MemoryTest, TestReadMemoryRangesUsesL2Cache) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  const uint64_t l2_cache_size = process->GetMemoryCacheLineSize();
+  Status error;
+  uint8_t header[8];
+
+  // Read the first 8 bytes of a cache line, the way a caller reads the header
+  // of an array before batching the elements that follow it. This fills the
+  // whole line and leaves the inferior unable to supply anything more.
+  const addr_t full_line = 0x1000;
+  ASSERT_EQ(full_line % l2_cache_size, 0u);
+  process->SetMaxReadSize(l2_cache_size);
+  process->SetFiller('A');
+  ASSERT_EQ(process->ReadMemory(full_line, header, sizeof(header), error),
+            sizeof(header));
+  ASSERT_EQ(process->m_bytes_left, 0u);
+
+  { // Ranges covered by that line are served from the cache. Leave the inferior
+    // able to answer, with a filler of its own, so a miss would show up both in
+    // the contents below and in the unspent budget.
+    process->SetMaxReadSize(l2_cache_size);
+    process->SetFiller('X');
+    llvm::SmallVector<uint8_t, 0> buffer(3 * 8, 0);
+    llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+        {full_line + 8, 8},
+        {full_line + 16, 8},
+        {full_line + l2_cache_size - 8, 8}};
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        process->ReadMemoryRanges(ranges, buffer);
+    ASSERT_EQ(read_results.size(), ranges.size());
+    for (llvm::MutableArrayRef<uint8_t> memory : read_results) {
+      ASSERT_EQ(memory.size(), 8u);
+      for (uint8_t byte : memory)
+        EXPECT_EQ(byte, 'A');
+    }
+    // Nothing was read from the inferior, so no packet was sent.
+    EXPECT_EQ(process->m_bytes_left, l2_cache_size);
+  }
+
+  { // A range crossing into the next, uncached line is a miss.
+    process->SetMaxReadSize(0);
+    llvm::SmallVector<uint8_t, 0> buffer(8, 0);
+    llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+        {full_line + l2_cache_size - 4, 8}};
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        process->ReadMemoryRanges(ranges, buffer);
+    ASSERT_EQ(read_results.size(), 1u);
+    EXPECT_EQ(read_results[0].size(), 0u);
+  }
+
+  { // A batch of hits and misses keeps the results in the requested order, and
+    // asks the inferior for the missed range only.
+    const addr_t uncached_line = 0x3000;
+    process->SetMaxReadSize(l2_cache_size);
+    process->SetFiller('C');
+    llvm::SmallVector<uint8_t, 0> buffer(3 * 8, 0);
+    llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+        {full_line + 8, 8}, {uncached_line, 8}, {full_line + 16, 8}};
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        process->ReadMemoryRanges(ranges, buffer);
+    ASSERT_EQ(read_results.size(), ranges.size());
+    for (llvm::MutableArrayRef<uint8_t> memory : read_results)
+      ASSERT_EQ(memory.size(), 8u);
+    for (uint8_t byte : read_results[0])
+      EXPECT_EQ(byte, 'A');
+    for (uint8_t byte : read_results[1])
+      EXPECT_EQ(byte, 'C');
+    for (uint8_t byte : read_results[2])
+      EXPECT_EQ(byte, 'A');
+    EXPECT_EQ(process->m_bytes_left, l2_cache_size - 8);
+  }
+
+  // A line the inferior could only partially supply is cached short.
+  const addr_t short_line = 0x2000;
+  ASSERT_EQ(short_line % l2_cache_size, 0u);
+  const size_t bytes_available = 64;
+  ASSERT_LT(bytes_available, l2_cache_size);
+  process->SetMaxReadSize(bytes_available);
+  process->SetFiller('D');
+  ASSERT_EQ(process->ReadMemory(short_line, header, sizeof(header), error),
+            sizeof(header));
+  ASSERT_EQ(process->m_bytes_left, 0u);
+
+  { // Only the part of the line that was actually read may be served.
+    llvm::SmallVector<uint8_t, 0> buffer(2 * 8, 0);
+    llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+        {short_line + bytes_available - 8, 8},
+        {short_line + bytes_available - 4, 8}};
+    llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+        process->ReadMemoryRanges(ranges, buffer);
+    ASSERT_EQ(read_results.size(), ranges.size());
+    ASSERT_EQ(read_results[0].size(), 8u);
+    for (uint8_t byte : read_results[0])
+      EXPECT_EQ(byte, 'D');
+    EXPECT_EQ(read_results[1].size(), 0u);
   }
 }
 
@@ -635,8 +747,9 @@ public:
     strcpy(&memory[300], long_str.data());
   }
 
-  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
+    lldb::addr_t vm_addr = process_addr.GetValue();
     if (vm_addr >= 1024) {
       error = Status::FromErrorString("out of bounds!");
       return 0;
@@ -800,7 +913,8 @@ public:
   void RefreshStateAfterStop() override {}
   bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
   llvm::StringRef GetPluginName() override { return "Dummy"; }
-  size_t DoReadMemory(addr_t, void *, size_t, Status &) override {
+  size_t DoReadMemory(const ProcessAddress &, void *, size_t,
+                      Status &) override {
     llvm_unreachable("don't call this");
   }
 };
