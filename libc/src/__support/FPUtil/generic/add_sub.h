@@ -119,27 +119,18 @@ add_or_sub(InType x, InType y) {
 
 #ifdef LIBC_USE_CONSTEXPR
         InType tmp = y;
+#else
+        // This prevents it from declaring Intype as volatile for emulated types
+        using InTypeTemp =
+            cpp::conditional_t<cpp::is_class_v<InType>, InType, volatile InType>;
+        InTypeTemp tmp = y;
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+#endif // LIBC_USE_CONSTEXPR
         if constexpr (IsSub)
           tmp = -tmp;
         return cast<OutType>(tmp);
-#else
-        if (cpp::is_class_v<InType>) {
-          // This prevents it from declaring Intype as volatile for emulated
-          // types
-          InType tmp = y;
-          if constexpr (IsSub)
-            tmp = -tmp;
-          return cast<OutType>(tmp);
-        } else {
-          // volatile prevents Clang from converting tmp to OutType and then
-          // immediately back to InType before negating it, resulting in double
-          // rounding.
-          volatile InType tmp = y;
-          if constexpr (IsSub)
-            tmp = -tmp;
-          return cast<OutType>(tmp);
-        }
-#endif // LIBC_USE_CONSTEXPR
       }
     }
 
@@ -147,10 +138,10 @@ add_or_sub(InType x, InType y) {
       return cast<OutType>(x);
   }
 
-    InType x_abs = x_bits.abs().get_val();
-    InType y_abs = y_bits.abs().get_val();
+  InType x_abs = x_bits.abs().get_val();
+  InType y_abs = y_bits.abs().get_val();
 
-    if (x_abs == y_abs && !is_effectively_add) {
+  if (x_abs == y_abs && !is_effectively_add) {
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return OutFPBits::zero(Sign::POS).get_val();
 #else
