@@ -21,9 +21,10 @@
 #include "test_iterators.h"
 
 constexpr bool test() {
+  std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+  
   // Test `size()` when the range is fully divisible by the chunk size.
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
         chunked(
@@ -40,7 +41,6 @@ constexpr bool test() {
 
   // Test `size()` when the last chunk is smaller than the chunk size.
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
         chunked(
@@ -59,7 +59,6 @@ constexpr bool test() {
 
   // Test `size()` after partially consuming the current chunk via the inner iterator.
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
         chunked(
