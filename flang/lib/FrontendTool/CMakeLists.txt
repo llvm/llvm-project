@@ -17,6 +17,7 @@ add_flang_library(flangFrontendTool
 
   MLIR_LIBS
   MLIRPass
+  MLIROpenMPDialect
 
   CLANG_LIBS
   clangBasic
