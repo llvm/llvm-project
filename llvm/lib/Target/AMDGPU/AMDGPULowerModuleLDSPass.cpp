@@ -1093,7 +1093,8 @@ public:
 
     // For each kernel, what variables does it access directly or through
     // callees
-    GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
+    GVUsesInfoTy LDSUsesInfo =
+        getTransitiveUsesOfGV(CG, M, isNotYetLoweredLDSVariable);
 
     // For each variable accessed through callees, which kernels access it
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
