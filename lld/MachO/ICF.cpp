@@ -107,6 +107,8 @@ static void getNormalizedData(const ConcatInputSection *isec,
 
 static bool compareData(const ConcatInputSection *ia,
                         const ConcatInputSection *ib) {
+  if (ia->data.size() != ib->data.size())
+    return false;
   if (ia->data == ib->data)
     return true;
   if (!isFoldableWithAddendsRemoved(ia))
