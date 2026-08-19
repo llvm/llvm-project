@@ -576,7 +576,7 @@ static bool callOverflows(MCFixupKindInfo Info, uint64_t FixedValue) {
   return !isIntN(26, FixedValue);
 }
 
-static uint64_t NormalizeCallOffset(MCFixupKindInfo Info, uint64_t Offset) {
+static uint64_t normalizeCallOffset(MCFixupKindInfo Info, uint64_t Offset) {
   if (Info.TargetSize != 24)
     report_fatal_error("Unexepected call fixup kind for XCOFF");
 
@@ -796,8 +796,8 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
     // crosses a CSECT boundary the linker may fix the overflow by using a
     // trampoline, or rearranging the sections in the output file.
     MCFixupKindInfo Info = Asm->getBackend().getFixupKindInfo(Fixup.getKind());
-    if (CallOverflows(Info, FixedValue) && haveDifferentSections(F, Target))
-      FixedValue = NormalizeCallOffset(Info, FixedValue);
+    if (callOverflows(Info, FixedValue) && haveDifferentSections(F, Target))
+      FixedValue = normalizeCallOffset(Info, FixedValue);
   } else if (Type == XCOFF::RelocationType::R_REF) {
     // The FixedValue and FixupOffsetInCsect should always be 0 since it
     // specifies a nonrelocating reference.
