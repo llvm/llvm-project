@@ -6,24 +6,33 @@ target triple = "x86_64"
 define void @pr141968(i1 %cond, i8 %v, ptr %p) {
 ; CHECK-LABEL: define void @pr141968(
 ; CHECK-SAME: i1 [[COND:%.*]], i8 [[V:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ZEXT_TRUE:%.*]] = zext i1 true to i16
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[V]] to i16
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE28:.*]]
 ; CHECK:       [[PRED_SDIV_CONTINUE28]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT1]], <16 x i8> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[PRED_SDIV_CONTINUE28]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_SDIV_CONTINUE30]], label %[[PRED_SDIV_IF29:.*]]
 ; CHECK:       [[PRED_SDIV_IF29]]:
-; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i16 [[SEXT]], [[ZEXT_TRUE]]
-; CHECK-NEXT:    [[SDIV_TRUNC:%.*]] = trunc i16 [[SDIV]] to i8
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = phi i8 [ [[SDIV_TRUNC]], %[[PRED_SDIV_IF29]] ], [ 0, %[[PRED_SDIV_CONTINUE28]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <16 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[PRED_SDIV_IF29]] ]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[BROADCAST_SPLAT2]], <16 x i8> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = extractelement <16 x i8> [[PREDPHI1]], i64 15
 ; CHECK-NEXT:    store i8 [[PREDPHI]], ptr [[P]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[PRED_SDIV_CONTINUE28]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT1:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:

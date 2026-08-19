@@ -1160,6 +1160,10 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:  vp<[[VP2:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT branch-on-cond ir<%c>
+; CHECK-NEXT:    Successor(s): loop.then, loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.then:
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
@@ -1181,6 +1185,9 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:    Successor(s): loop.then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.then.1:
+; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP2]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP1]]>
 ; CHECK-NEXT:    No successors

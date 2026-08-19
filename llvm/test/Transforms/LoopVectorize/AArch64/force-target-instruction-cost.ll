@@ -218,8 +218,13 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 0, ptr [[DST_3]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; COMMON:       [[PRED_STORE_CONTINUE9]]:
+; COMMON-NEXT:    br i1 [[C_3]], label %[[THEN_310:.*]], label %[[THEN_411:.*]]
+; COMMON:       [[THEN_310]]:
 ; COMMON-NEXT:    [[TMP22:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
-; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    br label %[[THEN_411]]
+; COMMON:       [[THEN_411]]:
+; COMMON-NEXT:    [[TMP26:%.*]] = phi <2 x i1> [ zeroinitializer, %[[PRED_STORE_CONTINUE9]] ], [ [[TMP22]], %[[THEN_310]] ]
+; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP26]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP14:%.*]] = or <2 x i1> [[TMP6]], [[TMP13]]
 ; COMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> splat (i64 1), <2 x i64> zeroinitializer
 ; COMMON-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i64 0
@@ -236,20 +241,20 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 [[TMP18]], ptr [[DST_2]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE13]]
 ; COMMON:       [[PRED_STORE_CONTINUE13]]:
-; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP26]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP20:%.*]] = or <2 x i1> [[TMP14]], [[TMP19]]
 ; COMMON-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[TMP20]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF14:.*]], label %[[PRED_STORE_CONTINUE15:.*]]
 ; COMMON:       [[PRED_STORE_IF14]]:
-; COMMON-NEXT:    [[TMP24:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6:![0-9]+]]
-; COMMON-NEXT:    store i64 [[TMP24]], ptr [[DST]], align 8, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
+; COMMON-NEXT:    [[TMP27:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6:![0-9]+]]
+; COMMON-NEXT:    store i64 [[TMP27]], ptr [[DST]], align 8, !alias.scope [[META9:![0-9]+]], !noalias [[META6]]
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE15]]
 ; COMMON:       [[PRED_STORE_CONTINUE15]]:
 ; COMMON-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP20]], i64 1
 ; COMMON-NEXT:    br i1 [[TMP23]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17]]
 ; COMMON:       [[PRED_STORE_IF16]]:
-; COMMON-NEXT:    [[TMP26:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6]]
-; COMMON-NEXT:    store i64 [[TMP26]], ptr [[DST]], align 8, !alias.scope [[META9]], !noalias [[META6]]
+; COMMON-NEXT:    [[TMP24:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6]]
+; COMMON-NEXT:    store i64 [[TMP24]], ptr [[DST]], align 8, !alias.scope [[META9]], !noalias [[META6]]
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; COMMON:       [[PRED_STORE_CONTINUE17]]:
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

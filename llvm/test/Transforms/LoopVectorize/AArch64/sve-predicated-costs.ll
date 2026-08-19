@@ -88,7 +88,13 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> [[BROADCAST_SPLAT1]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH9:.*]] ]
+; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_05:.*]], label %[[LATCH9]]
+; CHECK:       [[THEN_05]]:
+; CHECK-NEXT:    br i1 [[C1]], label %[[THEN_16:.*]], label %[[LATCH9]]
+; CHECK:       [[THEN_16]]:
+; CHECK-NEXT:    br i1 [[C2]], label %[[THEN_27:.*]], label %[[LATCH9]]
+; CHECK:       [[THEN_27]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[P0]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[TMP10]], i64 [[TMP7]]
@@ -102,6 +108,8 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> [[WIDE_MASKED_LOAD5]], <vscale x 2 x i64> [[WIDE_MASKED_LOAD7]], <vscale x 2 x i1> [[TMP8]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP14]], ptr align 8 [[TMP9]], <vscale x 2 x i1> [[TMP8]])
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP13]], ptr align 8 [[TMP12]], <vscale x 2 x i1> [[TMP8]])
+; CHECK-NEXT:    br label %[[LATCH9]]
+; CHECK:       [[LATCH9]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

@@ -821,11 +821,11 @@ define void @sincos_predicated_store(i1 %c, ptr noalias %src, ptr noalias %dst, 
 ; CHECK-LABEL: define void @sincos_predicated_store(
 ; CHECK-SAME: i1 [[C:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[COS_DST:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
-; CHECK:  [[VECTOR_PH:.*]]:
+; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; CHECK:    [[TMP0:%.*]] = call { <2 x double>, <2 x double> } @llvm.sincos.v2f64(<2 x double> [[BROADCAST_SPLAT:%.*]])
 ; CHECK:    store <2 x double> zeroinitializer, ptr [[TMP3:%.*]], align 8
+; CHECK:  [[IF1:.*:]]
 ; CHECK:    [[TMP2:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP0]], 1
 ; CHECK:    br i1 [[TMP1:%.*]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:  [[PRED_STORE_IF]]:
@@ -833,7 +833,7 @@ define void @sincos_predicated_store(i1 %c, ptr noalias %src, ptr noalias %dst, 
 ; CHECK:    store double [[TMP4]], ptr [[COS_DST]], align 8
 ; CHECK:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
-; CHECK:    br i1 [[TMP1]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
+; CHECK:    br i1 [[TMP1]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; CHECK:  [[PRED_STORE_IF1]]:
 ; CHECK:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK:    store double [[TMP5]], ptr [[COS_DST]], align 8
@@ -841,6 +841,7 @@ define void @sincos_predicated_store(i1 %c, ptr noalias %src, ptr noalias %dst, 
 ; CHECK:  [[PRED_STORE_CONTINUE2]]:
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[EXIT:.*:]]
+; CHECK:  [[EXIT1:.*:]]
 ;
 entry:
   br label %loop
