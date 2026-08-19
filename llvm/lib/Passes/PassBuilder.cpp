@@ -51,6 +51,7 @@
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
