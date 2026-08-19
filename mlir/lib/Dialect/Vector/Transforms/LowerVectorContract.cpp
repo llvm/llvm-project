@@ -71,10 +71,20 @@ static AffineMap adjustMap(AffineMap map, int64_t index,
   return AffineMap::get(map.getNumDims() - 1, 0, results, ctx);
 }
 
-// Helper method to possibly drop a dimension in a load.
-// TODO
-static Value reshapeLoad(Location loc, Value val, VectorType type,
-                         int64_t index, int64_t pos,
+/// Returns `val` with the dimension at position `index` dropped by indexing
+/// that dimension with `pos`.
+///
+/// If `index == -1`, returns `val` unchanged. If `index == 0`, the result is
+/// a single `vector.extract %val[pos]`.
+///
+/// Example (`index == 0`): extract the sub-vector at `pos` along the leading
+/// dimension.
+///   // val : vector<4x8xf32>, pos = 2
+///   %res = vector.extract %val[2] : vector<8xf32> from vector<4x8xf32>
+///
+/// For `index > 0`, recursively applies the same drop to each sub-vector of
+/// the leading dimension and reassembles the result.
+static Value reshapeLoad(Location loc, Value val, int64_t index, int64_t pos,
                          PatternRewriter &rewriter) {
   if (index == -1)
     return val;
@@ -84,23 +94,31 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
     return vector::ExtractOp::create(rewriter, loc, val, pos);
 
   // Unroll leading dimensions.
-  VectorType vType = VectorType::Builder(type).dropDim(0);
+  VectorType type = cast<VectorType>(val.getType());
   VectorType resType = VectorType::Builder(type).dropDim(index);
   Value result = arith::ConstantOp::create(rewriter, loc, resType,
                                            rewriter.getZeroAttr(resType));
   for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
     Value ext = vector::ExtractOp::create(rewriter, loc, val, d);
-    Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
+    Value load = reshapeLoad(loc, ext, index - 1, pos, rewriter);
     result = vector::InsertOp::create(rewriter, loc, load, result, d);
   }
   return result;
 }
 
-// Helper method to possibly drop a dimension in a store.
-// TODO
-static Value reshapeStore(Location loc, Value val, Value result,
-                          VectorType type, int64_t index, int64_t pos,
-                          PatternRewriter &rewriter) {
+/// Inserts `val` into `result` at position `pos` along dimension `index`.
+///
+/// This is the inverse of `reshapeLoad`. If `index == -1`, returns `val`. If
+/// `index == 0`, the result is a single `vector.insert %val, %result [pos]`.
+///
+/// Example (`index == 0`): insert `val` at `pos` along the leading dimension.
+///   // val : vector<4xf32>, acc : vector<2x4xf32>, pos = 1
+///   %res = vector.insert %val, %acc [1] : vector<4xf32> into vector<2x4xf32>
+///
+/// For `index > 0`, recursively applies the same insertion to each sub-vector
+/// of the leading dimension and reassembles the result.
+static Value reshapeStore(Location loc, Value val, Value result, int64_t index,
+                          int64_t pos, PatternRewriter &rewriter) {
   // Unmodified?
   if (index == -1)
     return val;
@@ -109,11 +127,11 @@ static Value reshapeStore(Location loc, Value val, Value result,
     return vector::InsertOp::create(rewriter, loc, val, result, pos);
 
   // Unroll leading dimensions.
-  VectorType vType = VectorType::Builder(type).dropDim(0);
+  VectorType type = cast<VectorType>(result.getType());
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
     Value ext = vector::ExtractOp::create(rewriter, loc, result, d);
     Value ins = vector::ExtractOp::create(rewriter, loc, val, d);
-    Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
+    Value sto = reshapeStore(loc, ins, ext, index - 1, pos, rewriter);
     result = vector::InsertOp::create(rewriter, loc, sto, result, d);
   }
   return result;
@@ -123,7 +141,8 @@ static Value reshapeStore(Location loc, Value val, Value result,
 static std::optional<Value>
 createContractArithOp(Location loc, Value x, Value y, Value acc,
                       vector::CombiningKind kind, PatternRewriter &rewriter,
-                      bool isInt, Value mask = Value()) {
+                      bool isInt, Value mask = Value(),
+                      arith::FastMathFlagsAttr fmf = {}) {
   using vector::CombiningKind;
   Value mul;
 
@@ -150,14 +169,13 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
         fma = selectPassthru(rewriter, mask, fma, acc);
       return fma;
     }
-    mul = arith::MulFOp::create(rewriter, loc, x, y);
+    mul = arith::MulFOp::create(rewriter, loc, x, y, fmf);
   }
 
   if (!acc)
     return std::optional<Value>(mul);
 
-  return makeArithReduction(rewriter, loc, kind, mul, acc,
-                            /*fastmath=*/nullptr, mask);
+  return makeArithReduction(rewriter, loc, kind, mul, acc, fmf, mask);
 }
 
 /// Return the positions of the reductions in the given map.
@@ -184,19 +202,21 @@ static std::optional<unsigned> getDimPosition(AffineMap map, unsigned dim) {
 /// Creates an AddIOp if `isInt` is true otherwise create an arith::AddFOp using
 /// operands `x` and `y`.
 static Value createAdd(Location loc, Value x, Value y, bool isInt,
-                       PatternRewriter &rewriter) {
+                       PatternRewriter &rewriter,
+                       arith::FastMathFlagsAttr fmf = {}) {
   if (isInt)
     return arith::AddIOp::create(rewriter, loc, x, y);
-  return arith::AddFOp::create(rewriter, loc, x, y);
+  return arith::AddFOp::create(rewriter, loc, x, y, fmf);
 }
 
 /// Creates a MulIOp if `isInt` is true otherwise create an MulFOp using
 /// operands `x and `y`.
 static Value createMul(Location loc, Value x, Value y, bool isInt,
-                       PatternRewriter &rewriter) {
+                       PatternRewriter &rewriter,
+                       arith::FastMathFlagsAttr fmf = {}) {
   if (isInt)
     return arith::MulIOp::create(rewriter, loc, x, y);
-  return arith::MulFOp::create(rewriter, loc, x, y);
+  return arith::MulFOp::create(rewriter, loc, x, y, fmf);
 }
 
 namespace {
@@ -253,12 +273,12 @@ private:
 ///    %bt = vector.transpose %b, [1, 0]
 ///    %aRow0 = vector.extract %a[0]
 ///    %btRow0 = vector.extract %bt[0]
-///    %c00 = vector.reduce %atRow0, %bRow0
+///    %c00 = vector.reduction %atRow0, %bRow0
 ///    %out00 = vector.insert %c00, %out[0, 0]
 ///    ...
 ///    %aRowLast = vector.extract %at[M-1]
 ///    %btRowLast = vector.extract %b[N-1]
-///    %cLastLast = vector.reduce %atRowLast, %bRowLast
+///    %cLastLast = vector.reduction %atRowLast, %bRowLast
 ///    %outcLastLast = vector.insert %cLastLast, %out[M-1, N-1]
 /// ```
 ///
@@ -705,6 +725,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   Value res = arith::ConstantOp::create(rewriter, loc, dstType,
                                         rewriter.getZeroAttr(dstType));
   bool isInt = isa<IntegerType>(dstType.getElementType());
+  arith::FastMathFlagsAttr fmf = op.getFastmathAttr();
   llvm::SmallVector<Value> extractedCols;
   extractedCols.reserve(dstColumns);
   for (unsigned r = 0; r < dstRows; ++r) {
@@ -721,9 +742,10 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
       }
       Value extractedColRhs = extractedCols[c];
       Value product =
-          createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter);
-      Value sum = vector::ReductionOp::create(
-          rewriter, op.getLoc(), vector::CombiningKind::ADD, product);
+          createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter, fmf);
+      Value sum = vector::ReductionOp::create(rewriter, op.getLoc(),
+                                              vector::CombiningKind::ADD,
+                                              product, op.getFastmath());
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
@@ -731,7 +753,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
     }
   }
   if (auto acc = op.getAcc())
-    res = createAdd(op.getLoc(), res, acc, isInt, rewriter);
+    res = createAdd(op.getLoc(), res, acc, isInt, rewriter, fmf);
   return res;
 }
 
@@ -845,7 +867,8 @@ struct ContractOpToElementwise
     newRhs = vector::ExtractOp::create(rewriter, loc, newRhs, rhsOffsets);
     std::optional<Value> result =
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
-                              contractOp.getKind(), rewriter, isInt);
+                              contractOp.getKind(), rewriter, isInt,
+                              /*mask=*/Value(), contractOp.getFastmathAttr());
     if (result)
       return *result;
 
@@ -1044,20 +1067,20 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
                                            rewriter.getZeroAttr(resType));
 
   for (int64_t d = 0; d < dimSize; ++d) {
-    auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
-    auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
-    auto acc = reshapeLoad(loc, op.getAcc(), resType, resIndex, d, rewriter);
+    auto lhs = reshapeLoad(loc, op.getLhs(), lhsIndex, d, rewriter);
+    auto rhs = reshapeLoad(loc, op.getRhs(), rhsIndex, d, rewriter);
+    auto acc = reshapeLoad(loc, op.getAcc(), resIndex, d, rewriter);
 
     Value lowMask;
     if (mask)
-      lowMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
-                            iterIndex, d, rewriter);
+      lowMask = reshapeLoad(loc, mask, iterIndex, d, rewriter);
 
-    Operation *lowContract = vector::ContractionOp::create(
-        rewriter, loc, lhs, rhs, acc, lowAffine, lowIter);
+    Operation *lowContract =
+        vector::ContractionOp::create(rewriter, loc, lhs, rhs, acc, lowAffine,
+                                      lowIter, op.getKind(), op.getFastmath());
     lowContract = maskOperation(rewriter, lowContract, lowMask);
-    result = reshapeStore(loc, lowContract->getResult(0), result, resType,
-                          resIndex, d, rewriter);
+    result = reshapeStore(loc, lowContract->getResult(0), result, resIndex, d,
+                          rewriter);
   }
   return result;
 }
@@ -1099,13 +1122,16 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     if (rhsType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           op, "When LHS has rank 1, expected also RHS to have rank 1");
-    Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter);
+    arith::FastMathFlagsAttr fmf = op.getFastmathAttr();
+    Value m = createMul(loc, op.getLhs(), op.getRhs(), isInt, rewriter, fmf);
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
     Operation *reductionOp =
-        acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc)
-            : vector::ReductionOp::create(rewriter, loc, kind, m);
+        acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
+                                          op.getFastmath())
+            : vector::ReductionOp::create(rewriter, loc, kind, m,
+                                          op.getFastmath());
     return maskOperation(rewriter, reductionOp, mask)->getResult(0);
   }
   // Construct new iterator types and affine map array attribute.
@@ -1122,15 +1148,15 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   // the sum of all reductions is computed.
   Value result = op.getAcc();
   for (int64_t d = 0; d < dimSize; ++d) {
-    auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
-    auto rhs = reshapeLoad(loc, op.getRhs(), rhsType, rhsIndex, d, rewriter);
+    auto lhs = reshapeLoad(loc, op.getLhs(), lhsIndex, d, rewriter);
+    auto rhs = reshapeLoad(loc, op.getRhs(), rhsIndex, d, rewriter);
     Value newMask;
     if (mask)
-      newMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
-                            iterIndex, d, rewriter);
+      newMask = reshapeLoad(loc, mask, iterIndex, d, rewriter);
 
     Operation *newContract = vector::ContractionOp::create(
-        rewriter, loc, lhs, rhs, result, lowAffine, lowIter);
+        rewriter, loc, lhs, rhs, result, lowAffine, lowIter, op.getKind(),
+        op.getFastmath());
     result = maskOperation(rewriter, newContract, newMask)->getResult(0);
   }
   return result;

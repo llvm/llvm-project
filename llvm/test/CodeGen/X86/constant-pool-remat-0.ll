@@ -2,10 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux   | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-linux -regalloc=greedy | FileCheck %s
 ; RUN: llc < %s -mtriple=i386-linux -mattr=+sse2 | FileCheck %s
-; CHECK:     LCPI
-; CHECK:     LCPI
-; CHECK:     LCPI
-; CHECK-NOT: LCPI
+; CHECK-COUNT-5: LCPI
+; CHECK-NOT:     LCPI
 
 ; RUN: llc < %s -mtriple=x86_64-linux -o /dev/null -stats -info-output-file - | FileCheck %s -check-prefix=X64stat
 ; X64stat: 6 asm-printer

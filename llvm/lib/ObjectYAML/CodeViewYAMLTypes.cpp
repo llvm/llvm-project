@@ -24,6 +24,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -84,6 +85,31 @@ struct LeafRecordBase {
   virtual void map(yaml::IO &io) = 0;
   virtual CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const = 0;
   virtual Error fromCodeViewRecord(CVType Type) = 0;
+};
+
+struct UnknownLeafRecord : public LeafRecordBase {
+  explicit UnknownLeafRecord(TypeLeafKind K) : LeafRecordBase(K) {}
+
+  void map(yaml::IO &IO) override;
+
+  CVType toCodeViewRecord(AppendingTypeTableBuilder &TS) const override {
+    RecordPrefix Prefix;
+    uint32_t TotalLen = sizeof(RecordPrefix) + Data.size();
+    Prefix.RecordKind = Kind;
+    Prefix.RecordLen = TotalLen - 2;
+    uint8_t *Buffer = TS.getAllocator().Allocate<uint8_t>(TotalLen);
+    ::memcpy(Buffer, &Prefix, sizeof(RecordPrefix));
+    ::memcpy(Buffer + sizeof(RecordPrefix), Data.data(), Data.size());
+    return CVType(ArrayRef<uint8_t>(Buffer, TotalLen));
+  }
+
+  Error fromCodeViewRecord(CVType Type) override {
+    this->Kind = Type.kind();
+    Data = Type.content();
+    return Error::success();
+  }
+
+  std::vector<uint8_t> Data;
 };
 
 template <typename T> struct LeafRecordImpl : public LeafRecordBase {
@@ -200,6 +226,7 @@ void ScalarEnumerationTraits<TypeLeafKind>::enumeration(IO &io,
 #define CV_TYPE(name, val) io.enumCase(Value, #name, name);
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 #undef CV_TYPE
+  io.enumFallback<Hex16>(Value);
 }
 
 void ScalarEnumerationTraits<PointerToMemberRepresentation>::enumeration(
@@ -396,6 +423,19 @@ void MappingTraits<MemberPointerInfo>::mapping(IO &IO, MemberPointerInfo &MPI) {
 namespace llvm {
 namespace CodeViewYAML {
 namespace detail {
+
+void UnknownLeafRecord::map(IO &IO) {
+  yaml::BinaryRef Binary;
+  if (IO.outputting())
+    Binary = yaml::BinaryRef(Data);
+  IO.mapRequired("Data", Binary);
+  if (!IO.outputting()) {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    Binary.writeAsBinary(OS);
+    Data.assign(Str.begin(), Str.end());
+  }
+}
 
 template <> void LeafRecordImpl<ModifierRecord>::map(IO &IO) {
   IO.mapRequired("ModifiedType", Record.ModifiedType);
@@ -678,7 +718,7 @@ template <typename T>
 static inline Expected<LeafRecord> fromCodeViewRecordImpl(CVType Type) {
   LeafRecord Result;
 
-  auto Impl = std::make_shared<LeafRecordImpl<T>>(Type.kind());
+  auto Impl = std::make_shared<T>(Type.kind());
   if (auto EC = Impl->fromCodeViewRecord(Type))
     return std::move(EC);
   Result.Leaf = std::move(Impl);
@@ -688,7 +728,7 @@ static inline Expected<LeafRecord> fromCodeViewRecordImpl(CVType Type) {
 Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
 #define TYPE_RECORD(EnumName, EnumVal, ClassName)                              \
   case EnumName:                                                               \
-    return fromCodeViewRecordImpl<ClassName##Record>(Type);
+    return fromCodeViewRecordImpl<LeafRecordImpl<ClassName##Record>>(Type);
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)             \
   TYPE_RECORD(EnumName, EnumVal, ClassName)
 #define MEMBER_RECORD(EnumName, EnumVal, ClassName)
@@ -696,9 +736,8 @@ Expected<LeafRecord> LeafRecord::fromCodeViewRecord(CVType Type) {
   switch (Type.kind()) {
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   default:
-      llvm_unreachable("Unknown leaf kind!");
+    return fromCodeViewRecordImpl<UnknownLeafRecord>(Type);
   }
-  return make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
 CVType
@@ -724,7 +763,7 @@ template <typename ConcreteType>
 static void mapLeafRecordImpl(IO &IO, const char *Class, TypeLeafKind Kind,
                               LeafRecord &Obj) {
   if (!IO.outputting())
-    Obj.Leaf = std::make_shared<LeafRecordImpl<ConcreteType>>(Kind);
+    Obj.Leaf = std::make_shared<ConcreteType>(Kind);
 
   if (Kind == LF_FIELDLIST)
     Obj.Leaf->map(IO);
@@ -740,7 +779,8 @@ void MappingTraits<LeafRecord>::mapping(IO &IO, LeafRecord &Obj) {
 
 #define TYPE_RECORD(EnumName, EnumVal, ClassName)                              \
   case EnumName:                                                               \
-    mapLeafRecordImpl<ClassName##Record>(IO, #ClassName, Kind, Obj);           \
+    mapLeafRecordImpl<LeafRecordImpl<ClassName##Record>>(IO, #ClassName, Kind, \
+                                                         Obj);                 \
     break;
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)             \
   TYPE_RECORD(EnumName, EnumVal, ClassName)
@@ -748,7 +788,8 @@ void MappingTraits<LeafRecord>::mapping(IO &IO, LeafRecord &Obj) {
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, AliasName, ClassName)
   switch (Kind) {
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-  default: { llvm_unreachable("Unknown leaf kind!"); }
+  default:
+    mapLeafRecordImpl<UnknownLeafRecord>(IO, "UnknownLeaf", Kind, Obj);
   }
 }
 

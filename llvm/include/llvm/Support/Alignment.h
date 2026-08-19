@@ -141,7 +141,7 @@ inline bool isAddrAligned(Align Lhs, const void *Addr) {
 }
 
 /// Returns a multiple of A needed to store `Size` bytes.
-inline uint64_t alignTo(uint64_t Size, Align A) {
+constexpr inline uint64_t alignTo(uint64_t Size, Align A) {
   const uint64_t Value = A.value();
   // The following line is equivalent to `(Size + Value - 1) / Value * Value`.
 

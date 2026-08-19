@@ -77,18 +77,20 @@ declare void @llvm.assume(i1)
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{!"clang version 4.0.0 (trunk 278098)"}
-!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, type: !15, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !6 = !DILocation(line: 30, column: 32, scope: !5)
-!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEv", scope: !1, file: !1, line: 13, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEv", scope: !1, file: !1, line: 13, type: !15, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !8 = !{i32 0, !"typeid"}
 
-!9 = distinct !DISubprogram(name: "call2", linkageName: "_Z5call2Pv", scope: !1, file: !1, line: 40, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!9 = distinct !DISubprogram(name: "call2", linkageName: "_Z5call2Pv", scope: !1, file: !1, line: 40, type: !15, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !10 = !DILocation(line: 41, column: 32, scope: !9)
 !11 = !{i32 0, !"typeid2"}
 
-!12 = distinct !DISubprogram(name: "call3", linkageName: "_Z5call3Pv", scope: !1, file: !1, line: 50, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!12 = distinct !DISubprogram(name: "call3", linkageName: "_Z5call3Pv", scope: !1, file: !1, line: 50, type: !15, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !13 = !DILocation(line: 51, column: 32, scope: !12)
 !14 = !{i32 0, !"typeid3"}
+!15 = !DISubroutineType(types: !16)
+!16 = !{null}
 
 ; CHECK: 1 wholeprogramdevirt - Number of whole program devirtualization targets
 ; CHECK: 3 wholeprogramdevirt - Number of single implementation devirtualizations

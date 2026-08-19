@@ -131,7 +131,7 @@ define void @combine_shlsat_vector() nounwind {
 define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w0, w0, #0xfffffffc
+; CHECK-NEXT:    and w0, w0, #0xfffc
 ; CHECK-NEXT:    ret
   %x2 = ashr i16 %x, 2
   %tmp = call i16 @llvm.sshl.sat.i16(i16 %x2, i16 2)

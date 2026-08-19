@@ -22,6 +22,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
@@ -29,6 +30,7 @@ class ASTContext;
 class FunctionType;
 class GlobalDecl;
 class QualType;
+class TargetInfo;
 class Type;
 } // namespace clang
 
@@ -42,6 +44,7 @@ class CallArgList;
 class CIRGenBuilderTy;
 class CIRGenCXXABI;
 class CIRGenModule;
+class FunctionArgList;
 
 /// This class organizes the cross-module state that is used while lowering
 /// AST types to CIR types.
@@ -70,6 +73,12 @@ class CIRGenTypes {
   llvm::SmallPtrSet<const clang::Type *, 4> recordsBeingLaidOut;
 
   llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
+
+  /// Cache of record type keys known to be safe to convert (i.e.,
+  /// isSafeToConvert returned true). Cleared whenever recordsBeingLaidOut
+  /// changes, since the safety result depends on which records are currently
+  /// being laid out.
+  llvm::DenseSet<const clang::Type *> safeToConvertCache;
 
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
@@ -105,6 +114,16 @@ public:
     return recordsBeingLaidOut.count(ty);
   }
 
+  /// Check if a record type key is in the safe-to-convert cache.
+  bool isCachedSafeToConvert(const clang::Type *key) const {
+    return safeToConvertCache.count(key);
+  }
+
+  /// Add a record type key to the safe-to-convert cache.
+  void cacheSafeToConvert(const clang::Type *key) {
+    safeToConvertCache.insert(key);
+  }
+
   const ABIInfo &getABIInfo() const { return theABIInfo; }
 
   /// Convert a Clang type into a mlir::Type.
@@ -132,10 +151,10 @@ public:
 
   cir::FuncType getFunctionType(clang::GlobalDecl gd);
 
-  /// Get the CIR function type for use in a vtable, given a CXXMethodDecl. If
-  /// the method has an incomplete return type, and/or incomplete argument
-  /// types, this will return the opaque type.
-  cir::FuncType getFunctionTypeForVTable(clang::GlobalDecl gd);
+  /// Determine if a C++ inheriting constructor should have parameters matching
+  /// those of its inherited constructor.
+  bool inheritingCtorHasParams(const InheritedConstructor &inherited,
+                               CXXCtorType type);
 
   // The arrangement methods are split into three families:
   //   - those meant to drive the signature and prologue/epilogue
@@ -168,6 +187,17 @@ public:
   const CIRGenFunctionInfo &
   arrangeFunctionDeclaration(const clang::FunctionDecl *fd);
 
+  /// Arrange the function info for a device kernel caller entry point (e.g. a
+  /// SYCL kernel caller).
+  const CIRGenFunctionInfo &
+  arrangeDeviceKernelCallerDeclaration(clang::QualType resultType,
+                                       const FunctionArgList &args);
+
+  /// A builtin function is a freestanding function using the default
+  /// C conventions.
+  const CIRGenFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
+                                                       const CallArgList &args);
+
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
@@ -197,7 +227,7 @@ public:
                                                     const FunctionType *fnType);
 
   const CIRGenFunctionInfo &
-  arrangeCIRFunctionInfo(CanQualType returnType,
+  arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
                          FunctionType::ExtInfo info, RequiredArgs required);
 
@@ -205,6 +235,8 @@ public:
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
+
+  unsigned getTargetAddressSpace(QualType ty) const;
 };
 
 } // namespace clang::CIRGen

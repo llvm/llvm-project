@@ -15,8 +15,6 @@ LIT_CONFIG_FILE = """
 # of libc++ installed at the given path.
 #
 
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 config.substitutions.append(('%{{flags}}',
     '-pthread' + (' -isysroot {{}}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
 ))
@@ -87,6 +85,8 @@ def main(argv):
              'are located in that directory after the run.')
     parser.add_argument('--libcxx-installation', type=pathlib.Path, required=True,
         help='Path to the directory where a copy of libc++ to run tests on is installed.')
+    parser.add_argument('--compiler', type=pathlib.Path, required=True,
+        help='Path to the compiler to use to run the tests.')
     parser.add_argument('--test-suite-commit', type=str, required=False,
         help='Commit to use for the test suite. If left unspecified, the currently checked-out version of the '
              'test suite is used. Otherwise, the requested version is checked out in a separate directory and '
@@ -127,6 +127,7 @@ def main(argv):
             f.write(LIT_CONFIG_FILE.format(INSTALL_ROOT=args.libcxx_installation))
 
         test_suite_cmd = ['cmake', '-B', args.build_dir, '-S', test_suite_sources / 'runtimes', '-G', 'Ninja']
+        test_suite_cmd += ['-D', f'CMAKE_CXX_COMPILER={args.compiler}']
         test_suite_cmd += ['-D', 'LLVM_ENABLE_RUNTIMES=libcxx;libcxxabi']
         test_suite_cmd += ['-D', 'LIBCXXABI_USE_LLVM_UNWINDER=OFF']
         test_suite_cmd += ['-D', f'LIBCXX_TEST_CONFIG={lit_cfg}']

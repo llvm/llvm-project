@@ -5,8 +5,8 @@
 // we cannot use splits.
 
 spirv.module Logical Vulkan requires #spirv.vce<v1.3,
-             [VulkanMemoryModel, Shader, Int64, Int16, Int8, Float64, Float16, CooperativeMatrixKHR, TensorsARM, Linkage],
-             [SPV_KHR_vulkan_memory_model, SPV_KHR_cooperative_matrix, SPV_ARM_tensors]> {
+             [VulkanMemoryModel, Shader, Int64, Int16, Int8, Float64, Float16, BFloat16TypeKHR, Float8EXT, CooperativeMatrixKHR, Linkage],
+             [SPV_KHR_vulkan_memory_model, SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16, SPV_EXT_float8]> {
   // CHECK-LABEL: @bool_const
   spirv.func @bool_const() -> () "None" {
     // CHECK: spirv.Constant true
@@ -161,6 +161,42 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.Return
   }
 
+  // CHECK-LABEL: @bf16
+  spirv.func @bf16() -> () "None" {
+    // CHECK: spirv.Constant 5.120000e+02 : bf16
+    %0 = spirv.Constant 512. : bf16
+    // CHECK: spirv.Constant -5.120000e+02 : bf16
+    %1 = spirv.Constant -512. : bf16
+
+    %2 = spirv.FConvert %0 : bf16 to f32
+    %3 = spirv.FConvert %1 : bf16 to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f8E4M3FN
+  spirv.func @f8E4M3FN() -> () "None" {
+    // CHECK: spirv.Constant 1.280000e+02 : f8E4M3FN
+    %0 = spirv.Constant 127. : f8E4M3FN
+    // CHECK: spirv.Constant -1.280000e+02 : f8E4M3FN
+    %1 = spirv.Constant -127. : f8E4M3FN
+
+    %2 = spirv.FConvert %0 : f8E4M3FN to f32
+    %3 = spirv.FConvert %1 : f8E4M3FN to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f8E5M2
+  spirv.func @f8E5M2() -> () "None" {
+    // CHECK: spirv.Constant 1.280000e+02 : f8E5M2
+    %0 = spirv.Constant 127. : f8E5M2
+    // CHECK: spirv.Constant -1.280000e+02 : f8E5M2
+    %1 = spirv.Constant -127. : f8E5M2
+
+    %2 = spirv.FConvert %0 : f8E5M2 to f32
+    %3 = spirv.FConvert %1 : f8E5M2 to f32
+    spirv.Return
+  }
+
   // CHECK-LABEL: @bool_vector_const
   spirv.func @bool_vector_const() -> () "None" {
     // CHECK: spirv.Constant dense<false> : vector<2xi1>
@@ -310,6 +346,20 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     // CHECK: {{%.*}} = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
     %coop = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
     spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  }
+
+  // CHECK-LABEL: @struct_const
+  spirv.func @struct_const() -> (!spirv.struct<(i32, f32)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+    %0 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, f32)>
+  }
+
+  // CHECK-LABEL: @struct_const_nested
+  spirv.func @struct_const_nested() -> (!spirv.struct<(i32, !spirv.array<2 x i32>)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    %0 = spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
   }
 
   spirv.EntryPoint "GLCompute" @bool_const

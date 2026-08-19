@@ -104,7 +104,7 @@ public:
   }
 
   void testSubnormalRange(RemQuoFunc func) {
-    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT;
     for (StorageType v = MIN_SUBNORMAL, w = MAX_SUBNORMAL;
          v <= MAX_SUBNORMAL && w >= MIN_SUBNORMAL; v += STEP, w -= STEP) {
@@ -117,7 +117,7 @@ public:
   }
 
   void testNormalRange(RemQuoFunc func) {
-    constexpr StorageType COUNT = 1'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;
          v <= MAX_NORMAL && w >= MIN_NORMAL; v += STEP, w -= STEP) {

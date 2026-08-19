@@ -135,7 +135,7 @@ def InferResultsOp : TestOp<"infer_results_op", [InferTypeOpInterface]> {
     static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties,
+      ::mlir::PropertyRef,
       ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::Builder b(context);
@@ -158,7 +158,7 @@ def InferResultsVariadicInputsOp : TestOp<"infer_results_variadic_inputs_op",
     static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties,
+      ::mlir::PropertyRef,
       ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       ::mlir::Builder b(context);
@@ -187,7 +187,7 @@ def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
     ::llvm::LogicalResult $cppClass::inferReturnTypeComponents(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
-      ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+      ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
       ::llvm::SmallVectorImpl<
         ::mlir::ShapedTypeComponents>& inferredShapedTypeComponents) {
       $cppClass::Adaptor adaptor(operands, attributes, properties, regions);

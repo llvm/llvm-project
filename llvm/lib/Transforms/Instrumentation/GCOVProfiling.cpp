@@ -1134,10 +1134,6 @@ Function *GCOVProfiler::insertCounterWriteout(
   StructType *FileInfoTy = StructType::create(
       {StartFileCallArgsTy, Builder.getInt32Ty(), PtrTy, PtrTy}, "file_info");
 
-  Constant *Zero32 = Builder.getInt32(0);
-  // Build an explicit array of two zeros for use in ConstantExpr GEP building.
-  Constant *TwoZero32s[] = {Zero32, Zero32};
-
   SmallVector<Constant *, 8> FileInfos;
   for (int i : llvm::seq<int>(0, CUNodes->getNumOperands())) {
     auto *CU = cast<DICompileUnit>(CUNodes->getOperand(i));
@@ -1167,9 +1163,7 @@ Function *GCOVProfiler::insertCounterWriteout(
       GlobalVariable *GV = CountersBySP[j].first;
       unsigned Arcs = cast<ArrayType>(GV->getValueType())->getNumElements();
       EmitArcsCallArgsArray.push_back(ConstantStruct::get(
-          EmitArcsCallArgsTy,
-          {Builder.getInt32(Arcs), ConstantExpr::getInBoundsGetElementPtr(
-                                       GV->getValueType(), GV, TwoZero32s)}));
+          EmitArcsCallArgsTy, {Builder.getInt32(Arcs), GV}));
     }
     // Create global arrays for the two emit calls.
     int CountersSize = CountersBySP.size();
@@ -1197,13 +1191,8 @@ Function *GCOVProfiler::insertCounterWriteout(
     EmitArcsCallArgsArrayGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
     FileInfos.push_back(ConstantStruct::get(
-        FileInfoTy,
-        {StartFileCallArgs, Builder.getInt32(CountersSize),
-         ConstantExpr::getInBoundsGetElementPtr(EmitFunctionCallArgsArrayTy,
-                                                EmitFunctionCallArgsArrayGV,
-                                                TwoZero32s),
-         ConstantExpr::getInBoundsGetElementPtr(
-             EmitArcsCallArgsArrayTy, EmitArcsCallArgsArrayGV, TwoZero32s)}));
+        FileInfoTy, {StartFileCallArgs, Builder.getInt32(CountersSize),
+                     EmitFunctionCallArgsArrayGV, EmitArcsCallArgsArrayGV}));
   }
 
   // If we didn't find anything to actually emit, bail on out.

@@ -34,9 +34,14 @@ HELP-EMPTY:
 HELP-NEXT:  BinaryAnalysis options:
 HELP-EMPTY:
 HELP-NEXT:   --auth-traps-on-failure - Assume authentication instructions always trap on failure
-HELP-NEXT:   --scanners=<value> - which gadget scanners to run
-HELP-NEXT:   =pacret - pac-ret: return address protection (subset of "pauth")
-HELP-NEXT:   =pauth - All Pointer Authentication scanners
-HELP-NEXT:   =all - All implemented scanners
+HELP-NEXT:   --scanners=<value> - Which gadget scanners to run
+HELP-NEXT:   =ptrauth-pac-ret        -   Unprotected returns (pac-ret)
+HELP-NEXT:   =ptrauth-tail-calls     -   Tail calls performed with unprotected link register
+HELP-NEXT:   =ptrauth-forward-cf     -   Unprotected calls and branches (forward control-flow)
+HELP-NEXT:   =ptrauth-sign-oracles   -   Signing of untrusted pointers (signing oracles)
+HELP-NEXT:   =ptrauth-auth-oracles   -   Authentication oracles
+HELP-NEXT:   =ptrauth-all            -   All Pointer Authentication scanners
+HELP-NEXT:   =all                    -   All implemented scanners
+
 HELP-EMPTY:
 HELP-NEXT:  Generic Options:

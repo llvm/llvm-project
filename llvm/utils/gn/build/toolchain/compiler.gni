@@ -11,7 +11,8 @@ declare_args() {
   # Android will be enabled.
   android_ndk_path = ""
 
-  # Set this to the path of the Win SDK. Only used for cross compilation. If set, cross compilation targeting Windows will be enabled.
+  # Set this to the path of the Win SDK. Only used for cross compilation. If
+  # set, cross compilation targeting Windows will be enabled.
   win_sysroot = ""
 }
 

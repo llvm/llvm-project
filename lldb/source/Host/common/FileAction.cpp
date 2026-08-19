@@ -12,30 +12,11 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 
-#ifdef _WIN32
-#include "lldb/Host/windows/windows.h"
-#endif
-
 using namespace lldb_private;
 
 // FileAction member functions
 
 FileAction::FileAction() : m_file_spec() {}
-
-#ifdef _WIN32
-HANDLE FileAction::GetHandle() const {
-  if (m_fd == -1)
-    return INVALID_HANDLE_VALUE;
-  return reinterpret_cast<HANDLE>(_get_osfhandle(m_fd));
-}
-#endif
-
-void FileAction::Clear() {
-  m_action = eFileActionNone;
-  m_fd = -1;
-  m_arg = -1;
-  m_file_spec.Clear();
-}
 
 const FileSpec &FileAction::GetFileSpec() const { return m_file_spec; }
 
@@ -52,14 +33,13 @@ bool FileAction::Open(int fd, const FileSpec &file_spec, bool read,
       m_arg = O_NOCTTY | O_CREAT | O_WRONLY | O_TRUNC;
     m_file_spec = file_spec;
     return true;
-  } else {
-    Clear();
   }
+  *this = FileAction();
   return false;
 }
 
 bool FileAction::Close(int fd) {
-  Clear();
+  *this = FileAction();
   if (fd >= 0) {
     m_action = eFileActionClose;
     m_fd = fd;
@@ -68,7 +48,7 @@ bool FileAction::Close(int fd) {
 }
 
 bool FileAction::Duplicate(int fd, int dup_fd) {
-  Clear();
+  *this = FileAction();
   if (fd >= 0 && dup_fd >= 0) {
     m_action = eFileActionDuplicate;
     m_fd = fd;

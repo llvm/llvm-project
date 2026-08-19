@@ -4,7 +4,7 @@ _Z4funcii
 # Func Hash:
 456046650042366162
 # Num Counters:
-19
+37
 # Counter Values:
 3
 1
@@ -25,12 +25,30 @@ _Z4funcii
 0
 0
 0
+2
+1
+2
+1
+2
+1
+2
+1
+2
+1
+3
+0
+3
+0
+3
+0
+3
+0
 
 _Z5func2ii
 # Func Hash:
 14151920320560143107
 # Num Counters:
-9
+15
 # Counter Values:
 3
 3
@@ -40,7 +58,13 @@ _Z5func2ii
 0
 1
 0
+2
+1
 3
+2
+1
+0
+1
 
 main
 # Func Hash:

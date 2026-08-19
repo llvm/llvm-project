@@ -2330,2245 +2330,2245 @@ vwsub.wx v8, v16, x30
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VI                    vadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VI                    vadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VV                    vadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VV                    vadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADD_VX                    vadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADD_VX                    vadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VV                    vsub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VV                    vsub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSUB_VX                    vsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSUB_VX                    vsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VVM                   vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VVM                   vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VXM                   vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VXM                   vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VADC_VIM                   vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VADC_VIM                   vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VVM                   vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSBC_VXM                   vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VV                  vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VV                  vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_VX                  vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_VX                  vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VV                   vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VV                   vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_VX                   vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_VX                   vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VV                  vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VV                  vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_VX                  vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_VX                  vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VV                   vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VV                   vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_VX                   vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_VX                   vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VV                  vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VV                  vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADDU_VX                  vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADDU_VX                  vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VV                   vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VV                   vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VAADD_VX                   vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VAADD_VX                   vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VV                  vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VV                  vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUBU_VX                  vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUBU_VX                  vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VV                   vasub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VV                   vasub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VASUB_VX                   vasub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VASUB_VX                   vasub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VI                   vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VI                   vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VIM                  vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VV                   vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VV                   vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VVM                  vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VX                   vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VX                   vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMADC_VXM                  vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VV                   vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VV                   vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VVM                  vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VX                   vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VX                   vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VMSBC_VXM                  vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VI                   vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VI                   vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VRSUB_VX                   vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VRSUB_VX                   vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VI                  vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VI                  vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VV                  vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VV                  vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADDU_VX                  vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADDU_VX                  vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VI                   vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VI                   vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VV                   vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VV                   vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSADD_VX                   vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSADD_VX                   vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VV                  vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VV                  vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUBU_VX                  vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUBU_VX                  vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VV                   vssub.vv	v8, v8, v8
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VV                   vssub.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VSSUB_VX                   vssub.vx	v8, v8, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VSSUB_VX                   vssub.vx	v8, v8, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WV                  vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WV                  vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADDU_WX                  vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADDU_WX                  vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WV                   vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WV                   vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWADD_WX                   vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWADD_WX                   vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WV                  vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WV                  vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUBU_WX                  vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUBU_WX                  vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WV                   vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WV                   vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     1.00                         2     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     2.00                         2     Andes45VALU[2]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     4.00                         2     Andes45VALU[4]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWSUB_WX                   vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  1      2     8.00                         2     Andes45VALU[8]                             VWSUB_WX                   vwsub.wx	v8, v16, t5
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - Andes45ALU
@@ -4591,7 +4591,7 @@ vwsub.wx v8, v16, x30
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -     1120.00  -     -      -      -      -      -     1120.00  -     -      -      -      -      -      -
+# CHECK-NEXT:  -      -     1120.00  -     -      -      -      -      -     3408.00  -     -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -4604,11 +4604,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4616,29 +4616,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4648,11 +4648,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4660,29 +4660,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4692,11 +4692,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4704,29 +4704,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4736,11 +4736,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4748,29 +4748,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4780,11 +4780,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4792,29 +4792,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4824,11 +4824,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4836,29 +4836,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4868,11 +4868,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4880,29 +4880,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4912,11 +4912,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4924,29 +4924,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -4956,11 +4956,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -4968,29 +4968,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5000,11 +5000,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5012,29 +5012,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5042,29 +5042,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5072,29 +5072,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5102,29 +5102,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5132,29 +5132,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5162,29 +5162,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5192,29 +5192,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5222,29 +5222,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5252,29 +5252,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.vx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5284,11 +5284,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5296,29 +5296,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5328,11 +5328,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5340,29 +5340,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5372,11 +5372,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5384,29 +5384,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5416,11 +5416,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5428,29 +5428,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vaadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5460,11 +5460,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5472,29 +5472,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5504,11 +5504,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5516,29 +5516,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5548,11 +5548,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5560,29 +5560,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5592,11 +5592,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5604,29 +5604,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vasub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5636,11 +5636,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5648,29 +5648,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5680,11 +5680,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5692,29 +5692,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vim	v8, v8, 12, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5724,11 +5724,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5736,29 +5736,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5768,11 +5768,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5780,29 +5780,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5812,11 +5812,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5824,29 +5824,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5856,11 +5856,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5868,29 +5868,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmadc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5900,11 +5900,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5912,29 +5912,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5944,11 +5944,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5956,29 +5956,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vvm	v8, v8, v8, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -5988,11 +5988,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6000,29 +6000,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6032,11 +6032,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6044,29 +6044,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vmsbc.vxm	v8, v8, t5, v0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6076,11 +6076,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6088,29 +6088,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6120,11 +6120,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6132,29 +6132,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vrsub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6164,11 +6164,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6176,29 +6176,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6208,11 +6208,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6220,29 +6220,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6252,11 +6252,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6264,29 +6264,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsaddu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6296,11 +6296,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6308,29 +6308,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vi	v8, v8, 12
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6340,11 +6340,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6352,29 +6352,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6384,11 +6384,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6396,29 +6396,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vsadd.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6428,11 +6428,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6440,29 +6440,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6472,11 +6472,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6484,29 +6484,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssubu.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6516,11 +6516,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6528,29 +6528,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vv	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6560,11 +6560,11 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -6572,29 +6572,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vssub.vx	v8, v8, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6602,29 +6602,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6632,29 +6632,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwaddu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6662,29 +6662,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6692,29 +6692,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwadd.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6722,29 +6722,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6752,29 +6752,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsubu.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6782,29 +6782,29 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
@@ -6812,26 +6812,26 @@ vwsub.wx v8, v16, x30
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     4.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwsub.wx	v8, v16, t5

@@ -30,7 +30,7 @@ define i64 @test_constant(ptr %rdata) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.land.lhs.true.i:
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
 entry:
@@ -67,7 +67,7 @@ define i64 @test_non_constant(ptr %rdata, i64 %i.194) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.land.lhs.true.i:
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   RET 0, $rax
 entry:

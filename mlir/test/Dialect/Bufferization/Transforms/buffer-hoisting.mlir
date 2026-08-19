@@ -789,3 +789,16 @@ func.func @loop_nested_alloc_dyn_dependency(
 // CHECK-NEXT: {{.*}} = scf.for
 // CHECK-NEXT: {{.*}} = scf.for
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc({{.*}})
+
+// Verify that --buffer-hoisting does not crash on allocations in unreachable
+// blocks (blocks with no predecessors that are not the function entry block).
+// See: https://github.com/llvm/llvm-project/issues/118445
+// CHECK-LABEL: func @unreachable_alloc
+func.func @unreachable_alloc(%arg0: f32) {
+  %c0 = arith.constant 0 : index
+  return
+^bb1(%0: i32):  // no predecessors
+  %alloc = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc
+  return
+}

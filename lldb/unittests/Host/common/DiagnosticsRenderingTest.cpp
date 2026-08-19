@@ -27,6 +27,18 @@ TEST_F(ErrorDisplayTest, RenderStatus) {
   }
 
   {
+    // Test that a single-character token (length=1) renders as just a caret
+    // with no underlines.
+    SourceLocation loc1 = {FileSpec{"a.c"}, 1, 6, 1, false, true};
+    std::string result =
+        Render({DiagnosticDetail{loc1, eSeverityError, "X", "X"}});
+    llvm::SmallVector<StringRef> lines;
+    StringRef(result).split(lines, '\n');
+    //                123456
+    ASSERT_EQ(lines[0], "     ^");
+    ASSERT_EQ(lines[1], "     error: X");
+  }
+  {
     // Test that diagnostics on the same column can be handled and all
     // three errors are diagnosed.
     SourceLocation loc1 = {FileSpec{"a.c"}, 13, 5, 0, false, true};

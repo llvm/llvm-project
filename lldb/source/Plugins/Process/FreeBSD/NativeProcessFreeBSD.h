@@ -27,8 +27,7 @@ namespace process_freebsd {
 /// for debugging.
 ///
 /// Changes in the inferior process state are broadcasted.
-class NativeProcessFreeBSD : public NativeProcessELF,
-                             private NativeProcessSoftwareSingleStep {
+class NativeProcessFreeBSD : public NativeProcessELF {
 public:
   class Manager : public NativeProcessProtocol::Manager {
   public:
@@ -60,7 +59,7 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
@@ -90,8 +89,6 @@ public:
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
-  bool SupportHardwareSingleStepping() const;
-
   llvm::Expected<std::string> SaveCore(llvm::StringRef path_hint) override;
 
 protected:
@@ -101,9 +98,8 @@ protected:
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
-  MainLoop& m_main_loop;
+  MainLoop &m_main_loop;
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
-  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   // Private Instance Methods
   NativeProcessFreeBSD(::pid_t pid, int terminal_fd, NativeDelegate &delegate,

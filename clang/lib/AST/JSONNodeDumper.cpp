@@ -596,6 +596,27 @@ void JSONNodeDumper::VisitTLSModelAttr(const TLSModelAttr *TA) {
   JOS.attribute("tls_model", TA->getModel());
 }
 
+void JSONNodeDumper::VisitAvailabilityAttr(const AvailabilityAttr *AA) {
+  if (const IdentifierInfo *Platform = AA->getPlatform())
+    JOS.attribute("platform", Platform->getName());
+  if (!AA->getIntroduced().empty())
+    JOS.attribute("introduced", AA->getIntroduced().getAsString());
+  if (!AA->getDeprecated().empty())
+    JOS.attribute("deprecated", AA->getDeprecated().getAsString());
+  if (!AA->getObsoleted().empty())
+    JOS.attribute("obsoleted", AA->getObsoleted().getAsString());
+  attributeOnlyIfTrue("unavailable", AA->getUnavailable());
+  if (!AA->getMessage().empty())
+    JOS.attribute("message", AA->getMessage());
+  attributeOnlyIfTrue("strict", AA->getStrict());
+  if (!AA->getReplacement().empty())
+    JOS.attribute("replacement", AA->getReplacement());
+  if (AA->getPriority() != 0)
+    JOS.attribute("priority", AA->getPriority());
+  if (const IdentifierInfo *Env = AA->getEnvironment())
+    JOS.attribute("environment", Env->getName());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())
@@ -750,7 +771,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -1098,9 +1119,49 @@ void JSONNodeDumper::VisitAccessSpecDecl(const AccessSpecDecl *ASD) {
   JOS.attribute("access", createAccessSpecifier(ASD->getAccess()));
 }
 
+void JSONNodeDumper::VisitExplicitInstantiationDecl(
+    const ExplicitInstantiationDecl *D) {
+  attributeOnlyIfTrue("isExternTemplate", D->isExternTemplate());
+  if (D->getSpecialization())
+    JOS.attribute("specializationDeclId",
+                  createPointerRepresentation(D->getSpecialization()));
+  switch (D->getTemplateSpecializationKind()) {
+  case TSK_Undeclared:
+    break;
+  case TSK_ImplicitInstantiation:
+    JOS.attribute("templateSpecializationKind", "implicit_instantiation");
+    break;
+  case TSK_ExplicitSpecialization:
+    JOS.attribute("templateSpecializationKind", "explicit_specialization");
+    break;
+  case TSK_ExplicitInstantiationDeclaration:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_declaration");
+    break;
+  case TSK_ExplicitInstantiationDefinition:
+    JOS.attribute("templateSpecializationKind",
+                  "explicit_instantiation_definition");
+    break;
+  }
+}
+
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
+}
+
+void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(FD);
+    return;
+  }
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", Str);
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 

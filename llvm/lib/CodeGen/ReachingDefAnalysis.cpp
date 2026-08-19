@@ -115,18 +115,15 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
   unsigned MBBNumber = MBB->getNumber();
   assert(MBBNumber < MBBReachingDefs.numBlockIDs() &&
          "Unexpected basic block number.");
+  assert(LiveRegs.empty() && "LiveRegs should be empty on BB entry");
   MBBReachingDefs.startBasicBlock(MBBNumber, NumRegUnits);
 
   // Reset instruction counter in each basic block.
   CurInstr = 0;
 
-  // Set up LiveRegs to represent registers entering MBB.
-  // Default values are 'nothing happened a long time ago'.
-  if (LiveRegs.empty())
-    LiveRegs.assign(NumRegUnits, ReachingDefDefaultVal);
-
   // This is the entry block.
   if (MBB == &MBB->getParent()->front()) {
+    LiveRegs.assign(NumRegUnits, ReachingDefDefaultVal);
     for (const auto &LI : MBB->liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         // Treat function live-ins as if they were defined just before the first
@@ -143,6 +140,7 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
   }
 
   // Try to coalesce live-out registers from predecessors.
+  bool Initialized = false;
   for (MachineBasicBlock *pred : MBB->predecessors()) {
     assert(unsigned(pred->getNumber()) < MBBOutRegsInfos.size() &&
            "Should have pre-allocated MBBInfos for all MBBs");
@@ -152,10 +150,20 @@ void ReachingDefInfo::enterBasicBlock(MachineBasicBlock *MBB) {
     if (Incoming.empty())
       continue;
 
+    // Directly copy over the reg infos for the first predecessor.
+    if (!Initialized) {
+      LiveRegs = Incoming;
+      Initialized = true;
+      continue;
+    }
+
     // Find the most recent reaching definition from a predecessor.
     for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)
       LiveRegs[Unit] = std::max(LiveRegs[Unit], Incoming[Unit]);
   }
+
+  if (!Initialized)
+    LiveRegs.assign(NumRegUnits, ReachingDefDefaultVal);
 
   // Insert the most recent reaching definition we found.
   for (unsigned Unit = 0; Unit != NumRegUnits; ++Unit)

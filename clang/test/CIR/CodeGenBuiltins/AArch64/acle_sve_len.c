@@ -30,7 +30,7 @@ uint64_t test_svlen_u8(svuint8_t op) MODE_ATTR
 {
 // CIR:     %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:     %[[C16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) nuw : !u64i
+// CIR:     %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C16]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
@@ -42,7 +42,7 @@ uint64_t test_svlen_s8(svint8_t op) MODE_ATTR
 {
 // CIR:     %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:     %[[C16:.*]] = cir.const #cir.int<16> : !u64i
-// CIR:     %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C16]]) nuw : !u64i
+// CIR:     %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C16]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 16
@@ -54,7 +54,7 @@ uint64_t test_svlen_u16(svuint16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C8]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
@@ -66,7 +66,7 @@ uint64_t test_svlen_s16(svint16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C8]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
@@ -78,7 +78,7 @@ uint64_t test_svlen_f16(svfloat16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C8]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
@@ -90,7 +90,7 @@ uint64_t test_svlen_bf16(svbfloat16_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C8:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C8]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C8]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 8
@@ -102,7 +102,7 @@ uint64_t test_svlen_u32(svuint32_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C4]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 4
@@ -114,7 +114,7 @@ uint64_t test_svlen_s32(svint32_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C4]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
@@ -126,7 +126,7 @@ uint64_t test_svlen_f32(svfloat32_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C4:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C4]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C4]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 4
@@ -138,7 +138,7 @@ uint64_t test_svlen_u64(svuint64_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C2]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64  [[VSCALE]], 2
@@ -150,7 +150,7 @@ uint64_t test_svlen_s64(svint64_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C2]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2
@@ -162,7 +162,7 @@ uint64_t test_svlen_f64(svfloat64_t op) MODE_ATTR
 {
 // CIR:           %[[VSCALE:.*]] = cir.call_llvm_intrinsic "vscale"  : () -> !u64i
 // CIR:           %[[C2:.*]] = cir.const #cir.int<2> : !u64i
-// CIR:           %[[BINOP:.*]] = cir.binop(mul, %[[VSCALE]], %[[C2]]) nuw : !u64i
+// CIR:           %[[BINOP:.*]] = cir.mul nuw %[[VSCALE]], %[[C2]] : !u64i
 
 // LLVM_OGCG_CIR:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 // LLVM_OGCG_CIR:    [[RES:%.*]] = mul nuw i64 [[VSCALE]], 2

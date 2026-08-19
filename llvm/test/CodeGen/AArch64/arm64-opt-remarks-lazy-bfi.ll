@@ -65,8 +65,7 @@
 ; HOTNESS-NEXT: Executing Pass 'Lazy Machine Block Frequency Analysis'
 ; HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; HOTNESS-NEXT: Building MachineBlockFrequencyInfo on the fly
-; HOTNESS-NEXT: Building LoopInfo on the fly
-; HOTNESS-NEXT: Building DominatorTree on the fly
+; HOTNESS-NEXT: Building CycleInfo on the fly
 ; HOTNESS-NOT: Executing Pass
 ; HOTNESS: block-frequency: empty_func
 ; HOTNESS-NOT: Executing Pass
@@ -123,5 +122,7 @@ define void @empty_func() nounwind ssp !dbg !3 !prof !4 {
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1)
 !1 = !DIFile(filename: "arm64-summary-remarks.ll", directory: "")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, line: 5, scopeLine: 5, unit: !0)
+!3 = distinct !DISubprogram(name: "empty_func", scope: !1, file: !1, line: 5, scopeLine: 5, type: !5, unit: !0)
 !4 = !{!"function_entry_count", i64 33}
+!5 = !DISubroutineType(types: !6)
+!6 = !{null}

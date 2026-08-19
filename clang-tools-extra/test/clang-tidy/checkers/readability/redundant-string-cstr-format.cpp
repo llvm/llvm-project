@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -check-suffix=STDFORMAT -std=c++20 %s readability-redundant-string-cstr %t -- --  -isystem %clang_tidy_headers -DTEST_STDFORMAT
-// RUN: %check_clang_tidy -check-suffixes=STDFORMAT,STDPRINT -std=c++2b %s readability-redundant-string-cstr %t -- --  -isystem %clang_tidy_headers -DTEST_STDFORMAT -DTEST_STDPRINT
+// RUN: %check_clang_tidy -check-suffix=STDFORMAT -std=c++20 %s readability-redundant-string-cstr %t -- --  -DTEST_STDFORMAT
+// RUN: %check_clang_tidy -check-suffixes=STDFORMAT,STDPRINT -std=c++2b %s readability-redundant-string-cstr %t -- --  -DTEST_STDFORMAT -DTEST_STDPRINT
 #include <string>
 
 namespace std {

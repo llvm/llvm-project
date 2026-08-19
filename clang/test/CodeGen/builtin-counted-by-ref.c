@@ -233,3 +233,30 @@ struct d *test4(int size, int *data) {
   *__builtin_counted_by_ref(p->ptr) = size;
   return p;
 }
+
+// Test for FAM struct defined nested inside another struct (issue #182575).
+// The nested struct is named (not anonymous), so getOuterLexicalRecordContext()
+// would incorrectly resolve to 'struct outer' instead of 'struct inner'.
+struct outer {
+  struct inner {
+    int counter;
+    int ent[] __attribute__((counted_by(counter)));
+  } *entries;
+};
+
+// X86_64-LABEL: define dso_local ptr @test5(
+// X86_64-SAME: i32 noundef [[COUNT:%.*]]) #[[ATTR0]] {
+// X86_64:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_INNER:%.*]], ptr {{%.*}}, i32 0, i32 0
+// X86_64-NEXT:    store i32 [[TMP1:%.*]], ptr [[DOT_COUNTED_BY_GEP]], align 4
+//
+// I386-LABEL: define dso_local ptr @test5(
+// I386-SAME: i32 noundef [[COUNT:%.*]]) #[[ATTR0]] {
+// I386:    [[DOT_COUNTED_BY_GEP:%.*]] = getelementptr inbounds [[STRUCT_INNER:%.*]], ptr {{%.*}}, i32 0, i32 0
+// I386-NEXT:    store i32 [[TMP1:%.*]], ptr [[DOT_COUNTED_BY_GEP]], align 4
+//
+struct inner *test5(int count) {
+  struct inner *entries = __builtin_malloc(sizeof(*entries) + count * sizeof(*entries->ent));
+  if (entries)
+    *__builtin_counted_by_ref(entries->ent) = count;
+  return entries;
+}

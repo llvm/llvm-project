@@ -2931,13 +2931,13 @@ public:
   }
 };
 
-/// This represents '#pragma omp ordered' directive.
+/// This represents standalone '#pragma omp ordered' directive.
 ///
 /// \code
 /// #pragma omp ordered
 /// \endcode
 ///
-class OMPOrderedDirective : public OMPExecutableDirective {
+class OMPOrderedStandaloneDirective : public OMPExecutableDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
   /// Build directive with the given start and end location.
@@ -2945,16 +2945,70 @@ class OMPOrderedDirective : public OMPExecutableDirective {
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
   ///
-  OMPOrderedDirective(SourceLocation StartLoc, SourceLocation EndLoc)
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, StartLoc, EndLoc) {}
+  OMPOrderedStandaloneDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPOrderedStandaloneDirectiveClass,
+                               llvm::omp::OMPD_ordered_standalone, StartLoc,
+                               EndLoc) {}
 
   /// Build an empty directive.
   ///
-  explicit OMPOrderedDirective()
-      : OMPExecutableDirective(OMPOrderedDirectiveClass,
-                               llvm::omp::OMPD_ordered, SourceLocation(),
-                               SourceLocation()) {}
+  explicit OMPOrderedStandaloneDirective()
+      : OMPExecutableDirective(OMPOrderedStandaloneDirectiveClass,
+                               llvm::omp::OMPD_ordered_standalone,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses List of clauses.
+  ///
+  static OMPOrderedStandaloneDirective *Create(const ASTContext &C,
+                                               SourceLocation StartLoc,
+                                               SourceLocation EndLoc,
+                                               ArrayRef<OMPClause *> Clauses);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPOrderedStandaloneDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPOrderedStandaloneDirectiveClass;
+  }
+};
+
+/// This represents block-associated '#pragma omp ordered' directive.
+///
+/// \code
+/// #pragma omp ordered
+/// { body }
+/// \endcode
+///
+class OMPOrderedBlockAssocDirective : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPOrderedBlockAssocDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPOrderedBlockAssocDirectiveClass,
+                               llvm::omp::OMPD_ordered_blockassoc, StartLoc,
+                               EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPOrderedBlockAssocDirective()
+      : OMPExecutableDirective(OMPOrderedBlockAssocDirectiveClass,
+                               llvm::omp::OMPD_ordered_blockassoc,
+                               SourceLocation(), SourceLocation()) {}
 
 public:
   /// Creates directive.
@@ -2965,7 +3019,7 @@ public:
   /// \param Clauses List of clauses.
   /// \param AssociatedStmt Statement, associated with the directive.
   ///
-  static OMPOrderedDirective *
+  static OMPOrderedBlockAssocDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt);
 
@@ -2973,14 +3027,12 @@ public:
   ///
   /// \param C AST context.
   /// \param NumClauses Number of clauses.
-  /// \param IsStandalone true, if the standalone directive is created.
   ///
-  static OMPOrderedDirective *CreateEmpty(const ASTContext &C,
-                                          unsigned NumClauses,
-                                          bool IsStandalone, EmptyShell);
+  static OMPOrderedBlockAssocDirective *
+  CreateEmpty(const ASTContext &C, unsigned NumClauses, EmptyShell);
 
   static bool classof(const Stmt *T) {
-    return T->getStmtClass() == OMPOrderedDirectiveClass;
+    return T->getStmtClass() == OMPOrderedBlockAssocDirectiveClass;
   }
 };
 
@@ -6062,6 +6114,84 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPFuseDirectiveClass;
+  }
+};
+
+/// Represents the '#pragma omp split' loop transformation directive.
+///
+/// \code{.c}
+///   #pragma omp split counts(3, omp_fill, 2)
+///   for (int i = 0; i < n; ++i)
+///     ...
+/// \endcode
+///
+/// This directive transforms a single loop into multiple loops based on
+/// index ranges. The transformation splits the iteration space of the loop
+/// into multiple contiguous ranges. The \c counts clause is required and
+/// exactly one list item must be \c omp_fill.
+class OMPSplitDirective final
+    : public OMPCanonicalLoopNestTransformationDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Offsets of child members.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPSplitDirective(SourceLocation StartLoc, SourceLocation EndLoc,
+                             unsigned NumLoops)
+      : OMPCanonicalLoopNestTransformationDirective(
+            OMPSplitDirectiveClass, llvm::omp::OMPD_split, StartLoc, EndLoc,
+            NumLoops) {}
+
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp split'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses (e.g. the required \c counts
+  ///                  clause).
+  /// \param NumLoops  Number of affected loops (should be 1 for split).
+  /// \param AssociatedStmt  The outermost associated loop.
+  /// \param TransformedStmt The loop nest after splitting, or nullptr in
+  ///                        dependent contexts.
+  /// \param PreInits   Helper preinits statements for the loop nest.
+  static OMPSplitDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   unsigned NumLoops, Stmt *AssociatedStmt,
+                                   Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp split' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  /// \param NumLoops   Number of associated loops to allocate.
+  static OMPSplitDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, unsigned NumLoops);
+
+  /// Gets/sets the associated loops after the transformation, i.e. after
+  /// de-sugaring.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return preinits statement.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPSplitDirectiveClass;
   }
 };
 

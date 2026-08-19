@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -39,6 +38,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
+  ThrowsUnknown = ThrowsUnknown || Other.ThrowsUnknown;
   ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
@@ -135,15 +135,14 @@ static bool isStandardPointerConvertible(QualType From, QualType To) {
   // be converted to a prvalue of type “pointer to cv B”, where B is a base
   // class of D. If B is an inaccessible or ambiguous base class of D, a program
   // that necessitates this conversion is ill-formed.
-  if (const auto *RD = From->getPointeeCXXRecordDecl()) {
-    if (RD->isCompleteDefinition() &&
-        isBaseOf(From->getPointeeType().getTypePtr(),
-                 To->getPointeeType().getTypePtr())) {
-      // If B is an inaccessible or ambiguous base class of D, a program
-      // that necessitates this conversion is ill-formed
-      return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
-                                          To->getPointeeType().getTypePtr());
-    }
+  if (const auto *RD = From->getPointeeCXXRecordDecl();
+      RD && RD->isCompleteDefinition() &&
+      isBaseOf(From->getPointeeType().getTypePtr(),
+               To->getPointeeType().getTypePtr())) {
+    // If B is an inaccessible or ambiguous base class of D, a program
+    // that necessitates this conversion is ill-formed
+    return isUnambiguousPublicBaseClass(From->getPointeeType().getTypePtr(),
+                                        To->getPointeeType().getTypePtr());
   }
 
   return false;
@@ -253,12 +252,10 @@ static bool isQualificationConvertiblePointer(QualType From, QualType To,
 
   int I = 0;
   bool ConstUntilI = true;
-  auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
-                                             const QualType &To) {
-    if (I > 1) {
-      if (From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
-        return false;
-    }
+  const auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
+                                                   const QualType &To) {
+    if (I > 1 && From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
+      return false;
 
     if (I > 0) {
       if (From.isConstQualified() && !To.isConstQualified())
@@ -330,6 +327,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -356,7 +359,7 @@ static bool canThrow(const FunctionDecl *Func) {
 ExceptionAnalyzer::ExceptionInfo::Throwables
 ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
                                                 const ASTContext &Context) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *ExceptionTy = ThrownException.getFirst();
     const CanQualType ExceptionCanTy =
@@ -426,19 +429,19 @@ ExceptionAnalyzer::ExceptionInfo::filterByCatch(const Type *HandlerTy,
 ExceptionAnalyzer::ExceptionInfo &
 ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
     const llvm::StringSet<> &IgnoredTypes, bool IgnoreBadAlloc) {
-  llvm::SmallVector<const Type *, 8> TypesToDelete;
+  SmallVector<const Type *, 8> TypesToDelete;
   // Note: Using a 'SmallSet' with 'llvm::remove_if()' is not possible.
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
-    if (const auto *TD = T->getAsTagDecl()) {
-      if (TD->getDeclName().isIdentifier()) {
-        if ((IgnoreBadAlloc &&
-             (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.contains(TD->getName())))
-          TypesToDelete.push_back(T);
-      }
-    }
+    if (!T)
+      continue;
+    if (const auto *TD = T->getAsTagDecl();
+        TD && TD->getDeclName().isIdentifier() &&
+        ((IgnoreBadAlloc &&
+          (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
+         IgnoredTypes.contains(TD->getName())))
+      TypesToDelete.push_back(T);
   }
   for (const Type *T : TypesToDelete)
     ThrownExceptions.erase(T);
@@ -450,11 +453,12 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
 void ExceptionAnalyzer::ExceptionInfo::clear() {
   Behaviour = State::NotThrowing;
   ContainsUnknown = false;
+  ThrowsUnknown = false;
   ThrownExceptions.clear();
 }
 
 void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
-  if (ThrownExceptions.empty())
+  if (ThrownExceptions.empty() && !ThrowsUnknown)
     if (ContainsUnknown)
       Behaviour = State::Unknown;
     else
@@ -482,12 +486,28 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
+    // Optionally treat unannotated functions as potentially throwing if they
+    // are not explicitly non-throwing and no throw was discovered.
+    if (AssumeUnannotatedFunctionsAsThrowing &&
+        Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    }
+
     CallStack.erase(Func);
     return Result;
   }
 
+  // Functions without a visible body can still be known non-throwing from their
+  // exception specification.
+  if (!canThrow(Func))
+    return ExceptionInfo::createNonThrowing();
+
   auto Result = ExceptionInfo::createUnknown();
+
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(
@@ -496,6 +516,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       CallStack.erase(Func);
     }
   }
+
+  if (AssumeMissingDefinitionsFunctionsAsThrowing &&
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
+
   return Result;
 }
 
@@ -520,11 +548,12 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.registerException(
           ThrownExpr->getType()->getUnqualifiedDesugaredType(),
           {Throw->getBeginLoc(), CallStack});
-    } else
+    } else {
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
       // the parent try-catch block.
       Results.registerExceptions(Caught);
+    }
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
@@ -630,8 +659,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
     // The results here might be relevant to different analysis passes
     // with different needs as well.
     FunctionCache.try_emplace(Func, ExceptionList);
-  } else
+  } else {
     ExceptionList = CacheEntry->getSecond();
+  }
 
   return ExceptionList;
 }

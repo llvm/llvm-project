@@ -20,15 +20,6 @@ public:
     Update();
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
-  }
-
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_elements.size();
@@ -84,8 +75,7 @@ ValueObjectSP TupleFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!val_sp)
     return nullptr;
 
-  m_elements[idx] =
-      val_sp->Clone(ConstString(llvm::formatv("[{0}]", idx).str())).get();
+  m_elements[idx] = val_sp->Clone(llvm::formatv("[{0}]", idx).str()).get();
   return m_elements[idx]->GetSP();
 }
 

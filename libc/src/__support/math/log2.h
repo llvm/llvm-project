@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace log2_internal {
 // 128-bit precision dyadic floating point numbers.
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
 
@@ -832,7 +832,7 @@ alignas(16) LIBC_INLINE_VAR constexpr LogRR LOG2_TABLE = {
 // > P;
 // > dirtyinfnorm(log2(1 + x)/x - P, [-0x1.0002143p-29 , 0x1p-29]);
 // 0x1.27ad5...p-121
-LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
+LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[4]{
     {Sign::NEG, -129, 0xb8aa3b29'5c2b21e3'3eccf694'0d66bbcc_u128},
     {Sign::POS, -129, 0xf6384ee1'd01febc9'ee39a6d6'49394bb1_u128},
     {Sign::NEG, -128, 0xb8aa3b29'5c17f0bb'be87fed0'67ea2ad5_u128},
@@ -841,20 +841,20 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
 
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
-LIBC_INLINE static double log2_accurate(int e_x, int index, double m_x) {
+LIBC_INLINE double log2_accurate(int e_x, int index, double m_x) {
 
-  Float128 sum(static_cast<float>(e_x));
+  DFloat128 sum(static_cast<float>(e_x));
   sum = fputil::quick_add(sum, LOG2_TABLE.step_1[index]);
 
-  Float128 v_f128 = log_range_reduction(m_x, LOG2_TABLE, sum);
+  DFloat128 v_f128 = log_range_reduction(m_x, LOG2_TABLE, sum);
 
   // Polynomial approximation
-  Float128 p = fputil::quick_mul(v_f128, BIG_COEFFS[0]);
+  DFloat128 p = fputil::quick_mul(v_f128, BIG_COEFFS[0]);
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[1]));
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[2]));
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[3]));
 
-  Float128 r = fputil::quick_add(sum, p);
+  DFloat128 r = fputil::quick_add(sum, p);
 
   return static_cast<double>(r);
 }
@@ -862,7 +862,7 @@ LIBC_INLINE static double log2_accurate(int e_x, int index, double m_x) {
 
 } // namespace log2_internal
 
-LIBC_INLINE static double log2(double x) {
+LIBC_INLINE double log2(double x) {
   using namespace log2_internal;
   using namespace common_constants_internal;
   using FPBits_t = typename fputil::FPBits<double>;

@@ -241,9 +241,8 @@ define <32 x i8> @shl2_v32i8(<32 x i8> %a, <32 x i8> %mask) {
 ; SSE2-NEXT:    pcmpgtb %xmm2, %xmm6
 ; SSE2-NEXT:    movdqa %xmm6, %xmm7
 ; SSE2-NEXT:    pandn %xmm0, %xmm7
-; SSE2-NEXT:    psllw $2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; SSE2-NEXT:    pand %xmm8, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
+; SSE2-NEXT:    paddb %xmm0, %xmm0
 ; SSE2-NEXT:    pand %xmm6, %xmm0
 ; SSE2-NEXT:    por %xmm7, %xmm0
 ; SSE2-NEXT:    paddb %xmm2, %xmm2
@@ -259,8 +258,8 @@ define <32 x i8> @shl2_v32i8(<32 x i8> %a, <32 x i8> %mask) {
 ; SSE2-NEXT:    pcmpgtb %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; SSE2-NEXT:    pandn %xmm1, %xmm5
-; SSE2-NEXT:    psllw $2, %xmm1
-; SSE2-NEXT:    pand %xmm8, %xmm1
+; SSE2-NEXT:    paddb %xmm1, %xmm1
+; SSE2-NEXT:    paddb %xmm1, %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm5, %xmm1
 ; SSE2-NEXT:    paddb %xmm3, %xmm3
@@ -274,41 +273,38 @@ define <32 x i8> @shl2_v32i8(<32 x i8> %a, <32 x i8> %mask) {
 ;
 ; SSE42-LABEL: shl2_v32i8:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm3, %xmm4
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm4
 ; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    movdqa {{.*#+}} xmm3 = [49344,49344,49344,49344,49344,49344,49344,49344]
-; SSE42-NEXT:    movdqa %xmm5, %xmm6
-; SSE42-NEXT:    pand %xmm3, %xmm6
-; SSE42-NEXT:    paddb %xmm6, %xmm6
-; SSE42-NEXT:    movdqa %xmm0, %xmm7
-; SSE42-NEXT:    psllw $2, %xmm7
-; SSE42-NEXT:    movdqa {{.*#+}} xmm8 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; SSE42-NEXT:    pand %xmm8, %xmm7
-; SSE42-NEXT:    movdqa %xmm5, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm7, %xmm2
-; SSE42-NEXT:    movdqa %xmm2, %xmm5
-; SSE42-NEXT:    paddb %xmm2, %xmm5
-; SSE42-NEXT:    movdqa %xmm6, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm5, %xmm2
-; SSE42-NEXT:    pand %xmm4, %xmm3
-; SSE42-NEXT:    movdqa %xmm1, %xmm5
-; SSE42-NEXT:    psllw $2, %xmm5
-; SSE42-NEXT:    pand %xmm8, %xmm5
+; SSE42-NEXT:    movdqa %xmm0, %xmm5
+; SSE42-NEXT:    paddb %xmm0, %xmm5
+; SSE42-NEXT:    paddb %xmm5, %xmm5
 ; SSE42-NEXT:    movdqa %xmm4, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm5, %xmm1
-; SSE42-NEXT:    paddb %xmm3, %xmm3
+; SSE42-NEXT:    pblendvb %xmm0, %xmm5, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm6
+; SSE42-NEXT:    paddb %xmm2, %xmm6
+; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [49344,49344,49344,49344,49344,49344,49344,49344]
+; SSE42-NEXT:    pand %xmm5, %xmm4
+; SSE42-NEXT:    paddb %xmm4, %xmm4
+; SSE42-NEXT:    movdqa %xmm4, %xmm0
+; SSE42-NEXT:    pblendvb %xmm0, %xmm6, %xmm2
 ; SSE42-NEXT:    movdqa %xmm1, %xmm4
 ; SSE42-NEXT:    paddb %xmm1, %xmm4
+; SSE42-NEXT:    paddb %xmm4, %xmm4
 ; SSE42-NEXT:    movdqa %xmm3, %xmm0
+; SSE42-NEXT:    pblendvb %xmm0, %xmm4, %xmm1
+; SSE42-NEXT:    movdqa %xmm1, %xmm4
+; SSE42-NEXT:    paddb %xmm1, %xmm4
+; SSE42-NEXT:    pand %xmm3, %xmm5
+; SSE42-NEXT:    paddb %xmm5, %xmm5
+; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    pblendvb %xmm0, %xmm4, %xmm1
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: shl2_v32i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
+; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -318,8 +314,8 @@ define <32 x i8> @shl2_v32i8(<32 x i8> %a, <32 x i8> %mask) {
 ;
 ; AVX512-LABEL: shl2_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
+; AVX512-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
+; AVX512-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; AVX512-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
 ; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm1

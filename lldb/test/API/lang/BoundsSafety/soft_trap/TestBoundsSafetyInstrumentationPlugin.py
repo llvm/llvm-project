@@ -13,6 +13,8 @@ SOFT_TRAP_FUNC_WITH_STR = "__bounds_safety_soft_trap_s"
 
 
 class BoundsSafetyTestSoftTrapPlugin(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def _check_stop_reason_impl(
         self,
         expected_soft_trap_func: str,

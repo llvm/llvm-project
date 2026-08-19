@@ -103,62 +103,22 @@
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-feature" "+svnapot"
 // MCPU-XIANGSHAN-KUNMINGHU-SAME: "-target-abi" "lp64d"
 
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-a100 | FileCheck -check-prefix=MCPU-SPACEMIT-A100 %s
+// MCPU-SPACEMIT-A100: "-target-cpu" "spacemit-a100"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-a100.c`
+// MCPU-SPACEMIT-A100-SAME: "-target-feature" "+xsmtvdotii"
+// MCPU-SPACEMIT-A100-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-a100 | FileCheck -check-prefix=MTUNE-SPACEMIT-A100 %s
+// MTUNE-SPACEMIT-A100: "-tune-cpu" "spacemit-a100"
+
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x60 | FileCheck -check-prefix=MCPU-SPACEMIT-X60 %s
-// MCPU-SPACEMIT-X60: "-nostdsysteminc" "-target-cpu" "spacemit-x60"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+m"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+a"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+f"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+d"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+c"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+v"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zic64b"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicbom"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicbop"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicboz"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+ziccamoa"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+ziccif"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicclsm"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+ziccrse"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicntr"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicond"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zicsr"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zifencei"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zihintpause"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zihpm"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+za64rs"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zfh"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zfhmin"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zba"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zbb"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zbc"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zbkc"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zbs"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zkt"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve32f"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve32x"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve64d"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve64f"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zve64x"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvfh"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvfhmin"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvkt"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvl128b"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvl256b"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvl32b"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zvl64b"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+ssccptr"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sscofpmf"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sscounterenw"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sstc"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sstvala"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+sstvecd"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svade"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svbare"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svinval"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svnapot"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svpbmt"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
+// MCPU-SPACEMIT-X60: "-target-cpu" "spacemit-x60"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-spacemit-x60.c`
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=spacemit-x60 | FileCheck -check-prefix=MTUNE-SPACEMIT-X60 %s
+// MTUNE-SPACEMIT-X60: "-tune-cpu" "spacemit-x60"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=spacemit-x100 | FileCheck -check-prefix=MCPU-SPACEMIT-X100 %s
 // MCPU-SPACEMIT-X100: "-target-cpu" "spacemit-x100"
@@ -172,6 +132,20 @@
 // RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
 // RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
+
+// -march=native is an alias for -mcpu=native. We cannot check much for it, but
+// it should be replaced by a valid CPU string and never treated as an ISA
+// string.
+// RUN: %clang --target=riscv64 -### -c %s -march=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MARCH-NATIVE %s
+// MARCH-NATIVE-NOT: "-target-cpu" "native"
+// MARCH-NATIVE-NOT: invalid arch name 'native'
+
+// -mcpu takes priority over -march=native when choosing the target CPU,
+// regardless of the order of the options.
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -march=native -mcpu=rocket-rv64 | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=rocket-rv64 -march=native | FileCheck -check-prefix=MARCH-NATIVE-MCPU %s
+// MARCH-NATIVE-MCPU: "-target-cpu" "rocket-rv64"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
 // MTUNE-ROCKET32: "-tune-cpu" "rocket-rv32"
@@ -258,6 +232,7 @@
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknc"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkned"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkng"
+// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknha"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknhb"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkt"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl128b"
@@ -428,6 +403,10 @@
 // MARCH-UNSET: "-target-feature" "+c"
 // MARCH-UNSET-SAME: "-target-abi" "ilp32"
 
+// Invalid -march= is an error even with a valid -mcpu
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=bad -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-INVALID-MCPU %s
+// MARCH-INVALID-MCPU: invalid arch name 'bad', string must begin with rv32{i,e,g,y}, rv64{i,e,g,y}, or a supported profile name
+
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.
 //
@@ -461,6 +440,16 @@
 // MCPU-SIFIVE-X390: "-target-cpu" "sifive-x390"
 // COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-x390.c`
 // MCPU-SIFIVE-X390-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang -target riscv32 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x160 | FileCheck -check-prefix=MCPU-SIFIVE-X160 %s
+// MCPU-SIFIVE-X160: "-target-cpu" "sifive-x160"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-x160.c`
+// MCPU-SIFIVE-X160-SAME: "-target-abi" "ilp32f"
+
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -menable-experimental-extensions -mcpu=sifive-x180 | FileCheck -check-prefix=MCPU-SIFIVE-X180 %s
+// MCPU-SIFIVE-X180: "-target-cpu" "sifive-x180"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-x180.c`
+// MCPU-SIFIVE-X180-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p450 | FileCheck -check-prefix=MCPU-SIFIVE-P450 %s
 // MCPU-SIFIVE-P450: "-nostdsysteminc" "-target-cpu" "sifive-p450"
@@ -600,10 +589,10 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvkt"
 // MCPU-SIFIVE-P670-SAME: "-target-abi" "lp64d"
 
-// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870 | FileCheck -check-prefix=MCPU-SIFIVE-P870 %s
-// MCPU-SIFIVE-P870: "-target-cpu" "sifive-p870"
-// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870.c`
-// MCPU-SIFIVE-P870-SAME: "-target-abi" "lp64d"
+// RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p870-d | FileCheck -check-prefix=MCPU-SIFIVE-P870-D %s
+// MCPU-SIFIVE-P870-D: "-target-cpu" "sifive-p870-d"
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-sifive-p870-d.c`
+// MCPU-SIFIVE-P870-D-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv32 -### -c %s 2>&1 -mcpu=rp2350-hazard3 | FileCheck -check-prefix=MCPU-HAZARD3 %s
 // MCPU-HAZARD3: "-target-cpu" "rp2350-hazard3"
@@ -787,3 +776,13 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45mpv | FileCheck -check-prefix=MTUNE-ANDES-AX45MPV %s
 // MTUNE-ANDES-AX45MPV: "-tune-cpu" "andes-ax45mpv"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c910v2 | FileCheck -check-prefix=MCPU-XT-C910V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c910v2.c`
+// MCPU-XT-C910V2: "-target-cpu" "xt-c910v2"
+// MCPU-XT-C910V2-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c920v2 | FileCheck -check-prefix=MCPU-XT-C920V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c920v2.c`
+// MCPU-XT-C920V2: "-target-cpu" "xt-c920v2"
+// MCPU-XT-C920V2-SAME: "-target-abi" "lp64d"

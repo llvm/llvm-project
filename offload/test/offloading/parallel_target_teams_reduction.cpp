@@ -3,7 +3,7 @@
 
 // FIXME: This is a bug in host offload, this should run fine.
 // REQUIRES: gpu
-// XFAIL: intelgpu
+// UNSUPPORTED: intelgpu
 
 #include <iostream>
 #include <vector>

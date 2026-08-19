@@ -102,47 +102,47 @@ struct MemfunctionBenchmarkBase : public BenchmarkSetup {
   virtual Study run() = 0;
 
   CircularArrayRef<ParameterBatch::ParameterType>
-  generateBatch(size_t Iterations) {
+  generate_batch(size_t iterations) {
     randomize();
-    return cycle(ArrayRef(Parameters), Iterations);
+    return cycle(ArrayRef(parameters), iterations);
   }
 
 protected:
   Study createStudy() {
-    Study Study;
+    Study study;
     // Setup study.
-    Study.StudyName = StudyName;
-    Runtime &RI = Study.Runtime;
-    RI.Host = HostState::get();
-    RI.BufferSize = BufferSize;
-    RI.BatchParameterCount = BatchSize;
+    study.study_name = StudyName;
+    Runtime &ri = study.runtime;
+    ri.host = HostState::get();
+    ri.buffer_size = buffer_size;
+    ri.batch_parameter_count = batch_size;
 
-    BenchmarkOptions &BO = RI.BenchmarkOptions;
-    BO.MinDuration = std::chrono::milliseconds(1);
-    BO.MaxDuration = std::chrono::seconds(1);
-    BO.MaxIterations = 10'000'000U;
-    BO.MinSamples = 4;
-    BO.MaxSamples = 1000;
-    BO.Epsilon = 0.01; // 1%
-    BO.ScalingFactor = 1.4;
+    BenchmarkOptions &bo = ri.benchmark_options;
+    bo.min_duration = std::chrono::milliseconds(1);
+    bo.max_duration = std::chrono::seconds(1);
+    bo.max_iterations = 10'000'000U;
+    bo.min_samples = 4;
+    bo.max_samples = 1000;
+    bo.epsilon = 0.01; // 1%
+    bo.scaling_factor = 1.4;
 
-    StudyConfiguration &SC = Study.Configuration;
-    SC.NumTrials = NumTrials;
-    SC.IsSweepMode = SweepMode;
-    SC.AccessAlignment = MaybeAlign(AlignedAccess);
-    SC.Function = LIBC_BENCHMARK_FUNCTION_NAME;
-    return Study;
+    StudyConfiguration &sc = study.configuration;
+    sc.num_trials = NumTrials;
+    sc.is_sweep_mode = SweepMode;
+    sc.access_alignment = MaybeAlign(AlignedAccess);
+    sc.function = LIBC_BENCHMARK_FUNCTION_NAME;
+    return study;
   }
 
-  void runTrials(const BenchmarkOptions &Options,
-                 std::vector<Duration> &Measurements) {
+  void runTrials(const BenchmarkOptions &options,
+                 std::vector<Duration> &measurements) {
     for (size_t i = 0; i < NumTrials; ++i) {
-      const BenchmarkResult Result = benchmark(
-          Options, *this, [this](ParameterBatch::ParameterType Parameter) {
-            return Call(Parameter, LIBC_BENCHMARK_FUNCTION);
+      const BenchmarkResult result = benchmark(
+          options, *this, [this](ParameterBatch::ParameterType parameter) {
+            return call(parameter, LIBC_BENCHMARK_FUNCTION);
           });
-      Measurements.push_back(Result.BestGuess);
-      reportProgress(Measurements);
+      measurements.push_back(result.best_guess);
+      reportProgress(measurements);
     }
   }
 
@@ -173,72 +173,73 @@ private:
 
 struct MemfunctionBenchmarkSweep final : public MemfunctionBenchmarkBase {
   MemfunctionBenchmarkSweep()
-      : OffsetSampler(MemfunctionBenchmarkBase::BufferSize, SweepMaxSize,
-                      MaybeAlign(AlignedAccess)) {}
+      : offset_sampler(MemfunctionBenchmarkBase::buffer_size, SweepMaxSize,
+                       MaybeAlign(AlignedAccess)) {}
 
   virtual void randomize() override {
-    for (auto &P : Parameters) {
-      P.OffsetBytes = OffsetSampler(Gen);
-      P.SizeBytes = CurrentSweepSize;
-      checkValid(P);
+    for (auto &p : parameters) {
+      p.offset_bytes = offset_sampler(gen);
+      p.size_bytes = current_sweep_size;
+      check_valid(p);
     }
   }
 
   virtual Study run() override {
-    Study Study = createStudy();
-    Study.Configuration.SweepModeMaxSize = SweepMaxSize;
-    BenchmarkOptions &BO = Study.Runtime.BenchmarkOptions;
-    BO.MinDuration = std::chrono::milliseconds(1);
-    BO.InitialIterations = 100;
-    auto &Measurements = Study.Measurements;
-    Measurements.reserve(NumTrials * SweepMaxSize);
+    Study study = createStudy();
+    study.configuration.sweep_mode_max_size = SweepMaxSize;
+    BenchmarkOptions &bo = study.runtime.benchmark_options;
+    bo.min_duration = std::chrono::milliseconds(1);
+    bo.initial_iterations = 100;
+    auto &measurements = study.measurements;
+    measurements.reserve(NumTrials * SweepMaxSize);
     for (size_t Size = SweepMinSize; Size <= SweepMaxSize; ++Size) {
-      CurrentSweepSize = Size;
-      runTrials(BO, Measurements);
+      current_sweep_size = Size;
+      runTrials(bo, measurements);
     }
-    return Study;
+    return study;
   }
 
 private:
-  size_t CurrentSweepSize = 0;
-  OffsetDistribution OffsetSampler;
-  std::mt19937_64 Gen;
+  size_t current_sweep_size = 0;
+  OffsetDistribution offset_sampler;
+  std::mt19937_64 gen;
 };
 
 struct MemfunctionBenchmarkDistribution final
     : public MemfunctionBenchmarkBase {
-  MemfunctionBenchmarkDistribution(MemorySizeDistribution Distribution)
-      : Distribution(Distribution), Probabilities(Distribution.Probabilities),
-        SizeSampler(Probabilities.begin(), Probabilities.end()),
-        OffsetSampler(MemfunctionBenchmarkBase::BufferSize,
-                      Probabilities.size() - 1, MaybeAlign(AlignedAccess)) {}
+  MemfunctionBenchmarkDistribution(MemorySizeDistribution distribution_arg)
+      : distribution(distribution_arg),
+        probabilities(distribution_arg.probabilities),
+        size_sampler(probabilities.begin(), probabilities.end()),
+        offset_sampler(MemfunctionBenchmarkBase::buffer_size,
+                       probabilities.size() - 1, MaybeAlign(AlignedAccess)) {}
 
   virtual void randomize() override {
-    for (auto &P : Parameters) {
-      P.OffsetBytes = OffsetSampler(Gen);
-      P.SizeBytes = SizeSampler(Gen);
-      checkValid(P);
+    for (auto &p : parameters) {
+      p.offset_bytes = offset_sampler(gen);
+      p.size_bytes = size_sampler(gen);
+      check_valid(p);
     }
   }
 
   virtual Study run() override {
-    Study Study = createStudy();
-    Study.Configuration.SizeDistributionName = Distribution.Name.str();
-    BenchmarkOptions &BO = Study.Runtime.BenchmarkOptions;
-    BO.MinDuration = std::chrono::milliseconds(10);
-    BO.InitialIterations = BatchSize * 10;
-    auto &Measurements = Study.Measurements;
-    Measurements.reserve(NumTrials);
-    runTrials(BO, Measurements);
-    return Study;
+    Study study = createStudy();
+    study.configuration.size_distribution_name = distribution.name.str();
+    BenchmarkOptions &bo = study.runtime.benchmark_options;
+    bo.min_duration = std::chrono::milliseconds(10);
+    bo.initial_iterations = batch_size * 10;
+    auto &measurements = study.measurements;
+    measurements.reserve(NumTrials);
+    runTrials(bo, measurements);
+    return study;
   }
 
 private:
-  MemorySizeDistribution Distribution;
-  ArrayRef<double> Probabilities;
-  std::discrete_distribution<unsigned> SizeSampler;
-  OffsetDistribution OffsetSampler;
-  std::mt19937_64 Gen;
+  MemorySizeDistribution distribution;
+  ArrayRef<double> probabilities;
+  std::discrete_distribution<unsigned> size_sampler;
+  OffsetDistribution offset_sampler;
+  std::mt19937_64 gen;
 };
 
 void writeStudy(const Study &S) {
@@ -270,7 +271,7 @@ void main() {
     Benchmark.reset(new MemfunctionBenchmarkSweep());
   else
     Benchmark.reset(new MemfunctionBenchmarkDistribution(getDistributionOrDie(
-        BenchmarkSetup::getDistributions(), SizeDistributionName)));
+        BenchmarkSetup::get_distributions(), SizeDistributionName)));
   writeStudy(Benchmark->run());
 }
 

@@ -27,4 +27,4 @@ MDString *getOCLKernelArgAccessQual(const Function &F, unsigned ArgIdx);
 MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx);
 
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_METADATA_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVMETADATA_H

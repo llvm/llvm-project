@@ -96,7 +96,7 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                              MemoryRegionInfo &range_info) override;
 
-  Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  Status ReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
@@ -121,8 +121,6 @@ public:
                        bool hardware) override;
 
   Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false) override;
-
-  void DoStopIDBumped(uint32_t newBumpId) override;
 
   Status GetLoadedModuleFileSpec(const char *module_path,
                                  FileSpec &file_spec) override;
@@ -177,7 +175,6 @@ private:
   ArchSpec m_arch;
 
   LazyBool m_supports_mem_region = eLazyBoolCalculate;
-  std::vector<std::pair<MemoryRegionInfo, FileSpec>> m_mem_region_cache;
 
   lldb::tid_t m_pending_notification_tid = LLDB_INVALID_THREAD_ID;
 

@@ -10,7 +10,6 @@
 #define LLDB_INITIALIZATION_SYSTEMLIFETIMEMANAGER_H
 
 #include "lldb/Initialization/SystemInitializer.h"
-#include "lldb/lldb-private-types.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -29,7 +28,8 @@ public:
 private:
   std::recursive_mutex m_mutex;
   std::unique_ptr<SystemInitializer> m_initializer;
-  bool m_initialized = false;
+  uint8_t m_initialized = 0;
+  uint8_t m_terminated = 0;
 
   // Noncopyable.
   SystemLifetimeManager(const SystemLifetimeManager &other) = delete;

@@ -21,6 +21,20 @@ module attributes {
     // CHECK: spirv.IsInf %{{.*}} : vector<4xf32>
     %5 = math.isinf %v : vector<4xf32>
 
+    // CHECK: spirv.IsNormal %{{.*}} : f32
+    %6 = math.isnormal %x : f32
+    // CHECK: spirv.IsNormal %{{.*}} : vector<4xf32>
+    %7 = math.isnormal %v : vector<4xf32>
+
+    return
+  }
+
+  // CHECK-LABEL: @ctpop
+  func.func @ctpop(%i: i32, %iv: vector<4xi32>) {
+    // CHECK: spirv.BitCount %{{.*}} : i32
+    %0 = math.ctpop %i : i32
+    // CHECK: spirv.BitCount %{{.*}} : vector<4xi32>
+    %1 = math.ctpop %iv : vector<4xi32>
     return
   }
 

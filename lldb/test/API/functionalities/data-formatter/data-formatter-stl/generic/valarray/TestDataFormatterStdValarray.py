@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdValarrayDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
@@ -51,7 +53,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable va_int[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(valarray<int>) va_int"'],
+            substrs=['array index 4 is not valid for "(valarray'],
         )
 
         self.expect(
@@ -74,7 +76,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable va_double[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(valarray<double>) va_double"'],
+            substrs=['array index 4 is not valid for "(valarray'],
         )
 
         #
@@ -101,7 +103,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable sa[4]",
             error=True,
-            substrs=['array index 4 is not valid for "(slice_array<int>) sa"'],
+            substrs=['array index 4 is not valid for "(slice_array'],
         )
 
         #
@@ -126,7 +128,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ga[3]",
             error=True,
-            substrs=['array index 3 is not valid for "(gslice_array<int>) ga"'],
+            substrs=['array index 3 is not valid for "(gslice_array'],
         )
         #
         # std::mask_array
@@ -148,7 +150,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ma[2]",
             error=True,
-            substrs=['array index 2 is not valid for "(mask_array<int>) ma"'],
+            substrs=['array index 2 is not valid for "(mask_array'],
         )
 
         #
@@ -173,7 +175,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable ia[3]",
             error=True,
-            substrs=['array index 3 is not valid for "(indirect_array<int>) ia"'],
+            substrs=['array index 3 is not valid for "(indirect_array'],
         )
 
     @add_test_categories(["libc++"])

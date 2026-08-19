@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 std::array data = [] {
   std::uniform_int_distribution<int> distribution{std::numeric_limits<int>::min(), std::numeric_limits<int>::max()};
@@ -30,7 +31,7 @@ std::array data = [] {
   return result;
 }();
 
-static void BM_sprintf(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_sprintf(benchmark::State& state) {
   std::array<char, 100> output;
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
@@ -39,7 +40,7 @@ static void BM_sprintf(benchmark::State& state) {
     }
 }
 
-static void BM_to_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_string(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       std::string s = std::to_string(value);
@@ -47,7 +48,7 @@ static void BM_to_string(benchmark::State& state) {
     }
 }
 
-static void BM_to_chars(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars(benchmark::State& state) {
   std::array<char, 100> output;
 
   while (state.KeepRunningBatch(data.size()))
@@ -57,7 +58,7 @@ static void BM_to_chars(benchmark::State& state) {
     }
 }
 
-static void BM_to_chars_as_string(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_to_chars_as_string(benchmark::State& state) {
   std::array<char, 100> output;
 
   while (state.KeepRunningBatch(data.size()))
@@ -68,7 +69,7 @@ static void BM_to_chars_as_string(benchmark::State& state) {
     }
 }
 
-static void BM_format(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       std::string s = std::format("{}", value);
@@ -77,7 +78,7 @@ static void BM_format(benchmark::State& state) {
 }
 
 template <class C>
-static void BM_format_to_back_inserter(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_back_inserter(benchmark::State& state) {
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
       C c;
@@ -87,7 +88,7 @@ static void BM_format_to_back_inserter(benchmark::State& state) {
 }
 
 template <class F>
-static void BM_format_to_iterator(benchmark::State& state, F&& f) {
+static TEST_ALIGN_BENCHMARK void BM_format_to_iterator(benchmark::State& state, F&& f) {
   auto output = f();
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
@@ -96,27 +97,33 @@ static void BM_format_to_iterator(benchmark::State& state, F&& f) {
     }
 }
 
-BENCHMARK(BM_sprintf);
-BENCHMARK(BM_to_string);
-BENCHMARK(BM_to_chars);
-BENCHMARK(BM_to_chars_as_string);
-BENCHMARK(BM_format);
-BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::string);
-BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::vector<char>);
-BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::list<char>);
+BENCHMARK(BM_sprintf)->Name("std::sprintf(int)");
+BENCHMARK(BM_to_string)->Name("std::to_string(int)");
+BENCHMARK(BM_to_chars)->Name("std::to_chars(int)");
+BENCHMARK(BM_to_chars_as_string)->Name("std::to_chars(int) (as std::string)");
+BENCHMARK(BM_format)->Name("std::format(int)");
+BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::string)
+    ->Name("std::format_to(int) (std::back_insert_iterator<std::string>)");
+BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::vector<char>)
+    ->Name("std::format_to(int) (std::back_insert_iterator<std::vector<char>>)");
+BENCHMARK_TEMPLATE(BM_format_to_back_inserter, std::list<char>)
+    ->Name("std::format_to(int) (std::back_insert_iterator<std::list<char>>)");
 BENCHMARK_CAPTURE(BM_format_to_iterator, <std::array>, ([] {
                     std::array<char, 100> a;
                     return a;
-                  }));
+                  }))
+    ->Name("std::format_to(int) (std::array<char, 100>::iterator)");
 BENCHMARK_CAPTURE(BM_format_to_iterator, <std::string>, ([] {
                     std::string s;
                     s.resize(100);
                     return s;
-                  }));
+                  }))
+    ->Name("std::format_to(int) (std::string::iterator)");
 BENCHMARK_CAPTURE(BM_format_to_iterator, <std::vector>, ([] {
                     std::vector<char> v;
                     v.resize(100);
                     return v;
-                  }));
+                  }))
+    ->Name("std::format_to(int) (std::vector<char>::iterator)");
 
 BENCHMARK_MAIN();

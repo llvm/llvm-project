@@ -26,6 +26,7 @@
 #include "support/ThreadsafeFS.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
 
 namespace clang {
@@ -76,6 +77,9 @@ public:
   canReuse(const CompilerInvocation &CI,
            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const = 0;
 
+  /// Returns the set of directly required module names
+  virtual llvm::StringSet<> getRequiredModuleNames() const = 0;
+
   virtual ~PrerequisiteModules() = default;
 };
 
@@ -96,6 +100,11 @@ public:
 
   std::unique_ptr<PrerequisiteModules>
   buildPrerequisiteModulesFor(PathRef File, const ThreadsafeFS &TFS);
+
+  bool hasRequiredModules(PathRef File);
+
+  /// Returns the list of directly required module names
+  std::vector<std::string> getRequiredModuleNames(PathRef File);
 
 private:
   class ModulesBuilderImpl;

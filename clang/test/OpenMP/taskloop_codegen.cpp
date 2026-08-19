@@ -265,6 +265,13 @@ void test_threadset()
 
 void test_transparent()
 {
+  int a;
+#pragma omp taskloop transparent priority(10)
+  for (int i = 0; i < 10; ++i) {
+  }
+#pragma omp taskloop transparent
+  for (int i = 0; i < 10; ++i) {
+  }
 #pragma omp taskloop transparent(omp_not_impex)
   for (int i = 0; i < 10; ++i) {
   }
@@ -275,6 +282,12 @@ void test_transparent()
   for (int i = 0; i < 10; ++i) {
   }
 #pragma omp taskloop transparent(omp_impex)
+  for (int i = 0; i < 10; ++i) {
+  }
+#pragma omp taskloop transparent(a)
+  for (int i = 0; i < 10; ++i) {
+  }
+#pragma omp taskloop transparent(a+1)
   for (int i = 0; i < 10; ++i) {
   }
 }
@@ -317,74 +330,141 @@ void test_transparent()
 // CHECK6-NEXT:       call void @__kmpc_end_taskgroup(ptr @1, i32 %[[TID0:.*]])
 // CHECK6-NEXT:       ret void
 
-// CHECK6: define void @_Z16test_transparentv
-// CHECK6: entry:
-// CHECK6:  [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_18:%.*]], align 1
-// CHECK6:  [[TMP:%.*]] = alloca i32, align 4
-// CHECK6:  [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_20:%.*]], align 1
-// CHECK6:  [[TMP2:%.*]] = alloca i32, align 4
-// CHECK6:  [[AGG_CAPTURED3:%.*]] = alloca [[STRUCT_ANON_22:%.*]], align 1
-// CHECK6:  [[TMP4:%.*]] = alloca i32, align 4
-// CHECK6:  [[AGG_CAPTURED5:%.*]] = alloca [[STRUCT_ANON_24:%.*]], align 1
-// CHECK6:  [[TMP6:%.*]] = alloca i32, align 4
-// CHECK6:  [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK6:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  [[TMP1:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
-// CHECK6:  [[TMP2:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP1]], i32 0, i32 0
-// CHECK6:  [[TMP3:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 5
-// CHECK6:  store i64 0, ptr [[TMP3]], align 8
-// CHECK6:  [[TMP4:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 6
-// CHECK6:  store i64 9, ptr [[TMP4]], align 8
-// CHECK6:  [[TMP5:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 7
-// CHECK6:  store i64 1, ptr [[TMP5]], align 8
-// CHECK6:  [[TMP6:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 9
-// CHECK6:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP6]], i8 0, i64 8, i1 false)
-// CHECK6:  [[TMP7:%.*]] = load i64, ptr [[TMP5]], align 8
-// CHECK6:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP1]], i32 1, ptr [[TMP3]], ptr [[TMP4]], i64 [[TMP7]], i32 1, i32 0, i64 0, ptr null)
-// CHECK6:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  [[TMP8:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY2:[0-9]+]])
-// CHECK6:  [[TMP9:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP8]], i32 0, i32 0
-// CHECK6:  [[TMP10:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP9]], i32 0, i32 5
-// CHECK6:  store i64 0, ptr [[TMP10]], align 8
-// CHECK6:  [[TMP11:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP9]], i32 0, i32 6
-// CHECK6:  store i64 9, ptr [[TMP11]], align 8
-// CHECK6:  [[TMP12:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP9]], i32 0, i32 7
-// CHECK6:  store i64 1, ptr [[TMP12]], align 8
-// CHECK6:  [[TMP13:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP9]], i32 0, i32 9
-// CHECK6:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP13]], i8 0, i64 8, i1 false)
-// CHECK6:  [[TMP14:%.*]] = load i64, ptr [[TMP12]], align 8
-// CHECK6:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP8]], i32 1, ptr [[TMP10]], ptr [[TMP11]], i64 [[TMP14]], i32 1, i32 0, i64 0, ptr null)
-// CHECK6:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  [[TMP15:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..22)
-// CHECK6:  [[TMP16:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP15]], i32 0, i32 0
-// CHECK6:  [[TMP17:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP16]], i32 0, i32 5
-// CHECK6:  store i64 0, ptr [[TMP17]], align 8
-// CHECK6:  [[TMP18:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP16]], i32 0, i32 6
-// CHECK6:  store i64 9, ptr [[TMP18]], align 8
-// CHECK6:  [[TMP19:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP16]], i32 0, i32 7
-// CHECK6:  store i64 1, ptr [[TMP19]], align 8
-// CHECK6:  [[TMP20:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP16]], i32 0, i32 9
-// CHECK6:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP20]], i8 0, i64 8, i1 false)
-// CHECK6:  [[TMP21:%.*]] = load i64, ptr [[TMP19]], align 8
-// CHECK6:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP15]], i32 1, ptr [[TMP17]], ptr [[TMP18]], i64 [[TMP21]], i32 1, i32 0, i64 0, ptr null)
-// CHECK6:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  [[TMP22:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..24)
-// CHECK6:  [[TMP23:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP22]], i32 0, i32 0
-// CHECK6:  [[TMP24:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP23]], i32 0, i32 5
-// CHECK6:  store i64 0, ptr [[TMP24]], align 8
-// CHECK6:  [[TMP25:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP23]], i32 0, i32 6
-// CHECK6:  store i64 9, ptr [[TMP25]], align 8
-// CHECK6:  [[TMP26:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP23]], i32 0, i32 7
-// CHECK6:  store i64 1, ptr [[TMP26]], align 8
-// CHECK6:  [[TMP27:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP23]], i32 0, i32 9
-// CHECK6:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP27]], i8 0, i64 8, i1 false)
-// CHECK6:  [[TMP28:%.*]] = load i64, ptr [[TMP26]], align 8
-// CHECK6:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP22]], i32 1, ptr [[TMP24]], ptr [[TMP25]], i64 [[TMP28]], i32 1, i32 0, i64 0, ptr null)
-// CHECK6:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
-// CHECK6:  ret void
-// CHECK6:}
+// CHECK6-LABEL: define void @_Z16test_transparentv
+// CHECK6-NEXT: entry:
+// CHECK6-NEXT:  [[A:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON_18:%.*]], align 1
+// CHECK6-NEXT:  [[TMP:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED1:%.*]] = alloca [[STRUCT_ANON_20:%.*]], align 1
+// CHECK6-NEXT:  [[TMP2:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED3:%.*]] = alloca [[STRUCT_ANON_22:%.*]], align 1
+// CHECK6-NEXT:  [[TMP4:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED5:%.*]] = alloca [[STRUCT_ANON_24:%.*]], align 1
+// CHECK6-NEXT:  [[TMP6:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED7:%.*]] = alloca [[STRUCT_ANON_26:%.*]], align 1
+// CHECK6-NEXT:  [[TMP8:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGGD_CAPTURED9:%.*]] = alloca [[STRUCT_ANON_28:%.*]], align 1
+// CHECK6-NEXT:  [[TMP10:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED11:%.*]] = alloca [[STRUCT_ANON_30:%.*]], align 1
+// CHECK6-NEXT:  [[TMP12:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[AGG_CAPTURED13:%.*]] = alloca [[STRUCT_ANON_32:%.*]], align 1
+// CHECK6-NEXT:  [[TMP14:%.*]] = alloca i32, align 4
+// CHECK6-NEXT:  [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP1:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 289, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY1:[0-9]+]])
+// CHECK6-NEXT:  [[TMP2:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP1]], i32 0, i32 0
+// CHECK6-NEXT:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP2]], i32 0, i32 4
+// CHECK6-NEXT:  store i32 10, ptr [[TMP3]], align 8
+// CHECK6-NEXT:  [[TMP4:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP2]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP4]], align 8
+// CHECK6-NEXT:  [[TMP5:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP5]], align 8
+// CHECK6-NEXT:  [[TMP6:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP6]], align 8
+// CHECK6-NEXT:  [[TMP7:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP2]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP7]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP1]], i32 1, ptr [[TMP4]], ptr [[TMP5]], i64 [[TMP8]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP9:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..20)
+// CHECK6-NEXT:  [[TMP10:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP9]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP11:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP10]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP11]], align 8
+// CHECK6-NEXT:  [[TMP12:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP10]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP12]], align 8
+// CHECK6-NEXT:  [[TMP13:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP10]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP13]], align 8
+// CHECK6-NEXT:  [[TMP14:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP10]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP14]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP15:%.*]] = load i64, ptr [[TMP13]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP9]], i32 1, ptr [[TMP11]], ptr [[TMP12]], i64 [[TMP15]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP16:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY22:[0-9]+]])
+// CHECK6-NEXT:  [[TMP17:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP16]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP18:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP17]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP18]], align 8
+// CHECK6-NEXT:  [[TMP19:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP17]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP19]], align 8
+// CHECK6-NEXT:  [[TMP20:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP17]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP20]], align 8
+// CHECK6-NEXT:  [[TMP21:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP17]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP21]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP22:%.*]] = load i64, ptr [[TMP20]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP16]], i32 1, ptr [[TMP18]], ptr [[TMP19]], i64 [[TMP22]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP23:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY24:[0-9]+]])
+// CHECK6-NEXT:  [[TMP24:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP23]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP25:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP24]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP25]], align 8
+// CHECK6-NEXT:  [[TMP26:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP24]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP26]], align 8
+// CHECK6-NEXT:  [[TMP27:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP24]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP27]], align 8
+// CHECK6-NEXT:  [[TMP28:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t{{.*}}, ptr [[TMP24]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP28]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP29:%.*]] = load i64, ptr [[TMP27]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP23]], i32 1, ptr [[TMP25]], ptr [[TMP26]], i64 [[TMP29]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP30:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY26:[0-9]+]])
+// CHECK6-NEXT:  [[TMP31:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates.27, ptr [[TMP30]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP32:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP31]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP32]], align 8
+// CHECK6-NEXT:  [[TMP33:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP31]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP33]], align 8
+// CHECK6-NEXT:  [[TMP34:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP31]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP34]], align 8
+// CHECK6-NEXT:  [[TMP35:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP31]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP35]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP36:%.*]] = load i64, ptr [[TMP34]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP30]], i32 1, ptr [[TMP32]], ptr [[TMP33]], i64 [[TMP36]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP37:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY28:[0-9]+]])
+// CHECK6-NEXT:  [[TMP38:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates.29, ptr [[TMP37]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP39:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP38]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP39]], align 8
+// CHECK6-NEXT:  [[TMP40:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP38]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP40]], align 8
+// CHECK6-NEXT:  [[TMP41:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP38]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP41]], align 8
+// CHECK6-NEXT:  [[TMP42:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP38]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP42]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP43:%.*]] = load i64, ptr [[TMP41]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP37]], i32 1, ptr [[TMP39]], ptr [[TMP40]], i64 [[TMP43]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP44:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..[[ENTRY30:[0-9]+]])
+// CHECK6-NEXT:  [[TMP45:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP44]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP46:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP45]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP46]], align 8
+// CHECK6-NEXT:  [[TMP47:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP45]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP47]], align 8
+// CHECK6-NEXT:  [[TMP48:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP45]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP48]], align 8
+// CHECK6-NEXT:  [[TMP49:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP45]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP49]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP50:%.*]] = load i64, ptr [[TMP48]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP44]], i32 1, ptr [[TMP46]], ptr [[TMP47]], i64 [[TMP50]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  call void @__kmpc_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  [[TMP51:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 [[TMP0]], i32 257, i64 80, i64 1, ptr @.omp_task_entry..32)
+// CHECK6-NEXT:  [[TMP52:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t_with_privates{{.*}}, ptr [[TMP51]], i32 0, i32 0
+// CHECK6-NEXT:  [[TMP53:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP52]], i32 0, i32 5
+// CHECK6-NEXT:  store i64 0, ptr [[TMP53]], align 8
+// CHECK6-NEXT:  [[TMP54:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP52]], i32 0, i32 6
+// CHECK6-NEXT:  store i64 9, ptr [[TMP54]], align 8
+// CHECK6-NEXT:  [[TMP55:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP52]], i32 0, i32 7
+// CHECK6-NEXT:  store i64 1, ptr [[TMP55]], align 8
+// CHECK6-NEXT:  [[TMP56:%.*]] = getelementptr inbounds nuw %struct.kmp_task_t.2, ptr [[TMP52]], i32 0, i32 9
+// CHECK6-NEXT:  call void @llvm.memset.p0.i64(ptr align 8 [[TMP56]], i8 0, i64 8, i1 false)
+// CHECK6-NEXT:  [[TMP57:%.*]] = load i64, ptr [[TMP55]], align 8
+// CHECK6-NEXT:  call void @__kmpc_taskloop(ptr @1, i32 [[TMP0]], ptr [[TMP51]], i32 1, ptr [[TMP53]], ptr [[TMP54]], i64 [[TMP57]], i32 1, i32 0, i64 0, ptr null)
+// CHECK6-NEXT:  call void @__kmpc_end_taskgroup(ptr @1, i32 [[TMP0]])
+// CHECK6-NEXT:  ret void
 
 #endif

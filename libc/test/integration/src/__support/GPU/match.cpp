@@ -30,7 +30,7 @@ static void test_match() {
 #endif
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   if (gpu::get_thread_id() >= gpu::get_lane_size())
     return 0;
 

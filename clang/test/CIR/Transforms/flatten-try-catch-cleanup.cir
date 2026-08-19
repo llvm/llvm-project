@@ -1,0 +1,62 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+// Regression test: catch handler whose cleanup scope body contains a
+// nested try.  After inner flattening, the normal and catch paths
+// merge at a multi-predecessor block before reaching end_catch and
+// the handler's yield.  The end_catch assertion must handle
+// multi-predecessor blocks when walking backward from the yield.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+cir.func private @may_throw()
+cir.func private @inner_may_throw()
+
+cir.func @test_catch_with_nested_try() {
+  cir.scope {
+    cir.try {
+      cir.call @may_throw() : () -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.cleanup.scope {
+        cir.try {
+          cir.call @inner_may_throw() : () -> ()
+          cir.yield
+        } catch all (%inner_eh : !cir.eh_token) {
+          %inner_ct, %inner_ep = cir.begin_catch %inner_eh : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+          cir.cleanup.scope {
+            cir.yield
+          } cleanup all {
+            cir.end_catch %inner_ct : !cir.catch_token
+            cir.yield
+          }
+          cir.yield
+        }
+        cir.yield
+      } cleanup all {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// Verify that flattening succeeds and produces the expected structure:
+// outer try_call, dispatch to catch handler, inner try_call inside
+// the catch handler, end_catch for both inner and outer catches,
+// and branches to the continue block.
+
+// CHECK-LABEL: cir.func @test_catch_with_nested_try()
+// CHECK:         cir.try_call @may_throw()
+// CHECK:       ^{{bb[0-9]+}}(%{{.*}}: !cir.eh_token):
+// CHECK:         cir.begin_catch
+// CHECK:         cir.try_call @inner_may_throw()
+// CHECK:         cir.begin_catch
+// CHECK:         cir.end_catch
+// CHECK:         cir.end_catch
+// CHECK:         cir.return

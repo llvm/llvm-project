@@ -7,7 +7,7 @@ define void @_ZN14simd_test_avx216c_imm_v256_alignILi1EEE6c_v256S1_S1_(ptr byval
 ; CHECK-LABEL: _ZN14simd_test_avx216c_imm_v256_alignILi1EEE6c_v256S1_S1_:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovdqu {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vpbroadcastd (%eax), %xmm1
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpsllq $56, %ymm0, %ymm0
 ; CHECK-NEXT:    vmovdqu %ymm0, (%eax)

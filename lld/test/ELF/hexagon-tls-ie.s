@@ -1,5 +1,6 @@
 # REQUIRES: hexagon
-# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %s -o %t.o
+# RUN: rm -rf %t.dir && split-file %s %t.dir
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %t.dir/main.s -o %t.o
 # RUN: llvm-readobj -r %t.o | FileCheck -check-prefix=RELOC %s
 # RUN: ld.lld %t.o -o %t
 ## shared needs -z notext because of the R_HEX_IE_16/32_X(R_GOT) static
@@ -11,6 +12,16 @@
 # RUN: FileCheck -check-prefix=SHARED %s
 # RUN: llvm-readobj -r  %t.so | FileCheck -check-prefix=RELA %s
 
+## Test R_HEX_TPREL_11_X on duplex instructions with large TLS offset.
+## TPREL relocations cannot be used with -shared, so test separately.
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf \
+# RUN:   %t.dir/tprel-duplex.s -o %t-duplex.o
+# RUN: llvm-readobj -r %t-duplex.o | FileCheck -check-prefix=RELOC-DUPLEX %s
+# RUN: ld.lld %t-duplex.o -o %t-duplex
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t-duplex | \
+# RUN:   FileCheck -check-prefix=CHECK-DUPLEX %s
+
+#--- main.s
 	.globl	_start
 	.type	_start, @function
 _start:
@@ -76,3 +87,26 @@ c:
 .globl  d
 d:
 .word 4
+
+#--- tprel-duplex.s
+## Test R_HEX_TPREL_11_X on duplex instructions with large TLS offset.
+## This exercises the isDuplex() path in findMaskR11().
+	.globl	_start
+	.type	_start, @function
+_start:
+# RELOC-DUPLEX:      0x0 R_HEX_TPREL_32_6_X e 0x0
+# RELOC-DUPLEX-NEXT: 0x4 R_HEX_TPREL_11_X e 0x0
+# CHECK-DUPLEX:      { immext(#0xfffbffc0)
+# CHECK-DUPLEX-NEXT:   r2 = add(r2,##-0x40003); memw(r3+#0x0) = #0 }
+    {
+        r2 = add(r2,##e@TPREL)
+        memw(r3+#0) = #0
+    }
+    jumpr r31
+
+.section .tbss,"awT",@nobits
+.p2align 2
+.space 0xd
+.globl e
+e:
+.space 0x40000

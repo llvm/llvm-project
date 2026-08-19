@@ -1,0 +1,47 @@
+#ifndef _QUEUE_
+#define _QUEUE_
+
+#include "stddef.h"
+
+namespace std {
+
+template <typename T, typename Container = void>
+class queue {
+public:
+  using value_type = T;
+
+  void push(const T &) {}
+  void push(T &&) {}
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+
+  T &front();
+  const T &front() const;
+  T &back();
+  const T &back() const;
+
+  bool empty() const;
+  size_t size() const;
+};
+
+template <typename T, typename Container = void, typename Compare = void>
+class priority_queue {
+public:
+  using value_type = T;
+
+  void push(const T &) {}
+  void push(T &&) {}
+
+  template <typename... Args>
+  void emplace(Args &&...args) {}
+
+  const T &top() const;
+
+  bool empty() const;
+  size_t size() const;
+};
+
+} // namespace std
+
+#endif // _QUEUE_

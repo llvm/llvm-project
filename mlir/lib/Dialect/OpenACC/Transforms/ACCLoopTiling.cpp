@@ -63,6 +63,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -117,30 +118,38 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
 
   void emitTilingRemarks(acc::LoopOp loop, ArrayRef<Value> tileSizes) const {
     // Emit remarks for loop tiling
-    size_t tileLevel = tileSizes.size();
-    std::string msg =
-        "Tiling " + std::to_string(tileLevel) + "-level loop nest with tile(";
-    for (size_t i = 0; i < tileSizes.size(); ++i) {
-      std::optional<int64_t> val = getConstantIntValue(tileSizes[i]);
-      if (*val == -1)
-        msg += "*";
-      else
-        msg += std::to_string(*val);
-      if (i < tileSizes.size() - 1)
-        msg += ",";
-    }
-    msg += ")";
-    accSupport.emitRemark(loop, llvm::Twine(msg), DEBUG_TYPE);
+    accSupport.emitRemark(
+        loop,
+        [&]() {
+          auto getTileSizeStr = [&](Value v) -> std::string {
+            std::string name = accSupport.getVariableName(v);
+            // Use "*" for unknown tile sizes (represented as -1 or empty)
+            if (name.empty() || name == "-1")
+              return "*";
+            return name;
+          };
+          SmallVector<std::string> tileStrs;
+          for (Value v : tileSizes)
+            tileStrs.push_back(getTileSizeStr(v));
+          return "Tiling " + std::to_string(tileSizes.size()) +
+                 "-level loop nest with tile(" + llvm::join(tileStrs, ",") +
+                 ")";
+        },
+        DEBUG_TYPE);
 
     // Emit remarks for unknown tile sizes that will be resolved to default
     // TODO: Need to base the default tile size on some heuristics.
     for (Value tileSize : tileSizes) {
       std::optional<int64_t> val = getConstantIntValue(tileSize);
       if (val && *val < 0) {
-        std::string unknownMsg = "Picking default tile size " +
-                                 std::to_string(defaultTileSize) +
-                                 " for unknown tile size '*'";
-        accSupport.emitRemark(loop, llvm::Twine(unknownMsg), DEBUG_TYPE);
+        accSupport.emitRemark(
+            loop,
+            [&]() {
+              return "Picking default tile size " +
+                     std::to_string(defaultTileSize) +
+                     " for unknown tile size '*'";
+            },
+            DEBUG_TYPE);
       }
     }
   }
@@ -149,12 +158,20 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
                                 PatternRewriter &rewriter) const override {
 
     if (origLoop.getTileValues().empty())
-      return success();
+      return failure();
 
     SmallVector<Value> tileSizes(origLoop.getTileValues().begin(),
                                  origLoop.getTileValues().end());
-    unsigned tileCount = tileSizes.size();
-    unsigned collapseCount = origLoop.getCollapseValue().value_or(1);
+
+    // A tile clause and a collapse clause on the same loop are not supported:
+    // they give conflicting descriptions of how many loops the construct
+    // associates.
+    if (origLoop.getCollapseAttr()) {
+      accSupport.emitNYI(origLoop.getLoc(),
+                         "a tile clause combined with a collapse clause on the "
+                         "same loop");
+      return failure();
+    }
 
     // Sanity check tile size types
     if (failed(checkTileSizeTypes(origLoop, tileSizes)))
@@ -173,24 +190,12 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
     origLoop.removeTileOperandsDeviceTypeAttr();
     rewriter.finalizeOpModification(origLoop);
 
-    SmallVector<acc::LoopOp> loopsToTile;
-    if (collapseCount < tileCount) {
-      // Uncollapse tile loops before tiling if necessary
-      loopsToTile =
-          acc::uncollapseLoops(origLoop, tileCount, collapseCount, rewriter);
-      rewriter.replaceOp(origLoop, loopsToTile[0]);
-      LLVM_DEBUG(llvm::dbgs() << "\nAfter uncollapsing:\n"
-                              << *loopsToTile[0] << "\n");
-    } else {
-      loopsToTile.push_back(origLoop);
-    }
-
-    // loopsToTile is a vector of perfectly nested loops. The outermost loop
-    // may have multiple IVs but inner loops can only have one IV.
+    // Tile the single fused loop in place: the tile iterations become one
+    // multi-IV "tile group" loop wrapping one multi-IV "element group" loop.
     // The utility handles unknown tile sizes (*) by using `defaultTileSize`.
-    acc::tileACCLoops(loopsToTile, tileSizes, defaultTileSize, rewriter);
+    acc::tileACCLoops(origLoop, tileSizes, defaultTileSize, rewriter);
 
-    LLVM_DEBUG(llvm::dbgs() << "\nAfter tiling:\n " << *loopsToTile[0] << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "\nAfter tiling:\n " << *origLoop << "\n");
     return success();
   }
 

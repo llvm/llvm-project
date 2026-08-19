@@ -38,7 +38,6 @@ start:
 define internal { i32, i128, i64 } @implicit_sret_impl() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
 ; CHECK-NEXT:    daddiu $1, $zero, 20
 ; CHECK-NEXT:    sd $1, 24($4)
 ; CHECK-NEXT:    daddiu $1, $zero, 0
@@ -84,7 +83,6 @@ start:
 define internal { i32, i32, i32, i32, i32, i32 } @implicit_sret_impl2() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
 ; CHECK-NEXT:    addiu $1, $zero, 6
 ; CHECK-NEXT:    sw $1, 20($4)
 ; CHECK-NEXT:    addiu $1, $zero, 5

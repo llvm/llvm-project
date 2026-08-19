@@ -1,5 +1,4 @@
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 %struct.A = type { i32 }
 
 define void @callee1(i32 %M) {

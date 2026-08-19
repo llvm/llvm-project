@@ -236,7 +236,8 @@ define float @test_float_args(float %arg1, float %arg2) {
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.1, align 16)
   ; X86-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s32) from %fixed-stack.0)
-  ; X86-NEXT:   $fp0 = COPY [[LOAD1]](s32)
+  ; X86-NEXT:   [[FPEXT:%[0-9]+]]:_(s80) = G_FPEXT [[LOAD1]](s32)
+  ; X86-NEXT:   $fp0 = COPY [[FPEXT]](s80)
   ; X86-NEXT:   RET 0, implicit $fp0
   ;
   ; X64-LABEL: name: test_float_args
@@ -257,7 +258,8 @@ define double @test_double_args(double %arg1, double %arg2) {
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s64) from %fixed-stack.1, align 16)
   ; X86-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load (s64) from %fixed-stack.0)
-  ; X86-NEXT:   $fp0 = COPY [[LOAD1]](s64)
+  ; X86-NEXT:   [[FPEXT:%[0-9]+]]:_(s80) = G_FPEXT [[LOAD1]](s64)
+  ; X86-NEXT:   $fp0 = COPY [[FPEXT]](s80)
   ; X86-NEXT:   RET 0, implicit $fp0
   ;
   ; X64-LABEL: name: test_double_args
@@ -775,7 +777,8 @@ define float @test_call_v32f32() {
   ; X86-NEXT:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (load (<32 x s32>) from %stack.0)
   ; X86-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<32 x s32>), [[C]](s32)
-  ; X86-NEXT:   $fp0 = COPY [[EVEC]](s32)
+  ; X86-NEXT:   [[FPEXT:%[0-9]+]]:_(s80) = G_FPEXT [[EVEC]](s32)
+  ; X86-NEXT:   $fp0 = COPY [[FPEXT]](s80)
   ; X86-NEXT:   RET 0, implicit $fp0
   ;
   ; X64-LABEL: name: test_call_v32f32
@@ -801,8 +804,7 @@ define void @test_sret(ptr sret(%struct.all) align 8 %result) #0 {
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (p0) from %fixed-stack.0, align 16)
   ; X86-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
-  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY [[LOAD]](p0)
-  ; X86-NEXT:   G_STORE [[C]](s8), [[COPY]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X86-NEXT:   G_STORE [[C]](s8), [[LOAD]](p0) :: (store (s8) into %ir.c, align 8)
   ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
   ; X86-NEXT:   RET 0, $eax
   ;
@@ -812,8 +814,7 @@ define void @test_sret(ptr sret(%struct.all) align 8 %result) #0 {
   ; X64-NEXT: {{  $}}
   ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; X64-NEXT:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 104
-  ; X64-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; X64-NEXT:   G_STORE [[C]](s8), [[COPY1]](p0) :: (store (s8) into %ir.c, align 8)
+  ; X64-NEXT:   G_STORE [[C]](s8), [[COPY]](p0) :: (store (s8) into %ir.c, align 8)
   ; X64-NEXT:   $rax = COPY [[COPY]](p0)
   ; X64-NEXT:   RET 0, $rax
 entry:

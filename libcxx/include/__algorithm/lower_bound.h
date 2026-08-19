@@ -56,11 +56,11 @@ template <class _AlgPolicy, class _Iter, class _Type, class _Proj, class _Comp>
 // would yield \Omega(n*log(n)) comparisons and, for non-random-access iterators, \Omega(n^2) iterator increments,
 // whereas the one-sided version will yield O(n) operations on both counts, with a \Omega(log(n)) bound on the number of
 // comparisons.
-template <class _AlgPolicy, class _ForwardIterator, class _Sent, class _Type, class _Proj, class _Comp>
+template <class _AlgPolicy, class _ForwardIterator, class _Sent, class _Type, class _Comp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
-__lower_bound_onesided(_ForwardIterator __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
+__lower_bound_onesided(_ForwardIterator __first, _Sent __last, const _Type& __value, _Comp& __comp) {
   // step = 0, ensuring we can always short-circuit when distance is 1 later on
-  if (__first == __last || !std::__invoke(__comp, std::__invoke(__proj, *__first), __value))
+  if (__first == __last || !std::__invoke(__comp, *__first, __value))
     return __first;
 
   using _Distance = typename iterator_traits<_ForwardIterator>::difference_type;
@@ -69,11 +69,12 @@ __lower_bound_onesided(_ForwardIterator __first, _Sent __last, const _Type& __va
     auto __dist = __step - _IterOps<_AlgPolicy>::__advance_to(__it, __step, __last);
     // once we reach the last range where needle can be we must start
     // looking inwards, bisecting that range
-    if (__it == __last || !std::__invoke(__comp, std::__invoke(__proj, *__it), __value)) {
+    if (__it == __last || !std::__invoke(__comp, *__it, __value)) {
       // we've already checked the previous value and it was less, we can save
       // one comparison by skipping bisection
       if (__dist == 1)
         return __it;
+      __identity __proj;
       return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
     }
     // range not found, move forward!

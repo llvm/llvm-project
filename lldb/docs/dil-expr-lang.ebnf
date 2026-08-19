@@ -3,15 +3,53 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = cast_expression;
+expression = conditional_expression ;
+
+conditional_expression = assignment_expression
+                       | assignment_expression "?" expression ":" expression ;
+
+assignment_expression = logical_or_expression
+                      | logical_or_expression assignment_operator assignment_expression ;
+
+assignment_operator = "="
+                    | "+="
+                    | "-=" ;
+
+logical_or_expression = logical_and_expression {"||" logical_and_expression} ;
+
+logical_and_expression = inclusive_or_expression {"&&" inclusive_or_expression} ;
+
+inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} ;
+
+exclusive_or_expression = and_expression {"^" and_expression} ;
+
+and_expression = equality_expression {"&" equality_expression} ;
+
+equality_expression = relational_expression {"==" relational_expression}
+                    | relational_expression {"!=" relational_expression} ;
+
+relational_expression = shift_expression {"<" shift_expression}
+                      | shift_expression {">" shift_expression}
+                      | shift_expression {"<=" shift_expression}
+                      | shift_expression {">=" shift_expression} ;
+
+shift_expression = additive_expression {"<<" additive_expression}
+                 | additive_expression {">>" additive_expression} ;
+
+additive_expression = multiplicative_expression {"+" multiplicative_expression}
+                    | multiplicative_expression {"-" multiplicative_expression} ;
+
+multiplicative_expression = cast_expression {"*" cast_expression}
+                          | cast_expression {"/" cast_expression}
+                          | cast_expression {"%" cast_expression} ;
 
 cast_expression = unary_expression
-                | "(" type_id ")" cast_expression;
+                | "(" type_id ")" cast_expression ;
 
 unary_expression = postfix_expression
                  | unary_operator cast_expression ;
 
-unary_operator = "*" | "&" | "+" | "-";
+unary_operator = "*" | "&" | "+" | "-" | "~" | "!" ;
 
 postfix_expression = primary_expression
                    | postfix_expression "[" expression "]"
@@ -22,11 +60,14 @@ postfix_expression = primary_expression
 primary_expression = numeric_literal
                    | boolean_literal
                    | id_expression
-                   | "(" expression ")" ;
+                   | "(" expression ")"
+                   | "sizeof" "(" expression ")"
+                   | "sizeof" "(" type_id ")" ;
 
 id_expression = unqualified_id
               | qualified_id
-              | register ;
+              | register
+              | null_pointer ;
 
 unqualified_id = identifier ;
 
@@ -39,6 +80,8 @@ numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
                 | ? Floating constant ? ;
 
 boolean_literal = "true" | "false" ;
+
+null_pointer = "nullptr" ;
 
 register = "$" ? Register name ? ;
 

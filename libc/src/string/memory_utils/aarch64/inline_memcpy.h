@@ -9,17 +9,40 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
+#if defined(LIBC_TARGET_CPU_HAS_SVE)
+#include <arm_sve.h>
+#endif
 namespace LIBC_NAMESPACE_DECL {
-
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+  // Always avoid emit any memory operation if count == 0.
   if (count == 0)
     return;
+  // Use predicated load/store on SVE available targets to avoid branching in
+  // small cases.
+#ifdef LIBC_TARGET_CPU_HAS_SVE
+  auto src_ptr = reinterpret_cast<const uint8_t *>(src);
+  auto dst_ptr = reinterpret_cast<uint8_t *>(dst);
+  if (count <= 16) {
+    const svbool_t mask = svwhilelt_b8_u64(0, count);
+    svst1_u8(mask, dst_ptr, svld1_u8(mask, src_ptr));
+    return;
+  }
+  if (count <= 32) {
+    const size_t vlen = svcntb();
+    svbool_t m0 = svwhilelt_b8_u64(0, count);
+    svbool_t m1 = svwhilelt_b8_u64(vlen, count);
+    svst1_u8(m0, dst_ptr, svld1_u8(m0, src_ptr));
+    svst1_u8(m1, dst_ptr + vlen, svld1_u8(m1, src_ptr + vlen));
+    return;
+  }
+#else
   if (count == 1)
     return builtin::Memcpy<1>::block(dst, src);
   if (count == 2)
@@ -34,6 +57,7 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
     return builtin::Memcpy<8>::head_tail(dst, src, count);
   if (count < 32)
     return builtin::Memcpy<16>::head_tail(dst, src, count);
+#endif
   if (count < 64)
     return builtin::Memcpy<32>::head_tail(dst, src, count);
   if (count < 128)

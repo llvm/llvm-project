@@ -57,6 +57,9 @@ static bool isExternalWeakLinkage(GlobalLinkageKind linkage) {
 [[maybe_unused]] static bool isCommonLinkage(GlobalLinkageKind linkage) {
   return linkage == GlobalLinkageKind::CommonLinkage;
 }
+[[maybe_unused]] static bool isAppendingLinkage(GlobalLinkageKind linkage) {
+  return linkage == GlobalLinkageKind::AppendingLinkage;
+}
 [[maybe_unused]] static bool
 isValidDeclarationLinkage(GlobalLinkageKind linkage) {
   return isExternalWeakLinkage(linkage) || isExternalLinkage(linkage);
@@ -79,6 +82,7 @@ isValidDeclarationLinkage(GlobalLinkageKind linkage) {
     // The above three cannot be overridden but can be de-refined.
 
   case GlobalLinkageKind::ExternalLinkage:
+  case GlobalLinkageKind::AppendingLinkage:
   case GlobalLinkageKind::InternalLinkage:
   case GlobalLinkageKind::PrivateLinkage:
     return false;

@@ -21,6 +21,7 @@ namespace _Algorithm {
 struct __copy {};
 struct __fill_n {};
 struct __for_each {};
+struct __swap_ranges {};
 } // namespace _Algorithm
 
 template <class>

@@ -28,6 +28,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
@@ -37,6 +38,7 @@
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cmath>
 #include <optional>
 #include <string>
 
@@ -135,6 +137,7 @@ LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     if (dims != 5)
@@ -234,6 +237,7 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
   case TMAStoreMode::TILE:
     return cpAsyncBulkTensorCommonVerifier(dims, false, 0, getLoc());
   case TMAStoreMode::IM2COL:
+  case TMAStoreMode::IM2COL_W:
     return cpAsyncBulkTensorCommonVerifier(dims, true, 0, getLoc());
   case TMAStoreMode::TILE_SCATTER4:
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
@@ -300,6 +304,82 @@ LogicalResult MBarrierArriveExpectTxOp::verify() {
 LogicalResult MBarrierArriveDropExpectTxOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
                                     getRes());
+}
+
+//===----------------------------------------------------------------------===//
+// inferReturnTypes for mbarrier arrive-like ops
+//===----------------------------------------------------------------------===//
+
+/// Only shared_cluster (ptr<7>) produces zero results; all other address
+/// spaces (including generic) return i64.
+static LogicalResult
+inferMBarrierArriveResultTypes(MLIRContext *context, Value addr,
+                               SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (!isPtrInSharedClusterSpace(addr))
+    inferredReturnTypes.push_back(IntegerType::get(context, 64));
+  return success();
+}
+
+LogicalResult
+MBarrierArriveOp::inferReturnTypes(MLIRContext *context,
+                                   std::optional<Location> location,
+                                   MBarrierArriveOp::Adaptor adaptor,
+                                   SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveDropOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveDropOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveExpectTxOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveExpectTxOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  // Predicate forces no return value (inline PTX path).
+  // Note: predicate + shared_cluster is rejected by the verifier separately.
+  if (adaptor.getPredicate())
+    return success();
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+LogicalResult MBarrierArriveDropExpectTxOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MBarrierArriveDropExpectTxOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  return inferMBarrierArriveResultTypes(context, adaptor.getAddr(),
+                                        inferredReturnTypes);
+}
+
+/// For ops with optional results, allow the user to omit the result even when
+/// inference would produce one. This preserves backward compatibility: the
+/// result can be silently discarded (e.g., for fire-and-forget arrive ops).
+static bool isCompatibleReturnTypesOptionalResult(TypeRange inferred,
+                                                  TypeRange actual) {
+  if (actual.empty())
+    return true;
+  return inferred == actual;
+}
+
+bool MBarrierArriveOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveDropOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveExpectTxOp::isCompatibleReturnTypes(TypeRange l,
+                                                       TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
+}
+bool MBarrierArriveDropExpectTxOp::isCompatibleReturnTypes(TypeRange l,
+                                                           TypeRange r) {
+  return isCompatibleReturnTypesOptionalResult(l, r);
 }
 
 LogicalResult MBarrierExpectTxOp::verify() {
@@ -414,18 +494,45 @@ LogicalResult ConvertF16x2ToF8x2Op::verify() {
 
 LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   using RndMode = NVVM::FPRoundingMode;
+  using SatMode = NVVM::SaturationMode;
 
-  if (!llvm::isa<mlir::Float8E8M0FNUType>(getDstTy()))
-    return emitOpError("Only ") << mlir::Float8E8M0FNUType::get(getContext())
-                                << " type is supported for conversions from "
-                                   "bf16x2 to f8x2.";
+  bool isRoundingModeRN = getRnd() == RndMode::RN;
+  bool isRoundingModeRZ = getRnd() == RndMode::RZ;
+  bool isRoundingModeRP = getRnd() == RndMode::RP;
+  bool isSatFinite = getSat() == SatMode::SATFINITE;
+  bool hasRelu = getRelu();
 
-  auto rnd = getRnd();
-  if (rnd != RndMode::RZ && rnd != RndMode::RP)
-    return emitOpError("Only RZ and RP rounding modes are supported for "
-                       "conversions from bf16x2 to f8x2.");
+  mlir::MLIRContext *ctx = getContext();
 
-  return success();
+  return llvm::TypeSwitch<mlir::Type, LogicalResult>(getDstTy())
+      .Case<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(
+          [&](mlir::Type) -> LogicalResult {
+            if (!isRoundingModeRN)
+              return emitOpError("Only RN rounding mode is supported for "
+                                 "conversions from bf16x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            if (!isSatFinite)
+              return emitOpError("Only SATFINITE saturation mode is supported "
+                                 "for conversions from bf16x2 to ")
+                     << mlir::Float8E4M3FNType::get(ctx) << " and "
+                     << mlir::Float8E5M2Type::get(ctx) << " types";
+            return success();
+          })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Type) -> LogicalResult {
+        if (!(isRoundingModeRZ || isRoundingModeRP))
+          return emitOpError("Only RZ and RP rounding modes are supported for "
+                             "conversions from bf16x2 to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        if (hasRelu)
+          return emitOpError("relu not supported for conversions to ")
+                 << mlir::Float8E8M0FNUType::get(ctx) << " type";
+        return success();
+      })
+      .Default([&](mlir::Type) -> LogicalResult {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
+        return failure();
+      });
 }
 
 LogicalResult ConvertF32x2ToF4x2Op::verify() {
@@ -439,47 +546,20 @@ LogicalResult ConvertF32x2ToF4x2Op::verify() {
   return success();
 }
 
-LogicalResult ConvertF8x2ToF16x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<Float8E4M3FNType, Float8E5M2Type>(getSrcType()))
-    return emitOpError("Only ")
-           << mlir::Float8E4M3FNType::get(ctx) << " and "
-           << mlir::Float8E5M2Type::get(ctx)
-           << " types are supported for conversions from f8x2 to f16x2.";
-
-  return success();
-}
-
 LogicalResult ConvertF8x2ToBF16x2Op::verify() {
   mlir::MLIRContext *ctx = getContext();
-  if (!llvm::isa<Float8E8M0FNUType>(getSrcType()))
-    return emitOpError("Only ")
-           << mlir::Float8E8M0FNUType::get(ctx)
-           << " type is supported for conversions from f8x2 to bf16x2.";
-
-  return success();
-}
-
-LogicalResult ConvertF6x2ToF16x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<Float6E2M3FNType, Float6E3M2FNType>(getSrcType()))
-    return emitOpError("Only ")
-           << mlir::Float6E2M3FNType::get(ctx) << " and "
-           << mlir::Float6E3M2FNType::get(ctx)
-           << " types are supported for conversions from f6x2 to f16x2.";
-
-  return success();
-}
-
-LogicalResult ConvertF4x2ToF16x2Op::verify() {
-  mlir::MLIRContext *ctx = getContext();
-
-  if (!llvm::isa<Float4E2M1FNType>(getSrcType()))
-    return emitOpError("Only ")
-           << mlir::Float4E2M1FNType::get(ctx)
-           << " type is supported for conversions from f4x2 to f16x2.";
+  if (llvm::isa<Float8E8M0FNUType>(getSrcType())) {
+    if (getSat() != SaturationMode::NONE)
+      return emitOpError(
+                 "Only NONE saturation mode is supported for conversions from ")
+             << Float8E8M0FNUType::get(ctx) << " type";
+    if (getScaleFactor())
+      return emitOpError("scaleFactor not supported for conversions from ")
+             << Float8E8M0FNUType::get(ctx) << " type";
+    if (getRelu())
+      return emitOpError("relu not supported for conversions from ")
+             << Float8E8M0FNUType::get(ctx) << " type";
+  }
 
   return success();
 }
@@ -588,6 +668,23 @@ LogicalResult ConvertF32x4ToF4x4Op::verify() {
 LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
+  return success();
+}
+
+LogicalResult AsyncStoreGlobalOp::verify() {
+  NVVM::MemScopeKind scope = getScope();
+  bool isMmio = getMmio();
+  bool isMultimem = getMultimem();
+
+  if (scope != MemScopeKind::SYS && scope != MemScopeKind::GPU)
+    return emitOpError("scope must be either SYS or GPU");
+
+  if (isMmio && scope != MemScopeKind::SYS)
+    return emitOpError("mmio is only supported for SYS scope");
+
+  if (isMmio && isMultimem)
+    return emitOpError("multimem is not supported with mmio");
+
   return success();
 }
 
@@ -716,8 +813,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -928,6 +1024,15 @@ LogicalResult MmaOp::verify() {
     case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+      // FP8 (m16n8k16 / m16n8k32) packs 4 values per 32-bit register, same
+      // as s8/u8, but the accumulator is f16 or f32 (not integer).
+      kFactor = 16;
+      multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
       break;
@@ -1423,7 +1528,7 @@ LogicalResult MmaSpOp::verify() {
     case MMATypes::e3m2:
     case MMATypes::e2m3:
     case MMATypes::e2m1:
-      kFactor = 32;
+      kFactor = 16;
       multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
@@ -1917,7 +2022,8 @@ LogicalResult MmaBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
     } else {
@@ -2185,7 +2291,8 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
     } else {
@@ -2239,6 +2346,19 @@ LogicalResult ShflOp::verify() {
     if (getType() != getVal().getType())
       return verifyTypeError("return type", getVal().getType(), getType());
   }
+  return success();
+}
+
+LogicalResult
+ShflOp::inferReturnTypes(MLIRContext *context, std::optional<Location> location,
+                         ShflOp::Adaptor adaptor,
+                         SmallVectorImpl<Type> &inferredReturnTypes) {
+  Type valType = adaptor.getVal().getType();
+  if (adaptor.getReturnValueAndIsValid())
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context, {valType, IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(valType);
   return success();
 }
 
@@ -2448,6 +2568,23 @@ LogicalResult NVVM::LdMatrixOp::verify() {
   return success();
 }
 
+LogicalResult LdMatrixOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    LdMatrixOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  uint32_t num = adaptor.getNum();
+  uint32_t m = adaptor.getShape().getM();
+  uint32_t n = adaptor.getShape().getN();
+  uint32_t numElements = (m == 16 && n == 16) ? num * 2 : num;
+
+  Type i32 = IntegerType::get(context, 32);
+  if (numElements == 1)
+    inferredReturnTypes.push_back(i32);
+  else
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context, SmallVector<Type>(numElements, i32)));
+  return success();
+}
+
 LogicalResult NVVM::StMatrixOp::verify() {
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
@@ -2469,6 +2606,17 @@ LogicalResult NVVM::StMatrixOp::verify() {
     return emitOpError("expected shape to be 8x8 or 16x8");
   }
 
+  return success();
+}
+
+LogicalResult NVVM::MovMatrixOp::verify() {
+  int m = getShape().getM(), n = getShape().getN();
+  if (m != 8 || n != 8)
+    return emitOpError("expected shape to be 8x8");
+  if (getLayout() != NVVM::MMALayout::col)
+    return emitOpError("expected layout to be col");
+  if (getEltType() != NVVM::LdStMatrixEltType::B16)
+    return emitOpError("expected element type to be b16");
   return success();
 }
 
@@ -2682,9 +2830,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -2731,18 +2877,7 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
-LogicalResult NVVM::FenceSyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-  return success();
-}
-
 LogicalResult NVVM::FenceProxyOp::verify() {
-  if (getKind() == NVVM::ProxyKind::TENSORMAP)
-    return emitOpError() << "tensormap proxy is not a supported proxy kind";
-  if (getKind() == NVVM::ProxyKind::GENERIC)
-    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
@@ -2775,10 +2910,6 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
 }
 
 LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-
   if (getFromProxy() != NVVM::ProxyKind::GENERIC)
     return emitOpError("only generic is support for from_proxy attribute");
 
@@ -2792,22 +2923,6 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
     return emitOpError("new register size must be multiple of 8");
   if (getRegCount() < 24 || getRegCount() > 256)
     return emitOpError("new register size must be in between 24 to 256");
-  return success();
-}
-
-LogicalResult NVVM::BarrierOp::verify() {
-  if (getNumberOfThreads() && !getBarrierId())
-    return emitOpError(
-        "barrier id is missing, it should be set between 0 to 15");
-
-  if (getBarrierId() && (getReductionOp() || getReductionPredicate()))
-    return emitOpError("reduction are only available when id is 0");
-
-  if ((getReductionOp() && !getReductionPredicate()) ||
-      (!getReductionOp() && getReductionPredicate()))
-    return emitOpError("reduction predicate and reduction operation must be "
-                       "specified together");
-
   return success();
 }
 
@@ -2853,6 +2968,18 @@ LogicalResult NVVM::MatchSyncOp::verify() {
   return success();
 }
 
+LogicalResult MatchSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    MatchSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (adaptor.getKind() == NVVM::MatchSyncKind::all)
+    inferredReturnTypes.push_back(LLVM::LLVMStructType::getLiteral(
+        context,
+        {IntegerType::get(context, 32), IntegerType::get(context, 1)}));
+  else
+    inferredReturnTypes.push_back(IntegerType::get(context, 32));
+  return success();
+}
+
 LogicalResult NVVM::VoteSyncOp::verify() {
   if (getKind() == NVVM::VoteSyncKind::ballot) {
     if (!getType().isInteger(32)) {
@@ -2863,6 +2990,14 @@ LogicalResult NVVM::VoteSyncOp::verify() {
       return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
     }
   }
+  return success();
+}
+
+LogicalResult VoteSyncOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    VoteSyncOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width = adaptor.getKind() == NVVM::VoteSyncKind::ballot ? 32 : 1;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
   return success();
 }
 
@@ -2959,6 +3094,18 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
   return success();
 }
 
+LogicalResult ClusterLaunchControlQueryCancelOp::inferReturnTypes(
+    MLIRContext *context, std::optional<Location> location,
+    ClusterLaunchControlQueryCancelOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  unsigned width =
+      adaptor.getQueryType() == NVVM::ClusterLaunchControlQueryType::IS_CANCELED
+          ? 1
+          : 32;
+  inferredReturnTypes.push_back(IntegerType::get(context, width));
+  return success();
+}
+
 LogicalResult NVVM::ReduxOp::verify() {
   mlir::Type reduxType = getType();
 
@@ -2969,26 +3116,26 @@ LogicalResult NVVM::ReduxOp::verify() {
       return emitOpError("nan attribute is supported only for f32 type");
   }
 
-  NVVM::ReduxKind kind = getKind();
+  NVVM::ReductionKind kind = getKind();
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
-  case NVVM::ReduxKind::AND:
-  case NVVM::ReduxKind::OR:
-  case NVVM::ReduxKind::XOR:
-  case NVVM::ReduxKind::MAX:
-  case NVVM::ReduxKind::MIN:
-  case NVVM::ReduxKind::UMAX:
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::ADD:
+  case NVVM::ReductionKind::AND:
+  case NVVM::ReductionKind::OR:
+  case NVVM::ReductionKind::XOR:
+  case NVVM::ReductionKind::MAX:
+  case NVVM::ReductionKind::MIN:
+  case NVVM::ReductionKind::UMAX:
+  case NVVM::ReductionKind::UMIN:
     if (!reduxType.isInteger(32))
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'i32'.";
     break;
-  case NVVM::ReduxKind::FMIN:
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMIN:
+  case NVVM::ReductionKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'f32'.";
     break;
   }
@@ -3072,6 +3219,136 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
+template <typename OpType>
+static LogicalResult verifyAddSubFOp(OpType op) {
+  mlir::NVVM::FPRoundingMode rndMode = op.getRnd();
+  mlir::NVVM::SaturationMode satMode = op.getSat();
+  bool isFTZ = op.getFtz();
+
+  mlir::Type opType = op.getRes().getType();
+  mlir::Type opBaseType = isa<VectorType>(opType)
+                              ? cast<VectorType>(opType).getElementType()
+                              : opType;
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return op.emitOpError("FTZ and saturation are not supported for "
+                          "additions/subtractions involving f64 type");
+
+  if (opBaseType.isF16() && !(rndMode == NVVM::FPRoundingMode::RN ||
+                              rndMode == NVVM::FPRoundingMode::NONE))
+    return op.emitOpError("only RN rounding mode is supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN &&
+        rndMode != NVVM::FPRoundingMode::NONE)
+      return op.emitOpError("only RN rounding mode is supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return op.emitOpError("FTZ and saturation are not supported for bf16 and "
+                            "vector<2xbf16> additions/subtractions");
+  }
+
+  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
+  // PTX instructions since the corresponding LLVM intrinsic is missing. This
+  // should be removed once the intrinsics for f16 addition (with FTZ only) are
+  // available.
+  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
+    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
+                          "vector<2xf16> additions/subtractions");
+
+  return success();
+}
+
+LogicalResult NVVM::AddFOp::verify() { return verifyAddSubFOp<AddFOp>(*this); }
+
+LogicalResult NVVM::SubFOp::verify() { return verifyAddSubFOp<SubFOp>(*this); }
+
+LogicalResult NVVM::FmaOp::verify() {
+  auto opType = getRes().getType();
+  mlir::NVVM::FPRoundingMode rndMode = getRnd();
+  mlir::NVVM::SaturationMode satMode = getSat();
+  bool isFTZ = getFtz();
+  bool isRelu = getRelu();
+  bool hasOOB = getOob();
+
+  auto getBaseFType = [](Type type) -> Type {
+    if (isa<VectorType>(type))
+      return cast<VectorType>(type).getElementType();
+    return type;
+  };
+
+  auto opBaseType = getBaseFType(opType);
+
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode must be specified");
+
+  if (isRelu && satMode == NVVM::SaturationMode::SAT)
+    return emitOpError("relu and saturation are not supported together");
+
+  if (hasOOB && (satMode == NVVM::SaturationMode::SAT || isFTZ))
+    return emitOpError("oob is not supported with saturation or FTZ");
+
+  if (!(opBaseType.isF16() || opBaseType.isBF16()) && (isRelu || hasOOB))
+    return emitOpError("relu and oob are only supported for f16 and bf16");
+
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for f64 type");
+
+  if (opBaseType.isF16() && rndMode != NVVM::FPRoundingMode::RN)
+    return emitOpError(
+        "only RN rounding mode is supported for f16 and vector<2xf16>");
+
+  if (opBaseType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN)
+      return emitOpError(
+          "only RN rounding mode is supported for bf16 and vector<2xbf16>");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError(
+          "FTZ and saturation are not supported for bf16 and vector<2xbf16>");
+  }
+
+  return success();
+}
+
+LogicalResult NVVM::SqrtOp::verify() {
+  if (getRnd() == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode cannot be None");
+
+  if (getRes().getType().isF64() && getFtz())
+    return emitOpError("FTZ is not supported for f64");
+
+  return success();
+}
+
+LogicalResult NVVM::DivFOp::verify() {
+  bool isApprox = getApprox();
+  bool isFull = getFull();
+  bool isF64 = getRes().getType().isF64();
+  bool isFtz = getFtz();
+  NVVM::FPRoundingMode rndMode = getRnd();
+
+  if (isApprox && isFull)
+    return emitOpError("'approx' and 'full' are mutually exclusive");
+
+  if (isApprox || isFull) {
+    if (isF64)
+      return emitOpError("'approx' and 'full' forms are f32-only");
+    if (rndMode != NVVM::FPRoundingMode::NONE)
+      return emitOpError(
+          "'approx' and 'full' forms do not accept a rounding mode");
+    return success();
+  }
+
+  // Rounded form below.
+  if (rndMode == NVVM::FPRoundingMode::NONE)
+    return emitOpError("rounding mode cannot be None for the rounded divide");
+  if (isF64 && isFtz)
+    return emitOpError("FTZ is not supported for f64");
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3149,8 +3426,62 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
 }
 
 //===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
+  using OpRewritePattern<SubFOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubFOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value negRhs =
+        LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
+
+    rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
+                                        op.getRnd(), op.getSat(), op.getFtz());
+    return success();
+  }
+};
+
+void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                         MLIRContext *context) {
+  patterns.add<ConvertFsubToFnegFadd>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
+
+/// Maps the (aligned, hasCount) pair to the `@llvm.nvvm.barrier.cta.sync.*`
+/// intrinsic ID.
+static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
+                                                   bool hasCount) {
+  if (hasCount) {
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
+                   : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  }
+  return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
+                 : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
+}
+
+/// Maps the (aligned, kind) pair to the `@llvm.nvvm.barrier.cta.red.*`
+/// intrinsic ID.
+static llvm::Intrinsic::ID
+getBarrierReductionIntrinsic(bool aligned, NVVM::BarrierReduction kind) {
+  switch (kind) {
+  case NVVM::BarrierReduction::AND:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_and_all;
+  case NVVM::BarrierReduction::OR:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_or_all;
+  case NVVM::BarrierReduction::POPC:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_popc_all;
+  }
+  llvm_unreachable("unknown BarrierReduction kind");
+}
 
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
@@ -3158,30 +3489,220 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   llvm::Value *barrierId = thisOp.getBarrierId()
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
-  llvm::Intrinsic::ID id;
+  bool hasCount = static_cast<bool>(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      getBarrierSyncIntrinsic(thisOp.getAligned(), hasCount);
   llvm::SmallVector<llvm::Value *> args = {barrierId};
-  if (thisOp.getNumberOfThreads()) {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+  if (hasCount)
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
-  } else if (thisOp.getReductionOp()) {
-    switch (*thisOp.getReductionOp()) {
-    case NVVM::BarrierReduction::AND:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
-      break;
-    case NVVM::BarrierReduction::OR:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
-      break;
-    case NVVM::BarrierReduction::POPC:
-      id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
-      break;
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierArriveOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Value *numThreads = mt.lookupValue(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      thisOp.getAligned()
+          ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
+          : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
+  return {id, {barrierId, numThreads}};
+}
+
+mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierReductionOp>(op);
+  llvm::Intrinsic::ID id = getBarrierReductionIntrinsic(
+      thisOp.getAligned(), thisOp.getReductionOp());
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::SmallVector<llvm::Value *> args = {
+      barrierId,
+      builder.CreateICmpNE(mt.lookupValue(thisOp.getReductionPredicate()),
+                           builder.getInt32(0))};
+  return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair
+CosOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CosOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_cos_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_cos_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SinOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SinOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_sin_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_sin_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+Log2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Log2Op>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_lg2_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_lg2_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Ex2Op>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_ex2_approx_ftz
+                               : llvm::Intrinsic::nvvm_ex2_approx;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                               llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::RsqrtOp>(op);
+  Type t = thisOp.getRes().getType();
+  bool isFtz = thisOp.getFtz();
+
+  llvm::Intrinsic::ID id = [&] {
+    if (t.isF32()) {
+      return isFtz ? llvm::Intrinsic::nvvm_rsqrt_approx_ftz_f
+                   : llvm::Intrinsic::nvvm_rsqrt_approx_f;
     }
-    args.push_back(builder.CreateICmpNE(
-        mt.lookupValue(thisOp.getReductionPredicate()), builder.getInt32(0)));
+    // f64
+    return isFtz ? llvm::Intrinsic::nvvm_rsqrt_approx_ftz_d
+                 : llvm::Intrinsic::nvvm_rsqrt_approx_d;
+  }();
+
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SqrtOp>(op);
+  Type t = thisOp.getRes().getType();
+  NVVM::FPRoundingMode rndMode = thisOp.getRnd();
+  bool isFtz = thisOp.getFtz();
+
+  // RM is one of RN/RM/RP/RZ (verifier rejects NONE).
+  // Subtracting 1 maps RN=1..RZ=4 to 0..3.
+  unsigned rndIndex = static_cast<unsigned>(rndMode) - 1;
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_f,
+      llvm::Intrinsic::nvvm_sqrt_rm_f,
+      llvm::Intrinsic::nvvm_sqrt_rp_f,
+      llvm::Intrinsic::nvvm_sqrt_rz_f,
+  };
+  static constexpr llvm::Intrinsic::ID f32FTZIDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rm_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rp_ftz_f,
+      llvm::Intrinsic::nvvm_sqrt_rz_ftz_f,
+  };
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_sqrt_rn_d,
+      llvm::Intrinsic::nvvm_sqrt_rm_d,
+      llvm::Intrinsic::nvvm_sqrt_rp_d,
+      llvm::Intrinsic::nvvm_sqrt_rz_d,
+  };
+
+  llvm::Intrinsic::ID id =
+      t.isF32() ? (isFtz ? f32FTZIDs[rndIndex] : f32IDs[rndIndex])
+                : f64IDs[rndIndex];
+
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+SqrtApproxOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                    llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SqrtApproxOp>(op);
+  llvm::Intrinsic::ID id = thisOp.getFtz()
+                               ? llvm::Intrinsic::nvvm_sqrt_approx_ftz_f
+                               : llvm::Intrinsic::nvvm_sqrt_approx_f;
+  return {id, {mt.lookupValue(thisOp.getSrc())}};
+}
+
+mlir::NVVM::IDArgPair
+DivFOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::DivFOp>(op);
+  bool isFtz = thisOp.getFtz();
+
+  llvm::Intrinsic::ID id;
+
+  if (thisOp.getApprox()) {
+    id = isFtz ? llvm::Intrinsic::nvvm_div_approx_ftz_f
+               : llvm::Intrinsic::nvvm_div_approx_f;
+  } else if (thisOp.getFull()) {
+    // Intrinsic Naming quirk: int_nvvm_div_full has no `_f` suffix (unlike
+    // approx).
+    id = isFtz ? llvm::Intrinsic::nvvm_div_full_ftz
+               : llvm::Intrinsic::nvvm_div_full;
   } else {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
+    // Rounded form — three 4-entry tables indexed by (rndMode - 1).
+    unsigned rndIndex = static_cast<unsigned>(thisOp.getRnd()) - 1;
+
+    static constexpr llvm::Intrinsic::ID f32IDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_f,
+        llvm::Intrinsic::nvvm_div_rm_f,
+        llvm::Intrinsic::nvvm_div_rp_f,
+        llvm::Intrinsic::nvvm_div_rz_f,
+    };
+    static constexpr llvm::Intrinsic::ID f32FTZIDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_ftz_f,
+        llvm::Intrinsic::nvvm_div_rm_ftz_f,
+        llvm::Intrinsic::nvvm_div_rp_ftz_f,
+        llvm::Intrinsic::nvvm_div_rz_ftz_f,
+    };
+    static constexpr llvm::Intrinsic::ID f64IDs[] = {
+        llvm::Intrinsic::nvvm_div_rn_d,
+        llvm::Intrinsic::nvvm_div_rm_d,
+        llvm::Intrinsic::nvvm_div_rp_d,
+        llvm::Intrinsic::nvvm_div_rz_d,
+    };
+    Type t = thisOp.getRes().getType();
+    id = t.isF32() ? (isFtz ? f32FTZIDs[rndIndex] : f32IDs[rndIndex])
+                   : f64IDs[rndIndex];
   }
 
-  return {id, std::move(args)};
+  return {id,
+          {mt.lookupValue(thisOp.getLhs()), mt.lookupValue(thisOp.getRhs())}};
+}
+
+mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  using IDArgPair = mlir::NVVM::IDArgPair;
+  auto thisOp = cast<NVVM::AsyncStoreGlobalOp>(op);
+  mlir::NVVM::MemScopeKind scope = thisOp.getScope();
+  bool isMmio = thisOp.getMmio();
+
+  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *value = mt.lookupValue(thisOp.getValue());
+  llvm::Value *isMultimem = builder.getInt1(thisOp.getMultimem());
+
+  if (scope == MemScopeKind::SYS) {
+    return isMmio ? IDArgPair(llvm::Intrinsic::nvvm_st_async_mmio_sys,
+                              {addr, value})
+                  : IDArgPair(llvm::Intrinsic::nvvm_st_async_sys,
+                              {addr, value, isMultimem});
+  } else if (scope == MemScopeKind::GPU) {
+    return IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
+                     {addr, value, isMultimem});
+  }
+  llvm_unreachable("unsupported scope for AsyncStoreGlobalOp");
 }
 
 mlir::NVVM::IDArgPair
@@ -3574,6 +4095,14 @@ mlir::NVVM::IDArgPair CpAsyncMBarrierArriveOp::getIntrinsicIDAndArgs(
   return {id, {mt.lookupValue(thisOp.getAddr())}};
 }
 
+mlir::NVVM::IDArgPair
+MovMatrixOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MovMatrixOp>(op);
+  return {llvm::Intrinsic::nvvm_movmatrix_sync_aligned_m8n8_trans_b16,
+          {mt.lookupValue(thisOp.getSrc())}};
+}
+
 #define CP_ASYNC_ID_IMPL(mod, size, suffix)                                    \
   llvm::Intrinsic::nvvm_cp_async_##mod##_shared_global_##size##suffix
 
@@ -3897,24 +4426,27 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
   args.push_back(builder.getInt1(hasCacheHint));
 
-  const unsigned NI = llvm::Intrinsic::not_intrinsic;
-  static constexpr llvm::Intrinsic::ID IDTable[][6] = {
-      {NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d},
-      {NI, NI, NI, llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
-      {NI, NI, NI, NI, NI,
-       llvm::Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d}};
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_s2g_tile_1d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_2d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_3d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_4d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_5d},
+      {NI, NI, NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_2d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_5d}};
 
   static_assert(getMaxEnumValForTMAStoreMode() == std::size(IDTable) - 1,
                 "TMAStoreModes must match number of rows in IDTable");
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
-  llvm::Intrinsic::ID id = IDTable[mode][dim];
+  ID id = IDTable[mode][dim];
   if (id == llvm::Intrinsic::not_intrinsic)
     llvm_unreachable(
         "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOp.");
@@ -3925,144 +4457,46 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
 NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
-  llvm::LLVMContext &ctx = mt.getLLVMContext();
 
   llvm::SmallVector<llvm::Value *> args;
-
-  // Arguments to the intrinsic:
-  // shared_mem_ptr, tmaDesc, tensorDims
-  // cache_hint(if applicable) and flag(boolean)
   args.push_back(mt.lookupValue(thisOp.getSrcMem()));
   args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
-
   for (Value v : thisOp.getCoordinates())
     args.push_back(mt.lookupValue(v));
 
   mlir::Value cacheHint = thisOp.getL2CacheHint();
   const bool hasCacheHint = static_cast<bool>(cacheHint);
-  llvm::Value *i64ZeroValue =
-      llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64ZeroValue);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt32(static_cast<uint32_t>(thisOp.getRedKind())));
   args.push_back(builder.getInt1(hasCacheHint));
 
-  const llvm::Intrinsic::ID notIntrinsic = llvm::Intrinsic::not_intrinsic;
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_reduce_tile_1d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_2d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_3d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_4d,
+       nvvm_cp_async_bulk_tensor_reduce_tile_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_3d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_4d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_5d},
+      {NI, NI, NI, NI, NI, NI}, // scatter4 not supported for reduce
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_w_3d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_4d,
+       nvvm_cp_async_bulk_tensor_reduce_im2col_w_5d}};
 
-  constexpr unsigned numRedKinds = 8; // ADD, MIN, MAX, INC, DEC, AND, OR, XOR
-  constexpr unsigned numLayouts = 2;  // TILE, IM2COL
-  constexpr unsigned maxDim = 5;      // 1D to 5D
-  using row = std::array<llvm::Intrinsic::ID, maxDim + 1>;
-  using layoutTable = std::array<row, numLayouts>;
-  using fullTable = std::array<layoutTable, numRedKinds>;
-  static constexpr fullTable IDTable{
-      {// RedTy::ADD
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_im2col_5d}}}},
-       // RedTy::MIN
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_min_im2col_5d}}}},
-       // RedTy::MAX
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_max_im2col_5d}}}},
-       // RedTy::INC
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_inc_im2col_5d}}}},
-       // RedTy::DEC
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_dec_im2col_5d}}}},
-       // RedTy::AND
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_and_im2col_5d}}}},
-       // RedTy::OR
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_or_im2col_5d}}}},
-       // RedTy::XOR
-       {{{{notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_1d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_2d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_4d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_tile_5d}},
-         {{notIntrinsic, notIntrinsic, notIntrinsic,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_3d,
-           llvm::Intrinsic::nvvm_cp_async_bulk_tensor_reduce_xor_im2col_4d,
-           llvm::Intrinsic::
-               nvvm_cp_async_bulk_tensor_reduce_xor_im2col_5d}}}}}};
-
-  static_assert(getMaxEnumValForTMAReduxKind() == std::size(IDTable) - 1,
-                "TMAReduxKinds must match number of rows in IDTable");
-
-  size_t redKind = static_cast<size_t>(thisOp.getRedKind());
   size_t mode = static_cast<size_t>(thisOp.getMode());
   size_t dim = thisOp.getCoordinates().size();
-
-  assert(redKind < IDTable.size() &&
-         "Invalid redKind for CpAsyncBulkTensorReduceOp");
-  assert(mode < IDTable[redKind].size() &&
+  assert(mode < std::size(IDTable) &&
          "Invalid mode for CpAsyncBulkTensorReduceOp");
-  assert(dim < IDTable[redKind][mode].size() &&
+  assert(dim < std::size(IDTable[mode]) &&
          "Invalid dim for CpAsyncBulkTensorReduceOp");
 
-  llvm::Intrinsic::ID intrinsicID = IDTable[redKind][mode][dim];
-
-  assert(intrinsicID != notIntrinsic &&
-         "Invalid intrinsic for CpAsyncBulkTensorReduceOp.");
-
+  ID intrinsicID = IDTable[mode][dim];
+  assert(intrinsicID != NI &&
+         "Invalid intrinsic for CpAsyncBulkTensorReduceOp");
   return {intrinsicID, std::move(args)};
 }
 
@@ -4117,14 +4551,88 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
 llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
         llvm_unreachable("Invalid conversion in ConvertF32x2ToF6x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
+NVVM::IDArgPair
+ConvertF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF4x2Op &op,
+                                            LLVM::ModuleTranslation &mt,
+                                            llvm::IRBuilderBase &builder) {
+  mlir::Type dstTy = op.getDstTy();
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
+
+  if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
+    intId = hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_relu_satfinite
+                    : llvm::Intrinsic::nvvm_f16x2_to_e2m1x2_rn_satfinite;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrc()));
+
+  return {intId, std::move(args)};
+}
+
+NVVM::IDArgPair
+ConvertBF16x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF4x2Op &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  mlir::Type dstTy = op.getDstTy();
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId = llvm::Intrinsic::not_intrinsic;
+
+  if (llvm::isa<mlir::Float4E2M1FNType>(dstTy))
+    intId = hasRelu ? llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_relu_satfinite
+                    : llvm::Intrinsic::nvvm_bf16x2_to_e2m1x2_rn_satfinite;
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getSrc()));
+
+  return {intId, std::move(args)};
+}
+
+llvm::Intrinsic::ID ConvertF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                         bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f16x2_to_e2m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return hasRelu ? llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_relu_satfinite
+                       : llvm::Intrinsic::nvvm_f16x2_to_e3m2x2_rn_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertF16x2ToF6x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
+}
+
+llvm::Intrinsic::ID ConvertBF16x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
+                                                          bool hasRelu) {
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e2m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e3m2x2_rn_satfinite;
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF6x2Op");
         return llvm::Intrinsic::not_intrinsic;
       });
 }
@@ -4145,13 +4653,13 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
       })
-      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+      .Case([&](mlir::Float8E8M0FNUType) {
         if (hasRoundingModeRZ)
           return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
         else if (hasRoundingModeRP)
@@ -4172,10 +4680,10 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
 llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
@@ -4184,22 +4692,39 @@ llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
       });
 }
 
-#define GET_BF16X2_TO_F8X2_ID(rnd, has_satf)                                   \
-  has_satf ? llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd##_satfinite         \
-           : llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_##rnd
-
 llvm::Intrinsic::ID
-ConvertBF16x2ToF8x2Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                      NVVM::SaturationMode sat) {
+ConvertBF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
+                                      NVVM::FPRoundingMode rnd,
+                                      NVVM::SaturationMode sat, bool hasRelu) {
   bool hasSatFinite = (sat == NVVM::SaturationMode::SATFINITE);
-  switch (rnd) {
-  case NVVM::FPRoundingMode::RZ:
-    return GET_BF16X2_TO_F8X2_ID(rz, hasSatFinite);
-  case NVVM::FPRoundingMode::RP:
-    return GET_BF16X2_TO_F8X2_ID(rp, hasSatFinite);
-  default:
-    llvm_unreachable("Invalid rounding mode for CvtBF16x2ToF8x2Op");
-  }
+
+  static constexpr llvm::Intrinsic::ID ue8m0x2IDs[] = {
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rz,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rz_satfinite,
+      llvm::Intrinsic::nvvm_bf16x2_to_ue8m0x2_rp_satfinite,
+  };
+
+  return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
+      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e4m3x2_rn_satfinite;
+      })
+      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+        return hasRelu
+                   ? llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_relu_satfinite
+                   : llvm::Intrinsic::nvvm_bf16x2_to_e5m2x2_rn_satfinite;
+      })
+      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+        bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
+        unsigned index = (hasSatFinite << 1) | hasRoundingModeRP;
+        return ue8m0x2IDs[index];
+      })
+      .Default([](mlir::Type) {
+        llvm_unreachable("Invalid conversion in ConvertBF16x2ToF8x2Op");
+        return llvm::Intrinsic::not_intrinsic;
+      });
 }
 
 NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
@@ -4210,11 +4735,11 @@ NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float8E4M3FNType>([&](Float8E4M3FNType type) {
+          .Case([&](Float8E4M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
           })
-          .Case<Float8E5M2Type>([&](Float8E5M2Type type) {
+          .Case([&](Float8E5M2Type type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
           })
@@ -4233,13 +4758,52 @@ NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
 NVVM::IDArgPair ConvertF8x2ToBF16x2Op::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::ConvertF8x2ToBF16x2Op>(op);
+  bool hasScale = static_cast<bool>(curOp.getScaleFactor());
+  bool hasSatfinite = curOp.getSat() == NVVM::SaturationMode::SATFINITE;
+  bool hasRelu = curOp.getRelu();
 
-  llvm::Intrinsic::ID intId = llvm::Intrinsic::nvvm_ue8m0x2_to_bf16x2;
+  static constexpr llvm::Intrinsic::ID E4M3Ids[] = {
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e4m3x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  static constexpr llvm::Intrinsic::ID E5M2Ids[] = {
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e5m2x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case([&](Float8E8M0FNUType type) {
+            return llvm::Intrinsic::nvvm_ue8m0x2_to_bf16x2;
+          })
+          .Case([&](Float8E4M3FNType type) {
+            return E4M3Ids[hasSatfinite << 1 | hasRelu];
+          })
+          .Case([&](Float8E5M2Type type) {
+            return E5M2Ids[hasSatfinite << 1 | hasRelu];
+          })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF8x2ToBF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
   llvm::Value *packedI16 =
       builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
                             llvm::Type::getInt16Ty(builder.getContext()));
 
-  return {intId, {packedI16}};
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(packedI16);
+  if (!isa<Float8E8M0FNUType>(curOp.getSrcType()))
+    args.push_back(
+        hasScale ? mt.lookupValue(curOp.getScaleFactor())
+                 : builder.getInt16(0x7f7f)); // default scale factor (value of
+                                              // 1 for both elements)
+
+  return {intId, std::move(args)};
 }
 
 NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
@@ -4250,11 +4814,11 @@ NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float6E2M3FNType>([&](Float6E2M3FNType type) {
+          .Case([&](Float6E2M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn;
           })
-          .Case<Float6E3M2FNType>([&](Float6E3M2FNType type) {
+          .Case([&](Float6E3M2FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn;
           })
@@ -4270,6 +4834,52 @@ NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
   return {intId, {packedI16}};
 }
 
+NVVM::IDArgPair ConvertF6x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF6x2ToBF16x2Op>(op);
+  bool hasScale = static_cast<bool>(curOp.getScaleFactor());
+  bool hasSatfinite = curOp.getSat() == NVVM::SaturationMode::SATFINITE;
+  bool hasRelu = curOp.getRelu();
+
+  static constexpr llvm::Intrinsic::ID E2M3Ids[] = {
+      llvm::Intrinsic::nvvm_e2m3x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m3x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m3x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m3x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  static constexpr llvm::Intrinsic::ID E3M2Ids[] = {
+      llvm::Intrinsic::nvvm_e3m2x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e3m2x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e3m2x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e3m2x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  unsigned idx = (hasSatfinite << 1) | hasRelu;
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case([&](Float6E2M3FNType type) { return E2M3Ids[idx]; })
+          .Case([&](Float6E3M2FNType type) { return E3M2Ids[idx]; })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF6x2ToBF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
+
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(curOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(packedI16);
+  args.push_back(
+      hasScale
+          ? mt.lookupValue(curOp.getScaleFactor())
+          : builder.getInt16(
+                0x7f7f)); // default scale factor (value of 1 for both elements)
+
+  return {intId, std::move(args)};
+}
+
 NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::ConvertF4x2ToF16x2Op>(op);
@@ -4278,7 +4888,7 @@ NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float4E2M1FNType>([&](Float4E2M1FNType type) {
+          .Case([&](Float4E2M1FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn;
           })
@@ -4292,6 +4902,112 @@ NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
                          llvm::Type::getInt16Ty(builder.getContext()));
 
   return {intId, {extendedI16}};
+}
+
+NVVM::IDArgPair ConvertF4x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ConvertF4x2ToBF16x2Op>(op);
+  bool hasScale = static_cast<bool>(curOp.getScaleFactor());
+  bool hasSatfinite = curOp.getSat() == NVVM::SaturationMode::SATFINITE;
+  bool hasRelu = curOp.getRelu();
+
+  static constexpr llvm::Intrinsic::ID E2M1Ids[] = {
+      llvm::Intrinsic::nvvm_e2m1x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m1x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m1x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_e2m1x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  unsigned idx = (hasSatfinite << 1) | hasRelu;
+  llvm::Intrinsic::ID intId =
+      llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
+          .Case([&](Float4E2M1FNType type) { return E2M1Ids[idx]; })
+          .Default([](mlir::Type type) {
+            llvm_unreachable("Invalid type for ConvertF4x2ToBF16x2Op");
+            return llvm::Intrinsic::not_intrinsic;
+          });
+
+  llvm::Value *extendedI16 =
+      builder.CreateZExt(mt.lookupValue(curOp.getSrc()),
+                         llvm::Type::getInt16Ty(builder.getContext()));
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(extendedI16);
+  args.push_back(
+      hasScale
+          ? mt.lookupValue(curOp.getScaleFactor())
+          : builder.getInt16(
+                0x7f7f)); // default scale factor (value of 1 for both elements)
+
+  return {intId, std::move(args)};
+}
+
+NVVM::IDArgPair ConvertF32x2ToS2F6x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertF32x2ToS2F6x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+
+  llvm::Intrinsic::ID id =
+      hasRelu
+          ? llvm::Intrinsic::nvvm_ff_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0
+          : llvm::Intrinsic::nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getA()));
+  args.push_back(mt.lookupValue(thisOp.getB()));
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+  return {id, std::move(args)};
+}
+
+NVVM::IDArgPair ConvertBF16x2ToS2F6x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertBF16x2ToS2F6x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+
+  llvm::Intrinsic::ID id =
+      hasRelu
+          ? llvm::Intrinsic::
+                nvvm_bf16x2_to_s2f6x2_rn_relu_satfinite_scale_n2_ue8m0
+          : llvm::Intrinsic::nvvm_bf16x2_to_s2f6x2_rn_satfinite_scale_n2_ue8m0;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrc()));
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+  return {id, std::move(args)};
+}
+
+NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::ConvertS2F6x2ToBF16x2Op>(op);
+  bool hasRelu = thisOp.getRelu();
+  bool hasScale = static_cast<bool>(thisOp.getScaleFactor());
+  bool hasSat = thisOp.getSat() == NVVM::SaturationMode::SATFINITE;
+
+  static constexpr llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_relu_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_satfinite_scale_n2_ue8m0,
+      llvm::Intrinsic::nvvm_s2f6x2_to_bf16x2_rn_relu_satfinite_scale_n2_ue8m0,
+  };
+
+  unsigned idx = (hasSat << 1) | hasRelu;
+
+  // Fill the Intrinsic Args
+  llvm::SmallVector<llvm::Value *> args;
+  llvm::Value *packedI16 =
+      builder.CreateBitCast(mt.lookupValue(thisOp.getSrc()),
+                            llvm::Type::getInt16Ty(builder.getContext()));
+  args.push_back(packedI16);
+  args.push_back(hasScale ? mt.lookupValue(thisOp.getScaleFactor())
+                          : builder.getInt16(0x7f7f));
+
+  return {ids[idx], std::move(args)};
 }
 
 llvm::Intrinsic::ID
@@ -4335,29 +5051,33 @@ llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
   return id;
 }
 
-#define TCGEN05_COMMIT_IMPL(cg, is_shared, mc)                                 \
-  is_shared ? llvm::Intrinsic::nvvm_tcgen05_commit##mc##_shared##_##cg         \
-            : llvm::Intrinsic::nvvm_tcgen05_commit##mc##_##cg
-
-#define GET_TCGEN05_COMMIT_ID(cta_group, is_shared, has_mc)                    \
-  has_mc ? TCGEN05_COMMIT_IMPL(cta_group, is_shared, _mc)                      \
-         : TCGEN05_COMMIT_IMPL(cta_group, is_shared, )
-
 llvm::Intrinsic::ID
 Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
                                        LLVM::ModuleTranslation &mt,
                                        llvm::SmallVector<llvm::Value *> &args) {
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
-  unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
-                    .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::Shared;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
+  bool hasSmemARead = curOp.getSmemARead();
+  unsigned index = (static_cast<unsigned>(hasSmemARead) << 1) |
+                   static_cast<unsigned>(is2CTAMode);
 
-  llvm::Intrinsic::ID id =
-      is2CTAMode ? GET_TCGEN05_COMMIT_ID(cg2, isShared, hasMulticast)
-                 : GET_TCGEN05_COMMIT_ID(cg1, isShared, hasMulticast);
+  using namespace llvm::Intrinsic;
+  static constexpr ID IDs[] = {
+      nvvm_tcgen05_commit_cg1,
+      nvvm_tcgen05_commit_cg2,
+      nvvm_tcgen05_commit_smem_a_read_cg1,
+      nvvm_tcgen05_commit_smem_a_read_cg2,
+  };
 
+  static constexpr ID multicastIDs[] = {
+      nvvm_tcgen05_commit_mc_cg1,
+      nvvm_tcgen05_commit_mc_cg2,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg1,
+      nvvm_tcgen05_commit_smem_a_read_mc_cg2,
+  };
+
+  ID id = hasMulticast ? multicastIDs[index] : IDs[index];
   // Fill the Intrinsic Args
   args.push_back(mt.lookupValue(curOp.getAddr()));
   if (hasMulticast)
@@ -4483,11 +5203,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite;
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite;
       })
@@ -4502,11 +5222,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF6x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite;
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite;
       })
@@ -4521,7 +5241,7 @@ llvm::Intrinsic::ID ConvertF32x4ToF4x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float4E2M1FNType>([&](mlir::Float4E2M1FNType) {
+      .Case([&](mlir::Float4E2M1FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite;
       })
@@ -4693,9 +5413,7 @@ NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
 static llvm::Value *getParamCastedAddr(llvm::Value *addr,
                                        llvm::IRBuilderBase &builder) {
   return builder.CreateAddrSpaceCast(
-      addr,
-      llvm::PointerType::get(builder.getContext(),
-                             llvm::NVPTXAS::AddressSpace::ADDRESS_SPACE_PARAM));
+      addr, builder.getPtrTy(llvm::NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM));
 }
 
 NVVM::IDArgPair
@@ -5030,6 +5748,9 @@ Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5215,6 +5936,9 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
   return {ID, args};
 }
 
@@ -5249,11 +5973,13 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale
@@ -5266,7 +5992,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor
                    ? llvm::Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale
@@ -5277,7 +6003,7 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
                          : llvm::Intrinsic::
                                nvvm_tcgen05_mma_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5300,15 +6026,14 @@ mlir::NVVM::IDArgPair Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
 }
 
 static LogicalResult verifyTcgen05MMABlockScaleOp(
-    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::MMABlockScaleKind kind,
+    NVVM::Tcgen05MMACollectorOp collectorOp, NVVM::Tcgen05MMAKind kind,
     NVVM::Tcgen05MMABlockScale blockScale, Location loc) {
-
   if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT &&
-      kind == MMABlockScaleKind::MXF4NVF4)
+      kind == NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc, "mxf4nvf4 requires block scale attribute");
 
   if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK16 &&
-      kind != MMABlockScaleKind::MXF4NVF4)
+      kind != NVVM::Tcgen05MMAKind::MXF4NVF4)
     return emitError(loc,
                      llvm::formatv("{} kind does not support block16 attribute",
                                    stringifyEnum(kind)));
@@ -5347,11 +6072,13 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
       static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
 
   auto kind = thisOp.getKind();
   auto blockScale = thisOp.getBlockScale();
   llvm::Intrinsic::ID ID = [&]() {
-    if (kind == NVVM::MMABlockScaleKind::MXF8F6F4) {
+    if (kind == NVVM::Tcgen05MMAKind::MXF8F6F4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale
@@ -5364,7 +6091,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::DEFAULT) {
         return isATensor ? llvm::Intrinsic::
                                nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale
@@ -5377,7 +6104,7 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
                    : llvm::Intrinsic::
                          nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32;
       }
-    } else if (kind == NVVM::MMABlockScaleKind::MXF4NVF4) {
+    } else if (kind == NVVM::Tcgen05MMAKind::MXF4NVF4) {
       if (blockScale == NVVM::Tcgen05MMABlockScale::BLOCK32) {
         return isATensor
                    ? llvm::Intrinsic::
@@ -5485,8 +6212,104 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red functions
+//===----------------------------------------------------------------------===//
+
+#define TCGEN05LDRED(SHAPE, NUM, TYPE)                                         \
+  llvm::Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_##NUM##_##TYPE
+
+mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05LdRedOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  mlir::VectorType VecResTy =
+      cast<mlir::VectorType>(thisOp.getData().getType());
+  unsigned Num = VecResTy.getNumElements();
+  bool IsFloat = thisOp.getRedVal().getType().isF32();
+
+  llvm::Intrinsic::ID Shape32x32b[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(32x32b, x2, i32), TCGEN05LDRED(32x32b, x2, f32)},
+      {TCGEN05LDRED(32x32b, x4, i32), TCGEN05LDRED(32x32b, x4, f32)},
+      {TCGEN05LDRED(32x32b, x8, i32), TCGEN05LDRED(32x32b, x8, f32)},
+      {TCGEN05LDRED(32x32b, x16, i32), TCGEN05LDRED(32x32b, x16, f32)},
+      {TCGEN05LDRED(32x32b, x32, i32), TCGEN05LDRED(32x32b, x32, f32)},
+      {TCGEN05LDRED(32x32b, x64, i32), TCGEN05LDRED(32x32b, x64, f32)},
+      {TCGEN05LDRED(32x32b, x128, i32), TCGEN05LDRED(32x32b, x128, f32)},
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(16x32bx2, x2, i32), TCGEN05LDRED(16x32bx2, x2, f32)},
+      {TCGEN05LDRED(16x32bx2, x4, i32), TCGEN05LDRED(16x32bx2, x4, f32)},
+      {TCGEN05LDRED(16x32bx2, x8, i32), TCGEN05LDRED(16x32bx2, x8, f32)},
+      {TCGEN05LDRED(16x32bx2, x16, i32), TCGEN05LDRED(16x32bx2, x16, f32)},
+      {TCGEN05LDRED(16x32bx2, x32, i32), TCGEN05LDRED(16x32bx2, x32, f32)},
+      {TCGEN05LDRED(16x32bx2, x64, i32), TCGEN05LDRED(16x32bx2, x64, f32)},
+      {TCGEN05LDRED(16x32bx2, x128, i32), TCGEN05LDRED(16x32bx2, x128, f32)},
+  };
+
+  NVVM::Tcgen05LdStShape shape = thisOp.getShape();
+  unsigned ID = [&]() {
+    // `num` contains the length of vector and log2 of `num` returns the index
+    // into the shape array
+    unsigned idx = std::log2(Num);
+    switch (shape) {
+    case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+      return Shape32x32b[idx][IsFloat];
+    case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+      return Shape16x32bx2[idx][IsFloat];
+    default:
+      llvm_unreachable("unhandled tcgen05.ld lowering");
+    }
+  }();
+
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+
+  if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2)
+    args.push_back(mt.lookupValue(thisOp.getOffset()));
+
+  args.push_back(
+      builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MIN ? 0 : 1));
+
+  if (IsFloat) {
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getAbs())));
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getNan())));
+  }
+  return {ID, args};
+}
+
+LogicalResult Tcgen05LdRedOp::verify() {
+  VectorType data = cast<VectorType>(getData().getType());
+  Type redVal = getRedVal().getType();
+
+  if (data.getElementType() != redVal)
+    return emitError(
+        "type of reduction value and element type of vector data should match");
+
+  if (getOp() != NVVM::ReductionKind::MIN &&
+      getOp() != NVVM::ReductionKind::MAX)
+    return emitError("only min and max reduction kinds are supported");
+
+  if (redVal.isInteger() && (getAbs() || getNan())) {
+    return emitError("abs or nan is only applicable for f32 type");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
+
+namespace {
+struct NVVMInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
 
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
@@ -5502,6 +6325,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  addInterfaces<NVVMInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
   declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
@@ -5543,9 +6367,9 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
     if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
         !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
-             << "'" << attrName << "' attribute must be used along with "
-             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
-             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+             << "'" << attrName << "' attribute must be used along with " << "'"
+             << NVVMDialect::getReqntidAttrName() << "' and " << "'"
+             << NVVMDialect::getClusterDimAttrName() << "'";
     }
   }
 
@@ -5680,9 +6504,9 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const NVVMCheckSMVersion targetSMVersion =
-      NVVMCheckSMVersion::getTargetSMVersionFromStr(getChip());
-  if (!targetSMVersion.isMinimumSMVersion()) {
+  const unsigned targetFullSmVersion =
+      NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -5692,7 +6516,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetSMVersion)) {
+              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

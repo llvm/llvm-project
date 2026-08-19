@@ -60,6 +60,12 @@
 static FILE *verbose_file;
 static int verbose_init;
 
+#if defined(__GLIBC__)
+#define OMPT_GETENV secure_getenv
+#else
+#define OMPT_GETENV getenv
+#endif
+
 /*****************************************************************************
  * types
  ****************************************************************************/
@@ -281,7 +287,7 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
 
   // Try tool-libraries-var ICV
   OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed.\n");
-  const char *tool_libs = getenv("OMP_TOOL_LIBRARIES");
+  const char *tool_libs = OMPT_GETENV("OMP_TOOL_LIBRARIES");
   if (tool_libs) {
     OMPT_VERBOSE_INIT_PRINT("Searching tool libraries...\n");
     OMPT_VERBOSE_INIT_PRINT("OMP_TOOL_LIBRARIES = %s\n", tool_libs);
@@ -468,7 +474,7 @@ void ompt_pre_init() {
 #endif
 }
 
-extern "C" int omp_get_initial_device(void);
+#define omp_initial_device -1 /* see omp.h.var */
 
 void ompt_post_init() {
   //--------------------------------------------------
@@ -486,7 +492,7 @@ void ompt_post_init() {
   //--------------------------------------------------
   if (ompt_start_tool_result) {
     ompt_enabled.enabled = !!ompt_start_tool_result->initialize(
-        ompt_fn_lookup, omp_get_initial_device(),
+        ompt_fn_lookup, omp_initial_device,
         &(ompt_start_tool_result->tool_data));
 
     if (!ompt_enabled.enabled) {
@@ -591,9 +597,34 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_callback(ompt_callbacks_t which,
     else                                                                       \
       return ompt_set_always;
 
-    FOREACH_OMPT_EVENT(ompt_event_macro)
+    FOREACH_OMPT_HOST_EVENT(ompt_event_macro)
+    FOREACH_OMPT_DEVICE_EVENT(ompt_event_macro)
 
 #undef ompt_event_macro
+
+    // OpenMP v5.2, p. 503, l. 18-20:
+    // Restrictions to the ompt_callback_target_emi and ompt_callback_target
+    // callbacks are as follows:
+    //   These callbacks must not be registered at the same time.
+    //
+    // Similar restrictions apply to target_data_op, target_submit,
+    // and target_map. Hence, handle registration of them separately to ensure
+    // only one can be registered at the same time.
+#define ompt_target_event_macro(event_name, comparison_name, callback_type,    \
+                                event_id)                                      \
+  case event_name:                                                             \
+    if (ompt_callbacks.ompt_callback(comparison_name))                         \
+      return ompt_set_error;                                                   \
+    ompt_callbacks.ompt_callback(event_name) = (callback_type)callback;        \
+    ompt_enabled.event_name = (callback != 0);                                 \
+    if (callback)                                                              \
+      return ompt_event_implementation_status(event_name);                     \
+    else                                                                       \
+      return ompt_set_always;
+
+    FOREACH_MAPPED_OMPT_TARGET_EVENT(ompt_target_event_macro);
+
+#undef ompt_target_event_macro
 
   default:
     return ompt_set_error;
@@ -864,8 +895,10 @@ OMPT_API_ROUTINE int ompt_get_target_info(uint64_t *device_num,
   return 0; // thread is not in a target region
 }
 
+extern "C" int omp_get_num_devices(void);
+
 OMPT_API_ROUTINE int ompt_get_num_devices(void) {
-  return 1; // only one device (the current device) is available
+  return omp_get_num_devices();
 }
 
 /*****************************************************************************
@@ -915,8 +948,8 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
   return (ompt_interface_fn_t)0;
 }
 
-/// This function is called by the libomptarget connector to assign
-/// callbacks already registered with libomp.
+/// This function is called by libomptarget to assign callbacks already
+/// registered with libomp.
 _OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
   OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Enter ompt_libomp_connect\n");
 
@@ -929,7 +962,8 @@ _OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
     // functions can be extracted and assigned to the callbacks in
     // libomptarget
     result->initialize(ompt_libomp_target_fn_lookup,
-                       /* initial_device_num */ 0, /* tool_data */ nullptr);
+                       /* initial_device_num */ omp_initial_device,
+                       /* tool_data */ nullptr);
     // Track the object provided by libomptarget so that the finalizer can be
     // called during OMPT finalization
     libomptarget_ompt_result = result;

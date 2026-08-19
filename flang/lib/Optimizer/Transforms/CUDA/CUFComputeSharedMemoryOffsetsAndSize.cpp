@@ -9,19 +9,14 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
-#include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -70,13 +65,6 @@ static void createSharedMemoryGlobal(fir::FirOpBuilder &builder,
                                   cuf::DataAttribute::Shared)));
 
   mlir::DenseElementsAttr init = {};
-  mlir::Type i8Ty = builder.getI8Type();
-  if (size > 0) {
-    auto vecTy = mlir::VectorType::get(
-        static_cast<fir::SequenceType::Extent>(size), i8Ty);
-    mlir::Attribute zero = mlir::IntegerAttr::get(i8Ty, 0);
-    init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
-  }
   auto sharedMem =
       fir::GlobalOp::create(builder, loc, sharedMemGlobalName, false, false,
                             sharedMemType, init, linkage, attrs);
@@ -112,11 +100,10 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       unsigned short alignment = 0;
       mlir::Value crtDynOffset;
 
-      // Go over each shared memory operation and compute their start offset and
-      // the size and alignment of the global to be generated if all variables
-      // are static. If this is dynamic shared memory, then only the alignment
-      // is computed.
-      for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
+      // Walk all shared memory operations (including those nested inside
+      // scf.parallel from reduction lowering) and compute their start offset
+      // and the size and alignment of the global to be generated.
+      funcOp.walk([&](cuf::SharedMemoryOp sharedOp) {
         mlir::Location loc = sharedOp.getLoc();
         builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
@@ -162,23 +149,18 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           sharedOp.setIsStatic(true);
           ++nbStaticSharedVariables;
         }
-      }
+      });
 
       if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
         continue;
 
-      if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
-        mlir::emitError(
-            funcOp.getLoc(),
-            "static and dynamic shared variables in a single kernel");
-
-      if (nbStaticSharedVariables > 0)
-        continue;
-
-      auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
-      createSharedMemoryGlobal(builder, funcOp.getLoc(), funcOp.getName(), "",
-                               gpuMod, sharedMemType, sharedMemSize, alignment,
-                               /*isDynamic=*/true);
+      if (nbDynamicSharedVariables > 0) {
+        auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
+        createSharedMemoryGlobal(builder, funcOp.getLoc(), funcOp.getName(), "",
+                                 gpuMod, sharedMemType, sharedMemSize,
+                                 alignment,
+                                 /*isDynamic=*/true);
+      }
     }
   }
 };

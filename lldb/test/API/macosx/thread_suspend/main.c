@@ -16,7 +16,9 @@ function_to_call() {
 void *
 suspend_func (void *unused) {
   pthread_setname_np("Look for me");
+  pthread_mutex_lock(&signal_mutex);
   pthread_cond_signal(&signal_cond);
+  pthread_mutex_unlock(&signal_mutex);
   pthread_mutex_lock(&suspend_mutex);
 
   return NULL; // We allowed the suspend thread to run
@@ -41,7 +43,7 @@ main()
   pthread_create(&suspend_thread, NULL, suspend_func, NULL);
 
   pthread_cond_wait(&signal_cond, &signal_mutex);
-  
+
   mach_port_t th_port = pthread_mach_thread_np(suspend_thread);
   thread_suspend(th_port);
 

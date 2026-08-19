@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-arith-to-spirv -verify-diagnostics %s | FileCheck %s
+// XFAIL: system-aix
 
 
 //===----------------------------------------------------------------------===//

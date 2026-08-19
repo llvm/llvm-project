@@ -113,6 +113,20 @@
 
 @g.weird_ref.da.0 = constant i64 ptrtoint (ptr inttoptr (i64 ptrtoint (ptr ptrauth (ptr getelementptr (i8, ptr @g, i64 16), i32 2) to i64) to ptr) to i64)
 
+; Null pointer inside ptrauth is valid (e.g. ptrauth-irelative.ll).
+
+; CHECK-ELF-LABEL:     .globl g.null_ref.da.0
+; CHECK-ELF-NEXT:      .p2align 3
+; CHECK-ELF-NEXT:    g.null_ref.da.0:
+; CHECK-ELF-NEXT:      .xword (0)@AUTH(da,0)
+
+; CHECK-MACHO-LABEL:   .globl _g.null_ref.da.0
+; CHECK-MACHO-NEXT:    .p2align 3
+; CHECK-MACHO-NEXT:  _g.null_ref.da.0:
+; CHECK-MACHO-NEXT:    .quad (0)@AUTH(da,0)
+
+@g.null_ref.da.0 = constant ptr ptrauth (ptr null, i32 2)
+
 ; CHECK-ELF-LABEL:     .globl g_weak.ref.ia.42
 ; CHECK-ELF-NEXT:      .p2align 3
 ; CHECK-ELF-NEXT:    g_weak.ref.ia.42:
@@ -192,3 +206,15 @@
 
 ; CHECK-ERR-DISC-GNU: error: AArch64 PAC Discriminator '65538' out of range [0, 0xFFFF]
 @g.ref.da.65538 = constant ptr ptrauth (ptr @g, i32 2, i64 65538, ptr null, ptr @ds)
+
+;--- err-unsupported-base.ll
+
+; RUN: not llc < err-unsupported-base.ll -mtriple arm64e-apple-darwin 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-BASE
+; RUN: not llc < err-unsupported-base.ll -mtriple aarch64-elf -mattr=+pauth 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-ERR-BASE
+
+; CHECK-ERR-BASE: unsupported constant expression in ptrauth pointer
+
+@g = external global i32
+@g.nested_ptrauth = constant ptr ptrauth (ptr ptrauth (ptr @g, i32 0), i32 2)

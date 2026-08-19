@@ -20,8 +20,7 @@ namespace clang::tidy::abseil {
 // Given the name of a duration factory function, return the appropriate
 // `DurationScale` for that factory.  If no factory can be found for
 // `FactoryName`, return `std::nullopt`.
-static std::optional<DurationScale>
-getScaleForFactory(llvm::StringRef FactoryName) {
+static std::optional<DurationScale> getScaleForFactory(StringRef FactoryName) {
   return llvm::StringSwitch<std::optional<DurationScale>>(FactoryName)
       .Case("Nanoseconds", DurationScale::Nanoseconds)
       .Case("Microseconds", DurationScale::Microseconds)
@@ -169,8 +168,8 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     // cases where a user is multiplying by something such as 1e-3.
 
     // First check the LHS
-    const auto *IntLit = llvm::dyn_cast<IntegerLiteral>(MultBinOp->getLHS());
-    const auto *FloatLit = llvm::dyn_cast<FloatingLiteral>(MultBinOp->getLHS());
+    const auto *IntLit = dyn_cast<IntegerLiteral>(MultBinOp->getLHS());
+    const auto *FloatLit = dyn_cast<FloatingLiteral>(MultBinOp->getLHS());
     if (IntLit || FloatLit) {
       NewScale = getNewScale(Scale, getValue(IntLit, FloatLit));
       if (NewScale)
@@ -179,8 +178,8 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
 
     // If we weren't able to scale based on the LHS, check the RHS
     if (!NewScale) {
-      IntLit = llvm::dyn_cast<IntegerLiteral>(MultBinOp->getRHS());
-      FloatLit = llvm::dyn_cast<FloatingLiteral>(MultBinOp->getRHS());
+      IntLit = dyn_cast<IntegerLiteral>(MultBinOp->getRHS());
+      FloatLit = dyn_cast<FloatingLiteral>(MultBinOp->getRHS());
       if (IntLit || FloatLit) {
         NewScale = getNewScale(Scale, getValue(IntLit, FloatLit));
         if (NewScale)
@@ -191,7 +190,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<BinaryOperator>("div_binop")) {
     // We next handle division.
     // For division, we only check the RHS.
-    const auto *FloatLit = llvm::cast<FloatingLiteral>(DivBinOp->getRHS());
+    const auto *FloatLit = cast<FloatingLiteral>(DivBinOp->getRHS());
 
     std::optional<DurationScale> NewScale =
         getNewScale(Scale, 1.0 / FloatLit->getValueAsApproximateDouble());

@@ -577,7 +577,7 @@ no:
 define void @and16_trunc_8_sign(i16 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and16_trunc_8_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testb $-128, %dil
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
 ; CHECK-LINUX64-NEXT:    js .LBB13_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -589,7 +589,7 @@ define void @and16_trunc_8_sign(i16 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and16_trunc_8_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testb $-128, %cl
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
 ; CHECK-WIN32-64-NEXT:    js .LBB13_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -599,7 +599,7 @@ define void @and16_trunc_8_sign(i16 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and16_trunc_8_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
+; CHECK-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB13_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -620,7 +620,7 @@ no:
 define void @and32_trunc_8_sign(i32 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and32_trunc_8_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testb $-128, %dil
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
 ; CHECK-LINUX64-NEXT:    js .LBB14_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -632,7 +632,7 @@ define void @and32_trunc_8_sign(i32 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and32_trunc_8_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testb $-128, %cl
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
 ; CHECK-WIN32-64-NEXT:    js .LBB14_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -642,7 +642,7 @@ define void @and32_trunc_8_sign(i32 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and32_trunc_8_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
+; CHECK-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB14_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -663,7 +663,7 @@ no:
 define void @and64_trunc_8_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and64_trunc_8_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testb $-128, %dil
+; CHECK-LINUX64-NEXT:    testb %dil, %dil
 ; CHECK-LINUX64-NEXT:    js .LBB15_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -675,7 +675,7 @@ define void @and64_trunc_8_sign(i64 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and64_trunc_8_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testb $-128, %cl
+; CHECK-WIN32-64-NEXT:    testb %cl, %cl
 ; CHECK-WIN32-64-NEXT:    js .LBB15_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -685,7 +685,7 @@ define void @and64_trunc_8_sign(i64 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_8_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testb $-128, {{[0-9]+}}(%esp)
+; CHECK-X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB15_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -706,7 +706,6 @@ no:
 define void @and32_trunc_16_sign(i32 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and32_trunc_16_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    andl $32768, %edi # imm = 0x8000
 ; CHECK-LINUX64-NEXT:    testw %di, %di
 ; CHECK-LINUX64-NEXT:    js .LBB16_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
@@ -719,7 +718,6 @@ define void @and32_trunc_16_sign(i32 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and32_trunc_16_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; CHECK-WIN32-64-NEXT:    testw %cx, %cx
 ; CHECK-WIN32-64-NEXT:    js .LBB16_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
@@ -730,9 +728,7 @@ define void @and32_trunc_16_sign(i32 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and32_trunc_16_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-X86-NEXT:    andl $32768, %eax # imm = 0x8000
-; CHECK-X86-NEXT:    testw %ax, %ax
+; CHECK-X86-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB16_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -753,7 +749,7 @@ no:
 define void @and32_trunc_16_sign_minsize(i32 %x) minsize nounwind {
 ; CHECK-LINUX64-LABEL: and32_trunc_16_sign_minsize:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testw $-32768, %di # imm = 0x8000
+; CHECK-LINUX64-NEXT:    testw %di, %di
 ; CHECK-LINUX64-NEXT:    js .LBB17_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -765,7 +761,7 @@ define void @and32_trunc_16_sign_minsize(i32 %x) minsize nounwind {
 ; CHECK-WIN32-64-LABEL: and32_trunc_16_sign_minsize:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testw $-32768, %cx # imm = 0x8000
+; CHECK-WIN32-64-NEXT:    testw %cx, %cx
 ; CHECK-WIN32-64-NEXT:    js .LBB17_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -775,8 +771,7 @@ define void @and32_trunc_16_sign_minsize(i32 %x) minsize nounwind {
 ;
 ; CHECK-X86-LABEL: and32_trunc_16_sign_minsize:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-X86-NEXT:    testw $-32768, %ax # imm = 0x8000
+; CHECK-X86-NEXT:    cmpw $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB17_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -797,7 +792,6 @@ no:
 define void @and64_trunc_16_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and64_trunc_16_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    andl $32768, %edi # imm = 0x8000
 ; CHECK-LINUX64-NEXT:    testw %di, %di
 ; CHECK-LINUX64-NEXT:    js .LBB18_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
@@ -810,7 +804,6 @@ define void @and64_trunc_16_sign(i64 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and64_trunc_16_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    andl $32768, %ecx # imm = 0x8000
 ; CHECK-WIN32-64-NEXT:    testw %cx, %cx
 ; CHECK-WIN32-64-NEXT:    js .LBB18_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
@@ -821,8 +814,7 @@ define void @and64_trunc_16_sign(i64 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_16_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    movl $32768, %eax # imm = 0x8000
-; CHECK-X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    testw %ax, %ax
 ; CHECK-X86-NEXT:    js .LBB18_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
@@ -844,7 +836,7 @@ no:
 define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ; CHECK-LINUX64-LABEL: and64_trunc_16_sign_minsize:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testw $-32768, %di # imm = 0x8000
+; CHECK-LINUX64-NEXT:    testw %di, %di
 ; CHECK-LINUX64-NEXT:    js .LBB19_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -856,7 +848,7 @@ define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ; CHECK-WIN32-64-LABEL: and64_trunc_16_sign_minsize:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testw $-32768, %cx # imm = 0x8000
+; CHECK-WIN32-64-NEXT:    testw %cx, %cx
 ; CHECK-WIN32-64-NEXT:    js .LBB19_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -866,7 +858,8 @@ define void @and64_trunc_16_sign_minsize(i64 %x) minsize nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_16_sign_minsize:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testw $-32768, {{[0-9]+}}(%esp) # imm = 0x8000
+; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-X86-NEXT:    testw %ax, %ax
 ; CHECK-X86-NEXT:    js .LBB19_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT
@@ -887,7 +880,7 @@ no:
 define void @and64_trunc_32_sign(i64 %x) nounwind {
 ; CHECK-LINUX64-LABEL: and64_trunc_32_sign:
 ; CHECK-LINUX64:       # %bb.0:
-; CHECK-LINUX64-NEXT:    testl $-2147483648, %edi # imm = 0x80000000
+; CHECK-LINUX64-NEXT:    testl %edi, %edi
 ; CHECK-LINUX64-NEXT:    js .LBB20_2
 ; CHECK-LINUX64-NEXT:  # %bb.1: # %yes
 ; CHECK-LINUX64-NEXT:    pushq %rax
@@ -899,7 +892,7 @@ define void @and64_trunc_32_sign(i64 %x) nounwind {
 ; CHECK-WIN32-64-LABEL: and64_trunc_32_sign:
 ; CHECK-WIN32-64:       # %bb.0:
 ; CHECK-WIN32-64-NEXT:    subq $40, %rsp
-; CHECK-WIN32-64-NEXT:    testl $-2147483648, %ecx # imm = 0x80000000
+; CHECK-WIN32-64-NEXT:    testl %ecx, %ecx
 ; CHECK-WIN32-64-NEXT:    js .LBB20_2
 ; CHECK-WIN32-64-NEXT:  # %bb.1: # %yes
 ; CHECK-WIN32-64-NEXT:    callq bar
@@ -909,7 +902,7 @@ define void @and64_trunc_32_sign(i64 %x) nounwind {
 ;
 ; CHECK-X86-LABEL: and64_trunc_32_sign:
 ; CHECK-X86:       # %bb.0:
-; CHECK-X86-NEXT:    testl $-2147483648, {{[0-9]+}}(%esp) # imm = 0x80000000
+; CHECK-X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; CHECK-X86-NEXT:    js .LBB20_2
 ; CHECK-X86-NEXT:  # %bb.1: # %yes
 ; CHECK-X86-NEXT:    calll bar@PLT

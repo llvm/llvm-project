@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK: --- Classes ---
 // CHECK: list<int> ret = !foreach(a,

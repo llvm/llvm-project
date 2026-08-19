@@ -7,12 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Evaluate/real.h"
-#include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Decimal/decimal.h"
-#include "flang/Parser/characters.h"
 #include "llvm/Support/raw_ostream.h"
-#include <limits>
 
 namespace Fortran::evaluate::value {
 

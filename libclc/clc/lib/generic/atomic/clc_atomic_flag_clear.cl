@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_flag_clear.h>
-#include <clc/atomic/clc_atomic_store.h>
+#include "clc/atomic/clc_atomic_flag_clear.h"
+#include "clc/atomic/clc_atomic_store.h"
 
 #define __CLC_ATOMIC_FLAG_FALSE 0
 

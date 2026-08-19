@@ -46,6 +46,17 @@ test.using_property_ref_in_custom 1 + 4 = 5
 %ci64 = arith.constant 0 : i64
 test.variadic_segment_prop %ci64, %ci64 : %ci64 : i64, i64 : i64 end
 
+// Tests that the variadic segment size properties survive a round-trip
+// through the *custom* (non-generic) parser/printer when the assembly format
+// uses a bulk `functional-type(operands, results)` directive, which prevents
+// the printer from eliding `operandSegmentSizes` / `resultSegmentSizes` from
+// `<{...}>`. Without the parser-side fix, re-parsing the CHECK line below
+// (which is exactly what the printer emits) fails with "duplicate or unknown
+// key 'operandSegmentSizes' in dictionary attribute".
+// CHECK: test.variadic_segment_prop_bulk_type(%[[CI64]], %[[CI64]], %[[CI64]]) : (i64, i64, i64) -> (i64, i64, i64) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}>
+// GENERIC: "test.variadic_segment_prop_bulk_type"(%[[CI64]], %[[CI64]], %[[CI64]]) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}> : (i64, i64, i64) -> (i64, i64, i64)
+test.variadic_segment_prop_bulk_type(%ci64, %ci64, %ci64) : (i64, i64, i64) -> (i64, i64, i64) <{operandSegmentSizes = array<i32: 2, 1>, resultSegmentSizes = array<i32: 2, 1>}>
+
 // CHECK:   test.with_default_valued_properties na{{$}}
 // GENERIC: "test.with_default_valued_properties"()
 // GENERIC-SAME: <{a = 0 : i32, b = "", c = -1 : i32, unit = false}> : () -> ()
@@ -97,3 +108,27 @@ test.with_optional_properties nested = some<none>
 // CHECK-SAME: ints = [1, 2] strings = ["a", "b"] nested = {{\[}}[1, 2], [3, 4]] opt = [-1, -2] explicitOptions = [none, 0] explicitUnits = [unit, unit_absent]
 // GENERIC: "test.with_array_properties"()
 test.with_array_properties ints = [1, 2] strings = ["a", "b"] nested = [[1, 2], [3, 4]] opt = [-1, -2] explicitOptions = [none, 0] explicitUnits = [unit, unit_absent] [] thats_has_default
+
+// Tests that DefaultValuedProp is elided from prop-dict when value equals default.
+// CHECK: test.op_with_property_predicates
+// CHECK-SAME: <{array = [], more_constrained = 1 : i64, non_empty_constrained = [1], non_empty_unconstrained = [1], scalar = 1 : i64, unconstrained = 0 : i64}>
+// CHECK-NOT: defaulted
+test.op_with_property_predicates <{
+  scalar = 1 : i64,
+  more_constrained = 1 : i64,
+  array = [],
+  non_empty_unconstrained = [1],
+  non_empty_constrained = [1],
+  unconstrained = 0 : i64}>
+
+// Tests that DefaultValuedProp is printed when value differs from default.
+// CHECK: test.op_with_property_predicates
+// CHECK-SAME: defaulted = 3
+test.op_with_property_predicates <{
+  scalar = 1 : i64,
+  defaulted = 3 : i64,
+  more_constrained = 1 : i64,
+  array = [],
+  non_empty_unconstrained = [1],
+  non_empty_constrained = [1],
+  unconstrained = 0 : i64}>

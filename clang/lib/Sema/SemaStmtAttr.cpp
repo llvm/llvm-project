@@ -38,6 +38,18 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     return nullptr;
   }
 
+  // CWG 3045: The innermost enclosing switch statement of a fallthrough
+  // statement S shall be contained in the innermost enclosing expansion
+  // statement (8.7 [stmt.expand]) of S, if any.
+  for (Scope *Sc = S.getCurScope();
+       Sc && !Sc->isFunctionScope() && !Sc->isSwitchScope();
+       Sc = Sc->getParent()) {
+    if (Sc->isExpansionStmtScope()) {
+      S.Diag(A.getLoc(), diag::err_fallthrough_attr_invalid_placement);
+      return nullptr;
+    }
+  }
+
   // If this is spelled as the standard C++17 attribute, but not in C++17, warn
   // about using it as an extension.
   if (!S.getLangOpts().CPlusPlus17 && A.isCXX11Attribute() &&
@@ -143,6 +155,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                  .Case("pipeline_initiation_interval",
                        LoopHintAttr::PipelineInitiationInterval)
                  .Case("distribute", LoopHintAttr::Distribute)
+                 .Case("licm", LoopHintAttr::LICMDisabled)
                  .Default(LoopHintAttr::Vectorize);
     if (Option == LoopHintAttr::VectorizeWidth) {
       assert((ValueExpr || (StateLoc && StateLoc->getIdentifierInfo())) &&
@@ -168,7 +181,8 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                Option == LoopHintAttr::VectorizePredicate ||
                Option == LoopHintAttr::Unroll ||
                Option == LoopHintAttr::Distribute ||
-               Option == LoopHintAttr::PipelineDisabled) {
+               Option == LoopHintAttr::PipelineDisabled ||
+               Option == LoopHintAttr::LICMDisabled) {
       assert(StateLoc && StateLoc->getIdentifierInfo() &&
              "Loop hint must have an argument");
       if (StateLoc->getIdentifierInfo()->isStr("disable"))
@@ -312,7 +326,17 @@ static Attr *handleNoInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleAlwaysInlineAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                     SourceRange Range) {
   AlwaysInlineAttr AIA(S.Context, A);
-  if (!AIA.isClangAlwaysInline()) {
+  if (!S.getLangOpts().MicrosoftExt &&
+      (AIA.isMSVCForceInline() || AIA.isMSVCForceInlineCalls())) {
+    S.Diag(St->getBeginLoc(), diag::warn_attribute_ignored) << A;
+    return nullptr;
+  }
+  if (AIA.isMSVCForceInline()) {
+    S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
+        << "[[msvc::forceinline_calls]]";
+    return nullptr;
+  }
+  if (!AIA.isClangAlwaysInline() && !AIA.isMSVCForceInlineCalls()) {
     S.Diag(St->getBeginLoc(), diag::warn_function_attribute_ignored_in_stmt)
         << "[[clang::always_inline]]";
     return nullptr;
@@ -337,6 +361,64 @@ static Attr *handleMustTailAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   // Validation is in Sema::ActOnAttributedStmt().
   return ::new (S.Context) MustTailAttr(S.Context, A);
+}
+
+/// Return true if E is an atomic expression or a fence.
+static bool isAtomicExprOrFence(const Expr *E) {
+  E = E->IgnoreParenCasts();
+
+  if (isa<AtomicExpr>(E))
+    return true;
+
+  // _Atomic type qualifier operations: assignments and compound assignments
+  // to atomic lvalues, and loads from atomic lvalues.
+  if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
+    if (BO->getLHS()->getType()->isAtomicType())
+      return true;
+  } else if (E->getType()->isAtomicType()) {
+    return true;
+  }
+
+  // Target-independent fence builtins.
+  if (const auto *CE = dyn_cast<CallExpr>(E)) {
+    switch (CE->getBuiltinCallee()) {
+    case Builtin::BI__c11_atomic_thread_fence:
+    case Builtin::BI__c11_atomic_signal_fence:
+    case Builtin::BI__atomic_thread_fence:
+    case Builtin::BI__atomic_signal_fence:
+    case Builtin::BI__scoped_atomic_thread_fence:
+      return true;
+    default:
+      break;
+    }
+  }
+
+  return false;
+}
+
+static Attr *handleAMDGPUAvailableVisibleAttr(Sema &S, Stmt *St,
+                                              const ParsedAttr &A,
+                                              SourceRange Range) {
+  StringRef Mode;
+  if (!S.checkStringLiteralArgumentAttr(A, 0, Mode))
+    return nullptr;
+
+  if (Mode != "none") {
+    S.Diag(A.getLoc(), diag::warn_attribute_type_not_supported) << A << Mode;
+    return nullptr;
+  }
+
+  if (const auto *E = dyn_cast<Expr>(St)) {
+    if (!isAtomicExprOrFence(E)) {
+      S.Diag(A.getLoc(), diag::warn_amdgpu_av_requires_atomic) << A;
+      return nullptr;
+    }
+  } else {
+    S.Diag(A.getLoc(), diag::warn_amdgpu_av_requires_expr) << A;
+    return nullptr;
+  }
+
+  return ::new (S.Context) AMDGPUAvailableVisibleAttr(S.Context, A, Mode);
 }
 
 static Attr *handleLikely(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -422,11 +504,12 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
     if (!FirstValue)
       FirstValue = CAFA->getResultAsAPSInt();
 
-    if (FirstValue != SecondValue) {
-      S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
-          << *FirstItr;
-      S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
-    }
+    if (llvm::APSInt::isSameValue(*FirstValue, SecondValue))
+      continue;
+
+    S.Diag((*LastFoundItr)->getLocation(), diag::err_loop_attr_conflict)
+        << *FirstItr;
+    S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
   }
 }
 
@@ -474,6 +557,9 @@ CheckForIncompatibleAttributes(Sema &S,
     // The vector predication only has a state form that is exposed by
     // #pragma clang loop vectorize_predicate (enable | disable).
     VectorizePredicate,
+    // The LICM transformation only has a disable state form that is
+    // exposed by #pragma clang loop licm(disable).
+    LICM,
     // This serves as a indicator to how many category are listed in this enum.
     NumberOfCategories
   };
@@ -521,6 +607,9 @@ CheckForIncompatibleAttributes(Sema &S,
     case LoopHintAttr::VectorizePredicate:
       Category = VectorizePredicate;
       break;
+    case LoopHintAttr::LICMDisabled:
+      Category = LICM;
+      break;
     };
 
     assert(Category != NumberOfCategories && "Unhandled loop hint option");
@@ -531,6 +620,7 @@ CheckForIncompatibleAttributes(Sema &S,
         Option == LoopHintAttr::UnrollAndJam ||
         Option == LoopHintAttr::VectorizePredicate ||
         Option == LoopHintAttr::PipelineDisabled ||
+        Option == LoopHintAttr::LICMDisabled ||
         Option == LoopHintAttr::Distribute) {
       // Enable|Disable|AssumeSafety hint.  For example, vectorize(enable).
       PrevAttr = CategoryState.StateAttr;
@@ -710,6 +800,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleNoInlineAttr(S, St, A, Range);
   case ParsedAttr::AT_MustTail:
     return handleMustTailAttr(S, St, A, Range);
+  case ParsedAttr::AT_AMDGPUAvailableVisible:
+    return handleAMDGPUAvailableVisibleAttr(S, St, A, Range);
   case ParsedAttr::AT_Likely:
     return handleLikely(S, St, A, Range);
   case ParsedAttr::AT_Unlikely:

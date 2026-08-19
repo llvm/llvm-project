@@ -1840,14 +1840,14 @@ bool Scanner::fetchMoreTokens() {
   if (Column == 0 && *Current == '%')
     return scanDirective();
 
-  if (Column == 0 && Current + 4 <= End
+  if (Column == 0 && Current + 3 <= End
       && *Current == '-'
       && *(Current + 1) == '-'
       && *(Current + 2) == '-'
       && (Current + 3 == End || isBlankOrBreak(Current + 3)))
     return scanDocumentIndicator(true);
 
-  if (Column == 0 && Current + 4 <= End
+  if (Column == 0 && Current + 3 <= End
       && *Current == '.'
       && *(Current + 1) == '.'
       && *(Current + 2) == '.'

@@ -34,8 +34,8 @@ private:
   /// The name is obtained by concatenating the name with the list of types.
   void EmitEnum(raw_ostream &OS, StringRef N, const Record *R);
 
-  /// Emits the switch case and the invocation in the interpreter.
-  void EmitInterp(raw_ostream &OS, StringRef N, const Record *R);
+  void EmitInterpFnList(raw_ostream &OS, StringRef N, const Record *R);
+  void EmitInterpFnDispatchers(raw_ostream &OS, StringRef N, const Record *R);
 
   /// Emits the disassembler.
   void EmitDisasm(raw_ostream &OS, StringRef N, const Record *R);
@@ -91,7 +91,8 @@ void ClangOpcodesEmitter::run(raw_ostream &OS) {
       N = Opcode->getName();
 
     EmitEnum(OS, N, Opcode);
-    EmitInterp(OS, N, Opcode);
+    EmitInterpFnList(OS, N, Opcode);
+    EmitInterpFnDispatchers(OS, N, Opcode);
     EmitDisasm(OS, N, Opcode);
     EmitProto(OS, N, Opcode);
     EmitGroup(OS, N, Opcode);
@@ -109,60 +110,117 @@ void ClangOpcodesEmitter::EmitEnum(raw_ostream &OS, StringRef N,
   OS << "#endif\n";
 }
 
-void ClangOpcodesEmitter::EmitInterp(raw_ostream &OS, StringRef N,
-                                     const Record *R) {
-  OS << "#ifdef GET_INTERP\n";
+void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
+                                                  const Record *R) {
+  OS << "#ifdef GET_INTERPFN_DISPATCHERS\n";
+  // PRESERVE NONE static bool Interp_* (InterpState &S, CodePtr &PC) {
+  Enumerate(R, N, [&](ArrayRef<const Record *> TS, const Twine &ID) {
+    OS << "PRESERVE_NONE\nstatic bool Interp_" << ID << "(InterpState &S) {\n";
 
-  Enumerate(R, N,
-            [this, R, &OS, &N](ArrayRef<const Record *> TS, const Twine &ID) {
-              bool CanReturn = R->getValueAsBit("CanReturn");
-              bool ChangesPC = R->getValueAsBit("ChangesPC");
-              const auto &Args = R->getValueAsListOfDefs("Args");
+    if (ID.str() == "EndSpeculation") {
+      OS << "    MUSTTAIL return EndSpeculation(S);\n";
+      OS << "}\n";
+      return;
+    }
 
-              OS << "case OP_" << ID << ": {\n";
+    bool CanReturn = R->getValueAsBit("CanReturn");
+    const auto &Args = R->getValueAsListOfDefs("Args");
+    bool CanFail = R->getValueAsBit("CanFail");
+    bool PassOpPC = R->getValueAsBit("NeedsOpPC");
 
-              if (CanReturn)
-                OS << "  bool DoReturn = (S.Current == StartFrame);\n";
+    if (Args.empty()) {
+      if (CanReturn) {
+        OS << " MUSTTAIL return " << N;
+        PrintTypes(OS, TS);
+        OS << "(S);\n";
+        OS << "}\n";
+        return;
+      }
 
-              // Emit calls to read arguments.
-              for (size_t I = 0, N = Args.size(); I < N; ++I) {
-                const auto *Arg = Args[I];
-                bool AsRef = Arg->getValueAsBit("AsRef");
+      OS << "  ";
+      if (CanFail)
+        OS << "if (!";
 
-                if (AsRef)
-                  OS << "  const auto &V" << I;
-                else
-                  OS << "  const auto V" << I;
-                OS << " = ";
-                OS << "ReadArg<" << Arg->getValueAsString("Name")
-                   << ">(S, PC);\n";
-              }
+      OS << N;
+      PrintTypes(OS, TS);
+      OS << "(S";
+      if (PassOpPC)
+        OS << ", S.PC)";
+      else
+        OS << ")";
 
-              // Emit a call to the template method and pass arguments.
-              OS << "  if (!" << N;
-              PrintTypes(OS, TS);
-              OS << "(S";
-              if (ChangesPC)
-                OS << ", PC";
-              else
-                OS << ", OpPC";
-              for (size_t I = 0, N = Args.size(); I < N; ++I)
-                OS << ", V" << I;
-              OS << "))\n";
-              OS << "    return false;\n";
+      if (CanFail)
+        OS << ") return false";
 
-              // Bail out if interpreter returned.
-              if (CanReturn) {
-                OS << "  if (!S.Current || S.Current->isRoot())\n";
-                OS << "    return true;\n";
+      OS << ";\n";
 
-                OS << "  if (DoReturn)\n";
-                OS << "    return true;\n";
-              }
+      OS << "#if USE_TAILCALLS\n";
+      OS << "  MUSTTAIL return InterpNext(S);\n";
+      OS << "#else\n";
+      OS << "  return true;\n";
+      OS << "#endif\n";
+      OS << "}\n";
+      return;
+    }
 
-              OS << "  continue;\n";
-              OS << "}\n";
-            });
+    OS << "  {\n";
+
+    if (PassOpPC)
+      OS << "    CodePtr OpPC = S.PC;\n";
+
+    // Emit calls to read arguments.
+    for (size_t I = 0, N = Args.size(); I < N; ++I) {
+      const auto *Arg = Args[I];
+      bool AsRef = Arg->getValueAsBit("AsRef");
+
+      if (AsRef)
+        OS << "    const auto &V" << I;
+      else
+        OS << "    const auto V" << I;
+      OS << " = ";
+      OS << "ReadArg<" << Arg->getValueAsString("Name") << ">(S, S.PC);\n";
+    }
+
+    OS << "    ";
+    if (CanFail)
+      OS << "if (!";
+
+    OS << N;
+    PrintTypes(OS, TS);
+    OS << "(S";
+    if (PassOpPC)
+      OS << ", OpPC";
+    for (size_t I = 0, N = Args.size(); I < N; ++I)
+      OS << ", V" << I;
+
+    OS << ")";
+
+    if (CanFail)
+      OS << ") return false";
+
+    OS << ";\n";
+    OS << "  }\n";
+
+    if (!CanReturn) {
+      OS << "#if USE_TAILCALLS\n";
+      OS << "  MUSTTAIL return InterpNext(S);\n";
+      OS << "#else\n";
+      OS << "  return true;\n";
+      OS << "#endif\n";
+    } else
+      OS << "  return true;\n";
+
+    OS << "}\n";
+  });
+  OS << "#endif\n";
+}
+
+void ClangOpcodesEmitter::EmitInterpFnList(raw_ostream &OS, StringRef N,
+                                           const Record *R) {
+  OS << "#ifdef GET_INTERPFN_LIST\n";
+  Enumerate(R, N, [&OS](ArrayRef<const Record *>, const Twine &ID) {
+    OS << "&Interp_" << ID << ",\n";
+  });
   OS << "#endif\n";
 }
 
@@ -262,6 +320,11 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
 
   const auto *Types = R->getValueAsListInit("Types");
   const auto &Args = R->getValueAsListOfDefs("Args");
+
+  if (Types->empty()) {
+    PrintFatalError("HasGroup only makes sense for opcodes with types");
+    return;
+  }
 
   Twine EmitFuncName = "emit" + N;
 
@@ -372,12 +435,20 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
               OS << "  if (!isActive()) return true;\n";
               OS << "  CurrentSource = L;\n";
 
-              OS << "  return " << N;
-              PrintTypes(OS, TS);
-              OS << "(S, OpPC";
-              for (size_t I = 0, N = Args.size(); I < N; ++I)
-                OS << ", A" << I;
-              OS << ");\n";
+              if (N == "EndSpeculation") {
+                OS << "return EndSpeculation(S);\n";
+              } else {
+                bool PassOpPC = R->getValueAsBit("NeedsOpPC");
+
+                OS << "  return " << N;
+                PrintTypes(OS, TS);
+                OS << "(S";
+                if (PassOpPC)
+                  OS << ", CodePtr()";
+                for (size_t I = 0, N = Args.size(); I < N; ++I)
+                  OS << ", A" << I;
+                OS << ");\n";
+              }
               OS << "}\n";
             });
 

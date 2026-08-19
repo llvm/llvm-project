@@ -115,6 +115,7 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #else
 #define __plix(cache_level, retention_policy, addr) \
   __builtin_arm_prefetch(addr, 0, cache_level, retention_policy, 0)
+#define __pldir(addr) __builtin_arm_prefetch_ir(addr)
 #endif
 
 /* 7.7 NOP */

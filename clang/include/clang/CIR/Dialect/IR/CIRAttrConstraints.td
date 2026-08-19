@@ -71,15 +71,34 @@ def CIR_TryHandlerAttr
 // ArrayAttr constraints
 //===----------------------------------------------------------------------===//
 
-def CIR_IntArrayAttr : TypedArrayAttrBase<CIR_AnyIntAttr,
-   "integer array attribute">;
-
-def CIR_IntOrGlobalViewArrayAttr : TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
-   "integer or global view array attribute">{
+class CIR_TypedArrayAttrBase<Attr element, string summary>
+    : TypedArrayAttrBase<element, summary> {
   string cppType = "::mlir::ArrayAttr";
 }
 
-def CIR_TryHandlerArrayAttr : TypedArrayAttrBase<CIR_TryHandlerAttr,
+class CIR_TypedArrayAttrOrNullBase<Attr element, string summary>
+    : CIR_TypedArrayAttrBase<element, summary> {
+  let predicate = Or<[
+    CPred<"!$_self">,
+    CIR_TypedArrayAttrBase<element, summary>.predicate
+  ]>;
+  string defaultValue = "::mlir::ArrayAttr()";
+}
+
+def CIR_IntArrayAttr : CIR_TypedArrayAttrBase<CIR_AnyIntAttr,
+   "integer array attribute">;
+
+def CIR_IntOrGlobalViewArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_AnyIntOrGlobalViewAttr,
+                             "integer or global view array attribute">;
+
+def CIR_StringArrayAttr
+    : CIR_TypedArrayAttrBase<StrAttr, "string array attribute">;
+
+def CIR_StringArrayAttrOrNull
+    : CIR_TypedArrayAttrOrNullBase<StrAttr, "string array attribute or null">;
+
+def CIR_TryHandlerArrayAttr : CIR_TypedArrayAttrBase<CIR_TryHandlerAttr,
                          "catch all or unwind or global view array attribute">;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRCONSTRAINTS_TD

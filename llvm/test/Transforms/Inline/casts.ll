@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 ; RUN: opt < %s -passes='module-inline' -S | FileCheck %s
 
 define i32 @testByte(i8 %X) {

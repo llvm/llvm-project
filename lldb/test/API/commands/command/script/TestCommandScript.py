@@ -201,6 +201,19 @@ class CmdPythonTestCase(TestBase):
             substrs=[bad_class_name],
         )
 
+        # `-f` doesn't validate the function reference until the command is
+        # actually invoked. Make sure a bogus reference (e.g. a typo) produces
+        # a visible error at invocation time instead of silently doing
+        # nothing.
+        self.runCmd(
+            "command script add -f nonexistent_module.nonexistent_function typo_cmd"
+        )
+        self.expect(
+            "typo_cmd",
+            error=True,
+            substrs=["unable to execute script function"],
+        )
+
     def test_persistence(self):
         """
         Ensure that function arguments meaningfully persist (and do not crash!)
@@ -214,8 +227,8 @@ class CmdPythonTestCase(TestBase):
         # valid.
         self.expect("script str(persistence.debugger_copy)", substrs=[str(self.dbg)])
         # The result object will be replaced by an empty result object (in the
-        # "Started" state).
-        self.expect("script str(persistence.result_copy)", substrs=["Started"])
+        # default "Invalid" state).
+        self.expect("script str(persistence.result_copy)", substrs=["Invalid"])
 
     def test_interactive(self):
         """

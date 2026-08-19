@@ -38,7 +38,7 @@ class PlatformSDKTestCase(TestBase):
         return None
 
     @no_debug_info_test
-    @skipUnlessDarwin
+    @requireDarwin
     @skipTestIfFn(no_debugserver)
     @skipTestIfFn(port_not_available)
     @skipIfRemote
