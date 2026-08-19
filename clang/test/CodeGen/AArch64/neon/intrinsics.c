@@ -5453,6 +5453,323 @@ uint32_t test_vcvtad_u32_f64(float64_t a) {
 }
 
 //===------------------------------------------------------===//
+// 2.1.4.1 Convearions (int to float)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#conversions
+//===------------------------------------------------------===//
+// LLVM-LABEL: @test_vcvt_f32_s32(
+// CIR-LABEL: @vcvt_f32_s32(
+float32x2_t test_vcvt_f32_s32(int32x2_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM:    [[VCVT_I:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
+// LLVM:    ret <2 x float> [[VCVT_I]]
+  return vcvt_f32_s32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_f32_s32(
+// CIR-LABEL: @vcvtq_f32_s32(
+float32x4_t test_vcvtq_f32_s32(int32x4_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM:    [[VCVT_I:%.*]] = sitofp <4 x i32> [[TMP1]] to <4 x float>
+// LLVM:    ret <4 x float> [[VCVT_I]]
+  return vcvtq_f32_s32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_f32_u32(
+// CIR-LABEL: @vcvt_f32_u32(
+float32x2_t test_vcvt_f32_u32(uint32x2_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM:    [[VCVT_I:%.*]] = uitofp <2 x i32> [[TMP1]] to <2 x float>
+// LLVM:    ret <2 x float> [[VCVT_I]]
+  return vcvt_f32_u32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_f32_u32(
+// CIR-LABEL: @vcvtq_f32_u32(
+float32x4_t test_vcvtq_f32_u32(uint32x4_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM:    [[VCVT_I:%.*]] = uitofp <4 x i32> [[TMP1]] to <4 x float>
+// LLVM:    ret <4 x float> [[VCVT_I]]
+  return vcvtq_f32_u32(a);
+}
+
+// LLVM-LABEL: @test_vcvts_f32_s32(
+// CIR-LABEL: @vcvts_f32_s32(
+float32_t test_vcvts_f32_s32(int32_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = sitofp i32 [[A]] to float
+// LLVM:    ret float [[TMP0]]
+  return vcvts_f32_s32(a);
+}
+
+// LLVM-LABEL: @test_vcvts_f32_u32(
+// CIR-LABEL: @vcvts_f32_u32(
+float32_t test_vcvts_f32_u32(uint32_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = uitofp i32 [[A]] to float
+// LLVM:    ret float [[TMP0]]
+  return vcvts_f32_u32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_f64_s64(
+// CIR-LABEL: @vcvt_f64_s64(
+float64x1_t test_vcvt_f64_s64(int64x1_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM:    [[VCVT_I:%.*]] = sitofp <1 x i64> [[TMP1]] to <1 x double>
+// LLVM:    ret <1 x double> [[VCVT_I]]
+  return vcvt_f64_s64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_f64_s64(
+// CIR-LABEL: @vcvtq_f64_s64(
+float64x2_t test_vcvtq_f64_s64(int64x2_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM:    [[VCVT_I:%.*]] = sitofp <2 x i64> [[TMP1]] to <2 x double>
+// LLVM:    ret <2 x double> [[VCVT_I]]
+  return vcvtq_f64_s64(a);
+}
+
+// LLVM-LABEL: @test_vcvt_f64_u64(
+// CIR-LABEL: @vcvt_f64_u64(
+float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <1 x i64> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM:    [[VCVT_I:%.*]] = uitofp <1 x i64> [[TMP1]] to <1 x double>
+// LLVM:    ret <1 x double> [[VCVT_I]]
+  return vcvt_f64_u64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_f64_u64(
+// CIR-LABEL: @vcvtq_f64_u64(
+float64x2_t test_vcvtq_f64_u64(uint64x2_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: <2 x i64> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM:    [[TMP1:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM:    [[VCVT_I:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x double>
+// LLVM:    ret <2 x double> [[VCVT_I]]
+  return vcvtq_f64_u64(a);
+}
+
+// LLVM-LABEL: @test_vcvtd_f64_s64(
+// CIR-LABEL: @vcvtd_f64_s64(
+float64_t test_vcvtd_f64_s64(int64_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = sitofp i64 [[A]] to double
+// LLVM:    ret double [[TMP0]]
+  return vcvtd_f64_s64(a);
+}
+
+// LLVM-LABEL: @test_vcvtd_f64_u64(
+// CIR-LABEL: @vcvtd_f64_u64(
+float64_t test_vcvtd_f64_u64(uint64_t a) {
+// CIR:  cir.cast int_to_float
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = uitofp i64 [[A]] to double
+// LLVM:    ret double [[TMP0]]
+  return vcvtd_f64_u64(a);
+}
+
+//===------------------------------------------------------===//
+// 2.1.4.1 Convearions (float width conversion)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#conversions
+//===------------------------------------------------------===//
+// LLVM-LABEL: @test_vcvt_f16_f32(
+// CIR-LABEL: @vcvt_f16_f32(
+float16x4_t test_vcvt_f16_f32(float32x4_t a) {
+// CIR:  cir.cast floating
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[TMP3:%.*]] = fptrunc <4 x float> [[TMP2]] to <4 x half>
+// LLVM:    ret <4 x half> [[TMP3]]
+  return vcvt_f16_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_high_f16_f32(
+// CIR-LABEL: @vcvt_f16_f32(
+float16x8_t test_vcvt_high_f16_f32(float16x4_t a, float32x4_t b) {
+// CIR:  cir.call @vcvt_f16_f32
+// CIR: cir.call @vcombine_f16
+
+// LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[TMP3:%.*]] = fptrunc <4 x float> [[TMP2]] to <4 x half>
+// LLVM:    [[SHUFFLE_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// LLVM:    ret <8 x half> [[SHUFFLE_I]]
+  return vcvt_high_f16_f32(a, b);
+}
+
+// LLVM-LABEL: @test_vcvt_f32_f64(
+// CIR-LABEL: @vcvt_f32_f64(
+float32x2_t test_vcvt_f32_f64(float64x2_t a) {
+// CIR:  cir.cast floating
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]]) #[[ATTR0]] {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVT_I:%.*]] = fptrunc <2 x double> [[TMP2]] to <2 x float>
+// LLVM:    ret <2 x float> [[VCVT_I]]
+  return vcvt_f32_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvt_high_f32_f64(
+// CIR-LABEL: @vcvt_high_f32_f64(
+float32x4_t test_vcvt_high_f32_f64(float32x2_t a, float64x2_t b) {
+// CIR:  cir.call @vcvt_f32_f64
+// CIR: cir.call @vcombine_f32
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVT_I_I:%.*]] = fptrunc <2 x double> [[TMP2]] to <2 x float>
+// LLVM:    [[SHUFFLE_I:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[VCVT_I_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// LLVM:    ret <4 x float> [[SHUFFLE_I]]
+  return vcvt_high_f32_f64(a, b);
+}
+
+// LLVM-LABEL: @test_vcvt_f32_f16(
+// CIR-LABEL: @vcvt_f32_f16(
+float32x4_t test_vcvt_f32_f16(float16x4_t a) {
+// CIR:  cir.cast floating
+
+// LLVM-SAME: <4 x half> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// LLVM:    [[TMP3:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
+// LLVM:    ret <4 x float> [[TMP3]]
+  return vcvt_f32_f16(a);
+}
+
+// LLVM-LABEL: @test_vcvt_high_f32_f16(
+// CIR-LABEL: @vcvt_high_f32_f16(
+float32x4_t test_vcvt_high_f32_f16(float16x8_t a) {
+// CIR: cir.call @vget_high_f16
+// CIR:  cir.call @vcvt_f32_f16
+
+// LLVM-SAME: <8 x half> {{.*}} [[A:%.*]])
+// LLVM:    [[SHUFFLE_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x half> [[SHUFFLE_I]] to <4 x i16>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x half>
+// LLVM:    [[TMP3:%.*]] = fpext <4 x half> [[TMP2]] to <4 x float>
+// LLVM:    ret <4 x float> [[TMP3]]
+  return vcvt_high_f32_f16(a);
+}
+
+// LLVM-LABEL: @test_vcvt_f64_f32(
+// CIR-LABEL: @vcvt_f64_f32(
+float64x2_t test_vcvt_f64_f32(float32x2_t a) {
+// CIR:  cir.cast floating
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVT_I:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
+// LLVM:    ret <2 x double> [[VCVT_I]]
+  return vcvt_f64_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_high_f64_f32(
+// CIR-LABEL: @vcvt_high_f64_f32(
+float64x2_t test_vcvt_high_f64_f32(float32x4_t a) {
+// CIR: cir.call @vget_high_f32
+// CIR:  cir.call @vcvt_f64_f32
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[SHUFFLE_I:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[A]], <2 x i32> <i32 2, i32 3>
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[SHUFFLE_I]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVT_I_I:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
+// LLVM:    ret <2 x double> [[VCVT_I_I]]
+  return vcvt_high_f64_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtx_f32_f64(
+// CIR-LABEL: @vcvtx_f32_f64(
+float32x2_t test_vcvtx_f32_f64(float64x2_t a) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.fcvtxn"
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTX_F32_V_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTX_F32_V1_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> [[VCVTX_F32_V_I]])
+// LLVM:    ret <2 x float> [[VCVTX_F32_V1_I]]
+  return vcvtx_f32_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtxd_f32_f64
+// CIR-LABEL: @vcvtxd_f32_f64
+float32_t test_vcvtxd_f32_f64(float64_t a) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sisd.fcvtxn"
+
+// LLVM-SAME: (double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTXD_F32_F64_I:%.*]] = call float @llvm.aarch64.sisd.fcvtxn(double [[A]])
+// LLVM:    ret float [[VCVTXD_F32_F64_I]]
+  return (float32_t)vcvtxd_f32_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtx_high_f32_f64(
+// CIR-LABEL: @vcvtx_high_f32_f64(
+float32x4_t test_vcvtx_high_f32_f64(float32x2_t a, float64x2_t b) {
+// CIR: cir.call @vcvtx_f32_f64
+// CIR: cir.call @vcombine_f32
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[VCVTX_F32_V_I_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTX_F32_V1_I_I:%.*]] = call <2 x float> @llvm.aarch64.neon.fcvtxn.v2f32.v2f64(<2 x double> [[VCVTX_F32_V_I_I]])
+// LLVM:    [[SHUFFLE_I:%.*]] = shufflevector <2 x float> [[A]], <2 x float> [[VCVTX_F32_V1_I_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// LLVM:    ret <4 x float> [[SHUFFLE_I]]
+  return vcvtx_high_f32_f64(a, b);
+}
+
+//===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
 //===------------------------------------------------------===//
