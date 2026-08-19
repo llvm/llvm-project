@@ -26,8 +26,68 @@
 #if ENABLE_LIBOMPTARGET
 static void (*tgt_target_nowait_query)(void **);
 
+// libomptarget entry points used by the taskgraph-target stub entry points.
+// The kernel-arguments struct (\c __tgt_kernel_arguments) and the map names
+// array (\c map_var_info_t) are kept opaque here (\c void * / \c void **);
+// libomptarget reinterprets them.
+static int (*tgt_target_kernel)(ident_t *, int64_t, int32_t, int32_t, void *,
+                                void *);
+static void (*tgt_target_data_begin_mapper)(ident_t *, int64_t, int32_t,
+                                            void **, void **, int64_t *,
+                                            int64_t *, void **, void **);
+static void (*tgt_target_data_end_mapper)(ident_t *, int64_t, int32_t, void **,
+                                          void **, int64_t *, int64_t *,
+                                          void **, void **);
+static void (*tgt_target_data_update_mapper)(ident_t *, int64_t, int32_t,
+                                             void **, void **, int64_t *,
+                                             int64_t *, void **, void **);
+// The 'nowait' map variants take four extra dependence arguments; the
+// taskgraph-target stubs satisfy dependences themselves, so they are always
+// passed as empty.
+static void (*tgt_target_data_begin_nowait_mapper)(ident_t *, int64_t, int32_t,
+                                                   void **, void **, int64_t *,
+                                                   int64_t *, void **, void **,
+                                                   int32_t, void *, int32_t,
+                                                   void *);
+static void (*tgt_target_data_end_nowait_mapper)(ident_t *, int64_t, int32_t,
+                                                 void **, void **, int64_t *,
+                                                 int64_t *, void **, void **,
+                                                 int32_t, void *, int32_t,
+                                                 void *);
+static void (*tgt_target_data_update_nowait_mapper)(ident_t *, int64_t, int32_t,
+                                                    void **, void **, int64_t *,
+                                                    int64_t *, void **, void **,
+                                                    int32_t, void *, int32_t,
+                                                    void *);
+
+// Deep-copies a kernel-arguments struct and the arrays it points at into a
+// caller-provided block, sizing that block when the destination is null (see
+// offload/include/omptarget.h).
+static void (*tgt_taskgraph_dup_kernel_args)(void *, void *, size_t *);
+
+static void (*tgt_taskgraph_dup_data_args)(void *, int32_t, void ***, void ***,
+                                           int64_t **, int64_t **, void ***,
+                                           void ***, size_t *);
+
 void __kmp_init_target_task() {
   *(void **)(&tgt_target_nowait_query) = KMP_DLSYM("__tgt_target_nowait_query");
+  *(void **)(&tgt_target_kernel) = KMP_DLSYM("__tgt_target_kernel");
+  *(void **)(&tgt_target_data_begin_mapper) =
+      KMP_DLSYM("__tgt_target_data_begin_mapper");
+  *(void **)(&tgt_target_data_end_mapper) =
+      KMP_DLSYM("__tgt_target_data_end_mapper");
+  *(void **)(&tgt_target_data_update_mapper) =
+      KMP_DLSYM("__tgt_target_data_update_mapper");
+  *(void **)(&tgt_target_data_begin_nowait_mapper) =
+      KMP_DLSYM("__tgt_target_data_begin_nowait_mapper");
+  *(void **)(&tgt_target_data_end_nowait_mapper) =
+      KMP_DLSYM("__tgt_target_data_end_nowait_mapper");
+  *(void **)(&tgt_target_data_update_nowait_mapper) =
+      KMP_DLSYM("__tgt_target_data_update_nowait_mapper");
+  *(void **)(&tgt_taskgraph_dup_kernel_args) =
+      KMP_DLSYM("__tgt_taskgraph_dup_kernel_args");
+  *(void **)(&tgt_taskgraph_dup_data_args) =
+      KMP_DLSYM("__tgt_taskgraph_dup_data_args");
 }
 #endif
 
@@ -2161,6 +2221,7 @@ static kmp_int32 __kmp_count_region_exits(kmp_taskgraph_region_t *region) {
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
     return 1;
   case TASKGRAPH_REGION_PARALLEL: {
     // All children run concurrently, so all of them are exits.
@@ -2195,13 +2256,16 @@ kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
-  case TASKGRAPH_REGION_EXIT: {
+  case TASKGRAPH_REGION_EXIT:
+    // clang-format off
+  KMP_TASKGRAPH_REGION_TARGET_CASES: {
     descrs++;
     if (npreds > 0) {
       successors += npreds;
     }
     return 1;
   }
+  // clang-format on
   case TASKGRAPH_REGION_PARALLEL: {
     if (npreds > 0)
       successors += npreds;
@@ -2440,7 +2504,9 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
-  case TASKGRAPH_REGION_EXIT: {
+  case TASKGRAPH_REGION_EXIT:
+    // clang-format off
+  KMP_TASKGRAPH_REGION_TARGET_CASES: {
     kmp_taskgraph_exec_descr_t *exec_descr =
         descr_for_region(region, __kmp_exec_descr_list_len(preds));
     // Edit the taskdata for this specific instantiation.  At present the
@@ -2458,6 +2524,7 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
     __kmp_exec_descr_list_deref(thread, recycled, preds);
     return __kmp_exec_descr_singleton_list(thread, recycled, exec_descr);
   }
+  // clang-format on
   case TASKGRAPH_REGION_PARALLEL: {
     kmp_int32 npreds = __kmp_exec_descr_list_len(preds);
     kmp_taskgraph_exec_descr_t *gather_descr = descr_for_region(region, npreds);
@@ -2646,6 +2713,77 @@ struct kmp_taskred_input;
 template <typename T>
 void *__kmp_task_reduction_init(int gtid, int num, T *data);
 
+#if ENABLE_LIBOMPTARGET
+/// Re-issue one recorded target construct synchronously.
+///
+/// This is the host replay path: the exec_descr walk reaches a recorded target
+/// region and issues it here.  Relocation follows the same convention
+/// libomptarget uses on its own replay: the kernel-arguments blob for a kernel
+/// construct, the base-pointer array for a data construct.
+static void __kmp_taskgraph_exec_target(kmp_info_t *thread,
+                                        kmp_taskgraph_region_t *region) {
+  kmp_taskgraph_target_node_t *target = region->task.node->target;
+  KMP_DEBUG_ASSERT(target);
+  void *taskgraph_args = region->owner->taskgraph_args;
+
+  if (target->kind == TASKGRAPH_REGION_TARGET) {
+    if (target->relocate)
+      target->relocate(target->u.kernel.kernel_args, taskgraph_args);
+    // libomptarget overwrites KernelArgsTy::NumArgs in place with the
+    // post-mapping argument count, so launch from a fresh duplicate: the
+    // recorded blob has to stay pristine for the next replay.  The layout is
+    // libomptarget's, hence the dup callback rather than a memcpy here.
+    size_t alloc_size = 0;
+    tgt_taskgraph_dup_kernel_args(nullptr, target->u.kernel.kernel_args,
+                                  &alloc_size);
+    void *kernel_args = __kmp_thread_malloc(thread, alloc_size);
+    tgt_taskgraph_dup_kernel_args(kernel_args, target->u.kernel.kernel_args,
+                                  &alloc_size);
+    KMP_ASSERT(tgt_target_kernel);
+    tgt_target_kernel(/*loc_ref=*/nullptr, target->device_id,
+                      target->u.kernel.num_teams, target->u.kernel.thread_limit,
+                      target->u.kernel.host_ptr, kernel_args);
+    __kmp_thread_free(thread, kernel_args);
+    return;
+  }
+
+  if (target->relocate)
+    target->relocate(target->u.data.args_base, taskgraph_args);
+  switch (target->kind) {
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:
+    KMP_ASSERT(tgt_target_data_begin_mapper);
+    tgt_target_data_begin_mapper(
+        /*loc_ref=*/nullptr, target->device_id, target->u.data.arg_num,
+        target->u.data.args_base, target->u.data.args,
+        (int64_t *)target->u.data.arg_sizes,
+        (int64_t *)target->u.data.arg_types, target->u.data.arg_names,
+        target->u.data.arg_mappers);
+    break;
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:
+    KMP_ASSERT(tgt_target_data_end_mapper);
+    tgt_target_data_end_mapper(
+        /*loc_ref=*/nullptr, target->device_id, target->u.data.arg_num,
+        target->u.data.args_base, target->u.data.args,
+        (int64_t *)target->u.data.arg_sizes,
+        (int64_t *)target->u.data.arg_types, target->u.data.arg_names,
+        target->u.data.arg_mappers);
+    break;
+  case TASKGRAPH_REGION_TARGET_UPDATE:
+    KMP_ASSERT(tgt_target_data_update_mapper);
+    tgt_target_data_update_mapper(
+        /*loc_ref=*/nullptr, target->device_id, target->u.data.arg_num,
+        target->u.data.args_base, target->u.data.args,
+        (int64_t *)target->u.data.arg_sizes,
+        (int64_t *)target->u.data.arg_types, target->u.data.arg_names,
+        target->u.data.arg_mappers);
+    break;
+  default:
+    KMP_DEBUG_ASSERT(false && "not a recorded target region");
+    break;
+  }
+}
+#endif
+
 // Decrement DESCR's predecessor count; if it reaches zero, fire it.  TASKGROUP
 // is the taskgroup any task spawned by DESCR should join.
 static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
@@ -2684,6 +2822,23 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
         descr->region->reduce_input)
       __kmpc_end_taskgroup(/*loc=*/nullptr, gtid);
     break;
+    // clang-format off
+  KMP_TASKGRAPH_REGION_TARGET_CASES: {
+    // Replay a recorded target construct inline.  The libomptarget entry
+    // points used here are synchronous, so the successors are released as soon
+    // as the call returns -- as for a WAIT region, rather than from the
+    // task-completion hook a NODE region relies on.
+#if ENABLE_LIBOMPTARGET
+    __kmp_taskgraph_exec_target(thread, descr->region);
+    for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next)
+      __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr, taskgroup);
+#else
+    // A target region cannot have been recorded without libomptarget.
+    abort();
+#endif
+    break;
+  }
+  // clang-format on
   case TASKGRAPH_REGION_EXCLUSIVE:
   case TASKGRAPH_REGION_SEQUENTIAL:
   case TASKGRAPH_REGION_ENTRY:
@@ -5236,6 +5391,7 @@ __kmp_taskgraph_node_alloc(kmp_taskgraph_record_t *rec, kmp_task_t *task,
   new_task->taskloop_task = false;
   new_task->relocate = nullptr;
   new_task->reduce_input = nullptr;
+  new_task->target = nullptr;
   new_task->u.unresolved.ndeps = 0;
   new_task->u.unresolved.dep_list = nullptr;
   new_task->u.unresolved.cfg_successor = -1;
@@ -6023,6 +6179,9 @@ __kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_NODE:
+  // Target payloads are owned by the node (freed in __kmp_taskgraph_free), not
+  // by the region; nothing region-level to free here.
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
     break;
   case TASKGRAPH_REGION_PARALLEL:
   case TASKGRAPH_REGION_SEQUENTIAL:
@@ -6037,6 +6196,32 @@ __kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
   default:
     assert(false && "unreachable");
   }
+}
+
+// Free the deep-copied capture owned by a target node (allocated during
+// recording in the __kmpc_taskgraph_target* stubs).
+static void
+__kmp_taskgraph_free_target_node(kmp_info_t *thread,
+                                 kmp_taskgraph_target_node_t *target) {
+  switch (target->kind) {
+  case TASKGRAPH_REGION_TARGET:
+    // One block holding the blob and every array it points at (the arrays were
+    // repointed into it by __tgt_taskgraph_dup_kernel_args at record time).
+    if (target->u.kernel.kernel_args)
+      __kmp_thread_free(thread, target->u.kernel.kernel_args);
+    break;
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:
+  case TASKGRAPH_REGION_TARGET_UPDATE:
+    // One block holding every array, laid out by
+    // __tgt_taskgraph_dup_data_args at record time.
+    assert(target->u.data.arena);
+    __kmp_thread_free(thread, target->u.data.arena);
+    break;
+  default:
+    break;
+  }
+  __kmp_thread_free(thread, target);
 }
 
 static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
@@ -6057,6 +6242,10 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
         thread, rec->root, keep_rec ? &rec->recycled_deps : nullptr);
 
   for (size_t task = 0; task < rec->num_tasks; task++) {
+    // Free any deep-copied target payload first (present on target nodes,
+    // whose 'task' is null so they are otherwise skipped below).
+    if (rec->record_map[task].target)
+      __kmp_taskgraph_free_target_node(thread, rec->record_map[task].target);
     // Skip entries that don't have an associated task (e.g. taskwait nodes
     // recorded by __kmpc_taskgraph_taskwait).
     if (rec->record_map[task].task == nullptr)
@@ -6427,6 +6616,244 @@ void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
 
   __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
                               has_no_wait);
+}
+
+#if ENABLE_LIBOMPTARGET
+// Allocate a target node, copy its depend list, and attach a fresh target
+// payload of the given kind.  Shared by the kernel and data-op recorders.
+static kmp_taskgraph_target_node_t *__kmp_taskgraph_alloc_target_node(
+    kmp_info_t *thread, kmp_taskgraph_record_t *rec,
+    enum kmp_taskgraph_region_type kind, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int64 device_id,
+    kmp_target_relocate_t relocate) {
+  kmp_taskgraph_node_t *node = __kmp_taskgraph_node_alloc(rec, nullptr);
+  node->u.unresolved.ndeps = ndeps;
+  node->u.unresolved.dep_list = (kmp_depend_info_t *)__kmp_thread_malloc(
+      thread, ndeps * sizeof(kmp_depend_info_t));
+  if (ndeps)
+    KMP_MEMCPY(node->u.unresolved.dep_list, dep_list,
+               ndeps * sizeof(kmp_depend_info_t));
+
+  kmp_taskgraph_target_node_t *target =
+      (kmp_taskgraph_target_node_t *)__kmp_thread_malloc(
+          thread, sizeof(kmp_taskgraph_target_node_t));
+  target->kind = kind;
+  target->relocate = relocate;
+  target->device_id = device_id;
+  node->target = target;
+  return target;
+}
+
+// Record a target kernel construct, deep-copying the kernel-arguments blob and
+// each array it points to so the capture outlives this recording invocation.
+static void __kmp_taskgraph_record_target_kernel(
+    kmp_info_t *thread, kmp_taskgraph_record_t *rec, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int64 device_id, kmp_int32 num_teams,
+    kmp_int32 thread_limit, void *host_ptr, void *kernel_args,
+    kmp_target_relocate_t relocate) {
+  kmp_taskgraph_target_node_t *target =
+      __kmp_taskgraph_alloc_target_node(thread, rec, TASKGRAPH_REGION_TARGET,
+                                        ndeps, dep_list, device_id, relocate);
+  target->u.kernel.num_teams = num_teams;
+  target->u.kernel.thread_limit = thread_limit;
+  target->u.kernel.host_ptr = host_ptr;
+
+  size_t alloc_size = 0;
+  // We call libomptarget/tgt_taskgraph_dup_kernel_args twice: the first time
+  // to size the block we need to allocate, and the second time to copy the
+  // kernel arguments.  This library doesn't need to be concerned with the
+  // exact bit layout of these types: they are consumed by libomptarget anyway.
+  tgt_taskgraph_dup_kernel_args(nullptr, kernel_args, &alloc_size);
+  void *dup_kernel_args = __kmp_thread_malloc(thread, alloc_size);
+  tgt_taskgraph_dup_kernel_args(dup_kernel_args, kernel_args, &alloc_size);
+
+  target->u.kernel.kernel_args = dup_kernel_args;
+}
+
+// Copy ARG_NUM elements of ELEM_SIZE bytes from SRC into the arena slice at
+// BUMP_PTR, advancing it past the slice.  A null SRC yields a null result: the
+// optional map arrays (arg_names, arg_mappers) have to stay absent rather than
+// becoming pointers to uninitialized storage, because libomptarget tests them
+// for null.
+[[maybe_unused]] static void *__kmp_taskgraph_bump_dup(char *&bump_ptr,
+                                                       const void *src,
+                                                       kmp_int32 arg_num,
+                                                       size_t elem_size) {
+  char *dest = bump_ptr;
+  bump_ptr += arg_num * elem_size;
+  if (!src)
+    return nullptr;
+  KMP_MEMCPY(dest, src, arg_num * elem_size);
+  return dest;
+}
+
+// Record a target data construct (enter/exit/update), deep-copying the six map
+// arrays into a single block so the capture outlives this recording invocation.
+//
+// libomptarget does the copying, as it does for a kernel node: an element of
+// these arrays can be a pointer to something that has to be copied too, and
+// which one is a question about map types that belongs on the side that
+// defines them.
+static void __kmp_taskgraph_record_target_data(
+    kmp_info_t *thread, kmp_taskgraph_record_t *rec,
+    enum kmp_taskgraph_region_type kind, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int64 device_id, kmp_int32 arg_num,
+    void **args_base, void **args, kmp_int64 *arg_sizes, kmp_int64 *arg_types,
+    void **arg_names, void **arg_mappers, kmp_target_relocate_t relocate) {
+  kmp_taskgraph_target_node_t *target = __kmp_taskgraph_alloc_target_node(
+      thread, rec, kind, ndeps, dep_list, device_id, relocate);
+  target->u.data.arg_num = arg_num;
+  // Both calls are given the originals; the second repoints these at the copy.
+  void **dup_args_base = args_base;
+  void **dup_args = args;
+  int64_t *dup_arg_sizes = (int64_t *)arg_sizes;
+  int64_t *dup_arg_types = (int64_t *)arg_types;
+  void **dup_arg_names = arg_names;
+  void **dup_arg_mappers = arg_mappers;
+  size_t alloc_size = 0;
+  tgt_taskgraph_dup_data_args(nullptr, arg_num, &dup_args_base, &dup_args,
+                              &dup_arg_sizes, &dup_arg_types, &dup_arg_names,
+                              &dup_arg_mappers, &alloc_size);
+  void *arena = __kmp_thread_malloc(thread, alloc_size);
+  tgt_taskgraph_dup_data_args(arena, arg_num, &dup_args_base, &dup_args,
+                              &dup_arg_sizes, &dup_arg_types, &dup_arg_names,
+                              &dup_arg_mappers, &alloc_size);
+  target->u.data.arena = arena;
+  target->u.data.args_base = dup_args_base;
+  target->u.data.args = dup_args;
+  target->u.data.arg_sizes = (kmp_int64 *)dup_arg_sizes;
+  target->u.data.arg_types = (kmp_int64 *)dup_arg_types;
+  target->u.data.arg_names = dup_arg_names;
+  target->u.data.arg_mappers = dup_arg_mappers;
+}
+
+#endif
+
+// Entry points for target constructs that should be recorded into a taskgraph,
+// either because they are lexically nested in one or because they carry a
+// `replayable` clause.
+
+kmp_int32 __kmpc_taskgraph_target(ident_t *loc_ref, kmp_int32 gtid,
+                                  kmp_int32 ndeps, kmp_depend_info_t *dep_list,
+                                  kmp_int32 has_no_wait, kmp_int64 device_id,
+                                  kmp_int32 num_teams, kmp_int32 thread_limit,
+                                  void *host_ptr, void *kernel_args,
+                                  kmp_target_relocate_t reloc) {
+  if (ndeps > 0)
+    __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
+                                /*has_no_wait=*/0);
+#if ENABLE_LIBOMPTARGET
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
+  if (rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING)
+    __kmp_taskgraph_record_target_kernel(thread, rec, ndeps, dep_list,
+                                         device_id, num_teams, thread_limit,
+                                         host_ptr, kernel_args, reloc);
+  KMP_ASSERT(tgt_target_kernel);
+  // Here on the recording path, we invoke this synchronously after satisfying
+  // the dependencies above.
+  return tgt_target_kernel(loc_ref, device_id, num_teams, thread_limit,
+                           host_ptr, kernel_args);
+#else
+  return 0;
+#endif
+}
+
+void __kmpc_taskgraph_target_enter_data(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc) {
+  if (ndeps > 0)
+    __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
+                                /*has_no_wait=*/0);
+#if ENABLE_LIBOMPTARGET
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
+  bool recording = rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING;
+  if (recording) {
+    __kmp_taskgraph_record_target_data(
+        thread, rec, TASKGRAPH_REGION_TARGET_ENTER_DATA, ndeps, dep_list,
+        device_id, arg_num, args_base, args, arg_sizes, arg_types, arg_names,
+        arg_mappers, reloc);
+  } else if (has_no_wait && tgt_target_data_begin_nowait_mapper) {
+    tgt_target_data_begin_nowait_mapper(
+        loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
+        (int64_t *)arg_types, arg_names, arg_mappers, 0, nullptr, 0, nullptr);
+    return;
+  }
+  KMP_ASSERT(tgt_target_data_begin_mapper);
+  tgt_target_data_begin_mapper(loc_ref, device_id, arg_num, args_base, args,
+                               (int64_t *)arg_sizes, (int64_t *)arg_types,
+                               arg_names, arg_mappers);
+#endif
+}
+
+void __kmpc_taskgraph_target_exit_data(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc) {
+  if (ndeps > 0)
+    __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
+                                /*has_no_wait=*/0);
+#if ENABLE_LIBOMPTARGET
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
+  bool recording = rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING;
+  if (recording) {
+    __kmp_taskgraph_record_target_data(
+        thread, rec, TASKGRAPH_REGION_TARGET_EXIT_DATA, ndeps, dep_list,
+        device_id, arg_num, args_base, args, arg_sizes, arg_types, arg_names,
+        arg_mappers, reloc);
+  } else if (has_no_wait && tgt_target_data_end_nowait_mapper) {
+    tgt_target_data_end_nowait_mapper(
+        loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
+        (int64_t *)arg_types, arg_names, arg_mappers, 0, nullptr, 0, nullptr);
+    return;
+  }
+  KMP_ASSERT(tgt_target_data_end_mapper);
+  tgt_target_data_end_mapper(loc_ref, device_id, arg_num, args_base, args,
+                             (int64_t *)arg_sizes, (int64_t *)arg_types,
+                             arg_names, arg_mappers);
+#endif
+}
+
+void __kmpc_taskgraph_target_update(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc) {
+  if (ndeps > 0)
+    __kmpc_omp_taskwait_deps_51(loc_ref, gtid, ndeps, dep_list, 0, nullptr,
+                                /*has_no_wait=*/0);
+#if ENABLE_LIBOMPTARGET
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_taskgroup_t *taskgroup = thread->th.th_current_task->td_taskgroup;
+  kmp_taskgraph_record_t *rec = __kmp_taskgraph_or_parent_recording(taskgroup);
+  bool recording = rec && KMP_ATOMIC_LD_ACQ(&rec->status) == KMP_TDG_RECORDING;
+  if (recording) {
+    __kmp_taskgraph_record_target_data(
+        thread, rec, TASKGRAPH_REGION_TARGET_UPDATE, ndeps, dep_list, device_id,
+        arg_num, args_base, args, arg_sizes, arg_types, arg_names, arg_mappers,
+        reloc);
+  } else if (has_no_wait && tgt_target_data_update_nowait_mapper) {
+    tgt_target_data_update_nowait_mapper(
+        loc_ref, device_id, arg_num, args_base, args, (int64_t *)arg_sizes,
+        (int64_t *)arg_types, arg_names, arg_mappers, 0, nullptr, 0, nullptr);
+    return;
+  }
+  KMP_ASSERT(tgt_target_data_update_mapper);
+  tgt_target_data_update_mapper(loc_ref, device_id, arg_num, args_base, args,
+                                (int64_t *)arg_sizes, (int64_t *)arg_types,
+                                arg_names, arg_mappers);
+#endif
 }
 
 kmp_uint32 __kmpc_taskgraph_taskloop(

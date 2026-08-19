@@ -2682,17 +2682,83 @@ enum kmp_taskgraph_region_type {
   TASKGRAPH_REGION_EXIT,
   TASKGRAPH_REGION_NODE,
   TASKGRAPH_REGION_WAIT,
+  // Target constructs.  These carry a task node like NODE/WAIT.  Keep the
+  // TARGET codes contiguous e.g. for __kmp_taskgraph_region_is_target below.
+  TASKGRAPH_REGION_TARGET,
+  TASKGRAPH_REGION_TARGET_ENTER_DATA,
+  TASKGRAPH_REGION_TARGET_EXIT_DATA,
+  TASKGRAPH_REGION_TARGET_UPDATE,
   TASKGRAPH_REGION_PARALLEL,
   TASKGRAPH_REGION_EXCLUSIVE,
   TASKGRAPH_REGION_SEQUENTIAL,
   TASKGRAPH_REGION_IRREDUCIBLE
 };
 
+// True for the four target / target-data region types.
+static inline bool
+__kmp_taskgraph_region_is_target(enum kmp_taskgraph_region_type type) {
+  return type >= TASKGRAPH_REGION_TARGET &&
+         type <= TASKGRAPH_REGION_TARGET_UPDATE;
+}
+
+// True for regions that use the task arm of kmp_taskgraph_region (i.e. carry
+// a node): plain task nodes, taskwait nodes, and all target nodes.
+static inline bool
+__kmp_taskgraph_region_is_task_arm(enum kmp_taskgraph_region_type type) {
+  return type == TASKGRAPH_REGION_NODE || type == TASKGRAPH_REGION_WAIT ||
+         __kmp_taskgraph_region_is_target(type);
+}
+
+// Case labels for the four target region types, for use in switch statements.
+#define KMP_TASKGRAPH_REGION_TARGET_CASES                                      \
+  case TASKGRAPH_REGION_TARGET:                                                \
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:                                     \
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:                                      \
+  case TASKGRAPH_REGION_TARGET_UPDATE
+
+// Target relocation callback: rewrites moved host pointers in the captured
+// target arguments before a recorded target region is re-issued on replay.
+// Similar in priciple to kmp_task_relocate_t, but operating on
+// differently-shaped data.
+typedef void (*kmp_target_relocate_t)(void *captured_args,
+                                      void *outer_captures);
+
+// Separately-allocated metadata for a target/target-data regions.
+typedef struct kmp_taskgraph_target_node {
+  enum kmp_taskgraph_region_type kind;
+  kmp_target_relocate_t relocate;
+  kmp_int64 device_id;
+  union {
+    // TASKGRAPH_REGION_TARGET
+    struct {
+      kmp_int32 num_teams;
+      kmp_int32 thread_limit;
+      void *host_ptr;
+      void *kernel_args; // deep copy of the kernel-arguments struct
+    } kernel;
+    // TASKGRAPH_REGION_TARGET_{ENTER,EXIT}_DATA / _UPDATE.  The arrays are deep
+    // copies sized by arg_num, made by libomptarget into a block referenced by
+    // the opaque 'arena' pointer.
+    struct {
+      kmp_int32 arg_num;
+      void *arena;
+      void **args_base;
+      void **args;
+      kmp_int64 *arg_sizes;
+      kmp_int64 *arg_types;
+      void **arg_names;
+      void **arg_mappers;
+    } data;
+  } u;
+} kmp_taskgraph_target_node_t;
+
 typedef struct kmp_taskgraph_node {
   kmp_task_t *task;
   bool taskloop_task;
   kmp_task_relocate_t relocate;
   kmp_taskgraph_reduce_input_data_t *reduce_input;
+  // Non-NULL iff this node represents a target / target-data construct.
+  kmp_taskgraph_target_node_t *target;
   union {
     // Valid when KMP_TDG_RECORDING in parent taskgraph record.
     struct {
@@ -4580,6 +4646,29 @@ KMP_EXPORT void __kmpc_taskgraph_taskwait(ident_t *loc_ref, kmp_int32 gtid,
                                           kmp_int32 has_no_wait);
 KMP_EXPORT void *__kmpc_taskgraph_taskred_init(kmp_int32 gtid, kmp_int32 num,
                                                void *data);
+KMP_EXPORT kmp_int32 __kmpc_taskgraph_target(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 num_teams, kmp_int32 thread_limit, void *host_ptr,
+    void *kernel_args, kmp_target_relocate_t reloc);
+KMP_EXPORT void __kmpc_taskgraph_target_enter_data(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc);
+KMP_EXPORT void __kmpc_taskgraph_target_exit_data(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc);
+KMP_EXPORT void __kmpc_taskgraph_target_update(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
+    kmp_depend_info_t *dep_list, kmp_int32 has_no_wait, kmp_int64 device_id,
+    kmp_int32 arg_num, void **args_base, void **args, kmp_int64 *arg_sizes,
+    kmp_int64 *arg_types, void **arg_names, void **arg_mappers,
+    kmp_target_relocate_t reloc);
 #endif
 /* Interface to fast scalable reduce methods routines */
 
