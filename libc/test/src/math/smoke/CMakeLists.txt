@@ -999,6 +999,7 @@ add_fp_unittest(
     libc.src.math.lroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1096,6 +1097,7 @@ add_fp_unittest(
     libc.src.math.llroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -2695,6 +2697,7 @@ add_fp_unittest(
   HDRS
     FMinTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.fminf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
@@ -2780,6 +2783,7 @@ add_fp_unittest(
   HDRS
     FMaxTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.math.fmaxf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits

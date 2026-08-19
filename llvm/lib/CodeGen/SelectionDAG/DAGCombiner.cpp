@@ -6814,6 +6814,26 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
     }
   }
 
+  // (and (setne (and X, LL1), 0), (setne (and X, RL1), 0))
+  // --> (seteq (and X, (LL1|RL1)), (LL1|RL1))
+  // (or  (seteq (and X, LL1), 0), (seteq (and X, RL1), 0))
+  // --> (setne (and X, (LL1|RL1)), (LL1|RL1))
+  if (LL.getOpcode() == ISD::AND && RL.getOpcode() == ISD::AND &&
+      isNullConstant(LR) && isNullConstant(RR) && CC0 == CC1 &&
+      (CC0 == ISD::SETNE || CC0 == ISD::SETEQ)) {
+    SDValue LL0, LL1, RL0, RL1;
+    LL0 = LL.getOperand(0);
+    RL0 = RL.getOperand(0);
+    LL1 = LL.getOperand(1);
+    RL1 = RL.getOperand(1);
+    if (LL0 == RL0 && DAG.isKnownToBeAPowerOfTwo(LL1) &&
+        DAG.isKnownToBeAPowerOfTwo(RL1)) {
+      SDValue Or = DAG.getNode(ISD::OR, SDLoc(N0), OpVT, LL1, RL1);
+      SDValue And = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, LL0, Or);
+      return DAG.getSetCC(DL, VT, And, Or, IsAnd ? ISD::SETEQ : ISD::SETNE);
+    }
+  }
+
   // (and (setne X, 0), (setne X, -1)) --> (setuge (add X, 1), 2)
   // (or  (seteq X, 0), (seteq X, -1)) --> (setult (add X, 1), 2)
   if (LL == RL && CC0 == CC1 && OpVT.getScalarSizeInBits() > 1 && IsInteger &&
@@ -18527,10 +18547,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return FrozenN0;
   }
 
-  // We currently avoid folding freeze over SRA/SRL, due to the problems seen
-  // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
+  // We currently avoid folding freeze over SRL, due to the problems seen
+  // with (freeze (assert ext)) blocking simplifications of SRL. See for
   // example https://reviews.llvm.org/D136529#4120959.
-  if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
+  if (N0.getOpcode() == ISD::SRL)
     return SDValue();
 
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
