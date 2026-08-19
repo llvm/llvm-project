@@ -5443,8 +5443,8 @@ public:
 };
 } // anonymous namespace
 
-static void buildDependences(const OMPExecutableDirective &S,
-                             OMPTaskDataTy &Data) {
+void clang::CodeGen::buildDependences(const OMPExecutableDirective &S,
+                                      OMPTaskDataTy &Data) {
 
   // First look for 'omp_all_memory' and add this first.
   bool OmpAllMemory = false;
@@ -6153,19 +6153,14 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
   IntegerLiteral IfCond(getContext(), TrueOrFalse,
                         getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
                         SourceLocation());
-  const Expr *ReplayableCond = nullptr;
-  if (auto *RC = S.getSingleClause<OMPReplayableClause>()) {
-    ReplayableCond = RC->getCondition();
-    if (!ReplayableCond) {
-      ReplayableCond = IntegerLiteral::Create(
-          getContext(), llvm::APInt(32, 1),
-          getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
-          SourceLocation());
-    }
-  }
+  // The hidden helper task this emits is never itself a taskgraph node: a
+  // recorded target region is handed to __kmpc_taskgraph_target, which owns
+  // the dependences and needs no helper task, so every caller of this reaches
+  // it on the ordinary (non-recording) path.  Passing the directive's own
+  // replayable condition down here would record the helper instead.
   CGM.getOpenMPRuntime().emitTaskCall(*this, S.getBeginLoc(), S, OutlinedFn,
                                       SharedsTy, CapturedStruct, &IfCond,
-                                      ReplayableCond, Data);
+                                      /*ReplayableCond=*/nullptr, Data);
 }
 
 void CodeGenFunction::processInReduction(const OMPExecutableDirective &S,
@@ -7773,7 +7768,8 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     return nullptr;
   };
   CGM.getOpenMPRuntime().emitTargetCall(CGF, S, Fn, FnID, IfCond, Device,
-                                        SizeEmitter);
+                                        SizeEmitter,
+                                        getOMPReplayableCond(CGF, S));
 }
 
 static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,
@@ -8574,7 +8570,8 @@ void CodeGenFunction::EmitOMPTargetEnterDataDirective(
     Device = C->getDevice();
 
   OMPLexicalScope Scope(*this, S, OMPD_task);
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(
+      *this, S, IfCond, Device, getOMPReplayableCond(*this, S));
 }
 
 void CodeGenFunction::EmitOMPTargetExitDataDirective(
@@ -8595,7 +8592,8 @@ void CodeGenFunction::EmitOMPTargetExitDataDirective(
     Device = C->getDevice();
 
   OMPLexicalScope Scope(*this, S, OMPD_task);
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(
+      *this, S, IfCond, Device, getOMPReplayableCond(*this, S));
 }
 
 static void emitTargetParallelRegion(CodeGenFunction &CGF,
@@ -9059,7 +9057,8 @@ void CodeGenFunction::EmitOMPTargetUpdateDirective(
     Device = C->getDevice();
 
   OMPLexicalScope Scope(*this, S, OMPD_task);
-  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(*this, S, IfCond, Device);
+  CGM.getOpenMPRuntime().emitTargetDataStandAloneCall(
+      *this, S, IfCond, Device, getOMPReplayableCond(*this, S));
 }
 
 void CodeGenFunction::EmitOMPGenericLoopDirective(
