@@ -8059,6 +8059,57 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
 }
 
+static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG, bool Signed) {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(1);
+  SDValue Offset = Op.getOperand(2);
+  SDValue Width = Op.getOperand(3);
+
+  if (VT == MVT::i32)
+    return DAG.getNode(Signed ? AMDGPUISD::BFE_I32 : AMDGPUISD::BFE_U32, DL, VT,
+                       Src, Offset, Width);
+
+  assert(!VT.isVector() && "Vector handling of BFE not implemented");
+
+  auto *CWidth = dyn_cast<ConstantSDNode>(Width);
+  if (CWidth && CWidth->getZExtValue() == 0)
+    return DAG.getConstant(0, DL, VT);
+
+  // BFE_I32/BFE_U32 are 32-bit only; expand wider extracts into shifts. Mask
+  // a constant offset explicitly so the shift below doesn't fold to poison.
+  unsigned Size = VT.getSizeInBits();
+  unsigned ShrOpc = Signed ? ISD::SRA : ISD::SRL;
+  if (auto *COffset = dyn_cast<ConstantSDNode>(Offset))
+    Offset =
+        DAG.getConstant(COffset->getZExtValue() & (Size - 1), DL, MVT::i32);
+
+  SDValue Shift = DAG.getNode(ShrOpc, DL, VT, Src, Offset);
+
+  if (CWidth) {
+    uint64_t WidthVal = CWidth->getZExtValue();
+
+    // S_BFE_{I,U}64's width field is 7 bits; a full-width value needs no mask.
+    if (WidthVal >= Size)
+      return Shift;
+
+    EVT WidthVT = EVT::getIntegerVT(*DAG.getContext(), WidthVal);
+    if (Signed)
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Shift,
+                         DAG.getValueType(WidthVT));
+    return DAG.getZeroExtendInReg(Shift, DL, WidthVT);
+  }
+
+  // Select handles Width == 0: a shift amount of Size wraps to a shift by 0
+  // on hardware, so the shifts alone would wrongly return Src >> Offset.
+  SDValue ExtShift = DAG.getNode(ISD::SUB, DL, MVT::i32,
+                                 DAG.getConstant(Size, DL, MVT::i32), Width);
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, Shift, ExtShift);
+  SDValue Ext = DAG.getNode(ShrOpc, DL, VT, Shl, ExtShift);
+  return DAG.getSelectCC(DL, Width, DAG.getConstant(0, DL, MVT::i32),
+                         DAG.getConstant(0, DL, VT), Ext, ISD::SETEQ);
+}
+
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
                                          EVT VT);
 
@@ -11459,11 +11510,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
   case Intrinsic::amdgcn_sbfe:
-    return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_ubfe:
-    return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+    return lowerBFEIntrinsic(Op, DAG, IntrinsicID == Intrinsic::amdgcn_sbfe);
   case Intrinsic::amdgcn_cvt_pkrtz:
   case Intrinsic::amdgcn_cvt_pknorm_i16:
   case Intrinsic::amdgcn_cvt_pknorm_u16:
