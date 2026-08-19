@@ -66,6 +66,21 @@ const RegisterSet *RegisterContextWasm::GetRegisterSet(size_t reg_set) {
   return nullptr;
 }
 
+/// A local and an operand stack value belong to the frame, while a global
+/// belongs to the module instance the frame is executing, which is named
+/// directly wherever the stub accepts one.
+static llvm::Expected<DataBufferSP>
+ReadWasmValue(ProcessWasm &process, const WasmVirtualRegisterInfo &reg_info,
+              uint32_t frame_index, uint32_t module_id) {
+  if (reg_info.kind != eWasmTagGlobal)
+    return process.GetWasmVariable(reg_info.kind, frame_index, reg_info.index);
+
+  if (process.CanNameInstance(module_id))
+    return process.GetWasmGlobalForModule(module_id, reg_info.index);
+
+  return process.GetWasmGlobalForFrame(frame_index, reg_info.index);
+}
+
 bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
                                        RegisterValue &value) {
   ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(GetThread());
@@ -97,11 +112,7 @@ bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
           const_cast<RegisterInfo *>(reg_info));
 
   llvm::Expected<DataBufferSP> maybe_buffer =
-      wasm_reg_info->kind == eWasmTagGlobal
-          ? process->GetWasmGlobal(GetModuleID(), wasm_reg_info->index,
-                                   frame_index)
-          : process->GetWasmVariable(wasm_reg_info->kind, frame_index,
-                                     wasm_reg_info->index);
+      ReadWasmValue(*process, *wasm_reg_info, frame_index, GetModuleID());
   if (!maybe_buffer) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Process), maybe_buffer.takeError(),
                    "Failed to read Wasm value: {0}");

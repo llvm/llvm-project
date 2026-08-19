@@ -52,13 +52,24 @@ public:
   GetWasmVariable(WasmVirtualRegisterKinds kind, uint32_t frame_index,
                   uint32_t index);
 
-  /// Query the value of a WebAssembly global. The global index space is per
-  /// module, so an index only names a global together with \a module_id.
-  ///
-  /// \a frame_index only serves a stub that cannot be told which instance to
-  /// read. Pass LLDB_INVALID_INDEX32 when no frame can stand in.
-  llvm::Expected<lldb::DataBufferSP>
-  GetWasmGlobal(uint32_t module_id, uint32_t index, uint32_t frame_index);
+  /// Query the value of the global at \a index in the global index space of the
+  /// module instance \a module_id names. An index only names a global together
+  /// with an instance. Only a stub that advertises "qWasmInstance+" can be told
+  /// which instance to read, so see CanNameInstance first.
+  llvm::Expected<lldb::DataBufferSP> GetWasmGlobalForModule(uint32_t module_id,
+                                                            uint32_t index);
+
+  /// Query the value of a WebAssembly global through the frame at \a
+  /// frame_index, which reaches only the globals of the module instance that
+  /// frame is executing. This is the only scope a stub that cannot be told
+  /// which instance to read offers.
+  llvm::Expected<lldb::DataBufferSP> GetWasmGlobalForFrame(uint32_t frame_index,
+                                                           uint32_t index);
+
+  /// Whether the instance holding a global can be named to the stub, which
+  /// needs both a valid id to name it by and a stub that accepts one. Where it
+  /// cannot, a frame executing that instance has to stand in for it.
+  bool CanNameInstance(uint32_t module_id);
 
 protected:
   std::shared_ptr<process_gdb_remote::ThreadGDBRemote>
@@ -72,20 +83,15 @@ private:
   /// hex-encoded bytes of the whole value.
   llvm::Expected<lldb::DataBufferSP> SendWasmValueQuery(llvm::StringRef packet);
 
-  /// Read a WebAssembly global by its index in the global index space of the
-  /// module it belongs to. The index space is per module, so an index only
-  /// names a global together with the module it is an index into.
+  /// Read a WebAssembly global of the module instance \a module_id names,
+  /// through whichever scope that stub can be asked for it in.
   size_t ReadGlobal(uint32_t module_id, uint32_t index, void *buf, size_t size,
                     Status &error);
 
-  /// The frame to read a global of \a module_id through, or
-  /// LLDB_INVALID_INDEX32 when no frame can stand in for that module.
-  uint32_t GetFallbackFrameIndex(uint32_t module_id);
-
-  /// Whether the instance holding a global can be named to the stub, which
-  /// needs both a valid id to name it by and a stub that accepts one. Where it
-  /// cannot, a frame executing that instance has to stand in for it.
-  bool CanNameInstance(uint32_t module_id);
+  /// The frame to read a global of \a module_id through, for a stub that cannot
+  /// be told which instance to read. Fails when no frame is executing that
+  /// module, which leaves its globals out of reach.
+  llvm::Expected<uint32_t> GetFallbackFrameIndex(uint32_t module_id);
 
   lldb::DynamicRegisterInfoSP &GetRegisterInfo() { return m_register_info_sp; }
 

@@ -2676,26 +2676,26 @@ are encoded as base 10. The result is a hex-encoded little-endian value of the
 whole global, or `E<nn>`.
 
 A global index space belongs to a module instance, so an index only names a
-global together with the instance to read it from. A stub that advertises
-`qWasmInstance+` is named that instance directly:
+global together with the module instance to read it from. A stub that advertises
+`qWasmInstance+` requires that module instance to be named explicitly:
 
 ```
 send packet: $qWasmGlobal:2;instance:16;#32
 read packet: $e0030100#b9
 ```
 
-A stub that does not is given a frame index instead, which only reaches the
-instance that frame is executing:
+A stub that does not advertise `qWasmInstance+` is given a frame index instead,
+which only reaches the module instance that frame is executing:
 
 ```
 send packet: $qWasmGlobal:0;2#31
 read packet: $e0030100#b9
 ```
 
-The first field is a global index in the first form and a frame index in the
-second, so a stub tells the two apart by the `<key>:<value>` suffix. An
-unrecognized instance id must be answered with an error rather than with another
-instance's global.
+A stub tells the two apart by the presence of the `instance:` key, the only key
+this packet takes. Where it is absent, the first field is a frame index rather
+than a global index. An unrecognized instance id must be answered with an error
+rather than with another instance's global.
 
 **Priority to Implement:** Only required for Wasm support. Necessary to show
 variables.
