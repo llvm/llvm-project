@@ -2744,7 +2744,6 @@ define amdgpu_kernel void @fma_v2_s_imm_imm(ptr addrspace(1) %a) {
 ; GFX1251-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-SDAG-NEXT:    v_nop
 ; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1251-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24 nv
 ; GFX1251-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1251-SDAG-NEXT:    s_mov_b64 s[4:5], 0x4069000000000000
