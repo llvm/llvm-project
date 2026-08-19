@@ -535,8 +535,6 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isZero())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  if (S.shouldRelaxDiag(Loc.getLoc(), diag::note_constexpr_null_subobject))
-    return true;
   S.FFDiag(Loc, diag::note_constexpr_null_subobject)
       << CSK << S.Current->getRange(OpPC);
 
@@ -1593,10 +1591,16 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static bool allowNullSubObj(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  return Ptr.isZero() &&
+         S.shouldRelaxDiag(Loc.getLoc(), diag::note_constexpr_null_subobject);
+}
+
 static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                      uint32_t Off) {
   if (S.getLangOpts().CPlusPlus && S.inConstantContext() &&
-      !CheckNull(S, OpPC, Ptr, CSK_Field))
+      !allowNullSubObj(S, OpPC, Ptr) && !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
@@ -2719,8 +2723,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  APValue V = Ptr.toAPValue(S.getASTContext());
-  if (V.getLValueBase())
+  if (Ptr.isBlockPointer() && !Ptr.isZero())
     S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;
