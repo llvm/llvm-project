@@ -65,6 +65,15 @@ public:
     return writeBytes(Buffer);
   }
 
+  /// Write \p Value as a 128 bit integer (possibly truncated).
+  ///
+  /// \p Value is expected to be in native endian as it is byte swapped if
+  /// needed.
+  ///
+  /// \returns a success error code if the data was successfully written,
+  /// otherwise returns an appropriate error code.
+  LLVM_ABI Error writeInt128(const APSInt &Value);
+
   /// Similar to writeInteger
   template <typename T> Error writeEnum(T Num) {
     static_assert(std::is_enum<T>::value,

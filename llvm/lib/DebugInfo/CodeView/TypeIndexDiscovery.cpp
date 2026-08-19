@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
+#include <wtypes.h>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -42,43 +43,38 @@ static inline uint32_t getEncodedIntegerLength(ArrayRef<uint8_t> Data) {
   if (N < LF_NUMERIC)
     return 2;
 
-  switch (N) {
-  case LF_CHAR:
-    return 2 + 1;
+  assert(N <= LF_DATE && (N <= LF_COMPLEX128 || N >= LF_OCTWORD));
+  constexpr uint32_t Sizes[] = {
+      1,  // LF_CHAR
+      2,  // LF_SHORT
+      2,  // LF_USHORT
+      4,  // LF_LONG
+      4,  // LF_ULONG
+      4,  // LF_REAL32
+      8,  // LF_REAL64
+      10, // LF_REAL80
+      16, // LF_REAL128
+      8,  // LF_QUADWORD
+      8,  // LF_UQUADWORD
+      6,  // LF_REAL48
+      4,  // LF_COMPLEX32
+      8,  // LF_COMPLEX64
+      10, // LF_COMPLEX80
+      16, // LF_COMPLEX128
+      0,  // LF_VARSTRING (variable length)
+      0,  // 0x8011 (Unused)
+      0,  // 0x8012 (Unused)
+      0,  // 0x8013 (Unused)
+      0,  // 0x8014 (Unused)
+      0,  // 0x8015 (Unused)
+      0,  // 0x8016 (Unused)
+      16, // LF_OCTWORD
+      16, // LF_UOCTWORD
+      16, // LF_DECIMAL (sizeof(DECIMAL))
+      8,  // LF_DATE (sizeof(DATE))
+  };
 
-  case LF_SHORT:
-  case LF_USHORT:
-    return 2 + 2;
-
-  case LF_LONG:
-  case LF_ULONG:
-  case LF_REAL32:
-  case LF_COMPLEX32:
-    return 2 + 4;
-
-  case LF_REAL48:
-    return 2 + 6;
-
-  case LF_REAL64:
-  case LF_COMPLEX64:
-  case LF_QUADWORD:
-  case LF_UQUADWORD:
-    return 2 + 8;
-
-  case LF_REAL80:
-  case LF_COMPLEX80:
-    return 2 + 10;
-
-  case LF_REAL128:
-  case LF_COMPLEX128:
-  case LF_OCTWORD:
-  case LF_UOCTWORD:
-    return 2 + 16;
-
-  default:
-    assert(false && "Unknown numeric type");
-    return 2;
-  }
+  return 2 + Sizes[N - LF_NUMERIC];
 }
 
 static inline uint32_t getCStringLength(ArrayRef<uint8_t> Data) {

@@ -41,20 +41,14 @@
 ; ASM-NEXT:  .short	0x1502                          # Member kind: Enumerator ( LF_ENUMERATE )
 ; ASM-NEXT:  .short	0x3                             # Attrs: Public
 ; ASM-NEXT:  .short	0x8018
-; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00          # EnumValue
-; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
-; ASM-NEXT:  .byte	0x01, 0x00, 0x00, 0x00
-; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
+; ASM-NEXT:  .asciz	"\000\000\000\000\000\000\000\000\001\000\000\000\000\000\000" # EnumValue
 ; ASM-NEXT:  .asciz	"unsval"                        # Name
 ;
 ; ASM-LABEL: .short	0x1203                          # Record kind: LF_FIELDLIST
 ; ASM-NEXT:  .short	0x1502                          # Member kind: Enumerator ( LF_ENUMERATE )
 ; ASM-NEXT:  .short	0x3                             # Attrs: Public
 ; ASM-NEXT:  .short	0x8017
-; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00          # EnumValue
-; ASM-NEXT:  .byte	0x00, 0x00, 0x00, 0x00
-; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
-; ASM-NEXT:  .byte	0xff, 0xff, 0xff, 0xff
+; ASM-NEXT:  .ascii	"\000\000\000\000\000\000\000\000\377\377\377\377\377\377\377\377" # EnumValue
 ; ASM-NEXT:  .asciz	"sigval"                        # Name
 
 ; ------------------------------------------------------------------------------
