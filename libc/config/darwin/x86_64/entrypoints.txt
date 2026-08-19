@@ -158,6 +158,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.fmax
     #libc.src.math.fmaxf
     #libc.src.math.fmaxf128
+    #libc.src.math.fmaximumf128
     #libc.src.math.fmaxl
     #libc.src.math.fmin
     #libc.src.math.fminf
