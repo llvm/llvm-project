@@ -1296,7 +1296,9 @@ void CodeGenModule::Release() {
         llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
-  if (LangOpts.HIP) {
+  // Skip __hip_cuid_ under incremental extensions (clang-repl): its constant
+  // name collides across modules in the same JIT dylib (duplicate symbols).
+  if (LangOpts.HIP && !LangOpts.IncrementalExtensions) {
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(
