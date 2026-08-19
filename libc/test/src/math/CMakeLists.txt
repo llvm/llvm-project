@@ -2892,6 +2892,7 @@ add_fp_unittest(
     atan2f128_test.cpp
   DEPENDS
     libc.src.math.atan2f128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

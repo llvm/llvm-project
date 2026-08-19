@@ -28,6 +28,14 @@ math_test(name = "atan2f")
 
 math_test(name = "atan2f16")
 
+math_test(
+    name = "atan2f128",
+    deps = [
+        "//libc:__support_fputil_float128",
+        "//libc:__support_integer_literals",
+    ],
+)
+
 math_test(name = "atan")
 
 math_test(name = "atanf")
