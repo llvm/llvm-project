@@ -8982,7 +8982,7 @@ define float @local_atomic_fsub_ret_f32__amdgpu_ignore_denormal_mode(ptr addrspa
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw fsub ptr addrspace(3) %ptr, float 4.0 seq_cst, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr addrspace(3) %ptr, float 4.0 seq_cst, !atomic.ignore.denormal.mode !0
   ret float %result
 }
 
@@ -9182,7 +9182,7 @@ define void @local_atomic_fsub_noret_f32__amdgpu_ignore_denormal_mode(ptr addrsp
 ; GFX6-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX6-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
-  %result = atomicrmw fsub ptr addrspace(3) %ptr, float 4.0 seq_cst, !amdgpu.ignore.denormal.mode !0
+  %result = atomicrmw fsub ptr addrspace(3) %ptr, float 4.0 seq_cst, !atomic.ignore.denormal.mode !0
   ret void
 }
 

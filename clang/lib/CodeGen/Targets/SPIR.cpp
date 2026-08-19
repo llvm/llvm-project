@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LLVMContext.h"
 
 #include <stdint.h>
 #include <utility>
@@ -589,7 +590,7 @@ void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
   if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
       RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
       RMW->getType()->isFloatTy())
-    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
+    RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

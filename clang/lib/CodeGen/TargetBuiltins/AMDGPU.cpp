@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
@@ -2050,10 +2051,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       llvm::MDTuple *EmptyMD = MDNode::get(getLLVMContext(), {});
       RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
 
-      // Most targets require "amdgpu.ignore.denormal.mode" to emit the native
+      // Most targets require "atomic.ignore.denormal.mode" to emit the native
       // instruction, but this only matters for float fadd.
       if (BinOp == llvm::AtomicRMWInst::FAdd && Val->getType()->isFloatTy())
-        RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+        RMW->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                         EmptyMD);
     }
 
     return Builder.CreateBitCast(RMW, OrigTy);

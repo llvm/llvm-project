@@ -5266,7 +5266,7 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *EmptyMD = MDNode::get(F->getContext(), {});
     RMW->setMetadata("amdgpu.no.fine.grained.memory", EmptyMD);
     if (RMWOp == AtomicRMWInst::FAdd && RetTy->isFloatTy())
-      RMW->setMetadata("amdgpu.ignore.denormal.mode", EmptyMD);
+      RMW->setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, EmptyMD);
   }
 
   if (AddrSpace == AMDGPUAS::FLAT_ADDRESS) {
@@ -7218,7 +7218,7 @@ struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
     MDNode *Empty = MDNode::get(RMW.getContext(), {});
     RMW.setMetadata("amdgpu.no.fine.grained.host.memory", Empty);
     RMW.setMetadata("amdgpu.no.remote.memory.access", Empty);
-    RMW.setMetadata("amdgpu.ignore.denormal.mode", Empty);
+    RMW.setMetadata(LLVMContext::MD_atomic_ignore_denormal_mode, Empty);
   }
 };
 } // namespace
