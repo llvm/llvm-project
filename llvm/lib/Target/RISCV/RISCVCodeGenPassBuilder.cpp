@@ -194,7 +194,13 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
       }),
       PMW);
 
-  // TODO: CFIInstrInserterPass
+  // RISCVTargetMachine's constructor sets Options.EnableCFIFixup to the
+  // inverse of -riscv-enable-cfi-instr-inserter (a flag private to
+  // RISCVTargetMachine.cpp), so checking it here is equivalent to checking
+  // that flag directly -- the two passes solve overlapping problems and
+  // this target picks exactly one.
+  if (!TM.Options.EnableCFIFixup)
+    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 }
 
 void RISCVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {

@@ -230,10 +230,8 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI)) {
-    // TODO(boomanaiden154): Add CFInstrInserterPass here when it has been
-    // ported.
-  }
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+    addMachineFunctionPass(CFIInstrInserterPass(), PMW);
 
   if (TT.isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
