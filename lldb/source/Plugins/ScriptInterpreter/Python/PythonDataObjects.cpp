@@ -1427,8 +1427,10 @@ llvm::Expected<FileSP> PythonFile::ConvertToFile(bool borrowed) {
     return ConvertToFileForcingUseOfScriptingIOMethods(borrowed);
   }
   fd = TranslateFdFromPython(fd);
-  if (fd < 0)
+  if (fd < 0) {
+    PyErr_Clear();
     return llvm::createStringError("failed to translate Python fd to our fd");
+  }
 
   auto options = GetOptionsForPyObject(*this);
   if (!options)
@@ -1474,10 +1476,13 @@ PythonFile::ConvertToFileForcingUseOfScriptingIOMethods(bool borrowed) {
   if (fd < 0) {
     PyErr_Clear();
     fd = File::kInvalidDescriptor;
+  } else {
+    fd = TranslateFdFromPython(fd);
+    if (fd < 0) {
+      PyErr_Clear();
+      return llvm::createStringError("failed to translate Python fd to our fd");
+    }
   }
-  fd = TranslateFdFromPython(fd);
-  if (fd < 0)
-    return llvm::createStringError("failed to translate Python fd to our fd");
 
   auto io_module = PythonModule::Import("io");
   if (!io_module)
