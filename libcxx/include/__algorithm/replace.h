@@ -9,7 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_REPLACE_H
 #define _LIBCPP___ALGORITHM_REPLACE_H
 
+#include <__algorithm/replace_if.h>
 #include <__config>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,9 +22,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ForwardIterator, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 replace(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __old_value, const _Tp& __new_value) {
-  for (; __first != __last; ++__first)
-    if (*__first == __old_value)
-      *__first = __new_value;
+  auto __pred = [&__old_value](const auto& __curr) { return __curr == __old_value; };
+
+  std::replace_if(std::move(__first), std::move(__last), __pred, __new_value);
 }
 
 _LIBCPP_END_NAMESPACE_STD
