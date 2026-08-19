@@ -979,7 +979,7 @@ MachineInstr *SIWholeQuadMode::lowerKillI1(MachineInstr &MI, bool IsWQM) {
       if (!IsLastTerminator) {
         LIS->RemoveMachineInstrFromMaps(MI);
       } else {
-        assert(MBB.succ_size() == 1 && MI.getOpcode() != AMDGPU::SI_DEMOTE_I1);
+        assert(MBB.succ_size() == 1);
         MachineInstr *NewTerm = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_BRANCH))
                                     .addMBB(*MBB.succ_begin());
         LIS->ReplaceMachineInstrInMaps(MI, *NewTerm);
@@ -1231,6 +1231,7 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   StateTransition[MI] = StateExact;
 }
 
@@ -1468,7 +1469,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
             assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
           }
-
+          Before = skipDebugInstructionsForward(Before, MBB.end());
           toExact(MBB, Before, SavedWQMReg);
           State = StateExact;
         } else if (ExactToWQM) {

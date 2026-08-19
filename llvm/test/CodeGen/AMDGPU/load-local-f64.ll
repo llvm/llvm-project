@@ -1,12 +1,12 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=-enable-ds128 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; Testing for ds_read_b128
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=+enable-ds128 < %s | FileCheck -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_f64:
 ; SICIV: s_mov_b32 m0

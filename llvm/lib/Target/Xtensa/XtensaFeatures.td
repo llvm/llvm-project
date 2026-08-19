@@ -163,3 +163,8 @@ def FeatureDFPAccel : SubtargetFeature<"dfpaccel", "HasDFPAccel", "true",
                                        "Enable Xtensa Double Precision FP acceleration">;
 def HasDFPAccel : Predicate<"Subtarget->hasDFPAccel()">,
                   AssemblerPredicate<(all_of FeatureDFPAccel)>;
+
+def FeatureESP32S2Ops : SubtargetFeature<"esp32s2ops", "HasESP32S2Ops", "true",
+                                         "Support Xtensa esp32-s2 ISA extension">;
+def HasESP32S2Ops : Predicate<"Subtarget->hasESP32S2Ops()">,
+                               AssemblerPredicate<(all_of FeatureESP32S2Ops)>;

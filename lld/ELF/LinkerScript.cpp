@@ -119,7 +119,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
                       ".init_array",  ".fini_array", ".tbss",
                       ".tdata",       ".ARM.exidx",  ".ARM.extab",
                       ".ctors",       ".dtors",      ".sbss",
-                      ".sdata",       ".srodata"})
+                      ".sdata",       ".srodata",    ".gnu.build.attributes"})
     if (isSectionPrefix(v, s->name))
       return v;
 
@@ -558,14 +558,17 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           ctx.arg.sortSection, SortSectionPolicy::None);
     };
 
+    bool enableNonContiguousRegions = ctx.arg.enableNonContiguousRegions;
     for (const SectionPattern &pat : cmd->sectionPatterns) {
       size_t sizeBeforeCurrPat = ret.size();
 
       for (size_t i = 0, e = sections.size(); i != e; ++i) {
-        // Skip if the section is dead or has been matched by a previous pattern
-        // in this input section description.
+        // Skip if the section is dead, has been matched by a previous input
+        // section description with non-contiguous regions disabled, or has been
+        // matched by a previous pattern in this input section description.
         InputSectionBase *sec = sections[i];
-        if (!sec->isLive() || seen.contains(i))
+        if (!sec->isLive() || (!enableNonContiguousRegions && sec->parent) ||
+            seen.contains(i))
           continue;
 
         // For --emit-relocs we have to ignore entries like
@@ -586,9 +589,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (sec->parent) {
-          // Skip if not allowing multiple matches.
-          if (!ctx.arg.enableNonContiguousRegions)
-            continue;
+          assert(ctx.arg.enableNonContiguousRegions);
 
           // Disallow spilling into /DISCARD/; special handling would be needed
           // for this in address assignment, and the semantics are nebulous.
@@ -697,17 +698,15 @@ void LinkerScript::discard(InputSectionBase &s) {
 }
 
 void LinkerScript::discardSynthetic(OutputSection &outCmd) {
-  for (Partition &part : ctx.partitions) {
-    if (!part.armExidx || !part.armExidx->isLive())
-      continue;
-    SmallVector<InputSectionBase *, 0> secs(
-        part.armExidx->exidxSections.begin(),
-        part.armExidx->exidxSections.end());
-    for (SectionCommand *cmd : outCmd.commands)
-      if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-        for (InputSectionBase *s : computeInputSections(isd, secs, outCmd))
-          discard(*s);
-  }
+  ARMExidxSyntheticSection *armExidx = ctx.in.armExidx.get();
+  if (!armExidx || !armExidx->isLive())
+    return;
+  SmallVector<InputSectionBase *, 0> secs(armExidx->exidxSections.begin(),
+                                          armExidx->exidxSections.end());
+  for (SectionCommand *cmd : outCmd.commands)
+    if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
+      for (InputSectionBase *s : computeInputSections(isd, secs, outCmd))
+        discard(*s);
 }
 
 SmallVector<InputSectionBase *, 0>
@@ -763,9 +762,7 @@ void LinkerScript::processSectionCommands() {
         s->addralign = subalign;
     }
 
-    // Set the partition field the same way OutputSection::recordSection()
-    // does. Partitions cannot be used with the SECTIONS command, so this is
-    // always 1.
+    // Mark the output section live, like OutputSection::recordSection().
     osec->partition = 1;
     return true;
   };
@@ -1013,11 +1010,12 @@ void LinkerScript::addOrphanSections() {
   StringMap<TinyPtrVector<OutputSection *>> map;
   SmallVector<OutputDesc *, 0> v;
 
-  auto add = [&](InputSectionBase *s) {
+  auto add = [&](InputSectionBase *s, StringRef name = {}) {
     if (s->isLive() && !s->parent) {
       orphanSections.push_back(s);
 
-      StringRef name = getOutputSectionName(s);
+      if (name.empty())
+        name = getOutputSectionName(s);
       if (ctx.arg.unique) {
         v.push_back(createSection(ctx, s, name));
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
@@ -1033,8 +1031,19 @@ void LinkerScript::addOrphanSections() {
 
   const bool copyRelocs = ctx.arg.copyRelocs;
   const bool relocatable = ctx.arg.relocatable;
+  // Under --emit-relocs/-r, getOutputSectionName derives the name from the
+  // relocated section, and saving it is not thread-safe. Otherwise, the names
+  // can be precomputed in parallel.
+  SmallVector<StringRef, 0> names(ctx.inputSections.size());
+  if (!copyRelocs) {
+    parallelFor(0, ctx.inputSections.size(), [&](size_t i) {
+      InputSectionBase *s = ctx.inputSections[i];
+      if (s->isLive() && !s->parent)
+        names[i] = getOutputSectionName(s);
+    });
+  }
   size_t n = 0;
-  for (InputSectionBase *isec : ctx.inputSections) {
+  for (auto [i, isec] : llvm::enumerate(ctx.inputSections)) {
     // Process InputSection and MergeInputSection.
     if (LLVM_LIKELY(isa<InputSection>(isec)))
       ctx.inputSections[n++] = isec;
@@ -1059,7 +1068,7 @@ void LinkerScript::addOrphanSections() {
         }
     }
 
-    add(isec);
+    add(isec, names[i]);
     if (LLVM_UNLIKELY(relocatable))
       for (InputSectionBase *depSec : isec->dependentSections)
         if (depSec->flags & SHF_LINK_ORDER)
@@ -1188,7 +1197,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   if (!(sec->flags & SHF_ALLOC)) {
     // Non-SHF_ALLOC sections have zero addresses.
     dot = 0;
-  } else if (isTbss) {
+  } else if (isTbss && !sec->addrExpr) {
     // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
     // starts from the end address of the previous tbss section.
     if (state->tbssAddr == 0)
@@ -1196,7 +1205,9 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     else
       dot = state->tbssAddr;
   } else {
-    if (state->memRegion)
+    // If there is an explicit address expression this takes precedence over
+    // the memory region address.
+    if (state->memRegion && !(hasSectionsCommand && sec->addrExpr))
       dot = state->memRegion->curPos;
     if (sec->addrExpr)
       setDot(sec->addrExpr, sec->location, false);

@@ -4,7 +4,7 @@
 define i1 @test_is_inf_or_nan(double %arg) {
 ; CHECK-LABEL: define i1 @test_is_inf_or_nan(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
@@ -15,7 +15,7 @@ define i1 @test_is_inf_or_nan(double %arg) {
 define i1 @test_is_not_inf_or_nan(double %arg) {
 ; CHECK-LABEL: define i1 @test_is_not_inf_or_nan(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
@@ -26,7 +26,7 @@ define i1 @test_is_not_inf_or_nan(double %arg) {
 define i1 @test_is_inf(double %arg) {
 ; CHECK-LABEL: define i1 @test_is_inf(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
@@ -37,7 +37,7 @@ define i1 @test_is_inf(double %arg) {
 define i1 @test_is_not_inf(double %arg) {
 ; CHECK-LABEL: define i1 @test_is_not_inf(
 ; CHECK-SAME: double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f64(double [[ARG]], /* (nan zero sub norm) */ i32 507)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call double @llvm.fabs.f64(double %arg)
@@ -48,7 +48,7 @@ define i1 @test_is_not_inf(double %arg) {
 define <4 x i1> @test_vec_is_inf_or_nan(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x i1> @test_vec_is_inf_or_nan(
 ; CHECK-SAME: <4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
@@ -59,7 +59,7 @@ define <4 x i1> @test_vec_is_inf_or_nan(<4 x double> %arg) {
 define <4 x i1> @test_vec_is_not_inf_or_nan(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x i1> @test_vec_is_not_inf_or_nan(
 ; CHECK-SAME: <4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
@@ -70,7 +70,7 @@ define <4 x i1> @test_vec_is_not_inf_or_nan(<4 x double> %arg) {
 define <4 x i1> @test_vec_is_inf(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x i1> @test_vec_is_inf(
 ; CHECK-SAME: <4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
@@ -81,7 +81,7 @@ define <4 x i1> @test_vec_is_inf(<4 x double> %arg) {
 define <4 x i1> @test_vec_is_not_inf(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x i1> @test_vec_is_not_inf(
 ; CHECK-SAME: <4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> [[ARG]], /* (nan zero sub norm) */ i32 507)
 ; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %abs = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> %arg)
@@ -92,7 +92,7 @@ define <4 x i1> @test_vec_is_not_inf(<4 x double> %arg) {
 define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: define i1 @test_fp128_is_inf_or_nan(
 ; CHECK-SAME: fp128 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
@@ -103,7 +103,7 @@ define i1 @test_fp128_is_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 ; CHECK-LABEL: define i1 @test_fp128_is_not_inf_or_nan(
 ; CHECK-SAME: fp128 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
@@ -114,7 +114,7 @@ define i1 @test_fp128_is_not_inf_or_nan(fp128 %arg) {
 define i1 @test_fp128_is_inf(fp128 %arg) {
 ; CHECK-LABEL: define i1 @test_fp128_is_inf(
 ; CHECK-SAME: fp128 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
@@ -125,7 +125,7 @@ define i1 @test_fp128_is_inf(fp128 %arg) {
 define i1 @test_fp128_is_not_inf(fp128 %arg) {
 ; CHECK-LABEL: define i1 @test_fp128_is_not_inf(
 ; CHECK-SAME: fp128 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[ARG]], /* (nan zero sub norm) */ i32 507)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call fp128 @llvm.fabs.f128(fp128 %arg)
@@ -136,7 +136,7 @@ define i1 @test_fp128_is_not_inf(fp128 %arg) {
 define i1 @test_x86_fp80_is_inf_or_nan(x86_fp80 %arg) {
 ; CHECK-LABEL: define i1 @test_x86_fp80_is_inf_or_nan(
 ; CHECK-SAME: x86_fp80 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], /* (nan inf) */ i32 519)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call x86_fp80 @llvm.fabs.f80(x86_fp80 %arg)
@@ -147,7 +147,7 @@ define i1 @test_x86_fp80_is_inf_or_nan(x86_fp80 %arg) {
 define i1 @test_x86_fp80_is_not_inf_or_nan(x86_fp80 %arg) {
 ; CHECK-LABEL: define i1 @test_x86_fp80_is_not_inf_or_nan(
 ; CHECK-SAME: x86_fp80 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], /* (zero sub norm) */ i32 504)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call x86_fp80 @llvm.fabs.f80(x86_fp80 %arg)
@@ -158,7 +158,7 @@ define i1 @test_x86_fp80_is_not_inf_or_nan(x86_fp80 %arg) {
 define i1 @test_x86_fp80_is_inf(x86_fp80 %arg) {
 ; CHECK-LABEL: define i1 @test_x86_fp80_is_inf(
 ; CHECK-SAME: x86_fp80 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], /* (inf) */ i32 516)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call x86_fp80 @llvm.fabs.f80(x86_fp80 %arg)
@@ -169,7 +169,7 @@ define i1 @test_x86_fp80_is_inf(x86_fp80 %arg) {
 define i1 @test_x86_fp80_is_not_inf(x86_fp80 %arg) {
 ; CHECK-LABEL: define i1 @test_x86_fp80_is_not_inf(
 ; CHECK-SAME: x86_fp80 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.is.fpclass.f80(x86_fp80 [[ARG]], /* (nan zero sub norm) */ i32 507)
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %abs = tail call x86_fp80 @llvm.fabs.f80(x86_fp80 %arg)

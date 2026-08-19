@@ -125,7 +125,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   EXPECT_EQ(TPass.getName(), "test-pass");
   // Check runOnRegion();
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F, *TTI);
+      Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
   TPass.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount, 2u);
@@ -248,7 +248,7 @@ define i8 @foo(i8 %v0, i8 %v1) {
   RPM.addPass(std::make_unique<TestPass2>(InstCount2));
   // Check runOnRegion().
   llvm::SmallVector<std::unique_ptr<Region>> Regions =
-      Region::createRegionsFromMD(*F, *TTI);
+      Region::createRegionsFromMD(*F);
   ASSERT_EQ(Regions.size(), 1u);
   RPM.runOnRegion(*Regions[0], Analyses::emptyForTesting());
   EXPECT_EQ(InstCount1, 2u);
@@ -322,6 +322,22 @@ define void @f() {
   FPM.runOnFunction(*F, Analyses::emptyForTesting());
   EXPECT_EQ(Str,
             "foo(aux1)<abc>bar<nested1(aux2)<nested2<nested3()>>>foo(aux3)<>");
+
+  // A pass with an aux argument followed by another pass in a flat pipeline.
+  std::string AuxArgStr;
+  auto CreatePassWithAuxArg =
+      [&AuxArgStr](llvm::StringRef Name, llvm::StringRef Args,
+                   llvm::StringRef AuxArg) -> std::unique_ptr<FunctionPass> {
+    if (Name == "foo")
+      return std::make_unique<FooPass>(AuxArgStr, Args, AuxArg);
+    if (Name == "bar")
+      return std::make_unique<BarPass>(AuxArgStr, Args, AuxArg);
+    return nullptr;
+  };
+  FunctionPassManager FPMWithAuxArg("test-fpm");
+  FPMWithAuxArg.setPassPipeline("foo(aux1),bar", CreatePassWithAuxArg);
+  FPMWithAuxArg.runOnFunction(*F, Analyses::emptyForTesting());
+  EXPECT_EQ(AuxArgStr, "foo(aux1)<>bar<>");
 
   // A second call to setPassPipeline will trigger an assertion in debug mode.
 #ifndef NDEBUG

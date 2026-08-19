@@ -261,8 +261,8 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; CHECK32-NEXT:    incl %edi # encoding: [0x47]
 ; CHECK32-NEXT:  .LBB3_1: # %for.cond
 ; CHECK32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK32-NEXT:    testl %edx, %edx # encoding: [0x85,0xd2]
-; CHECK32-NEXT:    je .LBB3_14 # encoding: [0x74,A]
+; CHECK32-NEXT:    subl $1, %edx # encoding: [0x83,0xea,0x01]
+; CHECK32-NEXT:    jb .LBB3_14 # encoding: [0x72,A]
 ; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB3_14, kind: FK_PCRel_1
 ; CHECK32-NEXT:  # %bb.2: # %for.body
 ; CHECK32-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -321,7 +321,6 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; CHECK32-NEXT:  .LBB3_11: # %for.inc
 ; CHECK32-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK32-NEXT:    incl %eax # encoding: [0x40]
-; CHECK32-NEXT:    decl %edx # encoding: [0x4a]
 ; CHECK32-NEXT:    jmp .LBB3_1 # encoding: [0xeb,A]
 ; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB3_1, kind: FK_PCRel_1
 ; CHECK32-NEXT:  .LBB3_14:
@@ -376,8 +375,8 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; CHECK64-NEXT:    .cfi_adjust_cfa_offset -8
 ; CHECK64-NEXT:  .LBB3_1: # %for.cond
 ; CHECK64-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK64-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
-; CHECK64-NEXT:    je .LBB3_12 # encoding: [0x74,A]
+; CHECK64-NEXT:    subq $1, %rax # encoding: [0x48,0x83,0xe8,0x01]
+; CHECK64-NEXT:    jb .LBB3_12 # encoding: [0x72,A]
 ; CHECK64-NEXT:    # fixup A - offset: 1, value: .LBB3_12, kind: FK_PCRel_1
 ; CHECK64-NEXT:  # %bb.2: # %for.body
 ; CHECK64-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -437,7 +436,6 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; CHECK64-NEXT:  .LBB3_11: # %for.inc
 ; CHECK64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; CHECK64-NEXT:    incq %rdi # encoding: [0x48,0xff,0xc7]
-; CHECK64-NEXT:    decq %rax # encoding: [0x48,0xff,0xc8]
 ; CHECK64-NEXT:    jmp .LBB3_1 # encoding: [0xeb,A]
 ; CHECK64-NEXT:    # fixup A - offset: 1, value: .LBB3_1, kind: FK_PCRel_1
 ; CHECK64-NEXT:  .LBB3_12:
@@ -458,8 +456,8 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:    xorl %r8d, %r8d # encoding: [0x45,0x31,0xc0]
 ; WIN64-NEXT:  .LBB3_1: # %for.cond
 ; WIN64-NEXT:    # =>This Inner Loop Header: Depth=1
-; WIN64-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
-; WIN64-NEXT:    je .LBB3_11 # encoding: [0x74,A]
+; WIN64-NEXT:    subq $1, %rax # encoding: [0x48,0x83,0xe8,0x01]
+; WIN64-NEXT:    jb .LBB3_11 # encoding: [0x72,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_11, kind: FK_PCRel_1
 ; WIN64-NEXT:  # %bb.2: # %for.body
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
@@ -514,7 +512,6 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:  .LBB3_10: # %for.inc
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    incq %rcx # encoding: [0x48,0xff,0xc1]
-; WIN64-NEXT:    decq %rax # encoding: [0x48,0xff,0xc8]
 ; WIN64-NEXT:    jmp .LBB3_1 # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB3_1, kind: FK_PCRel_1
 ; WIN64-NEXT:  .LBB3_11:

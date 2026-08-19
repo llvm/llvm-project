@@ -19,15 +19,15 @@ define i128 @test_xchg_generic(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_generic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_generic_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_generic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_generic_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt release
   ret i128 %old
@@ -39,15 +39,15 @@ define i128 @test_xchg_global(ptr addrspace(1) %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_global_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_global_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_global_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_global_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.global.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr addrspace(1) %addr, i128 %amt release
   ret i128 %old
@@ -59,15 +59,15 @@ define i128 @test_xchg_shared(ptr addrspace(3) %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_shared_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_shared_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_shared_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_shared_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.shared.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr addrspace(3) %addr, i128 %amt release
   ret i128 %old
@@ -79,15 +79,15 @@ define i128 @test_xchg_shared_cluster(ptr addrspace(7) %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_shared_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.shared::cluster.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr addrspace(7) %addr, i128 %amt release
   ret i128 %old
@@ -99,15 +99,15 @@ define i128 @test_xchg_block(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_block_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_block_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_block_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_block_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.cta.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("block") release
   ret i128 %old
@@ -119,15 +119,15 @@ define i128 @test_xchg_cluster(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_cluster_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_cluster_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.cluster.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("cluster") release
   ret i128 %old
@@ -139,15 +139,15 @@ define i128 @test_xchg_gpu(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_gpu_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_gpu_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.gpu.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("device") release
   ret i128 %old
@@ -159,15 +159,15 @@ define i128 @test_xchg_sys(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_sys_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_sys_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_sys_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_sys_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt release
   ret i128 %old
@@ -179,15 +179,15 @@ define i128 @test_xchg_relaxed(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_relaxed_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_relaxed_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_relaxed_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_relaxed_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.relaxed.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt monotonic
   ret i128 %old
@@ -199,15 +199,15 @@ define i128 @test_xchg_acquire(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_acquire_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_acquire_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.acquire.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt acquire
   ret i128 %old
@@ -219,15 +219,15 @@ define i128 @test_xchg_release(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_release_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_release_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_release_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_release_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.release.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt release
   ret i128 %old
@@ -239,15 +239,15 @@ define i128 @test_xchg_acq_rel(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_xchg_acq_rel_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_xchg_acq_rel_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_xchg_acq_rel_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_xchg_acq_rel_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 amt, dst;
 ; CHECK-NEXT:    mov.b128 amt, {%rd2, %rd3};
 ; CHECK-NEXT:    atom.acq_rel.sys.exch.b128 dst, [%rd1], amt;
 ; CHECK-NEXT:    mov.b128 {%rd4, %rd5}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %old = atomicrmw xchg ptr %addr, i128 %amt acq_rel
   ret i128 %old
@@ -259,9 +259,9 @@ define i128 @test_cmpxchg_generic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_generic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_generic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_generic_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_generic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_generic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_generic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -269,7 +269,7 @@ define i128 @test_cmpxchg_generic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic
   ret i128 %new
@@ -281,9 +281,9 @@ define i128 @test_cmpxchg_global(ptr addrspace(1) %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_global_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_global_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_global_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_global_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_global_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_global_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -291,7 +291,7 @@ define i128 @test_cmpxchg_global(ptr addrspace(1) %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.sys.global.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr addrspace(1) %addr, i128 %cmp, i128 %new monotonic monotonic
   ret i128 %new
@@ -303,9 +303,9 @@ define i128 @test_cmpxchg_shared(ptr addrspace(3) %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_shared_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_shared_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_shared_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_shared_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_shared_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_shared_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -313,7 +313,7 @@ define i128 @test_cmpxchg_shared(ptr addrspace(3) %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.sys.shared.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr addrspace(3) %addr, i128 %cmp, i128 %new monotonic monotonic
   ret i128 %new
@@ -325,9 +325,9 @@ define i128 @test_cmpxchg_block(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_block_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_block_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_block_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_block_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_block_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_block_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -335,7 +335,7 @@ define i128 @test_cmpxchg_block(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.cta.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("block") monotonic monotonic
   ret i128 %new
@@ -347,9 +347,9 @@ define i128 @test_cmpxchg_cluster(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_cluster_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_cluster_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_cluster_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_cluster_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -357,7 +357,7 @@ define i128 @test_cmpxchg_cluster(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("cluster") monotonic monotonic
   ret i128 %new
@@ -369,9 +369,9 @@ define i128 @test_cmpxchg_gpu(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_gpu_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_gpu_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_gpu_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_gpu_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_gpu_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_gpu_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -379,7 +379,7 @@ define i128 @test_cmpxchg_gpu(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.gpu.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("device") monotonic monotonic
   ret i128 %new
@@ -391,9 +391,9 @@ define i128 @test_cmpxchg_shared_cluster(ptr addrspace(7) %addr, i128 %cmp, i128
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_shared_cluster_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_shared_cluster_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_shared_cluster_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_shared_cluster_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_shared_cluster_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_shared_cluster_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -401,7 +401,7 @@ define i128 @test_cmpxchg_shared_cluster(ptr addrspace(7) %addr, i128 %cmp, i128
 ; CHECK-NEXT:    atom.relaxed.sys.shared::cluster.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr addrspace(7) %addr, i128 %cmp, i128 %new monotonic monotonic
   ret i128 %new
@@ -413,9 +413,9 @@ define i128 @test_cmpxchg_monotonic_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_monotonic_monotonic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_monotonic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_monotonic_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_monotonic_monotonic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_monotonic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_monotonic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -423,7 +423,7 @@ define i128 @test_cmpxchg_monotonic_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic
   ret i128 %new
@@ -435,9 +435,9 @@ define i128 @test_cmpxchg_monotonic_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_monotonic_acquire_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_acquire_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_acquire_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_monotonic_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_acquire_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -445,7 +445,7 @@ define i128 @test_cmpxchg_monotonic_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic acquire
   ret i128 %new
@@ -457,10 +457,10 @@ define i128 @test_cmpxchg_monotonic_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_monotonic_seq_cst_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_monotonic_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_seq_cst_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_seq_cst_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_monotonic_seq_cst_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_monotonic_seq_cst_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -468,7 +468,7 @@ define i128 @test_cmpxchg_monotonic_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic seq_cst
   ret i128 %new
@@ -480,9 +480,9 @@ define i128 @test_cmpxchg_acquire_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acquire_monotonic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_monotonic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_monotonic_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acquire_monotonic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_monotonic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_monotonic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -490,7 +490,7 @@ define i128 @test_cmpxchg_acquire_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire monotonic
   ret i128 %new
@@ -502,9 +502,9 @@ define i128 @test_cmpxchg_acquire_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acquire_acquire_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_acquire_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_acquire_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acquire_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_acquire_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -512,7 +512,7 @@ define i128 @test_cmpxchg_acquire_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire acquire
   ret i128 %new
@@ -524,10 +524,10 @@ define i128 @test_cmpxchg_acquire_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acquire_seq_cst_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acquire_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_seq_cst_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_seq_cst_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acquire_seq_cst_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acquire_seq_cst_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -535,7 +535,7 @@ define i128 @test_cmpxchg_acquire_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire seq_cst
   ret i128 %new
@@ -547,9 +547,9 @@ define i128 @test_cmpxchg_release_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_release_monotonic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_monotonic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_monotonic_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_release_monotonic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_monotonic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_monotonic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -557,7 +557,7 @@ define i128 @test_cmpxchg_release_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.release.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release monotonic
   ret i128 %new
@@ -569,9 +569,9 @@ define i128 @test_cmpxchg_release_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_release_acquire_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_acquire_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_acquire_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_release_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_acquire_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -579,7 +579,7 @@ define i128 @test_cmpxchg_release_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acq_rel.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release acquire
   ret i128 %new
@@ -591,10 +591,10 @@ define i128 @test_cmpxchg_release_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_release_seq_cst_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_release_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_seq_cst_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_seq_cst_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_release_seq_cst_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_release_seq_cst_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -602,7 +602,7 @@ define i128 @test_cmpxchg_release_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release seq_cst
   ret i128 %new
@@ -614,9 +614,9 @@ define i128 @test_cmpxchg_acq_rel_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acq_rel_monotonic_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_monotonic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_monotonic_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acq_rel_monotonic_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_monotonic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_monotonic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -624,7 +624,7 @@ define i128 @test_cmpxchg_acq_rel_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acq_rel.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel monotonic
   ret i128 %new
@@ -636,9 +636,9 @@ define i128 @test_cmpxchg_acq_rel_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acq_rel_acquire_param_0];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_acquire_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_acquire_param_2];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acq_rel_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_acquire_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -646,7 +646,7 @@ define i128 @test_cmpxchg_acq_rel_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acq_rel.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel acquire
   ret i128 %new
@@ -658,10 +658,10 @@ define i128 @test_cmpxchg_acq_rel_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_acq_rel_seq_cst_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_acq_rel_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_seq_cst_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_seq_cst_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_acq_rel_seq_cst_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_acq_rel_seq_cst_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -669,7 +669,7 @@ define i128 @test_cmpxchg_acq_rel_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel seq_cst
   ret i128 %new
@@ -681,10 +681,10 @@ define i128 @test_cmpxchg_seq_cst_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_monotonic_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_seq_cst_monotonic_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_monotonic_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_monotonic_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_monotonic_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_monotonic_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -692,7 +692,7 @@ define i128 @test_cmpxchg_seq_cst_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst monotonic
   ret i128 %new
@@ -704,10 +704,10 @@ define i128 @test_cmpxchg_seq_cst_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_acquire_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_seq_cst_acquire_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_acquire_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_acquire_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_acquire_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_acquire_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -715,7 +715,7 @@ define i128 @test_cmpxchg_seq_cst_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst acquire
   ret i128 %new
@@ -727,10 +727,10 @@ define i128 @test_cmpxchg_seq_cst_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_cmpxchg_seq_cst_seq_cst_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_cmpxchg_seq_cst_seq_cst_param_0];
 ; CHECK-NEXT:    fence.sc.sys;
-; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_seq_cst_param_1];
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_seq_cst_param_2];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd2, %rd3}, [test_cmpxchg_seq_cst_seq_cst_param_1];
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_cmpxchg_seq_cst_seq_cst_param_2];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
 ; CHECK-NEXT:    mov.b128 cmp, {%rd2, %rd3};
@@ -738,7 +738,7 @@ define i128 @test_cmpxchg_seq_cst_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    atom.acquire.sys.cas.b128 dst, [%rd1], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd6, %rd7}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd4, %rd5};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
   %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst seq_cst
   ret i128 %new
@@ -748,32 +748,39 @@ define i128 @test_atomicrmw_and(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_and(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_and_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_and_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB34_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    and.b64 %rd6, %rd11, %rd4;
-; CHECK-NEXT:    and.b64 %rd7, %rd12, %rd5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_and_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_and_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd7};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB34_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    and.b64 %rd7, %rd12, %rd4;
+; CHECK-NEXT:    and.b64 %rd8, %rd13, %rd5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd8};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p1, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p1, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p1 bra $L__BB34_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw and ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -783,32 +790,39 @@ define i128 @test_atomicrmw_or(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_or(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_or_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_or_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB35_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or.b64 %rd6, %rd11, %rd4;
-; CHECK-NEXT:    or.b64 %rd7, %rd12, %rd5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_or_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_or_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd7};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB35_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    or.b64 %rd7, %rd12, %rd4;
+; CHECK-NEXT:    or.b64 %rd8, %rd13, %rd5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd8};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p1, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p1, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p1 bra $L__BB35_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw or ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -818,32 +832,39 @@ define i128 @test_atomicrmw_xor(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_xor(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_xor_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_xor_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB36_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    xor.b64 %rd6, %rd11, %rd4;
-; CHECK-NEXT:    xor.b64 %rd7, %rd12, %rd5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_xor_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_xor_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd7};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB36_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    xor.b64 %rd7, %rd12, %rd4;
+; CHECK-NEXT:    xor.b64 %rd8, %rd13, %rd5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd8};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p1, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p1, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p1 bra $L__BB36_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw xor ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -853,37 +874,44 @@ define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_min(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<7>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_min_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_min_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB37_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    setp.lt.u64 %p1, %rd11, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd12, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.lt.s64 %p4, %rd12, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd6, %rd12, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd7, %rd11, %rd4, %p5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_min_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_min_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd6};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB37_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd12, %rd4;
+; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
+; CHECK-NEXT:    and.pred %p3, %p2, %p1;
+; CHECK-NEXT:    setp.lt.s64 %p4, %rd13, %rd5;
+; CHECK-NEXT:    or.pred %p5, %p3, %p4;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd8, %rd7};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p6 bra $L__BB37_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw min ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -893,37 +921,44 @@ define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_max(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<7>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_max_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_max_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB38_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    setp.gt.u64 %p1, %rd11, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd12, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.gt.s64 %p4, %rd12, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd6, %rd12, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd7, %rd11, %rd4, %p5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_max_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_max_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd6};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB38_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    setp.gt.u64 %p1, %rd12, %rd4;
+; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
+; CHECK-NEXT:    and.pred %p3, %p2, %p1;
+; CHECK-NEXT:    setp.gt.s64 %p4, %rd13, %rd5;
+; CHECK-NEXT:    or.pred %p5, %p3, %p4;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd8, %rd7};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p6 bra $L__BB38_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw max ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -933,37 +968,44 @@ define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_umin(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<7>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_umin_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_umin_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB39_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    setp.lt.u64 %p1, %rd11, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd12, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.lt.u64 %p4, %rd12, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd6, %rd12, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd7, %rd11, %rd4, %p5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_umin_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_umin_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd6};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB39_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    setp.lt.u64 %p1, %rd12, %rd4;
+; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
+; CHECK-NEXT:    and.pred %p3, %p2, %p1;
+; CHECK-NEXT:    setp.lt.u64 %p4, %rd13, %rd5;
+; CHECK-NEXT:    or.pred %p5, %p3, %p4;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd8, %rd7};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p6 bra $L__BB39_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw umin ptr %ptr, i128 %val monotonic
   ret i128 %ret
@@ -973,37 +1015,44 @@ define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-LABEL: test_atomicrmw_umax(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<7>;
-; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [test_atomicrmw_umax_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_atomicrmw_umax_param_0];
-; CHECK-NEXT:    ld.v2.b64 {%rd11, %rd12}, [%rd3];
-; CHECK-NEXT:  $L__BB40_1: // %atomicrmw.start
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    setp.gt.u64 %p1, %rd11, %rd4;
-; CHECK-NEXT:    setp.eq.b64 %p2, %rd12, %rd5;
-; CHECK-NEXT:    and.pred %p3, %p2, %p1;
-; CHECK-NEXT:    setp.gt.u64 %p4, %rd12, %rd5;
-; CHECK-NEXT:    or.pred %p5, %p3, %p4;
-; CHECK-NEXT:    selp.b64 %rd6, %rd12, %rd5, %p5;
-; CHECK-NEXT:    selp.b64 %rd7, %rd11, %rd4, %p5;
+; CHECK-NEXT:    ld.param::func.v2.b64 {%rd4, %rd5}, [test_atomicrmw_umax_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd3, [test_atomicrmw_umax_param_0];
+; CHECK-NEXT:    mov.b64 %rd6, 0;
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
-; CHECK-NEXT:    mov.b128 cmp, {%rd11, %rd12};
-; CHECK-NEXT:    mov.b128 swap, {%rd7, %rd6};
+; CHECK-NEXT:    mov.b128 cmp, {%rd6, %rd6};
+; CHECK-NEXT:    mov.b128 swap, {%rd6, %rd6};
+; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
+; CHECK-NEXT:    mov.b128 {%rd12, %rd13}, dst;
+; CHECK-NEXT:    }
+; CHECK-NEXT:  $L__BB40_1: // %atomicrmw.start
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    setp.gt.u64 %p1, %rd12, %rd4;
+; CHECK-NEXT:    setp.eq.b64 %p2, %rd13, %rd5;
+; CHECK-NEXT:    and.pred %p3, %p2, %p1;
+; CHECK-NEXT:    setp.gt.u64 %p4, %rd13, %rd5;
+; CHECK-NEXT:    or.pred %p5, %p3, %p4;
+; CHECK-NEXT:    selp.b64 %rd7, %rd13, %rd5, %p5;
+; CHECK-NEXT:    selp.b64 %rd8, %rd12, %rd4, %p5;
+; CHECK-NEXT:    {
+; CHECK-NEXT:    .reg .b128 cmp, swap, dst;
+; CHECK-NEXT:    mov.b128 cmp, {%rd12, %rd13};
+; CHECK-NEXT:    mov.b128 swap, {%rd8, %rd7};
 ; CHECK-NEXT:    atom.relaxed.sys.cas.b128 dst, [%rd3], cmp, swap;
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, dst;
 ; CHECK-NEXT:    }
-; CHECK-NEXT:    xor.b64 %rd8, %rd2, %rd12;
-; CHECK-NEXT:    xor.b64 %rd9, %rd1, %rd11;
-; CHECK-NEXT:    or.b64 %rd10, %rd9, %rd8;
-; CHECK-NEXT:    setp.ne.b64 %p6, %rd10, 0;
-; CHECK-NEXT:    mov.b64 %rd11, %rd1;
-; CHECK-NEXT:    mov.b64 %rd12, %rd2;
+; CHECK-NEXT:    xor.b64 %rd9, %rd2, %rd13;
+; CHECK-NEXT:    xor.b64 %rd10, %rd1, %rd12;
+; CHECK-NEXT:    or.b64 %rd11, %rd10, %rd9;
+; CHECK-NEXT:    setp.ne.b64 %p6, %rd11, 0;
+; CHECK-NEXT:    mov.b64 %rd12, %rd1;
+; CHECK-NEXT:    mov.b64 %rd13, %rd2;
 ; CHECK-NEXT:    @%p6 bra $L__BB40_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd1, %rd2};
+; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw umax ptr %ptr, i128 %val monotonic
   ret i128 %ret

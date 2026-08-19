@@ -74,7 +74,7 @@ bool ChrootChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
 bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   BasicValueFactory &BVF = C.getSValBuilder().getBasicValueFactory();
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   ProgramStateRef State = C.getState();
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
@@ -82,10 +82,10 @@ bool ChrootChecker::evalChroot(const CallEvent &Call, CheckerContext &C) const {
   SVal Zero = nonloc::ConcreteInt{BVF.getValue(0, IntTy)};
   SVal Minus1 = nonloc::ConcreteInt{BVF.getValue(-1, IntTy)};
 
-  ProgramStateRef ChrootFailed = State->BindExpr(CE, LCtx, Minus1);
+  ProgramStateRef ChrootFailed = State->BindExpr(CE, SF, Minus1);
   C.addTransition(ChrootFailed->set<ChrootState>(ROOT_CHANGE_FAILED));
 
-  ProgramStateRef ChrootSucceeded = State->BindExpr(CE, LCtx, Zero);
+  ProgramStateRef ChrootSucceeded = State->BindExpr(CE, SF, Zero);
   C.addTransition(ChrootSucceeded->set<ChrootState>(ROOT_CHANGED));
   return true;
 }
@@ -136,7 +136,7 @@ public:
 
     Satisfied = true;
     PathDiagnosticLocation Pos(Call, BRC.getSourceManager(),
-                               N->getLocationContext());
+                               N->getStackFrame());
     return std::make_shared<PathDiagnosticEventPiece>(Pos, "chroot called here",
                                                       /*addPosRange=*/true);
   }

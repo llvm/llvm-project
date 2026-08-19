@@ -1,0 +1,45 @@
+# RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown -mattr=+reference-types | FileCheck %s
+# RUN: llvm-mc --disassemble %s -triple=wasm64-unknown-unknown -mattr=+reference-types | FileCheck %s
+
+# The Requires<[...]> feature gate does not filter the disassembler tables, so
+# the same bytes should decode even without features enabled.
+# RUN: llvm-mc --disassemble %s -triple=wasm32-unknown-unknown | FileCheck %s
+
+# CHECK: select i32
+0x1c 0x01 0x7f
+
+# CHECK: select i64
+0x1c 0x01 0x7e
+
+# CHECK: select f32
+0x1c 0x01 0x7d
+
+# CHECK: select f64
+0x1c 0x01 0x7c
+
+# CHECK: select v128
+0x1c 0x01 0x7b
+
+# CHECK: select funcref
+0x1c 0x01 0x70
+
+# CHECK: select externref
+0x1c 0x01 0x6f
+
+# CHECK: select exnref
+0x1c 0x01 0x69
+
+# A zero-length type vec is a well-formed encoding per the spec.
+# CHECK: select{{[[:space:]]*$}}
+0x1c 0x00
+
+# A multi-value type vec — not emitted by current tools but must disassemble.
+# CHECK: select i32 i64
+0x1c 0x02 0x7f 0x7e
+
+# The untyped select at 0x1b must still decode to the numeric form.
+# CHECK: f32.select
+0x1b
+
+# CHECK: end
+0x0B

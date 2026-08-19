@@ -457,7 +457,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
   if (ESize) {
     int64_t Res;
     if (!ESize->evaluateKnownAbsolute(Res, Asm))
-      report_fatal_error("Size expression must be absolute.");
+      report_fatal_error("size expression must be absolute");
     Size = Res;
   }
 
@@ -1366,7 +1366,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
     UseSectionSym = RSS == RelocSectionSymType::All ||
                     (RSS == RelocSectionSymType::Internal &&
                      SymA->getName().starts_with(
-                         Ctx.getAsmInfo()->getInternalSymbolPrefix()));
+                         Ctx.getAsmInfo().getInternalSymbolPrefix()));
   }
   if (UseSectionSym && useSectionSymbol(Target, SymA, Addend, Type)) {
     Addend += Asm->getSymbolOffset(*SymA);

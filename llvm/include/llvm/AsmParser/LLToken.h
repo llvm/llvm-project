@@ -91,6 +91,7 @@ enum Kind {
   kw_unwind,
   kw_datalayout,
   kw_volatile,
+  kw_elementwise,
   kw_atomic,
   kw_unordered,
   kw_monotonic,
@@ -387,7 +388,6 @@ enum Kind {
 
   // Use-list order directives.
   kw_uselistorder,
-  kw_uselistorder_bb,
 
   // Summary index keywords
   kw_path,
@@ -512,6 +512,7 @@ enum Kind {
   DwarfVirtuality,     // DW_VIRTUALITY_foo
   DwarfLang,           // DW_LANG_foo
   DwarfSourceLangName, // DW_LNAME_foo
+  DwarfLangDialect,    // DW_LLVM_LANG_DIALECT_foo
   DwarfCC,             // DW_CC_foo
   EmissionKind,        // lineTablesOnly
   NameTableKind,       // GNU
@@ -523,12 +524,14 @@ enum Kind {
   ChecksumKind,        // CSK_foo
   DbgRecordType,       // dbg_foo
   DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
+  FloatLiteral,        // Unparsed float literal
 
   // Type valued tokens (TyVal).
   Type,
 
-  APFloat, // APFloatVal
-  APSInt   // APSInt
+  FloatHexLiteral, // f0x..., stored as APSInt
+  APFloat,         // APFloatVal
+  APSInt           // APSInt
 };
 } // end namespace lltok
 } // end namespace llvm

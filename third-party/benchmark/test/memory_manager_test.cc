@@ -1,9 +1,9 @@
 #include <memory>
 
-#include "../src/check.h"
 #include "benchmark/benchmark.h"
 #include "output_test.h"
 
+namespace {
 class TestMemoryManager : public benchmark::MemoryManager {
   void Start() override {}
   void Stop(Result& result) override {
@@ -14,11 +14,13 @@ class TestMemoryManager : public benchmark::MemoryManager {
 
 void BM_empty(benchmark::State& state) {
   for (auto _ : state) {
-    auto iterations = double(state.iterations()) * double(state.iterations());
+    auto iterations = static_cast<double>(state.iterations()) *
+                      static_cast<double>(state.iterations());
     benchmark::DoNotOptimize(iterations);
   }
 }
 BENCHMARK(BM_empty);
+}  // end namespace
 
 ADD_CASES(TC_ConsoleOut, {{"^BM_empty %console_report$"}});
 ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_empty\",$"},
@@ -39,6 +41,7 @@ ADD_CASES(TC_JSONOut, {{"\"name\": \"BM_empty\",$"},
 ADD_CASES(TC_CSVOut, {{"^\"BM_empty\",%csv_report$"}});
 
 int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
   std::unique_ptr<benchmark::MemoryManager> mm(new TestMemoryManager());
 
   benchmark::RegisterMemoryManager(mm.get());

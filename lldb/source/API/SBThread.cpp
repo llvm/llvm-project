@@ -464,7 +464,8 @@ static Status ResumeNewPlan(StoppedExecutionContext exe_ctx,
   process->GetThreadList().SetSelectedThreadByID(thread->GetID());
 
   // Release the run lock but keep the API lock.
-  std::unique_lock<std::recursive_mutex> api_lock = exe_ctx.AllowResume();
+  TargetAPIMutex api_mutex = exe_ctx.AllowResume();
+  std::lock_guard<TargetAPIMutex> guard(api_mutex, std::adopt_lock);
   if (process->GetTarget().GetDebugger().GetAsyncExecution())
     return process->Resume();
   return process->ResumeSynchronous(nullptr);
@@ -897,8 +898,13 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
   Status new_plan_status;
   StructuredData::ObjectSP obj_sp = args_data.m_impl_up->GetObjectSP();
 
+  StructuredData::DictionarySP args_dict_sp;
+  if (obj_sp && obj_sp->GetType() == lldb::eStructuredDataTypeDictionary)
+    args_dict_sp = std::static_pointer_cast<StructuredData::Dictionary>(obj_sp);
+
+  ScriptedMetadata scripted_metadata(script_class_name, args_dict_sp);
   ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepScripted(
-      false, script_class_name, obj_sp, false, new_plan_status);
+      false, scripted_metadata, false, new_plan_status);
 
   if (new_plan_status.Fail()) {
     error = Status::FromErrorString(new_plan_status.AsCString());

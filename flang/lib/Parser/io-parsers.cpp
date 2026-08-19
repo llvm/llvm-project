@@ -625,7 +625,7 @@ TYPE_PARSER(construct<format::IntrinsicTypeDataEditDesc>(
         mandatoryWidth, noInt, noInt) ||
     construct<format::IntrinsicTypeDataEditDesc>(
         "A " >> ("T " >> pure(format::IntrinsicTypeDataEditDesc::Kind::AT)),
-        noInt, noInt, noInt) ||
+        maybe(width), maybe("." >> digits), noInt) ||
     construct<format::IntrinsicTypeDataEditDesc>(
         "A " >> pure(format::IntrinsicTypeDataEditDesc::Kind::A), maybe(width),
         noInt, noInt) ||

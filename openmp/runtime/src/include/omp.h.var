@@ -312,6 +312,9 @@
     extern void   __KAI_KMPC_CONVENTION  kmp_set_warnings_off(void);
 
     /* OpenMP 5.0 Tool Control */
+    /* OpenMP 6.1: Define in omp.h and omp-tools.h */
+#ifndef OMPCONTROLENUM
+#define OMPCONTROLENUM
     typedef enum omp_control_tool_result_t {
         omp_control_tool_notool = -2,
         omp_control_tool_nocallback = -1,
@@ -325,6 +328,7 @@
         omp_control_tool_flush = 3,
         omp_control_tool_end = 4
     } omp_control_tool_t;
+#endif /* OMPCONTROLENUM */
 
     extern int __KAI_KMPC_CONVENTION omp_control_tool(int, int, void*);
 
@@ -553,6 +557,7 @@
 
     /* OpenMP 5.2 */
     extern int __KAI_KMPC_CONVENTION omp_in_explicit_task(void);
+    #define omp_initial_device -1
     #define omp_invalid_device -2
 
     /* OpenMP 6.0 */

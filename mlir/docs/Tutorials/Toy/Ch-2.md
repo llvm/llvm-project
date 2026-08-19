@@ -620,7 +620,7 @@ def PrintOp : Toy_Op<"print"> {
 A C++ implementation for the printer and parser is shown below:
 
 ```c++
-/// The 'OpAsmPrinter' class is a stream that will allows for formatting
+/// The 'OpAsmPrinter' class is a stream that allows for formatting
 /// strings, attributes, operands, types, etc.
 void PrintOp::print(mlir::OpAsmPrinter &printer) {
   printer << "toy.print " << op.input();

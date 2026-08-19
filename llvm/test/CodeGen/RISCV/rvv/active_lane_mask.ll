@@ -107,9 +107,9 @@ define <32 x i1> @fv32(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v24, v16, a2
+; CHECK-NEXT:    vsaddu.vx v8, v8, a1
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v24, 2
@@ -124,24 +124,23 @@ define <64 x i1> @fv64(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsaddu.vx v16, v8, a1
-; CHECK-NEXT:    vmsltu.vx v0, v16, a2
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v24, v16, a2
+; CHECK-NEXT:    vsaddu.vx v16, v8, a1
+; CHECK-NEXT:    vmsltu.vx v0, v16, a2
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v25, v16, a2
 ; CHECK-NEXT:    li a0, 48
 ; CHECK-NEXT:    vadd.vx v8, v8, a0
 ; CHECK-NEXT:    vsaddu.vx v8, v8, a1
+; CHECK-NEXT:    vmsltu.vx v16, v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v0, v24, 2
 ; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v0, v25, 4
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vmsltu.vx v16, v8, a2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v0, v16, 6
 ; CHECK-NEXT:    ret
@@ -155,28 +154,28 @@ define <128 x i1> @fv128(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    li a0, 80
-; CHECK-NEXT:    vsaddu.vx v16, v8, a1
-; CHECK-NEXT:    vmsltu.vx v0, v16, a2
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 64
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v24, v16, a2
+; CHECK-NEXT:    li a0, 64
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 96
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v25, v16, a2
+; CHECK-NEXT:    li a0, 96
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 112
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v26, v16, a2
+; CHECK-NEXT:    li a0, 112
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v27, v16, a2
+; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
-; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v28, v16, a2
+; CHECK-NEXT:    vsaddu.vx v16, v8, a1
+; CHECK-NEXT:    vmsltu.vx v0, v16, a2
+; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vadd.vx v16, v8, a0
 ; CHECK-NEXT:    vsaddu.vx v16, v16, a1
 ; CHECK-NEXT:    vmsltu.vx v29, v16, a2

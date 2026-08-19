@@ -1179,7 +1179,12 @@ public:
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
     if (!CE) return false;
     int64_t Value = CE->getValue();
-    return ((Value & 3) == 0) && Value >= N && Value <= M;
+    // ARM assembly uses #-0 to request the subtract-zero encoding,
+    // which is distinct from the add-zero spelling even though both
+    // have zero magnitude. The rather odd std::numeric_limits
+    // invocation gives us this.
+    return (((Value & 3) == 0) && Value >= N && Value <= M) ||
+           Value == std::numeric_limits<int32_t>::min();
   }
   template<int64_t N, int64_t M>
   bool isImmediateS2() const {
@@ -1371,11 +1376,11 @@ public:
   }
   bool isDReg() const {
     return isReg() &&
-           ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg.RegNum);
+           getARMMCRegisterClass(ARM::DPRRegClassID).contains(Reg.RegNum);
   }
   bool isQReg() const {
     return isReg() &&
-           ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg.RegNum);
+           getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg.RegNum);
   }
   bool isDPRRegList() const { return Kind == k_DPRRegisterList; }
   bool isSPRRegList() const { return Kind == k_SPRRegisterList; }
@@ -1392,12 +1397,12 @@ public:
     if (Kind != k_Memory)
       return false;
     if (Memory.BaseRegNum &&
-        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.BaseRegNum) &&
-        !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Memory.BaseRegNum))
+        !getARMMCRegisterClass(ARM::GPRRegClassID)
+             .contains(Memory.BaseRegNum) &&
+        !getARMMCRegisterClass(ARM::MQPRRegClassID).contains(Memory.BaseRegNum))
       return false;
-    if (Memory.OffsetRegNum &&
-        !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
-            Memory.OffsetRegNum))
+    if (Memory.OffsetRegNum && !getARMMCRegisterClass(ARM::MQPRRegClassID)
+                                    .contains(Memory.OffsetRegNum))
       return false;
     return true;
   }
@@ -1405,25 +1410,25 @@ public:
     if (Kind != k_Memory)
       return false;
     if (Memory.BaseRegNum &&
-        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.BaseRegNum))
+        !getARMMCRegisterClass(ARM::GPRRegClassID).contains(Memory.BaseRegNum))
       return false;
-    if (Memory.OffsetRegNum &&
-        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.OffsetRegNum))
+    if (Memory.OffsetRegNum && !getARMMCRegisterClass(ARM::GPRRegClassID)
+                                    .contains(Memory.OffsetRegNum))
       return false;
     return true;
   }
   bool isShifterImm() const { return Kind == k_ShifterImmediate; }
   bool isRegShiftedReg() const {
     return Kind == k_ShiftedRegister &&
-           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
-               RegShiftedReg.SrcReg) &&
-           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
-               RegShiftedReg.ShiftReg);
+           getARMMCRegisterClass(ARM::GPRRegClassID)
+               .contains(RegShiftedReg.SrcReg) &&
+           getARMMCRegisterClass(ARM::GPRRegClassID)
+               .contains(RegShiftedReg.ShiftReg);
   }
   bool isRegShiftedImm() const {
     return Kind == k_ShiftedImmediate &&
-           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(
-               RegShiftedImm.SrcReg);
+           getARMMCRegisterClass(ARM::GPRRegClassID)
+               .contains(RegShiftedImm.SrcReg);
   }
   bool isRotImm() const { return Kind == k_RotateImmediate; }
 
@@ -1475,7 +1480,8 @@ public:
   bool isBitfield() const { return Kind == k_BitfieldDescriptor; }
   bool isPostIdxRegShifted() const {
     return Kind == k_PostIndexRegister &&
-           ARMMCRegisterClasses[ARM::GPRRegClassID].contains(PostIdxReg.RegNum);
+           getARMMCRegisterClass(ARM::GPRRegClassID)
+               .contains(PostIdxReg.RegNum);
   }
   bool isPostIdxReg() const {
     return isPostIdxRegShifted() && PostIdxReg.ShiftTy == ARM_AM::no_shift;
@@ -1491,8 +1497,8 @@ public:
     if (!isGPRMem())
       return false;
 
-    if (!ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
-            Memory.BaseRegNum))
+    if (!getARMMCRegisterClass(ARM::GPRnopcRegClassID)
+             .contains(Memory.BaseRegNum))
       return false;
 
     // No offset of any kind.
@@ -1503,8 +1509,7 @@ public:
     if (!isGPRMem())
       return false;
 
-    if (!ARMMCRegisterClasses[ARM::rGPRRegClassID].contains(
-            Memory.BaseRegNum))
+    if (!getARMMCRegisterClass(ARM::rGPRRegClassID).contains(Memory.BaseRegNum))
       return false;
 
     // No offset of any kind.
@@ -1515,8 +1520,7 @@ public:
     if (!isGPRMem())
       return false;
 
-    if (!ARMMCRegisterClasses[ARM::tGPRRegClassID].contains(
-            Memory.BaseRegNum))
+    if (!getARMMCRegisterClass(ARM::tGPRRegClassID).contains(Memory.BaseRegNum))
       return false;
 
     // No offset of any kind.
@@ -1832,8 +1836,8 @@ public:
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
     if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
-        !ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
-            Memory.BaseRegNum))
+        !getARMMCRegisterClass(ARM::GPRnopcRegClassID)
+             .contains(Memory.BaseRegNum))
       return false;
     // Immediate offset a multiple of 4 in range [-508, 508].
     if (!Memory.OffsetImm) return true;
@@ -1875,7 +1879,7 @@ public:
   template<unsigned Bits, unsigned RegClassID>
   bool isMemImm7ShiftedOffset() const {
     if (!isGPRMem() || Memory.OffsetRegNum || Memory.Alignment != 0 ||
-        !ARMMCRegisterClasses[RegClassID].contains(Memory.BaseRegNum))
+        !getARMMCRegisterClass(RegClassID).contains(Memory.BaseRegNum))
       return false;
 
     // Expect an immediate offset equal to an element of the range
@@ -1907,11 +1911,11 @@ public:
     if (!isMVEMem() || Memory.OffsetImm != nullptr || Memory.Alignment != 0)
       return false;
 
-    if (!ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
-            Memory.BaseRegNum))
+    if (!getARMMCRegisterClass(ARM::GPRnopcRegClassID)
+             .contains(Memory.BaseRegNum))
       return false;
-    if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
-            Memory.OffsetRegNum))
+    if (!getARMMCRegisterClass(ARM::MQPRRegClassID)
+             .contains(Memory.OffsetRegNum))
       return false;
 
     if (shift == 0 && Memory.ShiftType != ARM_AM::no_shift)
@@ -1928,8 +1932,7 @@ public:
     if (!isMVEMem() || Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
 
-    if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
-            Memory.BaseRegNum))
+    if (!getARMMCRegisterClass(ARM::MQPRRegClassID).contains(Memory.BaseRegNum))
       return false;
 
     if (!Memory.OffsetImm)
@@ -2067,8 +2070,8 @@ public:
 
   bool isVecListTwoMQ() const {
     return isSingleSpacedVectorList() && VectorList.Count == 2 &&
-           ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
-               VectorList.RegNum);
+           getARMMCRegisterClass(ARM::MQPRRegClassID)
+               .contains(VectorList.RegNum);
   }
 
   bool isVecListDPair() const {
@@ -2077,8 +2080,8 @@ public:
     if (isQReg() && !Parser->hasMVE())
       return true;
     if (!isSingleSpacedVectorList()) return false;
-    return (ARMMCRegisterClasses[ARM::DPairRegClassID]
-              .contains(VectorList.RegNum));
+    return (getARMMCRegisterClass(ARM::DPairRegClassID)
+                .contains(VectorList.RegNum));
   }
 
   bool isVecListThreeD() const {
@@ -2094,8 +2097,8 @@ public:
   bool isVecListDPairSpaced() const {
     if (Kind != k_VectorList) return false;
     if (isSingleSpacedVectorList()) return false;
-    return (ARMMCRegisterClasses[ARM::DPairSpcRegClassID]
-              .contains(VectorList.RegNum));
+    return (getARMMCRegisterClass(ARM::DPairSpcRegClassID)
+                .contains(VectorList.RegNum));
   }
 
   bool isVecListThreeQ() const {
@@ -2110,8 +2113,8 @@ public:
 
   bool isVecListFourMQ() const {
     return isSingleSpacedVectorList() && VectorList.Count == 4 &&
-           ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
-               VectorList.RegNum);
+           getARMMCRegisterClass(ARM::MQPRRegClassID)
+               .contains(VectorList.RegNum);
   }
 
   bool isSingleSpacedVectorAllLanes() const {
@@ -2129,8 +2132,8 @@ public:
 
   bool isVecListDPairAllLanes() const {
     if (!isSingleSpacedVectorAllLanes()) return false;
-    return (ARMMCRegisterClasses[ARM::DPairRegClassID]
-              .contains(VectorList.RegNum));
+    return (getARMMCRegisterClass(ARM::DPairRegClassID)
+                .contains(VectorList.RegNum));
   }
 
   bool isVecListDPairSpacedAllLanes() const {
@@ -3396,7 +3399,7 @@ public:
     } else if (isQReg() && !Parser->hasMVE()) {
       MCRegister DPair = Parser->getDRegFromQReg(Reg.RegNum);
       DPair = Parser->getMRI()->getMatchingSuperReg(
-          DPair, ARM::dsub_0, &ARMMCRegisterClasses[ARM::DPairRegClassID]);
+          DPair, ARM::dsub_0, &getARMMCRegisterClass(ARM::DPairRegClassID));
       Inst.addOperand(MCOperand::createReg(DPair));
     } else {
       LLVM_DEBUG(dbgs() << "TYPE: " << Kind << "\n");
@@ -3422,10 +3425,11 @@ public:
     // class, and returning the super-register at the corresponding
     // index in the target class.
 
-    const MCRegisterClass *RC_in = &ARMMCRegisterClasses[ARM::MQPRRegClassID];
+    const MCRegisterClass *RC_in = &getARMMCRegisterClass(ARM::MQPRRegClassID);
     const MCRegisterClass *RC_out =
-        (VectorList.Count == 2) ? &ARMMCRegisterClasses[ARM::MQQPRRegClassID]
-                                : &ARMMCRegisterClasses[ARM::MQQQQPRRegClassID];
+        (VectorList.Count == 2)
+            ? &getARMMCRegisterClass(ARM::MQQPRRegClassID)
+            : &getARMMCRegisterClass(ARM::MQQQQPRRegClassID);
 
     unsigned I, E = RC_out->getNumRegs();
     for (I = 0; I < E; I++)
@@ -3799,14 +3803,14 @@ public:
     assert(Regs.size() > 0 && "RegList contains no registers?");
     KindTy Kind = k_RegisterList;
 
-    if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(
-            Regs.front().second)) {
+    if (getARMMCRegisterClass(ARM::DPRRegClassID)
+            .contains(Regs.front().second)) {
       if (Regs.back().second == ARM::VPR)
         Kind = k_FPDRegisterListWithVPR;
       else
         Kind = k_DPRRegisterList;
-    } else if (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(
-                   Regs.front().second)) {
+    } else if (getARMMCRegisterClass(ARM::SPRRegClassID)
+                   .contains(Regs.front().second)) {
       if (Regs.back().second == ARM::VPR)
         Kind = k_FPSRegisterListWithVPR;
       else
@@ -4580,7 +4584,7 @@ static MCRegister getNextRegister(MCRegister Reg) {
   // If this is a GPR, we need to do it manually, otherwise we can rely
   // on the sort ordering of the enumeration since the other reg-classes
   // are sane.
-  if (!ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
+  if (!getARMMCRegisterClass(ARM::GPRRegClassID).contains(Reg))
     return Reg + 1;
   switch (Reg.id()) {
   default: llvm_unreachable("Invalid GPR number!");
@@ -4645,7 +4649,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
   bool VSCCLRMAdjustEncoding = false;
 
   // Allow Q regs and just interpret them as the two D sub-registers.
-  if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+  if (getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg)) {
     Reg = getDRegFromQReg(Reg);
     EReg = MRI->getEncodingValue(Reg);
     Registers.emplace_back(EReg, Reg);
@@ -4653,16 +4657,16 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
   }
   const MCRegisterClass *RC;
   if (Reg == ARM::RA_AUTH_CODE ||
-      ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
-    RC = &ARMMCRegisterClasses[ARM::GPRRegClassID];
-  else if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg))
-    RC = &ARMMCRegisterClasses[ARM::DPRRegClassID];
-  else if (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(Reg))
-    RC = &ARMMCRegisterClasses[ARM::SPRRegClassID];
-  else if (ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
-    RC = &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID];
+      getARMMCRegisterClass(ARM::GPRRegClassID).contains(Reg))
+    RC = &getARMMCRegisterClass(ARM::GPRRegClassID);
+  else if (getARMMCRegisterClass(ARM::DPRRegClassID).contains(Reg))
+    RC = &getARMMCRegisterClass(ARM::DPRRegClassID);
+  else if (getARMMCRegisterClass(ARM::SPRRegClassID).contains(Reg))
+    RC = &getARMMCRegisterClass(ARM::SPRRegClassID);
+  else if (getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID).contains(Reg))
+    RC = &getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID);
   else if (Reg == ARM::VPR)
-    RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
+    RC = &getARMMCRegisterClass(ARM::FPWithVPRRegClassID);
   else
     return Error(RegLoc, "invalid register in register list");
 
@@ -4686,7 +4690,7 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
       if (EndReg == ARM::RA_AUTH_CODE)
         return Error(AfterMinusLoc, "pseudo-register not allowed");
       // Allow Q regs and just interpret them as the two D sub-registers.
-      if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
+      if (getARMMCRegisterClass(ARM::QPRRegClassID).contains(EndReg))
         EndReg = getDRegFromQReg(EndReg) + 1;
       // If the register is the same as the start reg, there's nothing
       // more to do.
@@ -4725,22 +4729,22 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
       return Error(RegLoc, "pseudo-register not allowed");
     // Allow Q regs and just interpret them as the two D sub-registers.
     bool isQReg = false;
-    if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+    if (getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg)) {
       Reg = getDRegFromQReg(Reg);
       isQReg = true;
     }
     if (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg) &&
-        RC->getID() == ARMMCRegisterClasses[ARM::GPRRegClassID].getID() &&
-        ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg)) {
+        RC->getID() == getARMMCRegisterClass(ARM::GPRRegClassID).getID() &&
+        getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID).contains(Reg)) {
       // switch the register classes, as GPRwithAPSRnospRegClassID is a partial
       // subset of GPRRegClassId except it contains APSR as well.
-      RC = &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID];
+      RC = &getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID);
     }
     if (Reg == ARM::VPR &&
-        (RC == &ARMMCRegisterClasses[ARM::SPRRegClassID] ||
-         RC == &ARMMCRegisterClasses[ARM::DPRRegClassID] ||
-         RC == &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID])) {
-      RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
+        (RC == &getARMMCRegisterClass(ARM::SPRRegClassID) ||
+         RC == &getARMMCRegisterClass(ARM::DPRRegClassID) ||
+         RC == &getARMMCRegisterClass(ARM::FPWithVPRRegClassID))) {
+      RC = &getARMMCRegisterClass(ARM::FPWithVPRRegClassID);
       EReg = MRI->getEncodingValue(Reg);
       if (!insertNoDuplicates(Registers, EReg, Reg)) {
         Warning(RegLoc, "duplicated register (" + RegTok.getString() +
@@ -4752,11 +4756,11 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     // S31 is followed by D16.
     if (IsVSCCLRM && OldReg == ARM::S31 && Reg == ARM::D16) {
       VSCCLRMAdjustEncoding = true;
-      RC = &ARMMCRegisterClasses[ARM::FPWithVPRRegClassID];
+      RC = &getARMMCRegisterClass(ARM::FPWithVPRRegClassID);
     }
     // The register must be in the same register class as the first.
     if ((Reg == ARM::RA_AUTH_CODE &&
-         RC != &ARMMCRegisterClasses[ARM::GPRRegClassID]) ||
+         RC != &getARMMCRegisterClass(ARM::GPRRegClassID)) ||
         (Reg != ARM::RA_AUTH_CODE && !RC->contains(Reg)))
       return Error(RegLoc, "invalid register in register list");
     // In most cases, the list must be monotonically increasing. An
@@ -4767,14 +4771,15 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
     if (VSCCLRMAdjustEncoding)
       EReg += 16;
     if (EnforceOrder && EReg < EOldReg) {
-      if (ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Reg))
+      if (getARMMCRegisterClass(ARM::GPRRegClassID).contains(Reg))
         Warning(RegLoc, "register list not in ascending order");
-      else if (!ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(Reg))
+      else if (!getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID)
+                    .contains(Reg))
         return Error(RegLoc, "register list not in ascending order");
     }
     // VFP register lists must also be contiguous.
-    if (RC != &ARMMCRegisterClasses[ARM::GPRRegClassID] &&
-        RC != &ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID] &&
+    if (RC != &getARMMCRegisterClass(ARM::GPRRegClassID) &&
+        RC != &getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID) &&
         EReg != EOldReg + 1)
       return Error(RegLoc, "non-contiguous register range");
 
@@ -4867,7 +4872,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
     MCRegister Reg = tryParseRegister();
     if (!Reg)
       return ParseStatus::NoMatch;
-    if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg)) {
+    if (getARMMCRegisterClass(ARM::DPRRegClassID).contains(Reg)) {
       ParseStatus Res = parseVectorLane(LaneKind, LaneIndex, E);
       if (!Res.isSuccess())
         return Res;
@@ -4886,7 +4891,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
       }
       return ParseStatus::Success;
     }
-    if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+    if (getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg)) {
       Reg = getDRegFromQReg(Reg);
       ParseStatus Res = parseVectorLane(LaneKind, LaneIndex, E);
       if (!Res.isSuccess())
@@ -4896,8 +4901,8 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
         Operands.push_back(ARMOperand::CreateReg(Reg, S, E, *this));
         break;
       case AllLanes:
-        Reg = MRI->getMatchingSuperReg(Reg, ARM::dsub_0,
-                                   &ARMMCRegisterClasses[ARM::DPairRegClassID]);
+        Reg = MRI->getMatchingSuperReg(
+            Reg, ARM::dsub_0, &getARMMCRegisterClass(ARM::DPairRegClassID));
         Operands.push_back(
             ARMOperand::CreateVectorListAllLanes(Reg, 2, false, S, E, *this));
         break;
@@ -4925,12 +4930,13 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
   int Spacing = 0;
   MCRegister FirstReg = Reg;
 
-  if (hasMVE() && !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg))
+  if (hasMVE() && !getARMMCRegisterClass(ARM::MQPRRegClassID).contains(Reg))
     return Error(Parser.getTok().getLoc(),
                  "vector register in range Q0-Q7 expected");
   // The list is of D registers, but we also allow Q regs and just interpret
   // them as the two D sub-registers.
-  else if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+  else if (!hasMVE() &&
+           getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg)) {
     FirstReg = Reg = getDRegFromQReg(Reg);
     Spacing = 1; // double-spacing requires explicit D registers, otherwise
                  // it's ambiguous with four-register single spaced.
@@ -4956,7 +4962,8 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
       if (!EndReg)
         return Error(AfterMinusLoc, "register expected");
       // Allow Q regs and just interpret them as the two D sub-registers.
-      if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
+      if (!hasMVE() &&
+          getARMMCRegisterClass(ARM::QPRRegClassID).contains(EndReg))
         EndReg = getDRegFromQReg(EndReg) + 1;
       // If the register is the same as the start reg, there's nothing
       // more to do.
@@ -4964,9 +4971,9 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
         continue;
       // The register must be in the same register class as the first.
       if ((hasMVE() &&
-           !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(EndReg)) ||
+           !getARMMCRegisterClass(ARM::MQPRRegClassID).contains(EndReg)) ||
           (!hasMVE() &&
-           !ARMMCRegisterClasses[ARM::DPRRegClassID].contains(EndReg)))
+           !getARMMCRegisterClass(ARM::DPRRegClassID).contains(EndReg)))
         return Error(AfterMinusLoc, "invalid register in register list");
       // Ranges must go from low to high.
       if (Reg > EndReg)
@@ -4992,7 +4999,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
       return Error(RegLoc, "register expected");
 
     if (hasMVE()) {
-      if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg))
+      if (!getARMMCRegisterClass(ARM::MQPRRegClassID).contains(Reg))
         return Error(RegLoc, "vector register in range Q0-Q7 expected");
       Spacing = 1;
     }
@@ -5002,7 +5009,7 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
     //
     // The list is of D registers, but we also allow Q regs and just interpret
     // them as the two D sub-registers.
-    else if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+    else if (getARMMCRegisterClass(ARM::QPRRegClassID).contains(Reg)) {
       if (!Spacing)
         Spacing = 1; // Register range implies a single spaced list.
       else if (Spacing == 2)
@@ -5055,9 +5062,9 @@ ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
     // Two-register operands have been converted to the
     // composite register classes.
     if (Count == 2 && !hasMVE()) {
-      const MCRegisterClass *RC = (Spacing == 1) ?
-        &ARMMCRegisterClasses[ARM::DPairRegClassID] :
-        &ARMMCRegisterClasses[ARM::DPairSpcRegClassID];
+      const MCRegisterClass *RC =
+          (Spacing == 1) ? &getARMMCRegisterClass(ARM::DPairRegClassID)
+                         : &getARMMCRegisterClass(ARM::DPairSpcRegClassID);
       FirstReg = MRI->getMatchingSuperReg(FirstReg, ARM::dsub_0, RC);
     }
     auto Create = (LaneKind == NoLanes ? ARMOperand::CreateVectorList :
@@ -6903,11 +6910,10 @@ bool ARMAsmParser::shouldOmitVectorPredicateOperand(
         Mnemonic.starts_with("vmovx"))) {
     for (auto &Operand : Operands) {
       if (static_cast<ARMOperand &>(*Operand).isVectorIndex() ||
-          ((*Operand).isReg() &&
-           (ARMMCRegisterClasses[ARM::SPRRegClassID].contains(
-             (*Operand).getReg()) ||
-            ARMMCRegisterClasses[ARM::DPRRegClassID].contains(
-              (*Operand).getReg())))) {
+          ((*Operand).isReg() && (getARMMCRegisterClass(ARM::SPRRegClassID)
+                                      .contains((*Operand).getReg()) ||
+                                  getARMMCRegisterClass(ARM::DPRRegClassID)
+                                      .contains((*Operand).getReg())))) {
         return true;
       }
     }
@@ -7463,9 +7469,9 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // FIXME: As said above, this is all a pretty gross hack.  This instruction
   // does not fit with other "subs" and tblgen.
   // Adjust operands of B9.3.19 SUBS PC, LR, #imm (Thumb2) system instruction
-  // so the Mnemonic is the original name "subs" and delete the predicate
-  // operand so it will match the table entry.
-  if (isThumbTwo() && Mnemonic == "sub" &&
+  // so the Mnemonic is "subs" and delete the CCOut operand so it will match
+  // the table entry.
+  if (isThumbTwo() && Mnemonic == "sub" && CarrySetting &&
       Operands.size() == MnemonicOpsEndInd + 3 &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).isReg() &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd]).getReg() ==
@@ -7474,7 +7480,7 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 1]).getReg() ==
           ARM::LR &&
       static_cast<ARMOperand &>(*Operands[MnemonicOpsEndInd + 2]).isImm()) {
-    Operands.front() = ARMOperand::CreateToken(Name, NameLoc, *this);
+    Operands.front() = ARMOperand::CreateToken("subs", NameLoc, *this);
     removeCCOut(Operands, MnemonicOpsEndInd);
   }
   return false;
@@ -8371,8 +8377,8 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   case ARM::t2CLRM: {
     for (unsigned i = 2; i < Inst.getNumOperands(); i++) {
       if (Inst.getOperand(i).isReg() &&
-          !ARMMCRegisterClasses[ARM::GPRwithAPSRnospRegClassID].contains(
-              Inst.getOperand(i).getReg())) {
+          !getARMMCRegisterClass(ARM::GPRwithAPSRnospRegClassID)
+               .contains(Inst.getOperand(i).getReg())) {
         return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
                      "invalid register in register list. Valid registers are "
                      "r0-r12, lr/r14 and APSR.");
@@ -11645,7 +11651,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
     SwitchMode();
 
   getTargetStreamer().emitCode16();
-  getParser().getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
+  getParser().getStreamer().emitCodeAlignment(Align(2), getSTI(), 0);
   return false;
 }
 
@@ -11658,7 +11664,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
   if (isThumb())
     SwitchMode();
   getTargetStreamer().emitCode32();
-  getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
+  getParser().getStreamer().emitCodeAlignment(Align(4), getSTI(), 0);
   return false;
 }
 
@@ -12314,8 +12320,8 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (getContext().getAsmInfo()->useCodeAlign(*Section))
-    getStreamer().emitCodeAlignment(Align(2), &getSTI());
+  if (getContext().getAsmInfo().useCodeAlign(*Section))
+    getStreamer().emitCodeAlignment(Align(2), getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
 
@@ -12512,8 +12518,8 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (getContext().getAsmInfo()->useCodeAlign(*Section))
-      getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
+    if (getContext().getAsmInfo().useCodeAlign(*Section))
+      getStreamer().emitCodeAlignment(Align(4), getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);
     return false;
@@ -12852,9 +12858,8 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
       raw_svector_ostream OS(Message.Message);
 
       OS << "instruction requires:";
-      for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i)
-        if (MissingFeatures.test(i))
-          OS << ' ' << getSubtargetFeatureName(i);
+      for (unsigned Feature : MissingFeatures)
+        OS << ' ' << getSubtargetFeatureName(Feature);
 
       NearMissesOut.emplace_back(Message);
 

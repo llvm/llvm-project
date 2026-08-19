@@ -136,6 +136,7 @@ void test_exception_safety_throwing_allocator() {
 
     globalMemCounter.reset();
     Container<T, ThrowingAllocator<T>> c(std::from_range, in, alloc);
+    (void)c;
     assert(false); // The constructor call above should throw.
 
   } catch (int) {

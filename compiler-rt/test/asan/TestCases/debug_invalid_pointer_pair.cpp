@@ -1,5 +1,6 @@
 // Checks that the ASan debugging API for getting report information
 // returns correct values for invalid pointer pairs.
+// UNSUPPORTED: MSVC
 // RUN: %clangxx_asan -O0 %s -o %t -mllvm -asan-detect-invalid-pointer-pair && %env_asan_opts=detect_invalid_pointer_pairs=1 not %run %t 2>&1 | FileCheck %s
 
 #include <sanitizer/asan_interface.h>

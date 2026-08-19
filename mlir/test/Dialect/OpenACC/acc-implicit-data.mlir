@@ -259,3 +259,31 @@ func.func @test_device_global_in_parallel() {
 // CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {implicit = true, name = ""}
 // CHECK-NOT: acc.copyin
 // CHECK-NOT: acc.copyout
+
+// -----
+
+// Test memref.view tagged with acc.declare deviceptr and used directly in region.
+func.func @test_declare_deviceptr_arg_in_parallel(%arg0: memref<?xi8>) {
+  %c0 = arith.constant 0 : index
+  %view = memref.view %arg0[%c0][] {acc.declare = #acc.declare<dataClause = acc_deviceptr>} : memref<?xi8> to memref<10xf32>
+  %devptr = acc.deviceptr varPtr(%view : memref<10xf32>) -> memref<10xf32> {name = "arg0"}
+  %token = acc.declare_enter dataOperands(%devptr : memref<10xf32>)
+  acc.parallel {
+    %c0_1 = arith.constant 0 : index
+    %load = memref.load %arg0[%c0_1] : memref<?xi8>
+    acc.yield
+  }
+  acc.declare_exit token(%token) dataOperands(%devptr : memref<10xf32>)
+  return
+}
+
+// CHECK-LABEL: func.func @test_declare_deviceptr_arg_in_parallel
+// CHECK: %[[VIEW:.*]] = memref.view %{{.*}}[{{.*}}][] {acc.declare = #acc.declare<dataClause = acc_deviceptr>} : memref<?xi8> to memref<10xf32>
+// CHECK: %[[DEVPTR:.*]] = acc.deviceptr varPtr(%[[VIEW]] : memref<10xf32>) -> memref<10xf32> {name = "arg0"}
+// CHECK: %[[TOKEN:.*]] = acc.declare_enter dataOperands(%[[DEVPTR]] : memref<10xf32>)
+// CHECK: %[[IMPLICIT_DEVPTR:.*]] = acc.deviceptr varPtr(%{{.*}} : memref<?xi8>) -> memref<?xi8> {implicit = true, name = ""}
+// CHECK: acc.parallel dataOperands(%[[IMPLICIT_DEVPTR]] : memref<?xi8>) {
+// CHECK: memref.load %[[IMPLICIT_DEVPTR]][{{.*}}] : memref<?xi8>
+// CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[DEVPTR]] : memref<10xf32>)
+// CHECK-NOT: acc.copyin
+// CHECK-NOT: acc.copyout

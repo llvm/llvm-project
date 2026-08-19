@@ -149,6 +149,8 @@ bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
     return false;
   CI.getDiagnosticClient().clear();
   CI.getDiagnostics().Reset();
+  ProcessWarningOptions(CI.getDiagnostics(), CI.getDiagnosticOpts(),
+                        CI.getVirtualFileSystem());
 
   PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
   PPOpts.RemappedFiles.insert(PPOpts.RemappedFiles.end(),

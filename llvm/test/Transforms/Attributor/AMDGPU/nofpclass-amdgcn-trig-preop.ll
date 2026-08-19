@@ -66,8 +66,8 @@ define double @trig_preop_propagate_nonan(double noundef nofpclass(inf nan) %x){
 ; CHECK-SAME: double noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[I2:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 0) #[[ATTR2]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], 0x7B00000000000000
-; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], 0x37F0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], f0x7B00000000000000
+; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], f0x37F0000000000000
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[I9]], double [[X]]
 ; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[I2]], [[COND]]
 ; CHECK-NEXT:    [[FNEG13:%.*]] = fneg double [[MUL11]]
@@ -96,8 +96,8 @@ define double @trig_preop_propagate_nonan_full(double noundef nofpclass(inf nan)
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[I2:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 0) #[[ATTR2]]
 ; CHECK-NEXT:    [[I4:%.*]] = tail call double @llvm.amdgcn.trig.preop.f64(double noundef nofpclass(nan inf) [[X]], i32 noundef 1) #[[ATTR2]]
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], 0x7B00000000000000
-; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], 0x37F0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[X]], f0x7B00000000000000
+; CHECK-NEXT:    [[I9:%.*]] = fmul double [[X]], f0x37F0000000000000
 ; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], double [[I9]], double [[X]]
 ; CHECK-NEXT:    [[MUL4:%.*]] = fmul double [[I4]], [[COND]]
 ; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[I2]], [[COND]]

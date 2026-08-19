@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OmptTester.h"
+#include "EnvHelper.h"
 
 #include <atomic>
 #include <cassert>
@@ -49,7 +50,6 @@ static std::atomic<ompt_id_t> NextOpId{0x8000000000000001};
 static bool UseEMICallbacks = false;
 static bool UseTracing = false;
 static bool RunAsTestSuite = false;
-static bool ColoredLog = false;
 
 // OMPT entry point handles
 static ompt_set_trace_ompt_t ompt_set_trace_ompt = 0;
@@ -358,20 +358,6 @@ static void on_ompt_callback_target_map_emi(ompt_data_t *target_data,
   assert(0 && "Target map emi callback is unimplemented");
 }
 
-/// Load the value of a given boolean environmental variable.
-bool getBoolEnvironmentVariable(const char *VariableName) {
-  if (VariableName == nullptr)
-    return false;
-  if (const char *EnvValue = std::getenv(VariableName)) {
-    std::string S{EnvValue};
-    for (auto &C : S)
-      C = (char)std::tolower(C);
-    if (S == "1" || S == "on" || S == "true" || S == "yes")
-      return true;
-  }
-  return false;
-}
-
 /// Called by the OMP runtime to initialize the OMPT
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                     ompt_data_t *tool_data) {
@@ -380,10 +366,17 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
   if (!ompt_set_callback)
     return 0; // failure
 
-  UseEMICallbacks = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_EMI");
-  UseTracing = getBoolEnvironmentVariable("OMPTEST_USE_OMPT_TRACING");
-  RunAsTestSuite = getBoolEnvironmentVariable("OMPTEST_RUN_AS_TESTSUITE");
-  ColoredLog = getBoolEnvironmentVariable("OMPTEST_LOG_COLORED");
+  if (auto EmiCallbacksEnvVal =
+          getBoolEnvironmentVariable("OMPTEST_USE_OMPT_EMI"))
+    UseEMICallbacks = EmiCallbacksEnvVal.value();
+
+  if (auto TracingEnvVal =
+          getBoolEnvironmentVariable("OMPTEST_USE_OMPT_TRACING"))
+    UseTracing = TracingEnvVal.value();
+
+  if (auto RunAsTestSuiteEnvVal =
+          getBoolEnvironmentVariable("OMPTEST_RUN_AS_TESTSUITE"))
+    RunAsTestSuite = RunAsTestSuiteEnvVal.value();
 
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);

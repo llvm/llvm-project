@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class MCAsmInfoDarwin : public MCAsmInfo {
+class LLVM_ABI MCAsmInfoDarwin : public MCAsmInfo {
 public:
   explicit MCAsmInfoDarwin(const MCTargetOptions &Options);
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,

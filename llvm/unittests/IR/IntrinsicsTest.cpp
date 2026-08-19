@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsS390.h"
+#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Module.h"
 #include "gtest/gtest.h"
@@ -56,9 +57,6 @@ public:
       ProcessedArgs.push_back(Val);
     }
     return Builder.CreateCall(Decl, ProcessedArgs);
-  }
-  template <typename T> void checkIsa(const Instruction &I) {
-    EXPECT_TRUE(isa<T>(I));
   }
 };
 
@@ -189,8 +187,30 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
   }
 }
 
+TEST(IntrinsicAttributes,
+     SPIRVResourceImplicitDerivativeIntrinsicsAreConvergent) {
+  using namespace Intrinsic;
+  LLVMContext Context;
+  static constexpr ID ConvergentResourceIntrinsics[] = {
+      spv_resource_sample,        spv_resource_sample_clamp,
+      spv_resource_samplebias,    spv_resource_samplebias_clamp,
+      spv_resource_calculate_lod, spv_resource_calculate_lod_unclamped,
+  };
+  for (ID IntrID : ConvergentResourceIntrinsics) {
+    AttributeSet AS = getFnAttributes(Context, IntrID);
+    EXPECT_TRUE(AS.hasAttribute(Attribute::Convergent))
+        << "Intrinsic " << getName(IntrID) << " should be convergent";
+  }
+
+  AttributeSet SampleGradAttrs =
+      getFnAttributes(Context, spv_resource_samplegrad);
+  EXPECT_FALSE(SampleGradAttrs.hasAttribute(Attribute::Convergent))
+      << "Intrinsic " << getName(spv_resource_samplegrad)
+      << " should not be convergent";
+}
+
 // Check that getFnAttributes for intrinsics that do not have any function
-// attributes correcty returns an empty set.
+// attributes correctly returns an empty set.
 TEST(IntrinsicAttributes, TestGetFnAttributesBug) {
   using namespace Intrinsic;
   LLVMContext Context;
@@ -327,7 +347,8 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicScalar) {
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 10));
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 20));
 
-  CallInst *CI = Builder.CreateIntrinsic(RetTy, Intrinsic::umax, Args);
+  CallInst *CI =
+      Builder.CreateIntrinsicWithoutFolding(RetTy, Intrinsic::umax, Args);
 
   ASSERT_NE(CI, nullptr);
   EXPECT_EQ(CI->getIntrinsicID(), Intrinsic::umax);
@@ -345,7 +366,8 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicVector) {
   Args.push_back(Constant::getNullValue(RetTy));
   Args.push_back(Constant::getNullValue(RetTy));
 
-  CallInst *CI = Builder.CreateIntrinsic(RetTy, Intrinsic::umax, Args);
+  CallInst *CI =
+      Builder.CreateIntrinsicWithoutFolding(RetTy, Intrinsic::umax, Args);
 
   ASSERT_NE(CI, nullptr);
   EXPECT_EQ(CI->getIntrinsicID(), Intrinsic::umax);
@@ -366,7 +388,8 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicAddressSpace) {
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 3)); // locality
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 1)); // cache type
 
-  CallInst *CI = Builder.CreateIntrinsic(RetTy, Intrinsic::prefetch, Args);
+  CallInst *CI =
+      Builder.CreateIntrinsicWithoutFolding(RetTy, Intrinsic::prefetch, Args);
 
   ASSERT_NE(CI, nullptr);
   EXPECT_EQ(CI->getIntrinsicID(), Intrinsic::prefetch);
@@ -394,7 +417,7 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicVarArg) {
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 0)); // NumCallArgs
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 0)); // Flags
 
-  CallInst *CI = Builder.CreateIntrinsic(
+  CallInst *CI = Builder.CreateIntrinsicWithoutFolding(
       RetTy, Intrinsic::experimental_gc_statepoint, Args);
 
   ASSERT_NE(CI, nullptr);

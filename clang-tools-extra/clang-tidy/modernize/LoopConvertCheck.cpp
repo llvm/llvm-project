@@ -156,15 +156,16 @@ static StatementMatcher makeArrayLoopMatcher() {
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
 static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
-  auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
-                                    : hasAnyName("begin", "cbegin");
-  auto BeginNameMatcherStd = IsReverse
-                                 ? hasAnyName("::std::rbegin", "::std::crbegin")
-                                 : hasAnyName("::std::begin", "::std::cbegin");
+  const auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
+                                          : hasAnyName("begin", "cbegin");
+  const auto BeginNameMatcherStd =
+      IsReverse ? hasAnyName("::std::rbegin", "::std::crbegin")
+                : hasAnyName("::std::begin", "::std::cbegin");
 
-  auto EndNameMatcher =
+  const auto EndNameMatcher =
       IsReverse ? hasAnyName("rend", "crend") : hasAnyName("end", "cend");
-  auto EndNameMatcherStd = IsReverse ? hasAnyName("::std::rend", "::std::crend")
+  const auto EndNameMatcherStd = IsReverse
+                                     ? hasAnyName("::std::rend", "::std::crend")
                                      : hasAnyName("::std::end", "::std::cend");
 
   const StatementMatcher BeginCallMatcher =
@@ -432,8 +433,8 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
 ///
 /// BeginExpr must be a member call to a function named "begin()", and EndExpr
 /// must be a member.
-static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
-                                 const Expr *EndExpr,
+static const Expr *findContainer(const ASTContext *Context,
+                                 const Expr *BeginExpr, const Expr *EndExpr,
                                  bool *ContainerNeedsDereference,
                                  bool IsReverse) {
   // Now that we know the loop variable and test expression, make sure they are
@@ -461,7 +462,7 @@ static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -497,16 +498,17 @@ static bool isDirectMemberExpr(const Expr *E) {
 static bool canBeModified(ASTContext *Context, const Expr *E) {
   if (E->getType().isConstQualified())
     return false;
-  auto Parents = Context->getParents(*E);
+  const auto Parents = Context->getParents(*E);
   if (Parents.size() != 1)
     return true;
-  if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
-    if ((Cast->getCastKind() == CK_NoOp &&
-         ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
-        (Cast->getCastKind() == CK_LValueToRValue &&
-         !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))
-      return false;
-  }
+  if (const auto *Cast = Parents[0].get<ImplicitCastExpr>();
+      Cast &&
+      ((Cast->getCastKind() == CK_NoOp &&
+        ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
+       (Cast->getCastKind() == CK_LValueToRValue && !Cast->getType().isNull() &&
+        Cast->getType()->isFundamentalType())))
+    return false;
+
   // FIXME: Make this function more generic.
   return true;
 }
@@ -548,6 +550,39 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
     // type.
     CType = CType.getNonReferenceType();
     return CType.isConstQualified();
+  }
+  return false;
+}
+
+// Returns true if the token at `BeginLocation` is immediately preceded by an
+// identifier or keyword token with no space between them.
+static bool
+isPrecededByAdjacentIdentifierOrKeyword(const SourceManager &SourceMgr,
+                                        const LangOptions &LangOpts,
+                                        SourceLocation BeginLocation) {
+  std::optional<Token> PrevToken =
+      Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
+  if (!PrevToken)
+    return false;
+  // Check whether the token at `BeginLocation` is immediately adjacent to
+  // the previous token with no space between them.
+  const bool IsAdjacentToPrevToken = PrevToken->getEndLoc() == BeginLocation;
+  return PrevToken->isAnyIdentifier() && IsAdjacentToPrevToken;
+}
+
+// Returns true if the replacement text needs a leading space to avoid merging
+// with the preceding token. This occurs when `*it` is immediately adjacent to
+// a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
+// incorrectly produce `deleteit`. So we insert a space b/w `delete` and `it`.
+static bool requiresLeadingSpace(const SourceManager &SourceMgr,
+                                 const LangOptions &LangOpts,
+                                 SourceLocation BeginLocation) {
+  Token StarToken;
+  if (!Lexer::getRawToken(BeginLocation, StarToken, SourceMgr, LangOpts,
+                          false) &&
+      StarToken.is(tok::star)) {
+    return isPrecededByAdjacentIdentifierOrKeyword(SourceMgr, LangOpts,
+                                                   BeginLocation);
   }
   return false;
 }
@@ -698,11 +733,15 @@ void LoopConvertCheck::doConversion(
       std::string ReplaceText;
       SourceRange Range = Usage.Range;
       if (Usage.Expression) {
+        if (Usage.Kind == Usage::UK_Default &&
+            requiresLeadingSpace(Context->getSourceManager(), getLangOpts(),
+                                 Usage.Range.getBegin()))
+          ReplaceText = " ";
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
-        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
-                          ? VarNameOrStructuredBinding + "."
-                          : VarNameOrStructuredBinding;
+        ReplaceText += Usage.Kind == Usage::UK_MemberThroughArrow
+                           ? VarNameOrStructuredBinding + "."
+                           : VarNameOrStructuredBinding;
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
@@ -711,10 +750,14 @@ void LoopConvertCheck::doConversion(
             // removed except in case of a `sizeof` operator call.
             const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
-                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+                (GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr &&
+                 !isPrecededByAdjacentIdentifierOrKeyword(
+                     Context->getSourceManager(), getLangOpts(),
+                     Parents[0].getSourceRange().getBegin()))) {
               Range = Paren->getSourceRange();
             }
-          } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
+          } else if (const auto *UOP = Parents[0].get<UnaryOperator>();
+                     UOP && UOP->getOpcode() == UO_AddrOf) {
             // If we are taking the address of the loop variable, then we must
             // not use a copy, as it would mean taking the address of the loop's
             // local index instead.
@@ -722,8 +765,7 @@ void LoopConvertCheck::doConversion(
             // of the loop's body (for instance, in a function that got the
             // loop's index as a const reference parameter), or where we take
             // the address of a member (like "&Arr[i].A.B.C").
-            if (UOP->getOpcode() == UO_AddrOf)
-              CanCopy = false;
+            CanCopy = false;
           }
         }
       } else {
@@ -810,9 +852,9 @@ StringRef LoopConvertCheck::getContainerString(ASTContext *Context,
   } else {
     // For CXXOperatorCallExpr such as vector_ptr->size() we want the class
     // object vector_ptr, but for vector[2] we need the whole expression.
-    if (const auto *E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr))
-      if (E->getOperator() != OO_Subscript)
-        ContainerExpr = E->getArg(0);
+    if (const auto *E = dyn_cast<CXXOperatorCallExpr>(ContainerExpr);
+        E && E->getOperator() != OO_Subscript)
+      ContainerExpr = E->getArg(0);
     ContainerString =
         getStringFromRange(Context->getSourceManager(), Context->getLangOpts(),
                            ContainerExpr->getSourceRange());
@@ -878,7 +920,7 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
     // A node will only be bound with DerefByRefResultName if we're dealing
     // with a user-defined iterator type. Test the const qualification of
     // the reference type.
-    auto ValueType = DerefType->getNonReferenceType();
+    const auto ValueType = DerefType->getNonReferenceType();
 
     Descriptor.DerefByConstRef = ValueType.isConstQualified();
     Descriptor.ElemType = ValueType;
@@ -950,11 +992,11 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
       return false;
 
   } else if (FixerKind == LFK_PseudoArray) {
-    if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName)) {
+    if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName);
+        EndCall && !isa<MemberExpr>(EndCall->getCallee()))
       // This call is required to obtain the container.
-      if (!isa<MemberExpr>(EndCall->getCallee()))
-        return false;
-    }
+      return false;
+
     return Nodes.getNodeAs<CallExpr>(EndCallName) != nullptr;
   }
   return true;

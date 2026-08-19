@@ -15,73 +15,73 @@ objects: []
 functions:
   - name: cfgetispeed
     standards:
-      - POSIX
+      - posix
     return_type: speed_t
     arguments:
       - type: const struct termios *
   - name: cfgetospeed
     standards:
-      - POSIX
+      - posix
     return_type: speed_t
     arguments:
       - type: const struct termios *
   - name: cfsetispeed
     standards:
-      - POSIX
+      - posix
     return_type: speed_t
     arguments:
       - type: struct termios *
       - type: speed_t
   - name: cfsetospeed
     standards:
-      - POSIX
+      - posix
     return_type: speed_t
     arguments:
       - type: struct termios *
       - type: speed_t
   - name: tcdrain
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: tcflow
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: tcflush
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: tcgetattr
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: struct termios *
   - name: tcgetsid
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: int
   - name: tcsendbreak
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: tcsetattr
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int

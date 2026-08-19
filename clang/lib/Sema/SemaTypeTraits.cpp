@@ -13,11 +13,11 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -367,6 +367,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsCompound:
   case UTT_IsMemberPointer:
   case UTT_IsTypedResourceElementCompatible:
+  case UTT_IsConstantBufferElementCompatible:
     // Fall-through
 
     // These traits are modeled on type predicates in C++0x [meta.unary.prop]
@@ -1131,6 +1132,14 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
       return false;
 
     return Self.HLSL().IsTypedResourceElementCompatible(T);
+
+  case UTT_IsConstantBufferElementCompatible:
+    assert(Self.getLangOpts().HLSL &&
+           "constant buffer element compatible types are an HLSL-only feature");
+    if (T->isIncompleteType())
+      return false;
+
+    return Self.HLSL().IsConstantBufferElementCompatible(T);
   }
 }
 
@@ -1276,6 +1285,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     //     T t(create<Args>()...);
     assert(!Args.empty());
 
+    // LWG3819: For reference_meows_from_temporary traits, && is not added to
+    // the source object type.
+    // Otherwise, compute the result of add_rvalue_reference_t.
+    bool UseRawObjectType =
+        Kind == clang::BTT_ReferenceBindsToTemporary ||
+        Kind == clang::BTT_ReferenceConstructsFromTemporary ||
+        Kind == clang::BTT_ReferenceConvertsFromTemporary;
+
     // Precondition: T and all types in the parameter pack Args shall be
     // complete types, (possibly cv-qualified) void, or arrays of
     // unknown bound.
@@ -1291,21 +1308,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
 
     // Make sure the first argument is not incomplete nor a function type.
     QualType T = Args[0]->getType();
-    if (T->isIncompleteType() || T->isFunctionType())
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        (UseRawObjectType && !T->isReferenceType()))
       return false;
 
     // Make sure the first argument is not an abstract type.
     CXXRecordDecl *RD = T->getAsCXXRecordDecl();
     if (RD && RD->isAbstract())
       return false;
-
-    // LWG3819: For reference_meows_from_temporary traits, && is not added to
-    // the source object type.
-    // Otherwise, compute the result of add_rvalue_reference_t.
-    bool UseRawObjectType =
-        Kind == clang::BTT_ReferenceBindsToTemporary ||
-        Kind == clang::BTT_ReferenceConstructsFromTemporary ||
-        Kind == clang::BTT_ReferenceConvertsFromTemporary;
 
     llvm::BumpPtrAllocator OpaqueExprAllocator;
     SmallVector<Expr *, 2> ArgExprs;
@@ -1944,16 +1954,8 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET, SourceLocation KWLoc,
 
 static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
-      .Case("is_trivially_relocatable",
-            TypeTrait::UTT_IsCppTriviallyRelocatable)
-      .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
-      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
-      .Case("is_empty", TypeTrait::UTT_IsEmpty)
-      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
-      .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
-      .Case("is_constructible", TypeTrait::TT_IsConstructible)
-      .Case("is_final", TypeTrait::UTT_IsFinal)
-      .Case("is_abstract", TypeTrait::UTT_IsAbstract)
+#define EMIT_STD_NAME_CASES
+#include "clang/Basic/BuiltinTraits.inc"
       .Default(std::nullopt);
 }
 
@@ -2158,7 +2160,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
       continue;
     }
     auto SpecialMemberKind =
-        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+        Method->getDefaultedFunctionKind().asSpecialMember();
     switch (SpecialMemberKind) {
     case CXXSpecialMemberKind::CopyConstructor:
     case CXXSpecialMemberKind::MoveConstructor:

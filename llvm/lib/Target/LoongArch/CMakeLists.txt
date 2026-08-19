@@ -31,6 +31,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchSelectionDAGInfo.cpp
   LoongArchSubtarget.cpp
   LoongArchTargetMachine.cpp
+  LoongArchTargetObjectFile.cpp
   LoongArchTargetTransformInfo.cpp
 
   LINK_COMPONENTS

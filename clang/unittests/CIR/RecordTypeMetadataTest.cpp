@@ -62,9 +62,9 @@ TEST_F(RecordLayoutAttrTest, HighAlignment) {
 
 TEST_F(RecordLayoutAttrTest, RecordTypeUnchanged) {
   IntType i32 = IntType::get(&context, 32, true);
-  auto ty =
-      RecordType::get(&context, getName("Foo"), RecordType::RecordKind::Struct);
-  ty.complete({i32, i32}, /*packed=*/false, /*padded=*/false);
+  auto ty = StructType::get(&context, getName("Foo"), /*is_class=*/false);
+  mlir::Type members[] = {i32, i32};
+  ty.complete(members, /*packed=*/false, RecordType::getAllDataKinds(members));
   EXPECT_TRUE(ty.isComplete());
   EXPECT_EQ(ty.getMembers().size(), 2u);
 }

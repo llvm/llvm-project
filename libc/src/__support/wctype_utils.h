@@ -22,6 +22,7 @@
 
 #if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 #include "src/__support/wctype/wctype_classification_utils.h"
+#include "src/__support/wctype/wctype_conversion_utils.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -585,8 +586,7 @@ LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::tolower(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::tolower(wch));
 #endif
 }
 
@@ -597,8 +597,7 @@ LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::toupper(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::toupper(wch));
 #endif
 }
 

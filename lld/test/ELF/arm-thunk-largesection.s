@@ -22,6 +22,8 @@
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --start-address=0x2012ff8 --stop-address=0x2021ffc %t2 | FileCheck --check-prefix=CHECK4 %s
 // RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --start-address=0x3021fec --stop-address=0x3021ff6 %t2 | FileCheck --check-prefix=CHECK5 %s
 
+// RUN: rm %t %t2
+
  .syntax unified
  .balign 0x1000
  .thumb

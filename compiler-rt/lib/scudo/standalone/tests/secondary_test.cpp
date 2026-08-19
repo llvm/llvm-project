@@ -145,7 +145,7 @@ template <typename Config> static void testBasic() {
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.
@@ -182,6 +182,90 @@ TEST(ScudoSecondaryTest, Basic) {
   testBasic<TestCacheConfig>();
   testBasic<TestCacheNoGuardPageConfig>();
   testBasic<scudo::DefaultConfig>();
+}
+
+template <typename Config> static void testMteCacheRemapping() {
+  using ConfigWrapper = scudo::SecondaryConfig<Config>;
+  AllocatorInfoType<Config> Info;
+
+  if (!scudo::useMemoryTagging<ConfigWrapper>(Info.Options) ||
+      !Info.Allocator->canCache(1U << 16)) {
+    TEST_SKIP("Memory tagging is not supported or can't cache");
+  }
+
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+  const scudo::uptr LargeSize = 64 * 1024;
+  // SmallSize must be at least 52KB to ensure it stays within the
+  // 16KB (4 pages) cache fragmentation limit for reuse.
+  const scudo::uptr SmallSize = 52 * 1024;
+
+  // 1. Initial Allocation (64KB, page-aligned)
+  void *P1 = Info.Allocator->allocate(Info.Options, LargeSize, PageSize);
+  EXPECT_NE(P1, nullptr);
+  memset(P1, 'A', LargeSize);
+  const scudo::uptr AllocPos1 = reinterpret_cast<scudo::uptr>(P1);
+  const scudo::uptr CommitBase1 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P1)->CommitBase;
+
+  // Free P1 to cache it
+  Info.Allocator->deallocate(Info.Options, P1);
+
+  // 2. Reuse cached block for smaller allocation (52KB) -> Shift Forwards
+  void *P2 = Info.Allocator->allocate(Info.Options, SmallSize, PageSize);
+  EXPECT_NE(P2, nullptr);
+  memset(P2, 'A', SmallSize);
+  const scudo::uptr AllocPos2 = reinterpret_cast<scudo::uptr>(P2);
+  const scudo::uptr CommitBase2 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P2)->CommitBase;
+
+  // Verify that P2 reused P1's block
+  EXPECT_EQ(CommitBase1, CommitBase2);
+
+  // Since SmallSize < LargeSize, AllocPos2 must shift forwards (right)
+  EXPECT_GT(AllocPos2, AllocPos1);
+
+  // Verify MTE is disabled on the old header page
+  {
+    // P1 is AllocPos - 16. We add 16 (Chunk::getHeaderSize()) to get AllocPos,
+    // and subtract PageSize to target the start of the old header page.
+    const scudo::uptr OldHeaderPage = scudo::untagPointer(AllocPos1) +
+                                      scudo::Chunk::getHeaderSize() - PageSize;
+    *reinterpret_cast<volatile char *>(OldHeaderPage) = 'X';
+    EXPECT_EQ(*reinterpret_cast<volatile char *>(OldHeaderPage), 'X');
+  }
+
+  // Free P2 to cache it again (now cached with P2's smaller layout)
+  Info.Allocator->deallocate(Info.Options, P2);
+
+  // 3. Reuse cached block for larger allocation (64KB) -> Shift Backwards
+  void *P3 = Info.Allocator->allocate(Info.Options, LargeSize, PageSize);
+  EXPECT_NE(P3, nullptr);
+  memset(P3, 'A', LargeSize);
+  const scudo::uptr AllocPos3 = reinterpret_cast<scudo::uptr>(P3);
+  const scudo::uptr CommitBase3 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P3)->CommitBase;
+
+  // Verify that P3 reused the same block
+  EXPECT_EQ(CommitBase1, CommitBase3);
+
+  // Since we went back to LargeSize, AllocPos3 must shift backwards (left)
+  EXPECT_LT(AllocPos3, AllocPos2);
+
+  // Verify MTE is disabled on the old header page of P2
+  {
+    // P2 is AllocPos - 16. We add 16 (Chunk::getHeaderSize()) to get AllocPos,
+    // and subtract PageSize to target the start of the old header page of P2.
+    const scudo::uptr OldHeaderPageB = scudo::untagPointer(AllocPos2) +
+                                       scudo::Chunk::getHeaderSize() - PageSize;
+    *reinterpret_cast<volatile char *>(OldHeaderPageB) = 'Y';
+    EXPECT_EQ(*reinterpret_cast<volatile char *>(OldHeaderPageB), 'Y');
+  }
+
+  Info.Allocator->deallocate(Info.Options, P3);
+}
+
+TEST(ScudoSecondaryTest, MteCacheRemapping) {
+  testMteCacheRemapping<scudo::DefaultConfig>();
 }
 
 // This exercises a variety of combinations of size and alignment for the
@@ -313,6 +397,12 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
   *mapped = Stats[scudo::StatMapped] - *mapped;
 
   Info.Allocator->deallocate(Info.Options, Ptr);
+
+  // Cache is disabled therefore every deallocation is guaranteed to bypass the
+  // cache and increment UncacheableUnmaps.
+  scudo::ScopedString Str;
+  Info.Allocator->getStats(&Str);
+  EXPECT_NE(strstr(Str.data(), "Uncacheable unmaps: 1"), nullptr);
 
   *guard_page_size = Info.Allocator->getGuardPageSize();
 }
@@ -478,6 +568,10 @@ TEST(ScudoSecondaryTest, AllocatorCacheMemoryLeakTest) {
   // Evicted entry should be marked due to unmap callback
   EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
             UnmappedMarker);
+  scudo::ScopedString Str;
+  Info.Cache->getStats(&Str);
+  Str.output();
+  EXPECT_NE(strstr(Str.data(), "Unmapped due to eviction: 1"), nullptr);
 }
 
 TEST(ScudoSecondaryTest, AllocatorCacheOptions) {

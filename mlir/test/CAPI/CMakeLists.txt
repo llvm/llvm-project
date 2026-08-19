@@ -43,6 +43,7 @@ endif()
 _add_capi_test_executable(mlir-capi-ir-test
   ir.c
   LINK_LIBS PRIVATE
+    MLIRCAPIInterfaces
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything
@@ -109,6 +110,7 @@ _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
+    MLIRCAPIInterfaces
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
 )

@@ -16,9 +16,10 @@ module attributes {gpu.container_module} {
     }
   }
   func.func @foo() {
-    // CHECK: [[MEMREF:%.*]] = gpu.alloc () : memref<10xf32, 1>
-    // CHECK: [[DESCRIPTOR:%.*]] = builtin.unrealized_conversion_cast [[MEMREF]] : memref<10xf32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
-    // CHECK: [[PTR:%.*]] = llvm.extractvalue [[DESCRIPTOR]][1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[ALLOCATED:%.*]] = llvm.call @mgpuMemAlloc({{.*}}) : (i64, !llvm.ptr, i8) -> !llvm.ptr
+    // CHECK: [[CAST:%.*]] = llvm.addrspacecast [[ALLOCATED]] : !llvm.ptr to !llvm.ptr<1>
+    // CHECK: [[DESCRIPTOR:%.*]] = llvm.insertvalue [[CAST]], {{.*}}[0] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: [[PTR:%.*]] = llvm.extractvalue {{.*}}[1] : !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: gpu.launch_func  @kernels::@kernel_1 blocks in ({{.*}}) threads in ({{.*}}) : i64
     // CHECK: args(%{{.*}} : f32, [[PTR]] : !llvm.ptr<1>)
     %0 = arith.constant 0. : f32

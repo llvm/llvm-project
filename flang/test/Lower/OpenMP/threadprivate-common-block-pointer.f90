@@ -2,7 +2,7 @@
 ! from a common block.
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! Regression test for a compiler crash
 

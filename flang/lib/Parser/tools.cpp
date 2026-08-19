@@ -131,6 +131,17 @@ const Name &GetFirstName(const EntityDecl &x) {
   return std::get<ObjectName>(x.t);
 }
 
+const Name &GetFirstName(const AccObject &x) {
+  return common::visit(
+      [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
+}
+
+bool IsBOZLiteral(const ScalarIntConstantExpr &x) {
+  const Expr &expr{UnwrapRef<Expr>(x)};
+  const auto *literal{std::get_if<LiteralConstant>(&expr.u)};
+  return literal && std::holds_alternative<BOZLiteralConstant>(literal->u);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{
@@ -235,7 +246,7 @@ std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
           }
         } else if constexpr ( //
             std::is_same_v<TypeS, OpenMPLoopConstruct> ||
-            std::is_same_v<TypeS, OpenMPSectionConstruct> ||
+            std::is_same_v<TypeS, OmpSectionDirective> ||
             std::is_base_of_v<OmpBlockConstruct, TypeS>) {
           return GetFinalLabel(std::get<Block>(s.t));
         } else {

@@ -140,26 +140,27 @@ public:
   /// getLocation - Returns the edge associated with the given node.
   ProgramPoint getLocation() const { return Location; }
 
-  const LocationContext *getLocationContext() const {
-    return getLocation().getLocationContext();
-  }
-
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocation().getStackFrame();
   }
 
-  const Decl &getCodeDecl() const { return *getLocationContext()->getDecl(); }
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
+  }
 
-  CFG &getCFG() const { return *getLocationContext()->getCFG(); }
+  const Decl &getCodeDecl() const { return *getStackFrame()->getDecl(); }
+
+  CFG &getCFG() const { return *getStackFrame()->getCFG(); }
 
   const CFGBlock *getCFGBlock() const;
 
   const ParentMap &getParentMap() const {
-    return getLocationContext()->getParentMap();
+    return getStackFrame()->getParentMap();
   }
 
   template <typename T> T &getAnalysis() const {
-    return *getLocationContext()->getAnalysis<T>();
+    return *getStackFrame()->getAnalysis<T>();
   }
 
   const ProgramStateRef &getState() const { return State; }
@@ -169,8 +170,8 @@ public:
   }
 
   /// Get the value of an arbitrary expression at this node.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getStackFrame());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID,

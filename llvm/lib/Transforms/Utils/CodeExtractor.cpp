@@ -66,7 +66,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -247,7 +246,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 /// for specified target preserves original alignment
 static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
   switch (TargetTriple.getArch()) {
-  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::amdgpu:
   case Triple::ArchType::r600:
     return true;
   // TODO: Add other architectures for which we are certain that alignment
@@ -707,6 +706,9 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
     }
   }
 
+  // Reset stale state from any prior call in HotColdSplitting; the CFG may
+  // have changed since.
+  FuncRetVal = nullptr;
   if (!VoidReturnWithSingleOutput && !AggregateArgs && Outputs.size() == 1 &&
       getCommonExitBlock(Blocks)) {
     FuncRetVal = Outputs[0];
@@ -980,6 +982,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoIPA:
       case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
@@ -1089,8 +1092,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
-      newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+      newFunction->setEntryCount(*Count);
   }
 
   return newFunction;
@@ -1309,9 +1311,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
                         &NewFunc.getEntryBlock());
       return;
     }
-    DIB.insertDbgValueIntrinsic(
-        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-        NewFunc.getEntryBlock().getTerminator()->getIterator());
+    DIB.insertDbgValue(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                       NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;
@@ -2122,11 +2123,9 @@ void CodeExtractor::insertReplacerCall(
   }
 
   if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
+    FuncRetVal->replaceUsesWithIf(ReplacerCall, [&](Use &U) {
+      return cast<Instruction>(U.getUser())->getFunction() == oldFunction;
+    });
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

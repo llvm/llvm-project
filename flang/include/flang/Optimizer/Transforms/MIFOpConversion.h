@@ -11,7 +11,6 @@
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 
 namespace fir {
 class LLVMTypeConverter;

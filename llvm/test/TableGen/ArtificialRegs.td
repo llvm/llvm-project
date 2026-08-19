@@ -36,6 +36,7 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // CHECK-NEXT: CoveredBySubRegs:
 // CHECK-NEXT: Allocatable:
 // CHECK-NEXT: AllocationPriority:
+// CHECK-NEXT: Weight: 1
 // CHECK-NEXT: BaseClassOrder:
 // CHECK-NEXT: Regs: A R0 R1{{$}}
 // CHECK-NEXT: SubClasses: RA{{$}}
@@ -49,6 +50,7 @@ def DA : RegisterClass<"D", [i64], 64, (add D0, A)>;
 // CHECK-NEXT: CoveredBySubRegs:
 // CHECK-NEXT: Allocatable:
 // CHECK-NEXT: AllocationPriority:
+// CHECK-NEXT: Weight: 2
 // CHECK-NEXT: BaseClassOrder:
 // CHECK-NEXT: Regs: A D0{{$}}
 // CHECK-NEXT: SubClasses: DA{{$}}

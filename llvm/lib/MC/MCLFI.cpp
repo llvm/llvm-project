@@ -26,6 +26,8 @@
 
 static const char NoteNamespace[] = "LFI";
 
+static constexpr unsigned X86BundleSize = 32;
+
 namespace llvm {
 
 cl::opt<bool> FlagEnableRewriting("lfi-enable-rewriter",
@@ -50,6 +52,14 @@ void initializeLFIMCStreamer(MCStreamer &Streamer, MCContext &Ctx,
   }
 }
 
+void emitLFIBundleAlign(MCStreamer &Streamer, MCContext &Ctx) {
+  const Triple &TheTriple = Ctx.getTargetTriple();
+  assert(TheTriple.isLFI());
+
+  if (TheTriple.getArch() == Triple::x86_64)
+    Streamer.emitBundleAlignMode(Align(X86BundleSize));
+}
+
 void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   const Triple &TheTriple = Ctx.getTargetTriple();
   assert(TheTriple.isLFI());
@@ -60,6 +70,10 @@ void emitLFINoteSection(MCStreamer &Streamer, MCContext &Ctx) {
   case Triple::aarch64:
     NoteName = ".note.LFI.ABI.aarch64";
     NoteArch = "aarch64";
+    break;
+  case Triple::x86_64:
+    NoteName = ".note.LFI.ABI.x86_64";
+    NoteArch = "x86_64";
     break;
   default:
     reportFatalUsageError("Unsupported architecture for LFI");

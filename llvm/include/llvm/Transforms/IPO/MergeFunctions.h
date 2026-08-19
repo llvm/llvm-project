@@ -24,13 +24,13 @@ class Module;
 class Function;
 
 /// Merge identical functions.
-class MergeFunctionsPass : public PassInfoMixin<MergeFunctionsPass> {
+class MergeFunctionsPass : public OptionalPassInfoMixin<MergeFunctionsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  LLVM_ABI static bool runOnModule(Module &M);
+  LLVM_ABI static bool runOnModule(Module &M, ModuleAnalysisManager &AM);
   LLVM_ABI static DenseMap<Function *, Function *>
-  runOnFunctions(ArrayRef<Function *> F);
+  runOnFunctions(ArrayRef<Function *> Funcs, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

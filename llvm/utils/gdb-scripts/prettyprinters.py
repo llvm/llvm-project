@@ -146,46 +146,34 @@ class DenseMapPrinter:
     "Print a DenseMap"
 
     class _iterator:
-        def __init__(self, key_info_t, begin, end):
-            self.key_info_t = key_info_t
-            self.cur = begin
-            self.end = end
+        def __init__(self, buckets, used, num_buckets):
+            self.buckets = buckets
+            self.used = used
+            self.num_buckets = num_buckets
+            self.index = 0
             self.advancePastEmptyBuckets()
             self.first = True
 
         def __iter__(self):
             return self
 
+        def isUsed(self, index):
+            # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
+            # uint32_t words, so a bucket is occupied iff its bit is set.
+            word = self.used[index >> 5]
+            return (int(word) >> (index & 31)) & 1
+
         def advancePastEmptyBuckets(self):
-            # disabled until the comments below can be addressed
-            # keeping as notes/posterity/hints for future contributors
-            return
-            n = self.key_info_t.name
-            is_equal = gdb.parse_and_eval(n + "::isEqual")
-            empty = gdb.parse_and_eval(n + "::getEmptyKey()")
-            tombstone = gdb.parse_and_eval(n + "::getTombstoneKey()")
-            # the following is invalid, GDB fails with:
-            #   Python Exception <class 'gdb.error'> Attempt to take address of value
-            #   not located in memory.
-            # because isEqual took parameter (for the unsigned long key I was testing)
-            # by const ref, and GDB
-            # It's also not entirely general - we should be accessing the "getFirst()"
-            # member function, not the 'first' member variable, but I've yet to figure
-            # out how to find/call member functions (especially (const) overloaded
-            # ones) on a gdb.Value.
-            while self.cur != self.end and (
-                is_equal(self.cur.dereference()["first"], empty)
-                or is_equal(self.cur.dereference()["first"], tombstone)
-            ):
-                self.cur = self.cur + 1
+            while self.index < self.num_buckets and not self.isUsed(self.index):
+                self.index += 1
 
         def __next__(self):
-            if self.cur == self.end:
+            if self.index >= self.num_buckets:
                 raise StopIteration
-            cur = self.cur
-            v = cur.dereference()["first" if self.first else "second"]
+            bucket = (self.buckets + self.index).dereference()
+            v = bucket["first" if self.first else "second"]
             if not self.first:
-                self.cur = self.cur + 1
+                self.index += 1
                 self.advancePastEmptyBuckets()
                 self.first = True
             else:
@@ -200,9 +188,8 @@ class DenseMapPrinter:
 
     def children(self):
         t = self.val.type.template_argument(3).pointer()
-        begin = self.val["Buckets"].cast(t)
-        end = (begin + self.val["NumBuckets"]).cast(t)
-        return self._iterator(self.val.type.template_argument(2), begin, end)
+        buckets = self.val["Buckets"].cast(t)
+        return self._iterator(buckets, self.val["Used"], int(self.val["NumBuckets"]))
 
     def to_string(self):
         return "llvm::DenseMap with %d elements" % (self.val["NumEntries"])
@@ -222,11 +209,10 @@ class StringMapPrinter:
         end = it + self.val["NumBuckets"]
         value_ty = self.val.type.template_argument(0)
         entry_base_ty = gdb.lookup_type("llvm::StringMapEntryBase")
-        tombstone = gdb.parse_and_eval("llvm::StringMapImpl::TombstoneIntVal")
 
         while it != end:
             it_deref = it.dereference()
-            if it_deref == 0 or it_deref == tombstone:
+            if it_deref == 0:
                 it = it + 1
                 continue
 

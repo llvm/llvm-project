@@ -135,8 +135,60 @@ private:
   nanobind::object obj;
 };
 
-struct PyMemoryEffectsInstanceList {
-  MlirMemoryEffectInstancesList effects;
+/// A memory effect.
+class PyMemoryEffect {
+public:
+  explicit PyMemoryEffect(MlirMemoryEffect effect) : effect(effect) {}
+
+  MlirMemoryEffect get() const { return effect; }
+
+private:
+  MlirMemoryEffect effect;
+};
+
+/// A side effect resource.
+class PySideEffectResource {
+public:
+  explicit PySideEffectResource(MlirSideEffectResource resource)
+      : resource(resource) {}
+
+  MlirSideEffectResource get() const { return resource; }
+
+private:
+  MlirSideEffectResource resource;
+};
+
+/// A memory effect instance.
+class PyMemoryEffectInstance {
+public:
+  explicit PyMemoryEffectInstance(MlirMemoryEffectInstance instance)
+      : instance(instance) {}
+  PyMemoryEffectInstance(const PyMemoryEffect &effect,
+                         const nanobind::object &target,
+                         const nanobind::object &parameters, int stage,
+                         bool effectOnFullRegion,
+                         const PySideEffectResource &resource);
+  PyMemoryEffectInstance(const PyMemoryEffectInstance &) = delete;
+  PyMemoryEffectInstance(PyMemoryEffectInstance &&other) noexcept
+      : instance(other.instance) {
+    other.instance.ptr = nullptr;
+  }
+  ~PyMemoryEffectInstance() {
+    if (instance.ptr)
+      mlirMemoryEffectInstanceDestroy(instance);
+  }
+
+  MlirMemoryEffectInstance get() const { return instance; }
+  PyMemoryEffect getEffect() const;
+  PySideEffectResource getResource() const;
+  int getStage() const;
+  bool getEffectOnFullRegion() const;
+  nanobind::object getParameters() const;
+  nanobind::object getValue() const;
+  nanobind::object getSymbolRef() const;
+
+private:
+  MlirMemoryEffectInstance instance;
 };
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN

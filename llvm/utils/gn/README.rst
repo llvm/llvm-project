@@ -49,8 +49,6 @@ Quick start
    you can manually pass these parameters and not use the wrapper if you
    prefer.)
 
-#. ``echo out >> .git/info/exclude`` to tell git to ignore files below ``out``.
-
 #. ``ninja -C out/gn check-lld`` to build all prerequisites for and run the LLD
    tests.
 

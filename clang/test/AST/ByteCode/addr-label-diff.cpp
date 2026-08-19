@@ -14,3 +14,5 @@ void UnfoldableAddrLabelDiff2() { static short x = (long)&&a-(long)&&b; a:b:retu
 // CHECK: @_ZZ21FoldableAddrLabelDiffvE1x = internal global i64 sub (i64 ptrtoint (ptr blockaddress(@_Z21FoldableAddrLabelDiffv
 void FoldableAddrLabelDiff() { static long x = (long)&&a-(long)&&b; a:b:return;}
 
+typedef decltype(sizeof(int)) L;
+void foo1() { (L) & (*(int (*)[4]) nullptr)[0] - (L) && b; b:}

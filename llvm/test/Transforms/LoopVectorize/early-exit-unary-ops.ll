@@ -14,9 +14,9 @@ define i64 @early_exit_with_fneg(ptr dereferenceable(1024) align 8 %src, i1 %con
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <4 x double> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq <4 x double> [[TMP1]], splat (double 1.000000e+01)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 124
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
