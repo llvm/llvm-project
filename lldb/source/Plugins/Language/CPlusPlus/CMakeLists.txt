@@ -12,6 +12,7 @@ lldb_tablegen(LanguageCPlusPlusProperties.json -dump-json
 
 add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
+  Chrono.cpp
   Coroutines.cpp
   CPlusPlusLanguage.cpp
   CPlusPlusNameParser.cpp
