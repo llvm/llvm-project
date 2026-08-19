@@ -1,14 +1,10 @@
-=====================================================================
-Building a JIT: Adding Optimizations -- An introduction to ORC Layers
-=====================================================================
-
+# Building a JIT: Adding Optimizations -- An introduction to ORC Layers
 
 **This tutorial is under active development. It is incomplete and details may
 change frequently.** Nonetheless we invite you to try it out as it stands, and
 we welcome any feedback.
 
-Chapter 2 Introduction
-======================
+## Chapter 2 Introduction
 
 **Warning: This tutorial is currently being updated to account for ORC API
 changes. Only Chapters 1 and 2 are up-to-date.**
@@ -17,7 +13,7 @@ changes. Only Chapters 1 and 2 are up-to-date.**
 updated**
 
 Welcome to Chapter 2 of the "Building an ORC-based JIT in LLVM" tutorial. In
-`Chapter 1 <BuildingAJIT1.html>`_ of this series we examined a basic JIT
+[Chapter 1](BuildingAJIT1.md) of this series we examined a basic JIT
 class, KaleidoscopeJIT, that could take LLVM IR modules as input and produce
 executable code in memory. KaleidoscopeJIT was able to do this with relatively
 little code by composing two off-the-shelf *ORC layers*: IRCompileLayer and
@@ -26,10 +22,9 @@ ObjectLinkingLayer, to do much of the heavy lifting.
 In this layer we'll learn more about the ORC layer concept by using a new layer,
 IRTransformLayer, to add IR optimization support to KaleidoscopeJIT.
 
-Optimizing Modules using the IRTransformLayer
-=============================================
+## Optimizing Modules using the IRTransformLayer
 
-In `Chapter 4 <LangImpl04.html>`_ of the "Implementing a language with LLVM"
+In [Chapter 4](LangImpl04.md) of the "Implementing a language with LLVM"
 tutorial series the llvm *FunctionPassManager* is introduced as a means for
 optimizing LLVM IR. Interested readers may read that chapter for details, but
 in short: to optimize a Module we create an llvm::FunctionPassManager
@@ -52,31 +47,31 @@ constructor for this layer takes a reference to the execution session and the
 layer below (as all layers do) plus an *IR optimization function* that it will
 apply to each Module that is added via addModule:
 
-.. code-block:: c++
+```c++
+class KaleidoscopeJIT {
+private:
+  ExecutionSession ES;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer CompileLayer;
+  IRTransformLayer TransformLayer;
 
-  class KaleidoscopeJIT {
-  private:
-    ExecutionSession ES;
-    RTDyldObjectLinkingLayer ObjectLayer;
-    IRCompileLayer CompileLayer;
-    IRTransformLayer TransformLayer;
+  DataLayout DL;
+  MangleAndInterner Mangle;
+  ThreadSafeContext Ctx;
 
-    DataLayout DL;
-    MangleAndInterner Mangle;
-    ThreadSafeContext Ctx;
+public:
 
-  public:
-
-    KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
-        : ObjectLayer(ES,
-                      []() { return std::make_unique<SectionMemoryManager>(); }),
-          CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
-          TransformLayer(ES, CompileLayer, optimizeModule),
-          DL(std::move(DL)), Mangle(ES, this->DL),
-          Ctx(std::make_unique<LLVMContext>()) {
-      ES.getMainJITDylib().addGenerator(
-          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix())));
-    }
+  KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
+      : ObjectLayer(ES,
+                    []() { return std::make_unique<SectionMemoryManager>(); }),
+        CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
+        TransformLayer(ES, CompileLayer, optimizeModule),
+        DL(std::move(DL)), Mangle(ES, this->DL),
+        Ctx(std::make_unique<LLVMContext>()) {
+    ES.getMainJITDylib().addGenerator(
+        cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix())));
+  }
+```
 
 Our extended KaleidoscopeJIT class starts out the same as it did in Chapter 1,
 but after the CompileLayer we introduce a new member, TransformLayer, which sits
@@ -85,48 +80,48 @@ the ExecutionSession and output layer (standard practice for layers), along with
 a *transform function*. For our transform function we supply our classes
 optimizeModule static method.
 
-.. code-block:: c++
-
-  // ...
-  return cantFail(OptimizeLayer.addModule(std::move(M),
-                                          std::move(Resolver)));
-  // ...
+```c++
+// ...
+return cantFail(OptimizeLayer.addModule(std::move(M),
+                                        std::move(Resolver)));
+// ...
+```
 
 Next we need to update our addModule method to replace the call to
-``CompileLayer::add`` with a call to ``OptimizeLayer::add`` instead.
+`CompileLayer::add` with a call to `OptimizeLayer::add` instead.
 
-.. code-block:: c++
+```c++
+static Expected<ThreadSafeModule>
+optimizeModule(ThreadSafeModule M, const MaterializationResponsibility &R) {
+  // Create a function pass manager.
+  auto FPM = std::make_unique<legacy::FunctionPassManager>(M.get());
 
-  static Expected<ThreadSafeModule>
-  optimizeModule(ThreadSafeModule M, const MaterializationResponsibility &R) {
-    // Create a function pass manager.
-    auto FPM = std::make_unique<legacy::FunctionPassManager>(M.get());
+  // Add some optimizations.
+  FPM->add(createInstructionCombiningPass());
+  FPM->add(createReassociatePass());
+  FPM->add(createGVNPass());
+  FPM->add(createCFGSimplificationPass());
+  FPM->doInitialization();
 
-    // Add some optimizations.
-    FPM->add(createInstructionCombiningPass());
-    FPM->add(createReassociatePass());
-    FPM->add(createGVNPass());
-    FPM->add(createCFGSimplificationPass());
-    FPM->doInitialization();
+  // Run the optimizations over all functions in the module being added to
+  // the JIT.
+  for (auto &F : *M)
+    FPM->run(F);
 
-    // Run the optimizations over all functions in the module being added to
-    // the JIT.
-    for (auto &F : *M)
-      FPM->run(F);
-
-    return M;
-  }
+  return M;
+}
+```
 
 At the bottom of our JIT we add a private method to do the actual optimization:
 *optimizeModule*. This function takes the module to be transformed as input (as
 a ThreadSafeModule) along with a reference to a reference to a new class:
-``MaterializationResponsibility``. The MaterializationResponsibility argument
+`MaterializationResponsibility`. The MaterializationResponsibility argument
 can be used to query JIT state for the module being transformed, such as the set
 of definitions in the module that JIT'd code is actively trying to call/access.
 For now we will ignore this argument and use a standard optimization
 pipeline. To do this we set up a FunctionPassManager, add some passes to it, run
 it over every function in the module, and then return the mutated module. The
-specific optimizations are the same ones used in `Chapter 4 <LangImpl04.html>`_
+specific optimizations are the same ones used in [Chapter 4](LangImpl04.md)
 of the "Implementing a language with LLVM" tutorial series. Readers may visit
 that chapter for a more in-depth discussion of these, and of IR optimization in
 general.
@@ -140,67 +135,67 @@ to see how layers compose. It also provides a neat entry point to the *layer*
 concept itself, because IRTransformLayer is one of the simplest layers that
 can be implemented.
 
-.. code-block:: c++
+```c++
+// From IRTransformLayer.h:
+class IRTransformLayer : public IRLayer {
+public:
+  using TransformFunction = std::function<Expected<ThreadSafeModule>(
+      ThreadSafeModule, const MaterializationResponsibility &R)>;
 
-  // From IRTransformLayer.h:
-  class IRTransformLayer : public IRLayer {
-  public:
-    using TransformFunction = std::function<Expected<ThreadSafeModule>(
-        ThreadSafeModule, const MaterializationResponsibility &R)>;
+  IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
+                   TransformFunction Transform = identityTransform);
 
-    IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
-                     TransformFunction Transform = identityTransform);
-
-    void setTransform(TransformFunction Transform) {
-      this->Transform = std::move(Transform);
-    }
-
-    static ThreadSafeModule
-    identityTransform(ThreadSafeModule TSM,
-                      const MaterializationResponsibility &R) {
-      return TSM;
-    }
-
-    void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
-
-  private:
-    IRLayer &BaseLayer;
-    TransformFunction Transform;
-  };
-
-  // From IRTransformLayer.cpp:
-
-  IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
-                                     IRLayer &BaseLayer,
-                                     TransformFunction Transform)
-      : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
-
-  void IRTransformLayer::emit(MaterializationResponsibility R,
-                              ThreadSafeModule TSM) {
-    assert(TSM.getModule() && "Module must not be null");
-
-    if (auto TransformedTSM = Transform(std::move(TSM), R))
-      BaseLayer.emit(std::move(R), std::move(*TransformedTSM));
-    else {
-      R.failMaterialization();
-      getExecutionSession().reportError(TransformedTSM.takeError());
-    }
+  void setTransform(TransformFunction Transform) {
+    this->Transform = std::move(Transform);
   }
 
+  static ThreadSafeModule
+  identityTransform(ThreadSafeModule TSM,
+                    const MaterializationResponsibility &R) {
+    return TSM;
+  }
+
+  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
+
+private:
+  IRLayer &BaseLayer;
+  TransformFunction Transform;
+};
+
+// From IRTransformLayer.cpp:
+
+IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
+                                   IRLayer &BaseLayer,
+                                   TransformFunction Transform)
+    : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+
+void IRTransformLayer::emit(MaterializationResponsibility R,
+                            ThreadSafeModule TSM) {
+  assert(TSM.getModule() && "Module must not be null");
+
+  if (auto TransformedTSM = Transform(std::move(TSM), R))
+    BaseLayer.emit(std::move(R), std::move(*TransformedTSM));
+  else {
+    R.failMaterialization();
+    getExecutionSession().reportError(TransformedTSM.takeError());
+  }
+}
+```
+
 This is the whole definition of IRTransformLayer, from
-``llvm/include/llvm/ExecutionEngine/Orc/IRTransformLayer.h`` and
-``llvm/lib/ExecutionEngine/Orc/IRTransformLayer.cpp``.  This class is concerned
+`llvm/include/llvm/ExecutionEngine/Orc/IRTransformLayer.h` and
+`llvm/lib/ExecutionEngine/Orc/IRTransformLayer.cpp`. This class is concerned
 with two very simple jobs: (1) Running every IR Module that is emitted via this
 layer through the transform function object, and (2) implementing the ORC
-``IRLayer`` interface (which itself conforms to the general ORC Layer concept,
+`IRLayer` interface (which itself conforms to the general ORC Layer concept,
 more on that below). Most of the class is straightforward: a typedef for the
 transform function, a constructor to initialize the members, a setter for the
 transform function value, and a default no-op transform. The most important
-method is ``emit`` as this is half of our IRLayer interface. The emit method
+method is `emit` as this is half of our IRLayer interface. The emit method
 applies our transform to each module that it is called on and, if the transform
 succeeds, passes the transformed module to the base layer. If the transform
 fails, our emit function calls
-``MaterializationResponsibility::failMaterialization`` (this JIT clients who
+`MaterializationResponsibility::failMaterialization` (this JIT clients who
 may be waiting on other threads know that the code they were waiting for has
 failed to compile) and logs the error with the execution session before bailing
 out.
@@ -208,27 +203,27 @@ out.
 The other half of the IRLayer interface we inherit unmodified from the IRLayer
 class:
 
-.. code-block:: c++
+```c++
+Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
+  return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
+      *this, std::move(K), std::move(TSM)));
+}
+```
 
-  Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
-    return JD.define(std::make_unique<BasicIRLayerMaterializationUnit>(
-        *this, std::move(K), std::move(TSM)));
-  }
-
-This code, from ``llvm/lib/ExecutionEngine/Orc/Layer.cpp``, adds a
+This code, from `llvm/lib/ExecutionEngine/Orc/Layer.cpp`, adds a
 ThreadSafeModule to a given JITDylib by wrapping it up in a
-``MaterializationUnit`` (in this case a ``BasicIRLayerMaterializationUnit``).
+`MaterializationUnit` (in this case a `BasicIRLayerMaterializationUnit`).
 Most layers that derived from IRLayer can rely on this default implementation
-of the ``add`` method.
+of the `add` method.
 
-These two operations, ``add`` and ``emit``, together constitute the layer
+These two operations, `add` and `emit`, together constitute the layer
 concept: A layer is a way to wrap a part of a compiler pipeline (in this case
 the "opt" phase of an LLVM compiler) whose API is opaque to ORC with an
 interface that ORC can call as needed. The add method takes an
 module in some input program representation (in this case an LLVM IR module)
-and stores it in the target ``JITDylib``, arranging for it to be passed back
+and stores it in the target `JITDylib`, arranging for it to be passed back
 to the layer's emit method when any symbol defined by that module is requested.
-Each layer can complete its own work by calling the ``emit`` method of its base
+Each layer can complete its own work by calling the `emit` method of its base
 layer. For example, in this tutorial our IRTransformLayer calls through to
 our IRCompileLayer to compile the transformed IR, and our IRCompileLayer in
 turn calls our ObjectLayer to link the object file produced by our compiler.
@@ -253,22 +248,23 @@ one-size-fits all solution to them, but by providing composable layers we leave
 the decisions to the person implementing the JIT, and make it easy for them to
 experiment with different configurations.
 
-`Next: Adding Per-function Lazy Compilation <BuildingAJIT3.html>`_
+[Next: Adding Per-function Lazy Compilation](BuildingAJIT3.md)
 
-Full Code Listing
-=================
+## Full Code Listing
 
 Here is the complete code listing for our running example with an
 IRTransformLayer added to enable optimization. To build this example, use:
 
-.. code-block:: bash
-
-    # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
-    # Run
-    ./toy
+```bash
+# Compile
+clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
+# Run
+./toy
+```
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/BuildingAJIT/Chapter2/KaleidoscopeJIT.h
-   :language: c++
+```{literalinclude} ../../examples/Kaleidoscope/BuildingAJIT/Chapter2/KaleidoscopeJIT.h
+:language: c++
+```
+

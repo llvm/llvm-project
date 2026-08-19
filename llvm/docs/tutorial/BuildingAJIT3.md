@@ -1,14 +1,10 @@
-=============================================
-Building a JIT: Per-function Lazy Compilation
-=============================================
-
+# Building a JIT: Per-function Lazy Compilation
 
 **This tutorial is under active development. It is incomplete and details may
 change frequently.** Nonetheless we invite you to try it out as it stands, and
 we welcome any feedback.
 
-Chapter 3 Introduction
-======================
+## Chapter 3 Introduction
 
 **Warning: This text is currently out of date due to ORC API updates.**
 
@@ -17,10 +13,9 @@ once the API churn dies down.**
 
 Welcome to Chapter 3 of the "Building an ORC-based JIT in LLVM" tutorial. This
 chapter discusses lazy JITing and shows you how to enable it by adding an ORC
-CompileOnDemand layer the JIT from `Chapter 2 <BuildingAJIT2.html>`_.
+CompileOnDemand layer the JIT from [Chapter 2](BuildingAJIT2.md).
 
-Lazy Compilation
-================
+## Lazy Compilation
 
 When we add a module to the KaleidoscopeJIT class from Chapter 2 it is
 immediately optimized, compiled and linked for us by the IRTransformLayer,
@@ -63,63 +58,64 @@ set all the stubs and callbacks up for us. All we need to do is to add the
 CompileOnDemandLayer to the top of our stack and we'll get the benefits of
 lazy compilation. We just need a few changes to the source:
 
-.. code-block:: c++
+```c++
+...
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+...
 
-  ...
-  #include "llvm/ExecutionEngine/SectionMemoryManager.h"
-  #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
-  #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-  ...
+...
+class KaleidoscopeJIT {
+private:
+  std::unique_ptr<TargetMachine> TM;
+  const DataLayout DL;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
-  ...
-  class KaleidoscopeJIT {
-  private:
-    std::unique_ptr<TargetMachine> TM;
-    const DataLayout DL;
-    RTDyldObjectLinkingLayer ObjectLayer;
-    IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+  using OptimizeFunction =
+      std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
 
-    using OptimizeFunction =
-        std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
+  IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
-    IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+  std::unique_ptr<JITCompileCallbackManager> CompileCallbackManager;
+  CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
 
-    std::unique_ptr<JITCompileCallbackManager> CompileCallbackManager;
-    CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
-
-  public:
-    using ModuleHandle = decltype(CODLayer)::ModuleHandleT;
+public:
+  using ModuleHandle = decltype(CODLayer)::ModuleHandleT;
+```
 
 First we need to include the CompileOnDemandLayer.h header, then add two new
-members: a std::unique_ptr<JITCompileCallbackManager> and a CompileOnDemandLayer,
-to our class. The CompileCallbackManager member is used by the CompileOnDemandLayer
-to create the compile callback needed for each function.
+members: a `std::unique_ptr<JITCompileCallbackManager>` and a
+`CompileOnDemandLayer`, to our class. The CompileCallbackManager member is used
+by the CompileOnDemandLayer to create the compile callback needed for each
+function.
 
-.. code-block:: c++
-
-  KaleidoscopeJIT()
-      : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
-        OptimizeLayer(CompileLayer,
-                      [this](std::shared_ptr<Module> M) {
-                        return optimizeModule(std::move(M));
-                      }),
-        CompileCallbackManager(
-            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
-        CODLayer(OptimizeLayer,
-                 [this](Function &F) { return std::set<Function*>({&F}); },
-                 *CompileCallbackManager,
-                 orc::createLocalIndirectStubsManagerBuilder(
-                   TM->getTargetTriple())) {
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
-  }
+```c++
+KaleidoscopeJIT()
+    : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
+      ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
+      CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
+      OptimizeLayer(CompileLayer,
+                    [this](std::shared_ptr<Module> M) {
+                      return optimizeModule(std::move(M));
+                    }),
+      CompileCallbackManager(
+          orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
+      CODLayer(OptimizeLayer,
+               [this](Function &F) { return std::set<Function*>({&F}); },
+               *CompileCallbackManager,
+               orc::createLocalIndirectStubsManagerBuilder(
+                 TM->getTargetTriple())) {
+  llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+}
+```
 
 Next we have to update our constructor to initialize the new members. To create
 an appropriate compile callback manager we use the
 createLocalCompileCallbackManager function, which takes a TargetMachine and an
 ExecutorAddr to call if it receives a request to compile an unknown
-function.  In our simple JIT this situation is unlikely to come up, so we'll
+function. In our simple JIT this situation is unlikely to come up, so we'll
 cheat and just pass '0' here. In a production quality JIT you could give the
 address of a function that throws an exception in order to unwind the JIT'd
 code's stack.
@@ -144,46 +140,46 @@ removed from the JIT the indirect stubs manager will be deleted, freeing any
 memory allocated to the stubs. We supply this function by using the
 createLocalIndirectStubsManagerBuilder utility.
 
-.. code-block:: c++
+```c++
+// ...
+        if (auto Sym = CODLayer.findSymbol(Name, false))
+// ...
+return cantFail(CODLayer.addModule(std::move(Ms),
+                                   std::move(Resolver)));
+// ...
 
-  // ...
-          if (auto Sym = CODLayer.findSymbol(Name, false))
-  // ...
-  return cantFail(CODLayer.addModule(std::move(Ms),
-                                     std::move(Resolver)));
-  // ...
+// ...
+return CODLayer.findSymbol(MangledNameStream.str(), true);
+// ...
 
-  // ...
-  return CODLayer.findSymbol(MangledNameStream.str(), true);
-  // ...
-
-  // ...
-  CODLayer.removeModule(H);
-  // ...
+// ...
+CODLayer.removeModule(H);
+// ...
+```
 
 Finally, we need to replace the references to OptimizeLayer in our addModule,
 findSymbol, and removeModule methods. With that, we're up and running.
 
 **To be done:**
 
-** Chapter conclusion.**
+\*\* Chapter conclusion.\*\*
 
-Full Code Listing
-=================
+## Full Code Listing
 
 Here is the complete code listing for our running example with a CompileOnDemand
 layer added to enable lazy function-at-a-time compilation. To build this example, use:
 
-.. code-block:: bash
-
-    # Compile
-    clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
-    # Run
-    ./toy
+```bash
+# Compile
+clang++ -g toy.cpp `llvm-config --cxxflags --ldflags --system-libs --libs core orcjit native` -O3 -o toy
+# Run
+./toy
+```
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/BuildingAJIT/Chapter3/KaleidoscopeJIT.h
-   :language: c++
+```{literalinclude} ../../examples/Kaleidoscope/BuildingAJIT/Chapter3/KaleidoscopeJIT.h
+:language: c++
+```
 
-`Next: Extreme Laziness -- Using Compile Callbacks to JIT directly from ASTs <BuildingAJIT4.html>`_
+[Next: Extreme Laziness -- Using Compile Callbacks to JIT directly from ASTs](BuildingAJIT4.md)
