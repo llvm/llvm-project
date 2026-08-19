@@ -194,6 +194,9 @@ def NoCreateUndefOrPoison
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
+/// Function is always uniform.
+def AlwaysUniform : EnumAttr<"alwaysuniform", IntersectAnd, [FnAttr]>;
+
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 

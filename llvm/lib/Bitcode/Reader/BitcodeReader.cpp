@@ -2172,6 +2172,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCallback;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
+  case bitc::ATTR_KIND_ALWAYS_UNIFORM:
+    return Attribute::AlwaysUniform;
   case bitc::ATTR_KIND_NO_DUPLICATE:
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:

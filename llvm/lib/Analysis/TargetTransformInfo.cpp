@@ -295,6 +295,8 @@ ValueUniformity
 llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
   ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
+    if (Call->hasFnAttr(Attribute::AlwaysUniform))
+      return ValueUniformity::AlwaysUniform;
     if (VU == ValueUniformity::NeverUniform &&
         Call->hasFnAttr(Attribute::NoDivergenceSource))
       return ValueUniformity::Default;

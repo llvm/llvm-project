@@ -862,6 +862,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_CALLBACK;
   case Attribute::NoDivergenceSource:
     return bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE;
+  case Attribute::AlwaysUniform:
+    return bitc::ATTR_KIND_ALWAYS_UNIFORM;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
