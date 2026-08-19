@@ -1169,7 +1169,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
 
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
   const auto *CAT = ArrayBaseFD->getType()->getAs<CountAttributedType>();
-  assert(CAT && "the field's type is a CountAttributedType");
+  assert(CAT && "the field's type is not a CountAttributedType");
   const bool CountInBytes = CAT->isCountInBytes();
 
   //  count = ptr->count;
