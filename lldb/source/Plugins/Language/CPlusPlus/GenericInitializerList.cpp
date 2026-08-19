@@ -8,35 +8,29 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/ErrorExtras.h"
-#include <cstddef>
+#include <cinttypes>
+#include <cstdint>
 #include <optional>
-#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;
 
-namespace generic_check {
-template <class T>
-using size_func = decltype(T::GetSizeMember(std::declval<ValueObject &>()));
-template <class T>
-using start_func = decltype(T::GetStartMember(std::declval<ValueObject &>()));
 namespace {
-template <typename...> struct check_func : std::true_type {};
-} // namespace
-
-template <typename T>
-using has_functions = check_func<size_func<T>, start_func<T>>;
-} // namespace generic_check
 
 struct LibCxx {
   static ValueObjectSP GetStartMember(ValueObject &backend) {
     return backend.GetChildMemberWithName("__begin_");
   }
 
-  static ValueObjectSP GetSizeMember(ValueObject &backend) {
-    return backend.GetChildMemberWithName("__size_");
+  static uint64_t GetNumElements(ValueObject &backend, uint32_t) {
+    if (ValueObjectSP size_sp = backend.GetChildMemberWithName("__size_"))
+      return size_sp->GetValueAsUnsigned(0);
+    return 0;
   }
 };
 
@@ -45,39 +39,46 @@ struct LibStdcpp {
     return backend.GetChildMemberWithName("_M_array");
   }
 
-  static ValueObjectSP GetSizeMember(ValueObject &backend) {
-    return backend.GetChildMemberWithName("_M_len");
+  static uint64_t GetNumElements(ValueObject &backend, uint32_t) {
+    if (ValueObjectSP size_sp = backend.GetChildMemberWithName("_M_len"))
+      return size_sp->GetValueAsUnsigned(0);
+    return 0;
   }
 };
 
-namespace lldb_private::formatters {
+struct MsvcStl {
+  static ValueObjectSP GetStartMember(ValueObject &backend) {
+    return backend.GetChildMemberWithName("_First");
+  }
+
+  static uint64_t GetNumElements(ValueObject &backend, uint32_t element_size) {
+    ValueObjectSP first_sp = backend.GetChildMemberWithName("_First");
+    ValueObjectSP last_sp = backend.GetChildMemberWithName("_Last");
+    if (!first_sp || !last_sp || element_size == 0)
+      return 0;
+    uint64_t first = first_sp->GetValueAsUnsigned(0);
+    uint64_t last = last_sp->GetValueAsUnsigned(0);
+    if (last < first)
+      return 0;
+    uint64_t bytes = last - first;
+    if (bytes % element_size)
+      return 0;
+    return bytes / element_size;
+  }
+};
 
 template <class StandardImpl>
 class GenericInitializerListSyntheticFrontEnd
     : public SyntheticChildrenFrontEnd {
 public:
-  static_assert(generic_check::has_functions<StandardImpl>::value,
-                "Missing Required Functions.");
-
   GenericInitializerListSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
       : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type() {
     if (valobj_sp)
       Update();
   }
 
-  ~GenericInitializerListSyntheticFrontEnd() override {
-    // this needs to stay around because it's a child object who will follow its
-    // parent's life cycle
-    // delete m_start;
-  }
-
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    m_num_elements = 0;
-
-    const ValueObjectSP size_sp(StandardImpl::GetSizeMember(m_backend));
-    if (size_sp)
-      m_num_elements = size_sp->GetValueAsUnsigned(0);
-    return m_num_elements;
+    return StandardImpl::GetNumElements(m_backend, m_element_size);
   }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
@@ -95,7 +96,6 @@ public:
 
   lldb::ChildCacheState Update() override {
     m_start = nullptr;
-    m_num_elements = 0;
     m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
     if (!m_element_type.IsValid())
       return lldb::ChildCacheState::eRefetch;
@@ -128,8 +128,11 @@ private:
   ValueObject *m_start = nullptr;
   CompilerType m_element_type;
   uint32_t m_element_size = 0;
-  size_t m_num_elements = 0;
 };
+
+} // namespace
+
+namespace lldb_private::formatters {
 
 SyntheticChildrenFrontEnd *GenericInitializerListSyntheticFrontEndCreator(
     CXXSyntheticChildren * /*unused*/, lldb::ValueObjectSP valobj_sp) {
@@ -138,6 +141,8 @@ SyntheticChildrenFrontEnd *GenericInitializerListSyntheticFrontEndCreator(
 
   if (LibCxx::GetStartMember(*valobj_sp) != nullptr)
     return new GenericInitializerListSyntheticFrontEnd<LibCxx>(valobj_sp);
+  if (MsvcStl::GetStartMember(*valobj_sp) != nullptr)
+    return new GenericInitializerListSyntheticFrontEnd<MsvcStl>(valobj_sp);
 
   return new GenericInitializerListSyntheticFrontEnd<LibStdcpp>(valobj_sp);
 }

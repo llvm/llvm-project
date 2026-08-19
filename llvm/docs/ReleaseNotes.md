@@ -160,6 +160,12 @@ Makes programs 10x faster by doing Special New Thing.
 * Python 3.11 or later is now required for building LLDB 24 on Windows.
 * For better performance, LLDB now turns off the Windows debug heap by default when debugging.
   If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.
+* Data formatters for the MSVC STL now cover the remaining libc++-parity types:
+  `std::bitset`, `std::initializer_list`, `std::queue` / `std::stack` /
+  `std::priority_queue`, `std::valarray`, `std::expected`, `std::source_location`,
+  `std::chrono` duration typedefs, `std::error_code` / `std::error_condition`,
+  `std::filesystem::path`, and `std::_Vector(_const)?_iterator`.
+  Existing formatters already handled the core containers and smart pointers.
 
 ### Changes to BOLT
 

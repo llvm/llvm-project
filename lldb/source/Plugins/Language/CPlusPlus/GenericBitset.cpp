@@ -8,6 +8,7 @@
 
 #include "LibCxx.h"
 #include "LibStdcpp.h"
+#include "MsvcStl.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include <optional>
@@ -17,12 +18,14 @@ using namespace lldb_private;
 
 namespace {
 
-/// This class can be used for handling bitsets from both libcxx and libstdcpp.
+/// This class can be used for handling bitsets from libc++, libstdc++, and
+/// MSVC STL.
 class GenericBitsetFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   enum class StdLib {
     LibCxx,
     LibStdcpp,
+    MsvcStl,
   };
 
   GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib);
@@ -65,11 +68,14 @@ GenericBitsetFrontEnd::GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib)
 llvm::StringRef GenericBitsetFrontEnd::GetDataContainerMemberName() {
   static constexpr llvm::StringLiteral s_libcxx_case("__first_");
   static constexpr llvm::StringLiteral s_libstdcpp_case("_M_w");
+  static constexpr llvm::StringLiteral s_msvcstl_case("_Array");
   switch (m_stdlib) {
   case StdLib::LibCxx:
     return s_libcxx_case;
   case StdLib::LibStdcpp:
     return s_libstdcpp_case;
+  case StdLib::MsvcStl:
+    return s_msvcstl_case;
   }
   llvm_unreachable("Unknown StdLib enum");
 }
@@ -144,5 +150,19 @@ SyntheticChildrenFrontEnd *formatters::LibcxxBitsetSyntheticFrontEndCreator(
   if (valobj_sp)
     return new GenericBitsetFrontEnd(*valobj_sp,
                                      GenericBitsetFrontEnd::StdLib::LibCxx);
+  return nullptr;
+}
+
+bool formatters::IsMsvcStlBitset(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Array") != nullptr;
+  return false;
+}
+
+SyntheticChildrenFrontEnd *formatters::MsvcStlBitsetSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (valobj_sp)
+    return new GenericBitsetFrontEnd(*valobj_sp,
+                                     GenericBitsetFrontEnd::StdLib::MsvcStl);
   return nullptr;
 }

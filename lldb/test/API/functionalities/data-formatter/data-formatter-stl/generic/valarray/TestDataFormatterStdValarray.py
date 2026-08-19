@@ -182,3 +182,26 @@ class StdValarrayDataFormatterTestCase(TestBase):
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        self.expect("frame variable va_int", substrs=["va_int = size=4"])
+        lldbutil.continue_to_breakpoint(process, bkpt)
+        self.expect(
+            "frame variable va_int",
+            substrs=[
+                "va_int = size=4",
+                "[0] = 1",
+                "[1] = 12",
+                "[2] = 123",
+                "[3] = 1234",
+            ],
+        )
+        self.expect(
+            "frame variable va_double",
+            substrs=["va_double = size=4", "[0] = 1", "[1] = 0.5"],
+        )

@@ -142,6 +142,51 @@ SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::bitset<>
+bool IsMsvcStlBitset(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::source_location
+bool IsMsvcStlSourceLocation(ValueObject &valobj);
+bool MsvcStlSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
+
+// MSVC STL std::valarray<>
+bool IsMsvcStlValarray(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::expected<>
+bool IsMsvcStlExpected(ValueObject &valobj);
+bool MsvcStlExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+SyntheticChildrenFrontEnd *
+MsvcStlExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL vector iterators
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::error_code / std::error_condition
+bool IsMsvcStlErrorCode(ValueObject &valobj);
+bool MsvcStlErrorCodeSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+
+// MSVC STL std::filesystem::path
+bool IsMsvcStlFilesystemPath(ValueObject &valobj);
+bool MsvcStlFilesystemPathSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
+
+// MSVC STL chrono duration rep (`_MyRep`)
+bool GenericChronoDurationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options,
+                                          const char *unit);
+
 } // namespace formatters
 } // namespace lldb_private
 

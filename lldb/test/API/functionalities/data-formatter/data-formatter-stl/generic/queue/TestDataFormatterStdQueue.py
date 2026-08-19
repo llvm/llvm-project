@@ -30,10 +30,32 @@ class TestDataFormatterStdQueue(TestBase):
     @expectedFailureAll(
         bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
     )
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        """Test that libstdc++ std::queue is displayed correctly"""
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
+
+        self.check_variable("q1")
+        self.check_variable("q2")
+
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         """Test that std::queue is displayed correctly"""
         self.build(dictionary={"USE_LIBCPP": 1})
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp", False)
+        )
+
+        self.check_variable("q1")
+        self.check_variable("q2")
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        """Test that MSVC STL std::queue is displayed correctly"""
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )

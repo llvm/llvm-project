@@ -12,10 +12,12 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/StringRef.h"
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 
@@ -304,4 +306,113 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
     return false;
   }
   return true;
+}
+
+bool lldb_private::formatters::IsMsvcStlSourceLocation(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_File") != nullptr &&
+           valobj_sp->GetChildMemberWithName("_Line") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP file_sp = valobj.GetChildMemberWithName("_File");
+  ValueObjectSP function_sp = valobj.GetChildMemberWithName("_Function");
+  ValueObjectSP line_sp = valobj.GetChildMemberWithName("_Line");
+  ValueObjectSP column_sp = valobj.GetChildMemberWithName("_Column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  // Default-constructed source_location is empty; don't invent a summary.
+  if (line == 0 && column == 0 &&
+      (!file || file[0] == '\0' || llvm::StringRef(file) == "\"\""))
+    return false;
+
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
+  return true;
+}
+
+bool lldb_private::formatters::IsMsvcStlErrorCode(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Myval") != nullptr &&
+           valobj_sp->GetChildMemberWithName("_Mycat") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlErrorCodeSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Myval");
+  if (!value_sp)
+    value_sp = valobj.GetChildMemberWithName("_M_value");
+  if (!value_sp)
+    return false;
+
+  const char *value = value_sp->GetValueAsCString();
+  if (!value)
+    return false;
+
+  stream.Printf("value=%s", value);
+  return true;
+}
+
+bool lldb_private::formatters::IsMsvcStlFilesystemPath(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Text") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlFilesystemPathSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP text_sp = valobj.GetChildMemberWithName("_Text");
+  if (!text_sp)
+    text_sp = valobj.GetChildMemberWithName("_M_pathname");
+  if (!text_sp)
+    return false;
+
+  if (const char *summary = text_sp->GetSummaryAsCString()) {
+    stream << summary;
+    return true;
+  }
+  return false;
+}
+
+bool lldb_private::formatters::GenericChronoDurationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
+    const char *unit) {
+  // MSVC STL stores the tick count in `_MyRep`. Do not match libstdc++
+  // (`__r` / `_M_rep`); those types share the `std::chrono::*` typedef names.
+  ValueObjectSP rep_sp = valobj.GetChildMemberWithName("_MyRep");
+  if (!rep_sp)
+    return false;
+
+  const char *rep = rep_sp->GetValueAsCString();
+  if (!rep)
+    return false;
+
+  stream << rep << ' ' << unit;
+  return true;
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::MsvcStlVectorIteratorSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(valobj_sp,
+                                                          {ConstString("_Ptr")})
+                    : nullptr);
 }

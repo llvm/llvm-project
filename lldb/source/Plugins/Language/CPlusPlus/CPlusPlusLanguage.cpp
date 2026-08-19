@@ -1725,6 +1725,51 @@ GenericStrongOrderingSummaryProvider(ValueObject &valobj, Stream &stream,
   return LibStdcppStrongOrderingSummaryProvider(valobj, stream, options);
 }
 
+static SyntheticChildrenFrontEnd *
+GenericBitsetSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                      lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlBitset(*valobj_sp))
+    return MsvcStlBitsetSyntheticFrontEndCreator(children, valobj_sp);
+  return LibStdcppBitsetSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool
+GenericSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlSourceLocation(valobj))
+    return MsvcStlSourceLocationSummaryProvider(valobj, stream, options);
+  return LibStdcppSourceLocationSummaryProvider(valobj, stream, options);
+}
+
+static SyntheticChildrenFrontEnd *
+GenericValarraySyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlValarray(*valobj_sp))
+    return MsvcStlValarraySyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static SyntheticChildrenFrontEnd *
+GenericExpectedSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                        lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+  if (IsMsvcStlExpected(*valobj_sp))
+    return MsvcStlExpectedSyntheticFrontEndCreator(children, valobj_sp);
+  return nullptr;
+}
+
+static bool GenericExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (IsMsvcStlExpected(valobj))
+    return MsvcStlExpectedSummaryProvider(valobj, stream, options);
+  return false;
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -1947,6 +1992,97 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::strong_ordering summary provider",
                 "std::strong_ordering",
                 eTypeOptionHideChildren | eTypeOptionHideValue, false);
+
+  // Container adaptors store the underlying container in a member named `c`
+  // in both MSVC STL and libstdc++.
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::queue synthetic children", "^std::queue<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::stack synthetic children", "^std::stack<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::priority_queue synthetic children",
+                  "^std::priority_queue<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::queue summary provider", "^std::queue<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::stack summary provider", "^std::stack<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::priority_queue summary provider",
+                "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericBitsetSyntheticFrontEndCreator,
+                  "MSVC STL/libstdc++ std::bitset synthetic children",
+                  "^std::(__debug::)?bitset<.+>(( )?&)?$", stl_deref_flags,
+                  true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericValarraySyntheticFrontEndCreator,
+                  "MSVC STL std::valarray synthetic children",
+                  "^std::valarray<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "MSVC STL std::valarray summary provider",
+                "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(cpp_category_sp, GenericExpectedSyntheticFrontEndCreator,
+                  "MSVC STL std::expected synthetic children",
+                  "^std::expected<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericExpectedSummaryProvider,
+                "MSVC STL std::expected summary provider",
+                "^std::expected<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSynthetic(
+      cpp_category_sp, MsvcStlVectorIteratorSyntheticFrontEndCreator,
+      "MSVC STL vector iterator synthetic children",
+      "^std::_Vector(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
+                "MSVC STL/libstdc++ std::source_location summary provider",
+                "std::source_location", stl_summary_flags);
+
+  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_code summary provider",
+                "std::error_code",
+                eTypeOptionHideChildren | eTypeOptionHideValue);
+  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_condition summary provider",
+                "std::error_condition",
+                eTypeOptionHideChildren | eTypeOptionHideValue);
+
+  AddCXXSummary(cpp_category_sp, MsvcStlFilesystemPathSummaryProvider,
+                "MSVC STL/libstdc++ std::filesystem::path summary provider",
+                "std::filesystem::path", stl_summary_flags);
+
+  auto add_chrono_duration = [&](const char *type_name, const char *unit) {
+    AddCXXSummary(
+        cpp_category_sp,
+        [unit](ValueObject &valobj, Stream &stream,
+               const TypeSummaryOptions &options) {
+          return GenericChronoDurationSummaryProvider(valobj, stream, options,
+                                                      unit);
+        },
+        "MSVC STL std::chrono duration summary provider", type_name,
+        // Don't hide children: these typedefs are also used by libstdc++,
+        // which does not have `_MyRep`. If the summary callback fails the
+        // raw members must still be visible.
+        TypeSummaryImpl::Flags()
+            .SetCascades(true)
+            .SetDontShowChildren(false)
+            .SetDontShowValue(false)
+            .SetHideItemNames(false));
+  };
+  add_chrono_duration("std::chrono::nanoseconds", "ns");
+  add_chrono_duration("std::chrono::microseconds", "µs");
+  add_chrono_duration("std::chrono::milliseconds", "ms");
+  add_chrono_duration("std::chrono::seconds", "s");
+  add_chrono_duration("std::chrono::minutes", "min");
+  add_chrono_duration("std::chrono::hours", "h");
+  add_chrono_duration("std::chrono::days", "days");
+  add_chrono_duration("std::chrono::weeks", "weeks");
+  add_chrono_duration("std::chrono::months", "months");
+  add_chrono_duration("std::chrono::years", "years");
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

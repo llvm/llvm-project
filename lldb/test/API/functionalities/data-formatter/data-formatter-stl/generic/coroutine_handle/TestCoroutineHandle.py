@@ -172,3 +172,8 @@ class TestCoroutineHandle(TestBase):
     def test_libcpp(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        self.do_test()
