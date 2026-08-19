@@ -1,26 +1,44 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture1D -DCOORD_TYPE=float -DGRAD_TYPE=float \
+// RUN:   -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture1DArray -DCOORD_TYPE=float2 -DGRAD_TYPE=float \
+// RUN:   -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture2D \
 // RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float2 -DOFFSET_TYPE=int2 -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture3D \
-// RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DOFFSET_TYPE=int3 -verify %s
+// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture1D \
+// RUN:   -DCOORD_TYPE=float -DGRAD_TYPE=float -DOFFSET_TYPE=int -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture2DArray \
 // RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float2 -DOFFSET_TYPE=int2 -verify %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_SAMPLE_CMP -DHAS_GATHER -DHAS_LOD \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture1DArray \
+// RUN:   -DCOORD_TYPE=float2 -DGRAD_TYPE=float -DOFFSET_TYPE=int -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_GATHER -DHAS_LOD \
 // RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 -verify \
 // RUN:   %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
-// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 \
-// RUN:   -DGRAD_TYPE=float3 -verify %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_SAMPLE_CMP -DHAS_GATHER -DHAS_LOD \
+// RUN:   -finclude-default-header -DHAS_SAMPLE -DHAS_GATHER -DHAS_LOD \
 // RUN:   -DLOAD_ARG="int4(0, 0, 0, 0)" -DINDEX_ARG="uint3(0, 0, 0)" \
 // RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 -DOFFSET_TYPE=int3 \
 // RUN:   -verify %s
+
+// RWTexture3D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DTEXTURE=RWTexture3D \
+// RUN:   -DCOORD_TYPE=float3 -DGRAD_TYPE=float3 -DOFFSET_TYPE=int3 -verify %s
+
+// Texture3D
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DHAS_TEXEL -DHAS_SAMPLE -DHAS_LOD \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_TYPE=float3 -DOFFSET_TYPE=int3 \
+// RUN:   -DGRAD_TYPE=float3 -verify %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -35,12 +53,11 @@
 //                      dimension
 //   OFFSET_TYPE        offset type, one component per resource dimension
 //   HAS_SAMPLE         defined for types that have the Sample* methods
-//   HAS_SAMPLE_CMP     defined for types that have the comparison sampling
-//                      methods
 //   HAS_GATHER         defined for types that have the Gather* methods
 //   HAS_LOD            defined for types that have CalculateLevelOfDetail*
 //
-// Writable (UAV) textures have no sampling, gathering or LOD methods.
+// Writable (UAV) textures have no sampling, gathering or LOD methods, and
+// 1D textures have no gathering methods.
 
 TEXTURE<float4> Tex;
 SamplerState Samp;
@@ -59,9 +76,6 @@ void main(COORD_TYPE uv) {
   Tex.SampleBias(Samp, uv, 0.0f);
   // expected-error-re@+1 {{no member named 'SampleGrad' in 'hlsl::{{.*}}Texture}}
   Tex.SampleGrad(Samp, uv, (GRAD_TYPE)0, (GRAD_TYPE)0);
-#endif
-
-#ifndef HAS_SAMPLE_CMP
   // expected-error-re@+1 {{no member named 'SampleCmp' in 'hlsl::{{.*}}Texture}}
   Tex.SampleCmp(SampCmp, uv, compare);
   // expected-error-re@+1 {{no member named 'SampleCmpLevelZero' in 'hlsl::{{.*}}Texture}}
