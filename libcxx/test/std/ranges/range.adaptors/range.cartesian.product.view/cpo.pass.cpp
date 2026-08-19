@@ -11,12 +11,14 @@
 // std::views::cartesian_product
 //   * Zero-argument form returns views::single(tuple()).
 //   * N-argument form returns cartesian_product_view<all_t<R>...>.
+//   * Both forms are expression-equivalent to those expressions, so they agree on potentially-throwing-ness.
 
 #include <array>
 #include <cassert>
 #include <concepts>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "../range_adaptor_types.h"
 
@@ -75,6 +77,19 @@ struct OutputOnly : std::ranges::view_base {
   sentinel_wrapper<cpp17_output_iterator<int*>> end() const;
 };
 static_assert(!std::is_invocable_v<decltype(std::views::cartesian_product), OutputOnly>);
+
+// [range.cartesian.overview]/2 makes views::cartesian_product(Es...) expression-equivalent to the expression it
+// returns, and [defns.expression-equivalent] requires expression-equivalent expressions to be either all
+// potentially-throwing or all not. Neither single_view's nor cartesian_product_view's constructor is noexcept, so
+// both forms are potentially-throwing today; the comparisons below keep holding if that ever changes.
+static_assert(!noexcept(std::views::cartesian_product()));
+static_assert(noexcept(std::views::cartesian_product()) == noexcept(std::views::single(std::tuple())));
+
+static_assert(!noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>())));
+static_assert(
+    !noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>(), std::declval<ForwardSizedView&>())));
+static_assert(noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>())) ==
+              noexcept(std::ranges::cartesian_product_view<SimpleCommon>(std::declval<SimpleCommon&>())));
 
 int main(int, char**) {
   test();

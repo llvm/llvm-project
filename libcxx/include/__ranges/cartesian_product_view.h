@@ -462,12 +462,15 @@ private:
 namespace views {
 namespace __cartesian_product {
 struct __fn {
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()() { return views::single(tuple()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()() noexcept(noexcept(views::single(tuple()))) {
+    return views::single(tuple());
+  }
 
-  template <class... _Ranges>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ranges&&... __rs)
-      -> decltype(cartesian_product_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)) {
-    return cartesian_product_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...);
+  template <class... _Ranges, class _View = cartesian_product_view<all_t<_Ranges&&>...>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Ranges&&... __rs) noexcept(noexcept(_View(std::forward<_Ranges>(__rs)...)))
+      -> decltype(_View(std::forward<_Ranges>(__rs)...)) {
+    return _View(std::forward<_Ranges>(__rs)...);
   }
 };
 } // namespace __cartesian_product
