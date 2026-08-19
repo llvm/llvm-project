@@ -17,6 +17,8 @@
 #include <array>
 #include <cassert>
 #include <compare>
+#include <concepts>
+#include <cstddef>
 #include <ranges>
 
 #include "test_iterators.h"
@@ -44,6 +46,9 @@ constexpr void compareOperatorTest(auto&& it1, auto&& it2) {
   assert(it1 != it2);
   assert(!(it2 != it2));
 }
+
+template <class T, class U>
+concept CanPlusEqual = requires(T& t, const U& u) { t += u; };
 
 template <class I1, class I2>
 constexpr void inequalityOperatorsDoNotExist(const I1&, const I2&) {
@@ -138,6 +143,36 @@ constexpr bool test() {
     auto it = v.begin();
     // The middle iterator is at end of empty range immediately, so begin == default_sentinel.
     assert(it == std::default_sentinel);
+  }
+
+  { // random-access but *unsized* tail: cartesian-product-all-random-access holds, so <=> is
+    // available, while cartesian-product-is-random-access does not, so the arithmetic is gone.
+    // This is the only configuration in which the two concepts differ.
+    std::array a{1, 2, 3};
+    std::array b{10, 20};
+    std::ranges::cartesian_product_view v(a, NonSizedRandomAccessView{b});
+    using Iter = std::ranges::iterator_t<decltype(v)>;
+
+    static_assert(std::three_way_comparable<Iter>);
+    static_assert(!std::is_invocable_v<std::plus<>, Iter, std::ptrdiff_t>);
+    static_assert(!std::is_invocable_v<std::plus<>, std::ptrdiff_t, Iter>);
+    static_assert(!CanPlusEqual<Iter, std::ptrdiff_t>);
+    static_assert(!std::is_invocable_v<std::minus<>, Iter, std::ptrdiff_t>);
+
+    // Not bidirectional either: the unsized tail is not a cartesian-product-common-arg.
+    static_assert(std::same_as<typename Iter::iterator_concept, std::forward_iterator_tag>);
+
+    auto it1 = v.begin();
+    auto it2 = it1;
+    ++it2; // must be ++, not + 1 -- operator+ is not available here
+
+    compareOperatorTest(it1, it2);
+
+    // random_access_iterator<int*> has no <=>, so tuple's synth-three-way yields weak_ordering.
+    static_assert(std::same_as<decltype(it1 <=> it2), std::weak_ordering>);
+    assert((it1 <=> it2) == std::weak_ordering::less);
+    assert((it1 <=> it1) == std::weak_ordering::equivalent);
+    assert((it2 <=> it1) == std::weak_ordering::greater);
   }
 
   return true;
