@@ -2222,6 +2222,9 @@ void SwiftASTContext::ApplyDiagnosticOptions() {
 
 void SwiftASTContext::RemapClangImporterOptions(
     const PathMappingList &path_map) {
+  if (path_map.IsEmpty())
+    return;
+
   auto &options = GetClangImporterOptions();
   ConstString remapped;
   if (path_map.RemapPath(ConstString(options.BridgingHeader), remapped)) {
@@ -2793,12 +2796,15 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   else
     swift_ast_sp->AddUserClangArgs(Target::GetGlobalProperties());
 
-  // Apply source path remappings found in the module's dSYM.
-  swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
-
-  // Apply source path remappings found in the target settings.
-  if (target)
-    swift_ast_sp->RemapClangImporterOptions(target->GetSourcePathMap());
+  // Collect the source path remappings found in the module's dSYM and
+  // in the target settings, then apply them in one go.
+  {
+    PathMappingList path_map;
+    path_map.Append(module.GetSourceMappingList(), /*notify=*/false);
+    if (target)
+      path_map.Append(target->GetSourcePathMap(), /*notify=*/false);
+    swift_ast_sp->RemapClangImporterOptions(path_map);
+  }
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
@@ -3591,14 +3597,19 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     }
   }
 
-  // Apply source path remappings found in each module's dSYM.
-  for (ModuleSP module : modules.Modules())
-    if (module)
-      swift_ast_sp->RemapClangImporterOptions(module->GetSourceMappingList());
-
-  // Apply source path remappings found in the target settings.
-  if (target_sp)
-    swift_ast_sp->RemapClangImporterOptions(target_sp->GetSourcePathMap());
+  // Collect the source path remappings found in each module's dSYM
+  // and in the target settings, then apply them in one go. The
+  // expectation is that there are orders of magnitude more modules
+  // than path remappings.
+  {
+    PathMappingList path_map;
+    for (ModuleSP module : modules.Modules())
+      if (module)
+        path_map.Append(module->GetSourceMappingList(), /*notify=*/false);
+    if (target_sp)
+      path_map.Append(target_sp->GetSourcePathMap(), /*notify=*/false);
+    swift_ast_sp->RemapClangImporterOptions(path_map);
+  }
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 

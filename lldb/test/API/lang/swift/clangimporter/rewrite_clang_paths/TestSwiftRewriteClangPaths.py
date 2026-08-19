@@ -40,6 +40,59 @@ class TestSwiftRewriteClangPaths(TestBase):
     def testWithoutRemap(self):
         self.dotest(False)
 
+    @skipEmbeddedSwift
+    # Don't run ClangImporter tests if Clangimporter is disabled.
+    @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
+    @skipUnlessDarwin
+    @swiftTest
+    @skipIf(debug_info=no_match(["dsym"]))
+    def testTargetSourceMapWins(self):
+        """Document which remapping takes effect when the module's dSYM and
+        target.source-map both match the same prefix: target.source-map is
+        applied and the dSYM's DBGSourcePathRemapping is not, even though the
+        dSYM's is the one that points at the real headers."""
+        self.build()
+        log = self.getBuildArtifact("types.log")
+        self.runCmd('log enable lldb types -f "%s"' % log)
+        self.expect("settings set symbols.swift-typesystem-compiler-fallback true")
+
+        mod_cache = self.getBuildArtifact("my-clang-modules-cache")
+        if os.path.isdir(mod_cache):
+          shutil.rmtree(mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
+                    % mod_cache)
+        self.runCmd("settings set symbols.use-swift-dwarfimporter false")
+
+        botdir = os.path.realpath(self.getBuildArtifact("buildbot"))
+        userdir = os.path.realpath(self.getBuildArtifact("user"))
+        self.assertTrue(os.path.isfile(self.find_plist()))
+
+        # The dSYM's DBGSourcePathRemapping maps botdir onto userdir, which is
+        # where the headers really are. Aim target.source-map at an empty
+        # directory instead, so that it is observable which of the two is
+        # applied. The directory has to exist because target.source-map
+        # rejects a replacement path that does not.
+        decoydir = os.path.realpath(self.getBuildArtifact("decoy"))
+        lldbutil.mkdir_p(decoydir)
+        self.runCmd("settings set target.source-map %s %s" % (botdir, decoydir))
+
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('Foo.swift'),
+            extra_images=['Foo'])
+
+        # Because target.source-map is what gets applied, the include paths
+        # end up in the empty decoy directory and the module cannot be built.
+        self.expect("expression foo", error=True)
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK_DECOY")
+
+        # Nothing was remapped onto the dSYM's destination.
+        with open(log) as f:
+            remaps = [l for l in f.read().splitlines() if "remapped " in l]
+        self.assertTrue(remaps, "the ClangImporter paths were remapped")
+        self.assertEqual(
+            [l for l in remaps if userdir in l.split("->")[-1]], [],
+            "the dSYM's remapping must not have been applied")
+
     def find_plist(self):
         import glob
         plist = self.getBuildArtifact("libFoo.dylib.dSYM/Contents/Resources/*.plist")
@@ -108,3 +161,7 @@ class TestSwiftRewriteClangPaths(TestBase):
 # CHECK_REMAP-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/buildbot/Frameworks{{.*}} -> {{.*}}/user/Frameworks
 # CHECK_REMAP-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/nonexisting-rootdir{{.*}} -> {{.*}}/user
 # CHECK_REMAP-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/buildbot/Foo/overlay.yaml{{.*}} -> {{.*}}/user/Foo/overlay.yaml
+
+# CHECK_DECOY-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/buildbot/Foo{{.*}} -> {{.*}}/decoy/Foo
+# CHECK_DECOY-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/buildbot/I-single{{.*}} -> {{.*}}/decoy/I-single
+# CHECK_DECOY-DAG: SwiftASTContextForExpressions(module: "Foo"{{.*}}/buildbot/Frameworks{{.*}} -> {{.*}}/decoy/Frameworks
