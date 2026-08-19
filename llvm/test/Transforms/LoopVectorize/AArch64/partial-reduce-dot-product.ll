@@ -42,7 +42,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -897,7 +897,7 @@ define i32 @not_dotp_not_phi(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1050,7 +1050,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[NUM_IN]], [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[NUM_IN]], [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1430,7 +1430,7 @@ define i32 @not_dotp_extend_user(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1566,7 +1566,7 @@ define i64 @dotp_cost_disagreement(ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 41, [[TMP3]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 41, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -2171,7 +2171,7 @@ define i32 @not_dotp_vscale1(ptr %a, ptr %b, i32 %n, i64 %cost) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = trunc i64 [[N_VEC]] to i32

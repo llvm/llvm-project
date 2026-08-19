@@ -41,7 +41,7 @@ define void @loop(i64 %N, ptr noalias %a, ptr noalias %b) {
 ; CHECKUF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECKUF2:       [[VECTOR_PH]]:
 ; CHECKUF2-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECKUF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECKUF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECKUF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECKUF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECKUF2-NEXT:    br label %[[VECTOR_BODY:.*]]

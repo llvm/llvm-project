@@ -11,7 +11,7 @@ define void @negative_stride_nuw(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 512, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 512, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], -2

@@ -2606,6 +2606,22 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(licm, Plan);
 }
 
+void VPlanTransforms::simplifyLiveInsWithSCEV(VPlan &Plan,
+                                              PredicatedScalarEvolution &PSE) {
+  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
+    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
+    const APInt *C;
+    if (match(Expr, m_scev_APInt(C)))
+      return Plan.getConstantInt(*C);
+    return nullptr;
+  };
+
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
+    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
+      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
+  }
+}
+
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
     const DenseMap<Value *, const SCEV *> &StridesMap,

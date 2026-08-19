@@ -27,7 +27,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -58,7 +58,7 @@ define void @main_vf_vscale_x_16(ptr %A) #0 {
 ; CHECK-VF8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -116,7 +116,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -140,7 +140,7 @@ define void @main_vf_vscale_x_2_no_epi_iteration(ptr %A) #0 vscale_range(8, 8) {
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-VF8:       vector.body:
 ; CHECK-VF8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -213,7 +213,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -263,7 +263,7 @@ define void @main_vf_vscale_x_2(ptr %A, i64 %n) #0 vscale_range(8, 8) {
 ; CHECK-VF8-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 1
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -330,7 +330,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 10000, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 10000, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
@@ -379,7 +379,7 @@ define void @test_pr57912_pointer_induction(ptr %start) #0 {
 ; CHECK-VF8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 10000, [[TMP3]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 10000, [[N_MOD_VF]]
 ; CHECK-VF8-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[N_VEC]]
@@ -446,7 +446,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -505,7 +505,7 @@ define void @trip_count_vscale(ptr noalias %a, ptr noalias %b) vscale_range(1, 1
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -564,7 +564,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -600,7 +600,7 @@ define void @trip_count_vscale_no_epilogue_iterations(ptr noalias %a, ptr noalia
 ; CHECK-VF8:       vector.ph:
 ; CHECK-VF8-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF8-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-VF8-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-VF8-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-VF8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF8-NEXT:    br label [[VECTOR_BODY:%.*]]
