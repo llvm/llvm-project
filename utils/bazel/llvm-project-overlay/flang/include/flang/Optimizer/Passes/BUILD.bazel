@@ -19,6 +19,7 @@ cc_library(
     strip_include_prefix = "/flang/include",
     deps = [
         "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Transforms:TransformsHeaders",
         "//llvm:Passes",
         "//llvm:Support",
         "//mlir:Pass",

@@ -74,13 +74,6 @@ from lldb.utils import symbolication
 from lldb.plugins.scripted_process import INTEL64_GPR, ARM64_GPR
 
 
-def read_plist(s):
-    if sys.version_info.major == 3:
-        return plistlib.loads(s)
-    else:
-        return plistlib.readPlistFromString(s)
-
-
 class CrashLog(symbolication.Symbolicator):
     class Thread:
         """Class that represents a thread in a darwin crash log"""
@@ -367,7 +360,7 @@ class CrashLog(symbolication.Symbolicator):
                 s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
-                        plist_root = read_plist(s)
+                        plist_root = plistlib.loads(s)
                     except:
                         with print_lock:
                             print(

@@ -76,9 +76,9 @@ public:
 
   void print(raw_ostream &OS) const;
 
-  void printCDF(StringRef FileName) const;
+  void printCDF(StringRef FileName, StringRef Label) const;
 
-  void printCDF(raw_ostream &OS) const;
+  void printCDF(raw_ostream &OS, StringRef Label) const;
 
   void printSectionHotness(StringRef Filename) const;
 

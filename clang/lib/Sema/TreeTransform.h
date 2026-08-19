@@ -10290,11 +10290,22 @@ TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
 }
 
 template <typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
+StmtResult TreeTransform<Derived>::TransformOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
-      OMPD_ordered, DirName, nullptr, D->getBeginLoc());
+      OMPD_ordered_standalone, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_ordered_blockassoc, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -11106,6 +11117,13 @@ OMPClause *TreeTransform<Derived>::TransformOMPWriteClause(OMPWriteClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPUpdateClause(OMPUpdateClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }
@@ -16348,6 +16366,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     TRC.ConstraintExpr = E.get();
   }
 
+  LSI->BeforeCompoundStatement = false;
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,

@@ -1,8 +1,5 @@
 # Instrumentation Profile Format
 
-```{contents}
-:local:
-```
 
 ## Overview
 
@@ -13,11 +10,11 @@ store instrumented profiles with a specific emphasis on IRPGO use case, in the
 sense that when specific header fields and payload sections have different ways
 of interpretation across use cases, the documentation is based on IRPGO.
 
-```{note}
+:::{note}
 Frontend-generated profiles are used together with coverage mapping for
 [source-based code coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html). The [coverage mapping format](https://llvm.org/docs/CoverageMappingFormat.html) is different from
 profile format.
-```
+:::
 
 ## Raw Profile Format
 
@@ -68,11 +65,11 @@ D    |       Section N       |
 +----+-----------------------+
 ```
 
-```{note}
+:::{note}
 Sections might be padded to meet specific alignment requirements. For
 simplicity, header fields and data sections solely for padding purposes are
 omitted in the data layout graph above and the rest of this document.
-```
+:::
 
 ### Header
 
@@ -118,13 +115,13 @@ It's used jointly with the [CounterPtr](#CounterPtr) field to compute the counte
 relative to `start(__llvm_prf_cnts)`. Check out [calculation-of-counter-offset](#calculation-of-counter-offset)
 for a visualized explanation.
 
-```{note}
+:::{note}
 The `__llvm_prf_data` object file section might not be loaded into memory
 when instrumented binary runs or might not get generated in the instrumented
 binary in the first place. In those cases, `CountersDelta` is not used and
 other mechanisms are used to match counters with instrumented code. See
 [lightweight instrumentation] and [binary profile correlation] for examples.
-```
+:::
 
 **`BitmapDelta`**
 This field records the in-memory address difference between the [profile metadata](#profile-metadata)
@@ -189,11 +186,11 @@ counters. Counter position is stored this way (as a link-time constant) to reduc
 instrumented binary size compared with snapshotting the address of symbols directly.
 See [commit a1532ed](https://github.com/llvm/llvm-project/commit/a1532ed27582038e2d9588108ba0fe8237f01844) for further information.
 
-```{note}
+:::{note}
 `CounterPtr` might represent a different value for non-IRPGO use cases. For
 example, for [binary profile correlation], it represents the absolute address of counter.
 When in doubt, check source code.
-```
+:::
 
 (BitmapPtr)=
 
@@ -201,9 +198,9 @@ When in doubt, check source code.
 The in-memory address difference between profile data and the start address of
 corresponding bitmap.
 
-```{note}
+:::{note}
 Similar to [CounterPtr](#CounterPtr), this field may represent a different value for non-IRPGO use cases.
-```
+:::
 
 **`FunctionPointer`**
 Records the function address when instrumented binary runs. This is used to
@@ -218,10 +215,10 @@ the each element in the second dimension is linked list element, carrying
 `<profiled-value, count>` as payload. This is used by compiler runtime when
 writing out value profiles.
 
-```{note}
+:::{note}
 Value profiling is supported by frontend and IR PGO instrumentation,
 but it's not supported in all cases (e.g., [lightweight instrumentation]).
-```
+:::
 
 **`NumCounters`**
 The number of counters for the instrumented function.
@@ -402,10 +399,10 @@ payload sections.
                           +-----------------------+---+
 ```
 
-```{note}
+:::{note}
 Profile summary section is at the beginning of payload. It's right after the
 header so its position is implicitly known after reading the header.
-```
+:::
 
 ### Header
 
@@ -414,11 +411,11 @@ what's in the header. At a high level, `*Offset` fields record section byte
 offsets, which are used by readers to locate interesting sections and skip
 uninteresting ones.
 
-```{note}
+:::{note}
 To maintain backward compatibility of the indexed profiles, existing fields
 shouldn't be deleted from struct definition; the field order shouldn't be
 modified. New fields should be appended.
-```
+:::
 
 ### Payload Sections
 

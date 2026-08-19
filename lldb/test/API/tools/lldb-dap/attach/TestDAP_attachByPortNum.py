@@ -6,7 +6,7 @@ from typing import List
 
 from lldbgdbserverutils import Pipe
 from lldbsuite.test import lldbplatformutil
-from lldbsuite.test.decorators import skipIfNetBSD, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import AttachArgs
@@ -26,6 +26,7 @@ def debug_server_start_args() -> List[str]:
     return args
 
 
+@skipIfWasm  # the test drives a native debug server for the program
 class TestDAP_attachByPortNum(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -50,6 +51,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
             str(self.get_debug_server_path()),
             debug_server_args,
             install_remote=False,
+            cwd=self.getBuildDir(),
         )
 
         # Read the port number from the debug server pipe.
@@ -107,7 +109,9 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
         if debug_server.stem == "lldb-server":
             server_args = ["gdbserver", *server_args]
 
-        self.spawnSubprocess(str(debug_server), server_args, install_remote=False)
+        self.spawnSubprocess(
+            str(debug_server), server_args, install_remote=False, cwd=self.getBuildDir()
+        )
 
         pending = session.initialize_and_launch(
             AttachArgs(

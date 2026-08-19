@@ -11,10 +11,10 @@
 // CHECK: CXXRecordDecl {{.*}} [[TEXTURE]] definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::is_ms]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 
 // Load(location, sampleIndex): the sample index is a separate scalar (there is
 // no packed mip level), and the read lowers to __builtin_hlsl_resource_load_ms.
@@ -27,10 +27,10 @@
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_ms' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::is_ms]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME{LITERAL}: [[hlsl::resource_dimension(2D)]]
+// CHECK-SAME{LITERAL}: [[hlsl::dimension("2D")]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[TEXTURE]]<element_type, sample_count>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<int, [[INDEX_SIZE]]>' lvalue ParmVar {{.*}} 'Location' 'vector<int, [[INDEX_SIZE]]>'

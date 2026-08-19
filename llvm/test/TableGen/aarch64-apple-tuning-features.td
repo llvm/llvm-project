@@ -280,6 +280,7 @@
 // CHECK-NEXT:    FeatureFuseCryptoEOR,
 // CHECK-NEXT:    FeatureFuseCmpCSel,
 // CHECK-NEXT:    FeatureFuseFCmpFCSel,
+// CHECK-NEXT:    FeatureFuseFMinFMax,
 // CHECK-NEXT:    FeatureFuseLiterals,
 // CHECK-NEXT:    FeatureMaxInterleaveFactor4,
 // CHECK-NEXT:    FeatureNoZCZeroingFPR64,

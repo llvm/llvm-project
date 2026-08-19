@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -o - -x hip %s | FileCheck \
 // RUN:   -check-prefixes=COMMON,DEV,NORDC-D %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -std=c++11 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -std=c++11 \
 // RUN:   -emit-llvm -fgpu-rdc -cuid=abc -o - -x hip %s > %t.dev
 // RUN: cat %t.dev | FileCheck -check-prefixes=COMMON,DEV,RDC-D %s
 
@@ -137,10 +137,10 @@ float load3() {
 // HOST-LABEL: define {{.*}}@_Z11addr_taken2v()
 // HOST:  %ld.managed = load ptr, ptr @v, align 16
 // HOST:  %0 = getelementptr inbounds nuw i8, ptr %ld.managed, i64 12
-// HOST:  %1 = ptrtoint ptr %0 to i64
+// HOST:  %1 = ptrtoaddr ptr %0 to i64
 // HOST:  %ld.managed1 = load ptr, ptr @v2, align 16
 // HOST:  %2 = getelementptr inbounds nuw i8, ptr %ld.managed1, i64 16
-// HOST:  %3 = ptrtoint ptr %2 to i64
+// HOST:  %3 = ptrtoaddr ptr %2 to i64
 // HOST:  %4 = sub i64 %3, %1
 // HOST:  %sub.ptr.div = sdiv exact i64 %4, 4
 // HOST:  %conv = sitofp contract i64 %sub.ptr.div to float

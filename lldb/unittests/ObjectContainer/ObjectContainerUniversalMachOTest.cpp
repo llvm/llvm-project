@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
+#include "Plugins/ObjectContainer/Mach-O-Fileset/ObjectContainerMachOFileset.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -14,6 +15,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -118,6 +120,47 @@ Slices:
   EXPECT_EQ(Specs.GetSize(), 0u);
 
   ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+}
+
+// Regression fixture: a Mach-O fileset whose single load command has
+// cmdsize = 0.  With ncmds set near INT_MAX the function hangs.  The
+// fix breaks out of the loop as soon as
+// cmdsize < sizeof(load_command).  Found by lldb-target-fuzzer.
+namespace {
+class ObjectContainerMachOFilesetTest : public ::testing::Test {
+  SubsystemRAII<FileSystem, ObjectContainerMachOFileset> subsystems;
+};
+} // namespace
+
+TEST_F(ObjectContainerMachOFilesetTest, ZeroCmdSize) {
+  // Minimal little-endian x86_64 Mach-O fileset: mach_header_64 (32 bytes)
+  // followed by a single load_command with cmdsize = 0.  ncmds is set to
+  // 0x7FFFFFFF so that without the fix ParseFileset spins ~2 billion times and
+  // never returns in practice; with the fix it breaks on the first iteration.
+  // Reaching the assertion below is the regression check.
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x0000000C
+  ncmds:           0x7FFFFFFF
+  sizeofcmds:      8
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_THREAD
+    cmdsize:         0
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  ModuleSpec Spec = ExpectedFile->moduleSpec();
+  lldb::DataExtractorSP DataSP = Spec.GetExtractor();
+  // Before the fix ParseFileset loops ~0x7FFFFFFF times and never returns.
+  (void)ObjectContainerMachOFileset::GetModuleSpecifications(
+      FileSpec(), DataSP, 0, DataSP->GetByteSize());
 }
 
 // Regression fixture: a universal (fat) Mach-O whose header claims a huge

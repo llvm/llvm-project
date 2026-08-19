@@ -1631,7 +1631,12 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
     Imm = 0;
     return true;
   }
-  return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+
+  if (!Reg.isVirtual())
+    return false;
+
+  const MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  return DefMI && isLoadImm(DefMI, Imm);
 }
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
@@ -3034,6 +3039,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
@@ -3977,9 +3983,11 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
   } else if (RISCV::FPR128RegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
+  } else if (RISCV::VRRegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
     llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for vector registers");
+        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
   }
 }
 
@@ -5537,10 +5545,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }

@@ -1,0 +1,44 @@
+// Magic
+RUN: printf '\201rforpl\377' > %t.profraw
+// Version (11 = 0o13)
+RUN: printf '\13\0\0\0\0\0\0\0' >> %t.profraw
+// BinaryIdsSize
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NumData
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+// PaddingBytesBeforeCounters
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NumCounters
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t.profraw
+// PaddingBytesAfterCounters
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NumBitmapBytes
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// PaddingBytesAfterBitmapBytes
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NumUniformCounters
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// PaddingBytesAfterUniformCounters
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// UniformCountersDelta
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NamesSize
+RUN: printf '\20\0\0\0\0\0\0\0' >> %t.profraw
+// CountersDelta
+RUN: printf '\370\377\377\377\0\0\0\0' >> %t.profraw
+// BitmapDelta
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// NamesDelta
+RUN: printf '\130\207\0\20\0\0\0\0' >> %t.profraw
+// NumVTables
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// VNamesSize
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t.profraw
+// ValueKindLast
+RUN: printf '\3\0\0\0\0\0\0\0' >> %t.profraw
+// No Binary Ids
+// Array of __llvm_prof_data goes next but we'll truncate it to 4 bytes
+RUN: printf '\0\0\0\0' >> %t.profraw
+
+RUN: not llvm-profdata show  %t.profraw 2>&1 | FileCheck %s
+CHECK: invalid instrumentation profile data (file is incomplete or header is corrupt): profile file size (156 bytes) smaller than expected (at least 248 bytes: 152(Header) + 0(BinaryIdSize) + 72(DataSize) + 8(CountersSize) + 0(NumBitmapBytes) + 0(UniformCountersSectionSize) + 16(NamesSize) + 0(VTableSectionSize) + 0(VTableNameSize) + 0(Padding))
