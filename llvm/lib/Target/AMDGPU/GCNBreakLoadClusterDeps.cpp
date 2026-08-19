@@ -237,6 +237,9 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     }
   }
 
+  if (!DefToRename)
+    return false;
+
   // Now, perform the rename between (DefToRename, KillerIns)
 
   // Find a free reg
