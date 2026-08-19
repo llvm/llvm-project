@@ -3935,13 +3935,22 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
 
   // SatWidth == DstWidth or SatWidth > 32
 
-  // Saturate at i32 for i64 dst and f16/bf16 src (will invoke f16 promotion
-  // below)
+  // Convert f16 at i32, then map the narrow saturation bounds to the i64
+  // bounds. All finite f16 values are small enough to remain unchanged.
   if (DstVT == MVT::i64 &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
+      (SrcVT == MVT::f16 ||
        (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
     const SDValue Int32VTOp = DAG.getValueType(MVT::i32);
-    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VTOp);
+    SDValue Narrow = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VTOp);
+
+    if (OpOpcode == ISD::FP_TO_UINT_SAT)
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, DstVT, Narrow);
+
+    SDValue NarrowOne = DAG.getConstant(1, DL, MVT::i32);
+    SDValue NarrowRot = DAG.getNode(ISD::ROTL, DL, MVT::i32, Narrow, NarrowOne);
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, DstVT, NarrowRot);
+    SDValue DstOne = DAG.getConstant(1, DL, DstVT);
+    return DAG.getNode(ISD::ROTR, DL, DstVT, Ext, DstOne);
   }
 
   // Promote f16/bf16 src to f32 for i32 conversion

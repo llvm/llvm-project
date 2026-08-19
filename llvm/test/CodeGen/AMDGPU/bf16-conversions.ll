@@ -673,26 +673,72 @@ entry:
   ret void
 }
 
-; FIXME: These record incorrect results. The conversion is performed at i32 and
-; then extended, so a finite bfloat that fits in an i64 but not an i32 saturates
-; to i32::MAX rather than converting exactly.
 define i64 @v_test_bf16_to_i64_sat(bfloat %x) {
 ; GCN-LABEL: v_test_bf16_to_i64_sat:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GCN-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GCN-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-NEXT:    s_mov_b32 s0, 0x2f800000
+; GCN-NEXT:    v_mul_f32_e64 v2, |v1|, s0
+; GCN-NEXT:    v_floor_f32_e32 v2, v2
+; GCN-NEXT:    s_mov_b32 s0, 0xcf800000
+; GCN-NEXT:    v_cvt_u32_f32_e32 v3, v2
+; GCN-NEXT:    v_fma_f32 v2, v2, s0, |v1|
+; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v1
+; GCN-NEXT:    v_xor_b32_e32 v3, v3, v1
+; GCN-NEXT:    s_mov_b32 s0, 0xdf000000
+; GCN-NEXT:    v_xor_b32_e32 v2, v2, v1
+; GCN-NEXT:    v_sub_co_u32_e32 v2, vcc, v2, v1
+; GCN-NEXT:    v_cmp_u_f32_e64 s[2:3], v0, v0
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    v_subb_co_u32_e32 v1, vcc, v3, v1, vcc
+; GCN-NEXT:    v_cmp_nle_f32_e32 vcc, s0, v0
+; GCN-NEXT:    s_mov_b32 s0, 0x5effffff
+; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, -1, s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[2:3]
+; GCN-NEXT:    v_bfrev_b32_e32 v2, 1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
+; GCN-NEXT:    v_bfrev_b32_e32 v2, -2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s[2:3]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_test_bf16_to_i64_sat:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX1250-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX1250-NEXT:    v_trunc_f32_e32 v0, v4
+; GFX1250-NEXT:    v_mul_f32_e64 v1, 0x2f800000, |v0|
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_floor_f32_e32 v1, v1
+; GFX1250-NEXT:    v_fma_f32 v2, 0xcf800000, v1, |v0|
+; GFX1250-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v3, v1
+; GFX1250-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 0xdf000000, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GFX1250-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_bitop2_b32 v3, v3, v0 bitop3:0x14
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_xor_b32_e32 v2, v2, v0
+; GFX1250-NEXT:    v_sub_nc_u64_e32 v[0:1], v[2:3], v[0:1]
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc_lo
+; GFX1250-NEXT:    v_cndmask_b32_e64 v1, v1, 0x80000000, vcc_lo
+; GFX1250-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x5effffff, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v0, -1, vcc_lo
+; GFX1250-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7fffffff, vcc_lo
+; GFX1250-NEXT:    v_cmp_u_f32_e32 vcc_lo, v4, v4
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc_lo
+; GFX1250-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc_lo
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.fptosi.sat.i64.bf16(bfloat %x)
   ret i64 %r
@@ -703,17 +749,43 @@ define i64 @v_test_bf16_to_u64_sat(bfloat %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GCN-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v1
+; GCN-NEXT:    v_floor_f32_e32 v2, v2
+; GCN-NEXT:    v_fmamk_f32 v1, v2, 0xcf800000, v1
+; GCN-NEXT:    v_cvt_u32_f32_e32 v3, v2
+; GCN-NEXT:    v_cvt_u32_f32_e32 v2, v1
+; GCN-NEXT:    v_cmp_nle_f32_e32 vcc, 0, v0
+; GCN-NEXT:    s_mov_b32 s0, 0x5f7fffff
+; GCN-NEXT:    v_cmp_lt_f32_e64 s[0:1], s0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, -1, s[0:1]
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -1, s[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: v_test_bf16_to_u64_sat:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_trunc_f32_e32 v1, v0
+; GFX1250-NEXT:    v_mul_f32_e32 v2, 0x2f800000, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_floor_f32_e32 v2, v2
+; GFX1250-NEXT:    v_fmamk_f32 v1, v2, 0xcf800000, v1
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v2, v2
+; GFX1250-NEXT:    v_cmp_nle_f32_e32 vcc_lo, 0, v0
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX1250-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v3, v1, 0, vcc_lo
+; GFX1250-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x5f7fffff, v0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v1, v2, -1, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, v3, -1, vcc_lo
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %r = call i64 @llvm.fptoui.sat.i64.bf16(bfloat %x)
   ret i64 %r
