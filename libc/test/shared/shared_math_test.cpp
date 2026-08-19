@@ -593,6 +593,8 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+  EXPECT_FP_EQ(Float128(0.0),
+               LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(1.0), LIBC_NAMESPACE::shared::sqrtf128(Float128(1.0)));
 }
@@ -753,8 +755,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
   EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
-  EXPECT_FP_EQ(float128(0.0),
-               LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 }
 

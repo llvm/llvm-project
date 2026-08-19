@@ -906,6 +906,7 @@ add_fp_unittest(
     RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

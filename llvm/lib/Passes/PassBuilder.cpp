@@ -106,6 +106,8 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"

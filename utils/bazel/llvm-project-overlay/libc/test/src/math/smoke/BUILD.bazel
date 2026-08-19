@@ -1404,6 +1404,9 @@ math_test(
 math_test(
     name = "roundevenf128",
     hdrs = ["RoundEvenTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

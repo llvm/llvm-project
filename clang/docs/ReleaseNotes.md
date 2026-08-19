@@ -441,6 +441,10 @@ features cannot lower the translation-unit ABI level;
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
 
+- Fixed a crash when an `address_space` attribute with a dependent argument was
+  written after the declarator-id, where it appertains to the declared entity
+  rather than to a declarator chunk. (#GH196982, #GH111463)
+
 #### Bug Fixes to C++ Support
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
