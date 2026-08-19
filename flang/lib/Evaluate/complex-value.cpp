@@ -13,7 +13,9 @@
 
 namespace Fortran::evaluate::value {
 
-void ComplexValue::print(llvm::raw_ostream &os) const { AsFortran(os, kind()); }
+void ComplexValue::print(llvm::raw_ostream &os) const {
+  AsFortran(os, static_cast<int>(kind()));
+}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ComplexValue::dump() const {
@@ -23,7 +25,7 @@ LLVM_DUMP_METHOD void ComplexValue::dump() const {
 #endif
 
 ValueWithRealFlags<ComplexValue> ComplexValue::FromInteger(
-    int kind, const IntegerValue &n, bool isUnsigned, Rounding rounding) {
+    KindsEnum kind, const IntegerValue &n, bool isUnsigned, Rounding rounding) {
   CHECK(!n.IsMonostate());
 
   ValueWithRealFlags<ComplexValue> result;
@@ -171,7 +173,7 @@ void ComplexValue::StoreRawBytes(
 }
 
 ComplexValue ComplexValue::FromRawBytes(
-    int kind, const void *raw, std::size_t expectedSize) {
+    KindsEnum kind, const void *raw, std::size_t expectedSize) {
   CHECK(expectedSize == static_cast<size_t>(-1) ||
       expectedSize == bytesStored(kind));
   std::size_t partBytes{RealValue::bytesStored(kind)};

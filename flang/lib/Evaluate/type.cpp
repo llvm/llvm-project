@@ -21,6 +21,14 @@
 #include <optional>
 #include <string>
 
+using Fortran::common::KindsEnum;
+
+namespace Fortran::common {
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, KindsEnum kind) {
+  return os << static_cast<int>(kind);
+}
+} // namespace Fortran::common
+
 // IsDescriptor() predicate: true when a symbol is implemented
 // at runtime with a descriptor.
 namespace Fortran::semantics {
@@ -117,7 +125,7 @@ bool IsPassedViaDescriptor(const Symbol &symbol) {
 
 namespace Fortran::evaluate {
 
-DynamicType::DynamicType(int k, const semantics::ParamValue &pv)
+DynamicType::DynamicType(KindsEnum k, const semantics::ParamValue &pv)
     : category_{TypeCategory::Character}, kind_{k} {
   CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   if (auto n{ToInt64(pv.GetExplicit())}) {
@@ -252,7 +260,8 @@ bool DynamicType::IsNonConstantLengthCharacter() const {
 }
 
 bool DynamicType::IsTypelessIntrinsicArgument() const {
-  return category_ == TypeCategory::Integer && kind_ == TypelessKind;
+  return category_ == TypeCategory::Integer &&
+      kind_ == static_cast<KindsEnum>(TypelessKind);
 }
 
 bool DynamicType::IsLengthlessIntrinsicType() const {
@@ -703,12 +712,13 @@ std::optional<DynamicType> DynamicType::From(
   if (const auto *intrinsic{type.AsIntrinsic()}) {
     if (auto kind{ToInt64(intrinsic->kind())}) {
       TypeCategory category{intrinsic->category()};
-      if (common::IsValidKindOfIntrinsicType(category, *kind)) {
+      auto kindsEnum{static_cast<KindsEnum>(*kind)};
+      if (common::IsValidKindOfIntrinsicType(category, kindsEnum)) {
         if (category == TypeCategory::Character) {
           const auto &charType{type.characterTypeSpec()};
-          return DynamicType{static_cast<int>(*kind), charType.length()};
+          return DynamicType{kindsEnum, charType.length()};
         } else {
-          return DynamicType{category, static_cast<int>(*kind)};
+          return DynamicType{category, kindsEnum};
         }
       }
     }
@@ -734,7 +744,8 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
   case TypeCategory::Integer:
     switch (that.category_) {
     case TypeCategory::Integer:
-      return DynamicType{TypeCategory::Integer, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Integer,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return that;
@@ -745,7 +756,8 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
   case TypeCategory::Unsigned:
     switch (that.category_) {
     case TypeCategory::Unsigned:
-      return DynamicType{TypeCategory::Unsigned, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Unsigned,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     default:
       CRASH_NO_CASE;
     }
@@ -755,9 +767,11 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
     case TypeCategory::Integer:
       return *this;
     case TypeCategory::Real:
-      return DynamicType{TypeCategory::Real, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Real,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     case TypeCategory::Complex:
-      return DynamicType{TypeCategory::Complex, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Complex,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     default:
       CRASH_NO_CASE;
     }
@@ -768,7 +782,8 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
       return *this;
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return DynamicType{TypeCategory::Complex, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Complex,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     default:
       CRASH_NO_CASE;
     }
@@ -776,7 +791,8 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
   case TypeCategory::Logical:
     switch (that.category_) {
     case TypeCategory::Logical:
-      return DynamicType{TypeCategory::Logical, std::max(kind(), that.kind())};
+      return DynamicType{TypeCategory::Logical,
+          static_cast<KindsEnum>(std::max(kind(), that.kind()))};
     default:
       CRASH_NO_CASE;
     }
@@ -821,7 +837,8 @@ bool SomeKind<TypeCategory::Derived>::operator==(
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
 }
 
-int SelectedCharKind(const std::string &s, int defaultKind) { // F'2023 16.9.180
+int SelectedCharKind(
+    const std::string &s, KindsEnum defaultKind) { // F'2023 16.9.180
   auto lower{parser::ToLowerCaseLetters(s)};
   auto n{lower.size()};
   while (n > 0 && lower[0] == ' ') {
@@ -838,7 +855,7 @@ int SelectedCharKind(const std::string &s, int defaultKind) { // F'2023 16.9.180
   } else if (lower == "iso_10646" || lower == "ucs-4") {
     return 4;
   } else if (lower == "default") {
-    return defaultKind;
+    return static_cast<int>(defaultKind);
   } else {
     return -1;
   }
@@ -850,7 +867,8 @@ std::optional<DynamicType> ComparisonType(
   case TypeCategory::Integer:
     switch (t2.category()) {
     case TypeCategory::Integer:
-      return DynamicType{TypeCategory::Integer, std::max(t1.kind(), t2.kind())};
+      return DynamicType{TypeCategory::Integer,
+          static_cast<KindsEnum>(std::max(t1.kind(), t2.kind()))};
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return t2;
@@ -863,7 +881,8 @@ std::optional<DynamicType> ComparisonType(
       return t1;
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return DynamicType{t2.category(), std::max(t1.kind(), t2.kind())};
+      return DynamicType{t2.category(),
+          static_cast<KindsEnum>(std::max(t1.kind(), t2.kind()))};
     default:
       return std::nullopt;
     }
@@ -873,15 +892,16 @@ std::optional<DynamicType> ComparisonType(
       return t1;
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return DynamicType{TypeCategory::Complex, std::max(t1.kind(), t2.kind())};
+      return DynamicType{TypeCategory::Complex,
+          static_cast<KindsEnum>(std::max(t1.kind(), t2.kind()))};
     default:
       return std::nullopt;
     }
   case TypeCategory::Character:
     switch (t2.category()) {
     case TypeCategory::Character:
-      return DynamicType{
-          TypeCategory::Character, std::max(t1.kind(), t2.kind())};
+      return DynamicType{TypeCategory::Character,
+          static_cast<KindsEnum>(std::max(t1.kind(), t2.kind()))};
     default:
       return std::nullopt;
     }
@@ -908,12 +928,12 @@ std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &type,
     // KIND=2 is IEEE-754 binary16, interoperable with C _Float16.
     // KIND=3 (bfloat16) has no standard interoperable C type, so it is
     // accepted only under CUDA (or when reading a module file).
-    return type.kind() == 2 || type.kind() >= 4 || !features ||
+    return type.kind() == Kind2 || type.kind() >= Kind4 || !features ||
         features->IsEnabled(common::LanguageFeature::CUDA);
   case TypeCategory::Logical:
-    return type.kind() == 1; // C_BOOL
+    return type.kind() == Kind1; // C_BOOL
   case TypeCategory::Character:
-    if (type.kind() != 1) { // C_CHAR
+    if (type.kind() != Kind1) { // C_CHAR
       return false;
     } else if (checkCharLength) {
       if (type.knownLength()) {
@@ -934,13 +954,13 @@ bool IsCUDAIntrinsicType(const DynamicType &type) {
   switch (type.category()) {
   case TypeCategory::Integer:
   case TypeCategory::Logical:
-    return type.kind() <= 8;
+    return type.kind() <= Kind8;
   case TypeCategory::Real:
-    return type.kind() >= 2 && type.kind() <= 8;
+    return type.kind() >= Kind2 && type.kind() <= Kind8;
   case TypeCategory::Complex:
-    return type.kind() == 2 || type.kind() == 4 || type.kind() == 8;
+    return type.kind() == Kind2 || type.kind() == Kind4 || type.kind() == Kind8;
   case TypeCategory::Character:
-    return type.kind() == 1;
+    return type.kind() == Kind1;
   default:
     // Derived types are tested in Semantics/check-declarations.cpp
     return false;

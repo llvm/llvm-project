@@ -12,12 +12,13 @@
 using namespace Fortran::evaluate;
 
 static Expr<Type<TypeCategory::Integer>> MakeDefaultIntegerExpr(int32_t v) {
-  return MakeConstantExpr<Type<TypeCategory::Integer>>(4, v);
+  return MakeConstantExpr<Type<TypeCategory::Integer>>(
+      Fortran::common::KindsEnum::Kind4, v);
 }
 
 int main() {
   using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer>>;
-  TEST(DefaultIntegerExpr::Result{4}.AsFortran() == "INTEGER(4)");
+  TEST(DefaultIntegerExpr::Result{Kind4}.AsFortran() == "INTEGER(4)");
   MATCH("666_4", MakeDefaultIntegerExpr(666).AsFortran());
   MATCH("-1_4", (-MakeDefaultIntegerExpr(1)).AsFortran());
   auto ex1{MakeDefaultIntegerExpr(2) +

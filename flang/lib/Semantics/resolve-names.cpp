@@ -2777,14 +2777,17 @@ void DeclTypeSpecVisitor::Post(const parser::TypeSpec &typeSpec) {
 
 void DeclTypeSpecVisitor::Post(
     const parser::IntrinsicTypeSpec::DoublePrecision &) {
-  MakeNumericType(TypeCategory::Real, context().doublePrecisionKind());
+  MakeNumericType(
+      TypeCategory::Real, static_cast<int>(context().doublePrecisionKind()));
 }
 void DeclTypeSpecVisitor::Post(
     const parser::IntrinsicTypeSpec::DoubleComplex &) {
-  MakeNumericType(TypeCategory::Complex, context().doublePrecisionKind());
+  MakeNumericType(
+      TypeCategory::Complex, static_cast<int>(context().doublePrecisionKind()));
 }
 void DeclTypeSpecVisitor::MakeNumericType(TypeCategory category, int kind) {
-  SetDeclTypeSpec(context().MakeNumericType(category, kind));
+  SetDeclTypeSpec(
+      context().MakeNumericType(category, static_cast<KindsEnum>(kind)));
 }
 
 void DeclTypeSpecVisitor::CheckForAbstractType(const Symbol &typeSymbol) {
@@ -3572,7 +3575,9 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
       return false;
     }
     auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
-    if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
+    if (!kind ||
+        static_cast<KindsEnum>(*kind) !=
+            context().GetDefaultKind(TypeCategory::Integer)) {
       return false;
     }
   }
@@ -3706,7 +3711,7 @@ const DeclTypeSpec &ScopeHandler::MakeNumericType(
 
 const DeclTypeSpec &ScopeHandler::MakeNumericType(
     TypeCategory category, int kind) {
-  return context().MakeNumericType(category, kind);
+  return context().MakeNumericType(category, static_cast<KindsEnum>(kind));
 }
 
 const DeclTypeSpec &ScopeHandler::MakeLogicalType(
@@ -3720,7 +3725,7 @@ const DeclTypeSpec &ScopeHandler::MakeLogicalType(
 }
 
 const DeclTypeSpec &ScopeHandler::MakeLogicalType(int kind) {
-  return context().MakeLogicalType(kind);
+  return context().MakeLogicalType(static_cast<KindsEnum>(kind));
 }
 
 void ScopeHandler::NotePossibleBadForwardRef(const parser::Name &name) {
@@ -6326,8 +6331,8 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
       std::string{DerivedTypeDetails::ordinalComponentName})};
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
-  ordinalSym.SetType(
-      currScope().MakeNumericType(TypeCategory::Integer, MakeKindExpr(4)));
+  ordinalSym.SetType(currScope().MakeNumericType(
+      TypeCategory::Integer, MakeKindExpr(KindsEnum::Kind4)));
   ordinalSym.set(Symbol::Flag::CompilerCreated);
   symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
 }
@@ -6773,8 +6778,8 @@ void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
   charInfo_.kind = EvaluateSubscriptIntExpr(kind);
   std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
   if (intKind &&
-      !context().targetCharacteristics().IsTypeEnabled(
-          TypeCategory::Character, *intKind)) { // C715, C719
+      !context().targetCharacteristics().IsTypeEnabled(TypeCategory::Character,
+          static_cast<KindsEnum>(*intKind))) { // C715, C719
     Say(currStmtSource().value(),
         "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);
     charInfo_.kind = std::nullopt; // prevent further errors
@@ -7875,7 +7880,8 @@ void DeclarationVisitor::Post(const parser::BasedPointer &bp) {
   }
   pointer->set(Symbol::Flag::CrayPointer);
   const DeclTypeSpec &pointerType{MakeNumericType(TypeCategory::Integer,
-      context().targetCharacteristics().integerKindForPointer())};
+      static_cast<int>(
+          context().targetCharacteristics().integerKindForPointer()))};
   const auto *type{pointer->GetType()};
   if (!type) {
     pointer->SetType(pointerType);
@@ -8167,7 +8173,7 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
         DEREF(interface->functionResult->GetTypeAndShape()).type()};
     CHECK(common::IsNumericTypeCategory(dyType.category()));
     const DeclTypeSpec &typeSpec{
-        MakeNumericType(dyType.category(), dyType.kind())};
+        MakeNumericType(dyType.category(), static_cast<int>(dyType.kind()))};
     ProcEntityDetails details;
     details.set_type(typeSpec);
     symbol.set_details(std::move(details));

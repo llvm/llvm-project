@@ -71,20 +71,20 @@ void IoChecker::Enter(
   FormatErrorReporter reporter{context_, reporterCharBlock};
   auto reporterWrapper{[&](const auto &msg) { return reporter.Say(msg); }};
   switch (context_.GetDefaultKind(TypeCategory::Character)) {
-  case 1: {
+  case KindsEnum::Kind1: {
     common::FormatValidator<char> validator{formatStart,
         stmt.source.size() - (formatStart - stmt.source.begin()),
         reporterWrapper};
     validator.Check();
     break;
   }
-  case 2: { // TODO: Get this to work.
+  case KindsEnum::Kind2: { // TODO: Get this to work.
     common::FormatValidator<char16_t> validator{
         /*???*/ nullptr, /*???*/ 0, reporterWrapper};
     validator.Check();
     break;
   }
-  case 4: { // TODO: Get this to work.
+  case KindsEnum::Kind4: { // TODO: Get this to work.
     common::FormatValidator<char32_t> validator{
         /*???*/ nullptr, /*???*/ 0, reporterWrapper};
     validator.Check();
@@ -277,20 +277,20 @@ void IoChecker::Enter(const parser::Format &spec) {
             auto reporterWrapper{
                 [&](const auto &msg) { return reporter.Say(msg); }};
             switch (context_.GetDefaultKind(TypeCategory::Character)) {
-            case 1: {
+            case KindsEnum::Kind1: {
               common::FormatValidator<char> validator{constantFormat->c_str(),
                   constantFormat->length(), reporterWrapper, stmt_};
               validator.Check();
               break;
             }
-            case 2: {
+            case KindsEnum::Kind2: {
               // TODO: Get this to work.  (Maybe combine with earlier instance?)
               common::FormatValidator<char16_t> validator{
                   /*???*/ nullptr, /*???*/ 0, reporterWrapper, stmt_};
               validator.Check();
               break;
             }
-            case 4: {
+            case KindsEnum::Kind4: {
               // TODO: Get this to work.  (Maybe combine with earlier instance?)
               common::FormatValidator<char32_t> validator{
                   /*???*/ nullptr, /*???*/ 0, reporterWrapper, stmt_};
@@ -314,8 +314,8 @@ void IoChecker::Enter(const parser::IdVariable &spec) {
     return;
   }
   CheckForDefinableVariable(spec, "ID");
-  int kind{expr->GetType()->kind()};
-  int defaultKind{context_.GetDefaultKind(TypeCategory::Integer)};
+  KindsEnum kind{expr->GetType()->kind()};
+  KindsEnum defaultKind{context_.GetDefaultKind(TypeCategory::Integer)};
   if (kind < defaultKind) {
     context_.Say(
         "ID kind (%d) is smaller than default INTEGER kind (%d)"_err_en_US,

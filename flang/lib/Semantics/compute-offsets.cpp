@@ -381,7 +381,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
   }
   auto result{offset * GetSizeAndAlignment(object.symbol, false).size};
   if (object.substringStart) {
-    int kind{context_.defaultKinds().GetDefaultKind(TypeCategory::Character)};
+    int kind{static_cast<int>(
+        context_.defaultKinds().GetDefaultKind(TypeCategory::Character))};
     if (const DeclTypeSpec * type{object.symbol.GetType()}) {
       if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {
         kind = ToInt64(intrinsic->kind()).value_or(kind);

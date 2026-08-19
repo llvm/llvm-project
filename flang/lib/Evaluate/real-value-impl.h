@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_REAL_VALUE_IMPL_H_
 #define FORTRAN_EVALUATE_REAL_VALUE_IMPL_H_
 
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/real.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <type_traits>
@@ -25,6 +26,7 @@ class raw_ostream;
 
 namespace Fortran::evaluate::value {
 class IntegerValue;
+using common::KindsEnum;
 
 class RealValueImpl {
 public:
@@ -78,19 +80,19 @@ public:
 #endif
 
   bool IsMonostate() const { return storage_.index() == 0; }
-  int kind() const;
+  KindsEnum kind() const;
 
   int bits() const;
 
   std::size_t bytesStored() const { return bytesStored(kind()); }
-  static constexpr std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(KindsEnum kind) {
     switch (kind) {
-    case 3:
+    case KindsEnum::Kind3:
       return 2;
-    case 10:
+    case KindsEnum::Kind10:
       return 16;
     default:
-      return kind;
+      return static_cast<std::size_t>(kind);
     }
   }
 
@@ -111,7 +113,7 @@ public:
   static RealValueImpl HUGE(int kind);
   static RealValueImpl EPSILON(int kind);
   static RealValueImpl TINY(int kind);
-  static RealValueImpl NotANumber(int kind);
+  static RealValueImpl NotANumber(KindsEnum kind);
   static RealValueImpl SignalingNaN(int kind);
   static RealValueImpl Infinity(int kind, bool negative = false);
   static RealValueImpl NegativeZero(int kind);

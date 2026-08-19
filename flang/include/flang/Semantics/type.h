@@ -45,6 +45,7 @@ class Symbol;
 /// i.e. a range of lower-case characters with provenance.
 using SourceName = parser::CharBlock;
 using TypeCategory = common::TypeCategory;
+using KindsEnum = common::KindsEnum;
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using MaybeExpr = std::optional<SomeExpr>;
 using SomeIntExpr = evaluate::Expr<evaluate::SomeInteger>;
@@ -53,7 +54,7 @@ using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
 
-KindExpr MakeKindExpr(int v);
+using evaluate::MakeKindExpr;
 
 // An array spec bound: an explicit integer expression, assumed size
 // or implied shape(*), or assumed or deferred shape(:).  In the absence

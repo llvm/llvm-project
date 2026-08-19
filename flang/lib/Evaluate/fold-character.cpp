@@ -47,7 +47,7 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
     FunctionRef<Type<TypeCategory::Character>> &&funcRef) {
   using T = Type<TypeCategory::Character>;
   using StringType = Scalar<T>; // CharacterValue
-  const int kind{funcRef.kind()};
+  const KindsEnum kind{funcRef.kind()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
@@ -57,13 +57,15 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
         context, std::move(funcRef),
         ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
           if (i.IsNegative() ||
-              i.BGE(Scalar<IntT>{SubscriptIntegerKind, 0}.IBSET(8 * kind))) {
+              i.BGE(Scalar<IntT>{SubscriptIntegerKind, 0}.IBSET(
+                  8 * static_cast<int>(kind)))) {
             context.Warn(common::UsageWarning::FoldingValueChecks,
                 "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
                 parser::ToUpperCaseLetters(name),
-                static_cast<std::intmax_t>(i.ToInt64()), kind);
+                static_cast<std::intmax_t>(i.ToInt64()),
+                static_cast<int>(kind));
           }
-          return CharacterUtils::CHAR(kind, i.ToUInt64());
+          return CharacterUtils::CHAR(static_cast<int>(kind), i.ToUInt64());
         }));
   } else if (name == "adjustl") {
     return FoldElementalIntrinsic<T, T>(
@@ -84,14 +86,15 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
     // Collating sequences correspond to positive integers (3.31)
-    StringType most{kind, 1, 0xffffffff >> (8 * (4 - kind))};
+    StringType most{kind, 1, 0xffffffff >> (8 * (4 - static_cast<int>(kind)))};
     if (auto identity{
             Identity<T>(most, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
           kind, context, std::move(funcRef), RelationalOperator::LT, *identity);
     }
   } else if (name == "new_line") {
-    return MakeConstantExpr<T>(kind, CharacterUtils::NEW_LINE(kind));
+    return MakeConstantExpr<T>(
+        kind, CharacterUtils::NEW_LINE(static_cast<int>(kind)));
   } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
             {kind, SubscriptIntegerKind}, context, funcRef.arguments(),
@@ -129,7 +132,7 @@ Expr<Type<TypeCategory::Character>> FoldIntrinsicFunction(
 
 Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, Concat &&x) {
-  const int kind{x.kind()};
+  const KindsEnum kind{static_cast<KindsEnum>(x.kind())};
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
@@ -142,7 +145,7 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
 
 Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, SetLength &&x) {
-  const int kind{x.kind()};
+  const KindsEnum kind{static_cast<KindsEnum>(x.kind())};
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }

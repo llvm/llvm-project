@@ -199,15 +199,16 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                         .value_or(false)) {
                   // If substring, take rest of substring
                   if (*actualLength > 0) {
-                    actualChars -=
-                        (actualOffset->offset() / actualType.type().kind()) %
+                    actualChars -= (actualOffset->offset() /
+                                       static_cast<std::int64_t>(
+                                           actualType.type().kind())) %
                         *actualLength;
                   }
                 } else {
                   actualChars = (static_cast<std::int64_t>(
                                      actualOffset->symbol().size()) -
                                     actualOffset->offset()) /
-                      actualType.type().kind();
+                      static_cast<std::int64_t>(actualType.type().kind());
                 }
                 if (actualChars < dummyChars) {
                   if (extentErrors) {
@@ -303,12 +304,14 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
               common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
         messages.Say(
             "Actual argument scalar expression of type INTEGER(%d) cannot be implicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US,
-            actualType.type().kind(), dummyType.type().kind());
+            static_cast<int>(actualType.type().kind()),
+            static_cast<int>(dummyType.type().kind()));
       } else {
         semanticsContext.Warn(messages,
             common::LanguageFeature::ActualIntegerConvertedToSmallerKind,
             "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_port_en_US,
-            actualType.type().kind(), dummyType.type().kind());
+            static_cast<int>(actualType.type().kind()),
+            static_cast<int>(dummyType.type().kind()));
       }
     }
     actualType = dummyType;
@@ -633,7 +636,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       bool actualIsArrayElement{IsArrayElement(actual) != nullptr};
       bool actualIsCKindCharacter{
           actualType.type().category() == TypeCategory::Character &&
-          actualType.type().kind() == 1};
+          actualType.type().kind() == KindsEnum::Kind1};
       if (!actualIsCKindCharacter) {
         if (!actualIsArrayElement && !dummyIsAssumedRank &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
@@ -2075,19 +2078,20 @@ static void CheckEvent_Query(evaluate::ActualArguments &arguments,
   }
   if (arguments.size() > 1 && arguments[1]) {
     if (auto dyType{arguments[1]->GetType()}) {
-      int defaultInt{
+      KindsEnum defaultInt{
           foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
       if (dyType->category() == TypeCategory::Integer &&
           dyType->kind() < defaultInt) {
         foldingContext.messages().Say(arguments[1]->sourceLocation(),
             "COUNT= argument to EVENT_QUERY must be an integer with kind >= %d"_err_en_US,
-            defaultInt);
+            static_cast<int>(defaultInt));
       }
     }
   }
   if (arguments.size() > 2 && arguments[2]) {
     if (auto dyType{arguments[2]->GetType()}) {
-      if (dyType->category() == TypeCategory::Integer && dyType->kind() < 2) {
+      if (dyType->category() == TypeCategory::Integer &&
+          dyType->kind() < KindsEnum::Kind2) {
         foldingContext.messages().Say(arguments[2]->sourceLocation(),
             "STAT= argument to EVENT_QUERY must be an integer with kind >= 2 when present"_err_en_US);
       }

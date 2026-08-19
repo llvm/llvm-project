@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_CHARACTER_VALUE_H_
 #define FORTRAN_EVALUATE_CHARACTER_VALUE_H_
 
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/object-sizes.h"
 #include "flang/Evaluate/type.h"
@@ -21,6 +22,7 @@
 
 namespace Fortran::evaluate::value {
 class CharacterValueImpl;
+using common::KindsEnum;
 
 /// A character string with dynamic character representation with
 /// std::basic_string-like API.
@@ -47,18 +49,18 @@ public:
   /// operations are supported in this state.
   CharacterValue();
 
-  explicit CharacterValue(int kind, std::string s);
-  explicit CharacterValue(int kind, std::u16string s);
-  explicit CharacterValue(int kind, std::u32string s);
+  explicit CharacterValue(KindsEnum kind, std::string s);
+  explicit CharacterValue(KindsEnum kind, std::u16string s);
+  explicit CharacterValue(KindsEnum kind, std::u32string s);
 
   /// Fill constructor: create a string of n copies of the given character.
-  CharacterValue(int kind, std::size_t n, char32_t c);
+  CharacterValue(KindsEnum kind, std::size_t n, char32_t c);
 
   // Named ctors
-  static CharacterValue Zero(int kind);
+  static CharacterValue Zero(KindsEnum kind);
 
   static CharacterValue FromRawBytes(
-      int kind, const void *raw, size_t byteSize);
+      KindsEnum kind, const void *raw, size_t byteSize);
 
   void print(llvm::raw_ostream &os) const;
 
@@ -71,14 +73,14 @@ public:
   bool IsMonostate() const;
 
   /// The kind of the value currently stored.
-  int kind() const;
+  KindsEnum kind() const;
 
   bool empty() const;
   std::size_t size() const;
   std::size_t length() const { return size(); }
 
   /// Byte size of one character unit (1, 2, or 4).
-  std::size_t charSize() const { return kind(); }
+  std::size_t charSize() const { return static_cast<std::size_t>(kind()); }
 
   /// Number of bytes accessed by FromRawBytes/StoreRawBytes
   size_t bytesStored() const { return length() * charSize(); }
@@ -119,11 +121,11 @@ public:
   bool operator>=(const CharacterValue &y) const { return !(*this < y); }
   bool operator>(const CharacterValue &y) const { return y < *this; }
 
-  CharacterValue ToAscii(int kind) const;
+  CharacterValue ToAscii(KindsEnum kind) const;
 
   /// Assign n copies of the given character, fixing the kind from the char
   /// type.
-  void assign(int kind, std::size_t n, char32_t c);
+  void assign(KindsEnum kind, std::size_t n, char32_t c);
 
   /// Assign from a raw character pointer and length.
   void assign(const char *p, std::size_t n);
@@ -194,14 +196,14 @@ public:
   void StoreRawBytes(void *dst, size_t size, bool *changed = nullptr) const;
 
   template <typename F>
-  static auto withCharProto(int kind, F &&f)
+  static auto withCharProto(KindsEnum kind, F &&f)
       -> decltype(std::declval<F>()(std::declval<char>())) {
     switch (kind) {
-    case 1:
+    case KindsEnum::Kind1:
       return f(char{});
-    case 2:
+    case KindsEnum::Kind2:
       return f(char16_t{});
-    case 4:
+    case KindsEnum::Kind4:
       return f(char32_t{});
     default:
       llvm_unreachable("unsupported character kind/monostate");
@@ -210,11 +212,11 @@ public:
 
   template <typename F> decltype(auto) withStdString(F &&f) const {
     switch (kind()) {
-    case 1:
+    case KindsEnum::Kind1:
       return f(*AsStdString());
-    case 2:
+    case KindsEnum::Kind2:
       return f(*AsU16String());
-    case 4:
+    case KindsEnum::Kind4:
       return f(*AsU32String());
     default:
       llvm_unreachable("unsupported kind/monostate");

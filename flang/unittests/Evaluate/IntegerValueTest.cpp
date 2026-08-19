@@ -50,11 +50,11 @@ struct KindName {
 template <typename T> class IntegerValueTypedKind : public testing::Test {};
 TYPED_TEST_SUITE(IntegerValueTypedKind, IntegerTypedKinds, KindName);
 
-class IntegerValueKind : public testing::TestWithParam<int> {};
+class IntegerValueKind : public testing::TestWithParam<KindsEnum> {};
 INSTANTIATE_TEST_SUITE_P(IntegerValueKind, IntegerValueKind,
     testing::ValuesIn(IntegerKinds),
-    [](const testing::TestParamInfo<int> &info) {
-      return "INTEGER(" + std::to_string(info.param) + ")";
+    [](const testing::TestParamInfo<KindsEnum> &info) {
+      return "INTEGER(" + std::to_string(static_cast<int>(info.param)) + ")";
     });
 
 //===----------------------------------------------------------------------===//
@@ -78,7 +78,7 @@ TEST(IntegerValue, Monostate) {
 TYPED_TEST(IntegerValueTypedKind, ConstructFromIntegral) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue positive{kind, 42};
   EXPECT_EQ(42, positive.ToInt64());
@@ -102,7 +102,7 @@ TYPED_TEST(IntegerValueTypedKind, ConstructFromIntegral) {
 }
 
 TEST_P(IntegerValueKind, CopyAndMove) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   const IntegerValue x{IntegerValue::HUGE(kind)};
 
   IntegerValue copyConstructed{x};
@@ -127,7 +127,7 @@ TEST_P(IntegerValueKind, CopyAndMove) {
 TYPED_TEST(IntegerValueTypedKind, KindCheckingConstructors) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue x{kind, 7};
   IntegerValue copied{kind, x};
@@ -143,7 +143,7 @@ TYPED_TEST(IntegerValueTypedKind, KindCheckingConstructors) {
 
 TYPED_TEST(IntegerValueTypedKind, Zero) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(kind, zero.kind());
@@ -153,50 +153,51 @@ TYPED_TEST(IntegerValueTypedKind, Zero) {
 }
 
 TEST(IntegerValue, Bits) {
-  EXPECT_EQ(8, IntegerValue::bits(1));
-  EXPECT_EQ(16, IntegerValue::bits(2));
-  EXPECT_EQ(16, IntegerValue::bits(3));
-  EXPECT_EQ(32, IntegerValue::bits(4));
-  EXPECT_EQ(64, IntegerValue::bits(8));
-  EXPECT_EQ(128, IntegerValue::bits(10)); // 80 significant bits, 128 stored
-  EXPECT_EQ(128, IntegerValue::bits(16));
+  EXPECT_EQ(8, IntegerValue::bits(KindsEnum::Kind1));
+  EXPECT_EQ(16, IntegerValue::bits(KindsEnum::Kind2));
+  EXPECT_EQ(16, IntegerValue::bits(KindsEnum::Kind3));
+  EXPECT_EQ(32, IntegerValue::bits(KindsEnum::Kind4));
+  EXPECT_EQ(64, IntegerValue::bits(KindsEnum::Kind8));
+  EXPECT_EQ(128,
+      IntegerValue::bits(KindsEnum::Kind10)); // 80 significant bits, 128 stored
+  EXPECT_EQ(128, IntegerValue::bits(KindsEnum::Kind16));
 
-  IntegerValue v{4, 0};
+  IntegerValue v{KindsEnum::Kind4, 0};
   EXPECT_EQ(32, v.bits());
 }
 
 TEST(IntegerValue, BytesStored) {
-  EXPECT_EQ(1u, IntegerValue::bytesStored(1));
-  EXPECT_EQ(2u, IntegerValue::bytesStored(2));
-  EXPECT_EQ(2u, IntegerValue::bytesStored(3));
-  EXPECT_EQ(4u, IntegerValue::bytesStored(4));
-  EXPECT_EQ(8u, IntegerValue::bytesStored(8));
-  EXPECT_EQ(16u, IntegerValue::bytesStored(10));
-  EXPECT_EQ(16u, IntegerValue::bytesStored(16));
+  EXPECT_EQ(1u, IntegerValue::bytesStored(KindsEnum::Kind1));
+  EXPECT_EQ(2u, IntegerValue::bytesStored(KindsEnum::Kind2));
+  EXPECT_EQ(2u, IntegerValue::bytesStored(KindsEnum::Kind3));
+  EXPECT_EQ(4u, IntegerValue::bytesStored(KindsEnum::Kind4));
+  EXPECT_EQ(8u, IntegerValue::bytesStored(KindsEnum::Kind8));
+  EXPECT_EQ(16u, IntegerValue::bytesStored(KindsEnum::Kind10));
+  EXPECT_EQ(16u, IntegerValue::bytesStored(KindsEnum::Kind16));
 
-  IntegerValue v{4, 0};
+  IntegerValue v{KindsEnum::Kind4, 0};
   EXPECT_EQ(4u, v.bytesStored());
 }
 
 TYPED_TEST(IntegerValueTypedKind, DIGITS) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   EXPECT_EQ(TypeParam::bits - 1, IntegerValue::DIGITS(kind));
 }
 
 TEST(IntegerValue, RANGE) {
-  EXPECT_EQ(2, IntegerValue::RANGE(1));
-  EXPECT_EQ(4, IntegerValue::RANGE(2));
-  EXPECT_EQ(9, IntegerValue::RANGE(4));
-  EXPECT_EQ(18, IntegerValue::RANGE(8));
-  EXPECT_EQ(38, IntegerValue::RANGE(16));
+  EXPECT_EQ(2, IntegerValue::RANGE(KindsEnum::Kind1));
+  EXPECT_EQ(4, IntegerValue::RANGE(KindsEnum::Kind2));
+  EXPECT_EQ(9, IntegerValue::RANGE(KindsEnum::Kind4));
+  EXPECT_EQ(18, IntegerValue::RANGE(KindsEnum::Kind8));
+  EXPECT_EQ(38, IntegerValue::RANGE(KindsEnum::Kind16));
 }
 
 TEST(IntegerValue, UnsignedRANGE) {
-  EXPECT_EQ(2, IntegerValue::UnsignedRANGE(1));
-  EXPECT_EQ(4, IntegerValue::UnsignedRANGE(2));
-  EXPECT_EQ(9, IntegerValue::UnsignedRANGE(4));
-  EXPECT_EQ(19, IntegerValue::UnsignedRANGE(8));
-  EXPECT_EQ(38, IntegerValue::UnsignedRANGE(16));
+  EXPECT_EQ(2, IntegerValue::UnsignedRANGE(KindsEnum::Kind1));
+  EXPECT_EQ(4, IntegerValue::UnsignedRANGE(KindsEnum::Kind2));
+  EXPECT_EQ(9, IntegerValue::UnsignedRANGE(KindsEnum::Kind4));
+  EXPECT_EQ(19, IntegerValue::UnsignedRANGE(KindsEnum::Kind8));
+  EXPECT_EQ(38, IntegerValue::UnsignedRANGE(KindsEnum::Kind16));
 }
 
 //===----------------------------------------------------------------------===//
@@ -205,9 +206,9 @@ TEST(IntegerValue, UnsignedRANGE) {
 
 TYPED_TEST(IntegerValueTypedKind, UnsignedDecimal) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ("0", zero.UnsignedDecimal());
 
   IntegerValue one{kind, 1};
@@ -250,9 +251,9 @@ TYPED_TEST(IntegerValueTypedKind, UnsignedDecimal) {
 
 TYPED_TEST(IntegerValueTypedKind, SignedDecimal) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ("0", zero.SignedDecimal());
 
   IntegerValue one{kind, 1};
@@ -297,9 +298,9 @@ TYPED_TEST(IntegerValueTypedKind, SignedDecimal) {
 
 TYPED_TEST(IntegerValueTypedKind, Hexadecimal) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ("0", zero.Hexadecimal());
 
   IntegerValue one{kind, 1};
@@ -342,7 +343,7 @@ TYPED_TEST(IntegerValueTypedKind, Hexadecimal) {
 TYPED_TEST(IntegerValueTypedKind, Read) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   {
     // Leading blanks are skipped and trailing text is left for the caller.
@@ -404,7 +405,7 @@ TYPED_TEST(IntegerValueTypedKind, Read) {
 
 TYPED_TEST(IntegerValueTypedKind, MASKL) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
   static constexpr UnsignedT nobits{0};
   static constexpr UnsignedT allbits{UnsignedT(~UnsignedT(0))};
@@ -442,7 +443,7 @@ TYPED_TEST(IntegerValueTypedKind, MASKL) {
 
 TYPED_TEST(IntegerValueTypedKind, MASKR) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
   static constexpr UnsignedT nobits{0};
   static constexpr UnsignedT allbits{UnsignedT(~UnsignedT(0))};
@@ -473,7 +474,7 @@ TYPED_TEST(IntegerValueTypedKind, MASKR) {
 
 TYPED_TEST(IntegerValueTypedKind, HUGE) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue huge{IntegerValue::HUGE(kind)};
   EXPECT_EQ(kind, huge.kind());
@@ -482,7 +483,7 @@ TYPED_TEST(IntegerValueTypedKind, HUGE) {
 
 TYPED_TEST(IntegerValueTypedKind, Least) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue least{IntegerValue::Least(kind)};
   EXPECT_EQ(kind, least.kind());
@@ -496,9 +497,9 @@ TYPED_TEST(IntegerValueTypedKind, Least) {
 TYPED_TEST(IntegerValueTypedKind, IsZero) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_TRUE(zero.IsZero());
 
   IntegerValue one{kind, 1};
@@ -532,9 +533,9 @@ TYPED_TEST(IntegerValueTypedKind, IsZero) {
 TYPED_TEST(IntegerValueTypedKind, IsNegative) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_FALSE(zero.IsNegative());
 
   IntegerValue one{kind, 1};
@@ -568,9 +569,9 @@ TYPED_TEST(IntegerValueTypedKind, IsNegative) {
 TYPED_TEST(IntegerValueTypedKind, CompareToZeroSigned) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(Ordering::Equal, zero.CompareToZeroSigned());
 
   IntegerValue one{kind, 1};
@@ -604,10 +605,10 @@ TYPED_TEST(IntegerValueTypedKind, CompareToZeroSigned) {
 TYPED_TEST(IntegerValueTypedKind, LEADZ) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(bits, zero.LEADZ());
 
   IntegerValue one{kind, 1};
@@ -632,7 +633,7 @@ TYPED_TEST(IntegerValueTypedKind, LEADZ) {
   EXPECT_EQ(0, sminv.LEADZ());
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
-  EXPECT_EQ((kind == 16) ? 65 : 1, patternv.LEADZ());
+  EXPECT_EQ((kind == KindsEnum::Kind16) ? 65 : 1, patternv.LEADZ());
 
   IntegerValue invpatternv{kind, ~UnsignedT(0x7FFFFFFF7FFF7F7Full)};
   EXPECT_EQ(0, invpatternv.LEADZ());
@@ -641,10 +642,10 @@ TYPED_TEST(IntegerValueTypedKind, LEADZ) {
 TYPED_TEST(IntegerValueTypedKind, POPCNT) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(0, zero.POPCNT());
 
   IntegerValue one{kind, 1};
@@ -670,19 +671,21 @@ TYPED_TEST(IntegerValueTypedKind, POPCNT) {
 
   IntegerValue patternv{kind, 0x7FFFFFFF7FFF7F7Full};
   const int kindPos{IntKindPos<TypeParam>};
-  EXPECT_EQ((kind == 16) ? 60 : bits - kindPos - 1, patternv.POPCNT());
+  EXPECT_EQ(
+      (kind == KindsEnum::Kind16) ? 60 : bits - kindPos - 1, patternv.POPCNT());
 
   IntegerValue invpatternv{kind, ~UnsignedT(0x7FFFFFFF7FFF7F7Full)};
-  EXPECT_EQ((kind == 16) ? 68 : 1 + kindPos, invpatternv.POPCNT());
+  EXPECT_EQ(
+      (kind == KindsEnum::Kind16) ? 68 : 1 + kindPos, invpatternv.POPCNT());
 }
 
 TYPED_TEST(IntegerValueTypedKind, POPPAR) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_FALSE(zero.POPPAR());
 
   IntegerValue one{kind, 1};
@@ -716,10 +719,10 @@ TYPED_TEST(IntegerValueTypedKind, POPPAR) {
 TYPED_TEST(IntegerValueTypedKind, TRAILZ) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
-  IntegerValue zero{IntegerValue::Zero(TypeParam::kind)};
+  IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(bits, zero.TRAILZ());
 
   IntegerValue one{kind, 1};
@@ -751,7 +754,7 @@ TYPED_TEST(IntegerValueTypedKind, TRAILZ) {
 }
 
 TYPED_TEST(IntegerValueTypedKind, BTEST) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -770,7 +773,7 @@ TYPED_TEST(IntegerValueTypedKind, BTEST) {
 
 TYPED_TEST(IntegerValueTypedKind, CompareUnsigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(Ordering::Equal, zero.CompareUnsigned(zero));
@@ -796,7 +799,7 @@ TYPED_TEST(IntegerValueTypedKind, CompareUnsigned) {
 
 TYPED_TEST(IntegerValueTypedKind, CompareSigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(Ordering::Equal, zero.CompareSigned(zero));
@@ -820,7 +823,7 @@ TYPED_TEST(IntegerValueTypedKind, CompareSigned) {
 
 TYPED_TEST(IntegerValueTypedKind, BitwiseComparisons) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   IntegerValue one{kind, 1};
@@ -851,7 +854,7 @@ TYPED_TEST(IntegerValueTypedKind, BitwiseComparisons) {
 
 TYPED_TEST(IntegerValueTypedKind, RelationalOperators) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_FALSE(zero < zero);
@@ -898,7 +901,7 @@ TYPED_TEST(IntegerValueTypedKind, RelationalOperators) {
 TYPED_TEST(IntegerValueTypedKind, ToUInt64) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(0u, zero.ToUInt64());
@@ -946,7 +949,7 @@ TYPED_TEST(IntegerValueTypedKind, ToUInt64) {
 TYPED_TEST(IntegerValueTypedKind, ToInt64) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(0, zero.ToInt64());
@@ -988,7 +991,7 @@ TYPED_TEST(IntegerValueTypedKind, ToInt64) {
 TYPED_TEST(IntegerValueTypedKind, ToUInt) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   // Small values fit in every host width, regardless of kind.
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -1031,7 +1034,7 @@ TYPED_TEST(IntegerValueTypedKind, ToUInt) {
 
   // Least truncates to zero in any host width narrower than the kind.
   IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
-  EXPECT_EQ(kind == 1 ? 0x80u : 0, sminv.ToUInt<uint8_t>());
+  EXPECT_EQ(kind == KindsEnum::Kind1 ? 0x80u : 0, sminv.ToUInt<uint8_t>());
   EXPECT_EQ(uint128_t{UnsignedT(std::numeric_limits<SignedT>::min())},
       sminv.ToUInt<uint128_t>());
 
@@ -1055,7 +1058,7 @@ TYPED_TEST(IntegerValueTypedKind, ToUInt) {
 TYPED_TEST(IntegerValueTypedKind, ToSInt) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   // Small values fit in every host width, regardless of kind.
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -1104,7 +1107,7 @@ TYPED_TEST(IntegerValueTypedKind, ToSInt) {
   // kind; a narrower width truncates it away, along with the sign. Widening
   // to the widest kind's own width (16) always sign-extends the true value.
   IntegerValue sminv{kind, std::numeric_limits<SignedT>::min()};
-  EXPECT_EQ(kind == 1 ? -128 : 0, sminv.ToSInt<int8_t>());
+  EXPECT_EQ(kind == KindsEnum::Kind1 ? -128 : 0, sminv.ToSInt<int8_t>());
   EXPECT_EQ(
       int8_t(std::numeric_limits<SignedT>::min()), sminv.ToSInt<int8_t>());
   EXPECT_EQ(
@@ -1140,7 +1143,7 @@ TYPED_TEST(IntegerValueTypedKind, ToSInt) {
 TYPED_TEST(IntegerValueTypedKind, NOT) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   EXPECT_EQ(UnsignedT(~UnsignedT{0}), zero.NOT().ToUInt<UnsignedT>());
@@ -1168,7 +1171,7 @@ TYPED_TEST(IntegerValueTypedKind, NOT) {
 
 TYPED_TEST(IntegerValueTypedKind, IAND) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(theanswer, theanswer.IAND(theanswer));
@@ -1188,7 +1191,7 @@ TYPED_TEST(IntegerValueTypedKind, IAND) {
 
 TYPED_TEST(IntegerValueTypedKind, IOR) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue theanswer{kind, 42};
   EXPECT_EQ(theanswer, theanswer.IOR(theanswer));
@@ -1208,7 +1211,7 @@ TYPED_TEST(IntegerValueTypedKind, IOR) {
 
 TYPED_TEST(IntegerValueTypedKind, IEOR) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   IntegerValue zero{IntegerValue::Zero(kind)};
 
   IntegerValue theanswer{kind, 42};
@@ -1225,7 +1228,7 @@ TYPED_TEST(IntegerValueTypedKind, IEOR) {
 
 TYPED_TEST(IntegerValueTypedKind, MERGE_BITS) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue negone{kind, -1};
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -1240,7 +1243,7 @@ TYPED_TEST(IntegerValueTypedKind, MERGE_BITS) {
 
 TYPED_TEST(IntegerValueTypedKind, MAX) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   IntegerValue one{kind, 1};
@@ -1259,7 +1262,7 @@ TYPED_TEST(IntegerValueTypedKind, MAX) {
 
 TYPED_TEST(IntegerValueTypedKind, MIN) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   IntegerValue one{kind, 1};
@@ -1279,7 +1282,7 @@ TYPED_TEST(IntegerValueTypedKind, MIN) {
 TYPED_TEST(IntegerValueTypedKind, IBCLR) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue theanswer{kind, 0b101010};
@@ -1299,7 +1302,7 @@ TYPED_TEST(IntegerValueTypedKind, IBCLR) {
 
 TYPED_TEST(IntegerValueTypedKind, IBSET) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue theanswer{kind, 42}; // 0b101010
@@ -1318,7 +1321,7 @@ TYPED_TEST(IntegerValueTypedKind, IBSET) {
 }
 
 TYPED_TEST(IntegerValueTypedKind, IBITS) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   // 0x...ef: low byte is 0b11101111.
@@ -1340,7 +1343,7 @@ TYPED_TEST(IntegerValueTypedKind, IBITS) {
 TYPED_TEST(IntegerValueTypedKind, ISHFT) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   // A positive count shifts left; a negative count shifts right.
@@ -1366,7 +1369,7 @@ TYPED_TEST(IntegerValueTypedKind, ISHFT) {
 TYPED_TEST(IntegerValueTypedKind, SHIFTL) {
   using UnsignedT = typename TypeParam::UnsignedT;
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue one{kind, 1};
@@ -1385,7 +1388,7 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTL) {
 
 TYPED_TEST(IntegerValueTypedKind, SHIFTR) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue negone{kind, -1};
@@ -1404,7 +1407,7 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTR) {
 
 TYPED_TEST(IntegerValueTypedKind, SHIFTA) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue negone{kind, -1};
@@ -1423,7 +1426,7 @@ TYPED_TEST(IntegerValueTypedKind, SHIFTA) {
 
 TYPED_TEST(IntegerValueTypedKind, ISHFTC) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   // Rotating a uniform bit pattern leaves it unchanged.
@@ -1451,7 +1454,7 @@ TYPED_TEST(IntegerValueTypedKind, ISHFTC) {
 
 TYPED_TEST(IntegerValueTypedKind, DSHIFTL) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
   const UnsignedT i{UnsignedT(0x0123456789abcdefull)};
   const UnsignedT j{UnsignedT(~i)};
@@ -1470,7 +1473,7 @@ TYPED_TEST(IntegerValueTypedKind, DSHIFTL) {
 
 TYPED_TEST(IntegerValueTypedKind, DSHIFTR) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
   const UnsignedT i{UnsignedT(0x0123456789abcdefull)};
   const UnsignedT j{UnsignedT(~i)};
@@ -1494,7 +1497,7 @@ TYPED_TEST(IntegerValueTypedKind, DSHIFTR) {
 
 TYPED_TEST(IntegerValueTypedKind, Negate) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   auto negZero{zero.Negate()};
@@ -1530,7 +1533,7 @@ TYPED_TEST(IntegerValueTypedKind, Negate) {
 
 TYPED_TEST(IntegerValueTypedKind, ABS) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   auto absZero{zero.ABS()};
@@ -1568,7 +1571,7 @@ TYPED_TEST(IntegerValueTypedKind, ABS) {
 
 TYPED_TEST(IntegerValueTypedKind, AddUnsigned) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   auto zeroPlusZero{zero.AddUnsigned(zero)};
@@ -1605,7 +1608,7 @@ TYPED_TEST(IntegerValueTypedKind, AddUnsigned) {
 
 TYPED_TEST(IntegerValueTypedKind, AddSigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   auto zeroPlusZero{zero.AddSigned(zero)};
@@ -1639,7 +1642,7 @@ TYPED_TEST(IntegerValueTypedKind, AddSigned) {
 
 TYPED_TEST(IntegerValueTypedKind, SubtractSigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   auto zeroMinusZero{zero.SubtractSigned(zero)};
@@ -1672,7 +1675,7 @@ TYPED_TEST(IntegerValueTypedKind, SubtractSigned) {
 
 TYPED_TEST(IntegerValueTypedKind, DIM) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue one{kind, 1};
   IntegerValue theanswer{kind, 42};
@@ -1705,7 +1708,7 @@ TYPED_TEST(IntegerValueTypedKind, DIM) {
 
 TYPED_TEST(IntegerValueTypedKind, SIGN) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue one{kind, 1};
   IntegerValue negone{kind, -1};
@@ -1740,7 +1743,7 @@ TYPED_TEST(IntegerValueTypedKind, SIGN) {
 
 TYPED_TEST(IntegerValueTypedKind, MultiplyUnsigned) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int bits{TypeParam::bits};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -1779,7 +1782,7 @@ TYPED_TEST(IntegerValueTypedKind, MultiplyUnsigned) {
 
 TYPED_TEST(IntegerValueTypedKind, MultiplySigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue zero{IntegerValue::Zero(kind)};
   IntegerValue theanswer{kind, 42};
@@ -1812,7 +1815,7 @@ TYPED_TEST(IntegerValueTypedKind, MultiplySigned) {
 
 TYPED_TEST(IntegerValueTypedKind, DivideUnsigned) {
   using UnsignedT = typename TypeParam::UnsignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   IntegerValue patternv{kind, 0x0123456789abcdefull};
   IntegerValue zero{IntegerValue::Zero(kind)};
@@ -1846,7 +1849,7 @@ TYPED_TEST(IntegerValueTypedKind, DivideUnsigned) {
 
 TYPED_TEST(IntegerValueTypedKind, DivideSigned) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   // A nonzero remainder has the sign of the dividend: this is MOD, not MODULO.
   struct {
@@ -1892,7 +1895,7 @@ TYPED_TEST(IntegerValueTypedKind, DivideSigned) {
 
 TYPED_TEST(IntegerValueTypedKind, MODULO) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   // The result has the sign of the divisor.
   struct {
     int64_t x, y, modulo;
@@ -1929,7 +1932,7 @@ TYPED_TEST(IntegerValueTypedKind, MODULO) {
 }
 
 TYPED_TEST(IntegerValueTypedKind, Power) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   IntegerValue three{kind, 3};
   IntegerValue two{kind, 2};
   auto square{three.Power(two)};
@@ -1977,7 +1980,7 @@ TYPED_TEST(IntegerValueTypedKind, Power) {
 
 TYPED_TEST(IntegerValueTypedKind, RawBytesRoundTrip) {
   using SignedT = typename TypeParam::SignedT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   ASSERT_EQ(
       IntegerValue::bytesStored(kind), IntegerValue::Zero(kind).bytesStored());
 
@@ -2045,19 +2048,19 @@ TYPED_TEST(IntegerValueTypedKind, RawBytesRoundTrip) {
 //===----------------------------------------------------------------------===//
 
 class IntegerValueKindPair
-    : public testing::TestWithParam<std::tuple<int, int>> {};
+    : public testing::TestWithParam<std::tuple<KindsEnum, KindsEnum>> {};
 
 INSTANTIATE_TEST_SUITE_P(AllKindPairs, IntegerValueKindPair,
     testing::Combine(
-        testing::ValuesIn(std::initializer_list<int> FORTRAN_INTEGER_KINDS),
-        testing::ValuesIn(std::initializer_list<int> FORTRAN_INTEGER_KINDS)),
-    [](const testing::TestParamInfo<std::tuple<int, int>> &info) {
-      return "KIND" + std::to_string(std::get<0>(info.param)) + "AndKIND" +
-          std::to_string(std::get<1>(info.param));
+        testing::ValuesIn(IntegerKinds), testing::ValuesIn(IntegerKinds)),
+    [](const testing::TestParamInfo<std::tuple<KindsEnum, KindsEnum>> &info) {
+      return "KIND" +
+          std::to_string(static_cast<int>(std::get<0>(info.param))) +
+          "AndKIND" + std::to_string(static_cast<int>(std::get<1>(info.param)));
     });
 
 TEST_P(IntegerValueKindPair, ConvertUnsigned) {
-  const int from{std::get<0>(GetParam())}, to{std::get<1>(GetParam())};
+  const KindsEnum from{std::get<0>(GetParam())}, to{std::get<1>(GetParam())};
   const int fromBits{IntegerValue::bits(from)}, toBits{IntegerValue::bits(to)};
   const int common{std::min(fromBits, toBits)};
 
@@ -2076,7 +2079,7 @@ TEST_P(IntegerValueKindPair, ConvertUnsigned) {
 }
 
 TEST_P(IntegerValueKindPair, ConvertSigned) {
-  const int from{std::get<0>(GetParam())}, to{std::get<1>(GetParam())};
+  const KindsEnum from{std::get<0>(GetParam())}, to{std::get<1>(GetParam())};
   const int fromBits{IntegerValue::bits(from)}, toBits{IntegerValue::bits(to)};
   // All ones stays all ones: it sign-extends and truncates to itself.
   auto ones{IntegerValue::ConvertSigned(IntegerValue{from, -1}, toBits)};
@@ -2095,8 +2098,8 @@ TEST_P(IntegerValueKindPair, ConvertSigned) {
 }
 
 TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
-  const int receiver{std::get<0>(GetParam())};
-  const int other{std::get<1>(GetParam())};
+  const KindsEnum receiver{std::get<0>(GetParam())};
+  const KindsEnum other{std::get<1>(GetParam())};
   IntegerValue x{receiver, 0x5a};
   IntegerValue allOnes{other, -1};
   // The result takes the receiver's kind; the argument is converted to it,
@@ -2111,7 +2114,7 @@ TEST_P(IntegerValueKindPair, MixedKindOperandsAreCoerced) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-TEST(IntegerValue, Dump) { IntegerValue(4, -1).dump(); }
+TEST(IntegerValue, Dump) { IntegerValue(KindsEnum::Kind4, -1).dump(); }
 #endif
 
 // Not an IntegerValue method, but the ordering that its comparisons return;
@@ -2131,7 +2134,7 @@ TEST(Ordering, Reverse) {
 // dyadic operations, every pair of values) of a narrow kind.
 //===----------------------------------------------------------------------===//
 
-void ExhaustiveUnary(int kind) {
+void ExhaustiveUnary(KindsEnum kind) {
   const int bits{IntegerValue::bits(kind)};
   ASSERT_LE(bits, 16); // the reference arithmetic below assumes a narrow kind
   const uint64_t maxUnsigned{(uint64_t{1} << bits) - 1};
@@ -2231,12 +2234,12 @@ void ExhaustiveUnary(int kind) {
   }
 }
 
-TEST(IntegerValue, ExhaustiveUnaryKind1) { ExhaustiveUnary(1); }
+TEST(IntegerValue, ExhaustiveUnaryKind1) { ExhaustiveUnary(KindsEnum::Kind1); }
 
-TEST(IntegerValue, ExhaustiveUnaryKind2) { ExhaustiveUnary(2); }
+TEST(IntegerValue, ExhaustiveUnaryKind2) { ExhaustiveUnary(KindsEnum::Kind2); }
 
 TEST(IntegerValue, ExhaustiveDyadicKind1) {
-  constexpr int kind{1};
+  constexpr KindsEnum kind{KindsEnum::Kind1};
   constexpr int bits{8};
   constexpr uint64_t maxUnsigned{0xff};
   constexpr int64_t maxPositiveSigned{0x7f};
@@ -2331,7 +2334,7 @@ TEST(IntegerValue, ExhaustiveDyadicKind1) {
 }
 
 TYPED_TEST(IntegerValueTypedKind, Print) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int pos{IntKindPos<TypeParam>};
 
   llvm::SmallString<128> buf;

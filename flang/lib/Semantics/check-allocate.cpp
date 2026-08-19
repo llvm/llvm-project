@@ -422,7 +422,9 @@ static bool HaveCompatibleTypeParameters(
     return true;
   }
   if (const IntrinsicTypeSpec * intrinsicType1{type1.AsIntrinsic()}) {
-    return evaluate::ToInt64(intrinsicType1->kind()).value() == type2.kind();
+    return static_cast<KindsEnum>(
+               evaluate::ToInt64(intrinsicType1->kind()).value()) ==
+        type2.kind();
   } else if (type2.IsUnlimitedPolymorphic()) {
     return false;
   } else if (const DerivedTypeSpec * derivedType1{type1.AsDerived()}) {

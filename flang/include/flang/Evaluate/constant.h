@@ -12,6 +12,7 @@
 #include "formatting.h"
 #include "type.h"
 #include "flang/Common/reference.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Support/default-kinds.h"
 #include <map>
 #include <vector>
@@ -110,47 +111,49 @@ public:
   using Result = RESULT;
   using Element = ELEMENT;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   // Constructor for creating ConstantBase from an actual value (i.e.
   // literals, etc.)
   template <typename A>
-  ConstantBase(int kind, const A &x, Result res)
+  ConstantBase(KindsEnum kind, const A &x, Result res)
       : kind_{kind}, result_{res}, values_{A{kind, x}} {
     CHECK_KIND(kind, RESULT);
   }
-  ConstantBase(int kind, ELEMENT &&x)
+  ConstantBase(KindsEnum kind, ELEMENT &&x)
       : kind_{kind}, result_{Result{kind}}, values_{std::move(x)} {
     CHECK_KIND(kind, RESULT);
   }
 
   template <TypeCategory CAT>
-  ConstantBase(int kind, const SomeKind<CAT> &x)
+  ConstantBase(KindsEnum kind, const SomeKind<CAT> &x)
       : kind_{kind}, result_{Result{kind}}, values_{x} {
     CHECK_KIND(kind, RESULT);
   }
   template <TypeCategory CAT>
-  ConstantBase(int kind, SomeKind<CAT> &&x)
+  ConstantBase(KindsEnum kind, SomeKind<CAT> &&x)
       : kind_{kind}, result_{Result{kind}}, values_{std::move(x)} {
     CHECK_KIND(kind, RESULT);
   }
 
   template <typename A>
-  ConstantBase(int kind, const A &x)
+  ConstantBase(KindsEnum kind, const A &x)
       : kind_{kind}, result_{Result{kind}}, values_{A{kind, x}} {
     CHECK_KIND(kind, RESULT);
   }
-  ConstantBase(int kind, ELEMENT &&x, Result res)
+  ConstantBase(KindsEnum kind, ELEMENT &&x, Result res)
       : kind_{kind}, result_{res}, values_{std::move(x)} {
     CHECK_KIND(kind, RESULT);
   }
 
-  ConstantBase(int kind, std::vector<Element> &&x, ConstantSubscripts &&sh)
+  ConstantBase(
+      KindsEnum kind, std::vector<Element> &&x, ConstantSubscripts &&sh)
       : ConstantBase{kind, std::move(x), std::move(sh), Result{kind}} {}
   ConstantBase(
-      int kind, std::vector<Element> &&, ConstantSubscripts &&, Result);
+      KindsEnum kind, std::vector<Element> &&, ConstantSubscripts &&, Result);
   template <typename A, typename B, typename C>
-  ConstantBase(int kind, const std::map<A, B, C> &x, Result res = Result{})
+  ConstantBase(
+      KindsEnum kind, const std::map<A, B, C> &x, Result res = Result{})
       : kind_{kind}, result_{res}, values_{x} {}
 
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConstantBase)
@@ -172,7 +175,7 @@ protected:
   std::size_t CopyFrom(const ConstantBase &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
-  int kind_;
+  KindsEnum kind_;
   Result result_; // usually empty except for Real & Complex
   std::vector<Element> values_;
 };
@@ -209,12 +212,12 @@ public:
   using Result = Type<TypeCategory::Character>;
   using Element = Scalar<Result>;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   CLASS_BOILERPLATE(Constant)
-  explicit Constant(int kind, const Scalar<Result> &);
-  explicit Constant(int kind, Scalar<Result> &&);
-  Constant(int kind, ConstantSubscript length, std::vector<Element> &&,
+  explicit Constant(KindsEnum kind, const Scalar<Result> &);
+  explicit Constant(KindsEnum kind, Scalar<Result> &&);
+  Constant(KindsEnum kind, ConstantSubscript length, std::vector<Element> &&,
       ConstantSubscripts &&);
   ~Constant();
 
@@ -252,7 +255,7 @@ public:
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
 private:
-  int kind_;
+  KindsEnum kind_;
   Scalar<Result> values_; // one contiguous string
   ConstantSubscript length_;
   bool wasHollerith_{false};
@@ -275,11 +278,11 @@ public:
 
   Constant(const StructureConstructor &);
   Constant(StructureConstructor &&);
-  Constant(int kind, const StructureConstructor &v) : Constant(v) {
-    CHECK(kind == 0);
+  Constant(KindsEnum kind, const StructureConstructor &v) : Constant(v) {
+    CHECK(kind == NoKind);
   }
-  Constant(int kind, StructureConstructor &&v) : Constant(std::move(v)) {
-    CHECK(kind == 0);
+  Constant(KindsEnum kind, StructureConstructor &&v) : Constant(std::move(v)) {
+    CHECK(kind == NoKind);
   }
   Constant(const semantics::DerivedTypeSpec &,
       std::vector<StructureConstructorValues> &&, ConstantSubscripts &&);
@@ -313,20 +316,21 @@ inline Constant<LogicalResult> MakeLogicalResultConstant(bool v) {
 template <typename T, typename CharT,
     typename =
         std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Character>>>>
-inline Constant<T> MakeConstant(int kind, const std::basic_string<CharT> &v) {
+inline Constant<T> MakeConstant(
+    KindsEnum kind, const std::basic_string<CharT> &v) {
   return Constant<T>{kind, value::CharacterValue{kind, v}};
 }
 
 template <typename T, typename CharT,
     typename =
         std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Character>>>>
-inline Constant<T> MakeConstant(int kind, std::basic_string<CharT> &&v) {
+inline Constant<T> MakeConstant(KindsEnum kind, std::basic_string<CharT> &&v) {
   return Constant<T>{kind, value::CharacterValue{kind, std::move(v)}};
 }
 
 template <typename T,
     typename = std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Integer>>>>
-inline Constant<T> MakeConstant(int kind, int64_t v) {
+inline Constant<T> MakeConstant(KindsEnum kind, int64_t v) {
   return Constant<T>{kind, value::IntegerValue{kind, v}};
 }
 

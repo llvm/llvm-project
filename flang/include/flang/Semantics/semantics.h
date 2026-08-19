@@ -82,11 +82,13 @@ public:
   const std::string &openAccDefaultNoneScalarsStrictDisableOption() const {
     return openAccDefaultNoneScalarsStrictDisableOption_;
   }
-  int GetDefaultKind(TypeCategory) const;
-  int doublePrecisionKind() const {
+  KindsEnum GetDefaultKind(TypeCategory) const;
+  KindsEnum doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
   }
-  int quadPrecisionKind() const { return defaultKinds_.quadPrecisionKind(); }
+  KindsEnum quadPrecisionKind() const {
+    return defaultKinds_.quadPrecisionKind();
+  }
   bool IsEnabled(common::LanguageFeature feature) const {
     return languageFeatures_.IsEnabled(feature);
   }
@@ -193,8 +195,9 @@ public:
     return *this;
   }
 
-  const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
-  const DeclTypeSpec &MakeLogicalType(int kind = 0);
+  const DeclTypeSpec &MakeNumericType(
+      TypeCategory, KindsEnum kind = KindsEnum::NoKind);
+  const DeclTypeSpec &MakeLogicalType(KindsEnum kind = KindsEnum::NoKind);
 
   std::size_t maxErrors() const { return maxErrors_; }
 

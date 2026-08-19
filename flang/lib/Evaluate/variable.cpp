@@ -647,16 +647,17 @@ template <typename T> const Symbol *Designator<T>::GetLastSymbol() const {
 template <typename T>
 std::optional<DynamicType> Designator<T>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
-    return DynamicType{Result::category, kind()};
+    return DynamicType{Result::category, static_cast<KindsEnum>(kind())};
   }
   if constexpr (Result::category == TypeCategory::Character) {
     if (std::holds_alternative<Substring>(u)) {
       if (auto len{LEN()}) {
         if (auto n{ToInt64(*len)}) {
-          return DynamicType{kind(), *n};
+          return DynamicType{static_cast<KindsEnum>(kind()), *n};
         }
       }
-      return DynamicType{TypeCategory::Character, kind()};
+      return DynamicType{
+          TypeCategory::Character, static_cast<KindsEnum>(kind())};
     }
   }
   if (const Symbol * symbol{GetLastSymbol()}) {

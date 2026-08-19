@@ -126,7 +126,7 @@ private:
 
   template <typename D, size_t... Is>
   D MutateOp(D &&op, std::index_sequence<Is...>) const {
-    const int kind{op.kind()};
+    const KindsEnum kind{op.kind()};
     return D(kind, Mutate(std::move(op.template operand<Is>()))...);
   }
 

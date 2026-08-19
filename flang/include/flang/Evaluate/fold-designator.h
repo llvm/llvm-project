@@ -116,7 +116,7 @@ private:
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<Type<TypeCategory::Character>> &designator,
       ConstantSubscript which) {
-    const int kind{designator.kind()};
+    const KindsEnum kind{designator.kind()};
     return common::visit(
         common::visitors{
             [&, kind](const Substring &ss) {
@@ -134,9 +134,10 @@ private:
                       if (*start < 1) {
                         isOutOfRange_ = true;
                       }
-                      result->Augment(kind * (*start - 1));
-                      result->set_size(
-                          *end >= *start ? kind * (*end - *start + 1) : 0);
+                      result->Augment(static_cast<int>(kind) * (*start - 1));
+                      result->set_size(*end >= *start
+                              ? static_cast<int>(kind) * (*end - *start + 1)
+                              : 0);
                       if (len) {
                         if (auto lenVal{ToInt64(*len)}) {
                           if (*end > *lenVal) {

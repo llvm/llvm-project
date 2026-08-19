@@ -678,7 +678,6 @@ void Fortran::lower::omp::lowerAtomic(
                   *cond)) {
         common::visit(
             [&](const auto &kindLogical) {
-              using LogicalExpr = std::decay_t<decltype(kindLogical)>;
               if (const auto *logOp =
                       std::get_if<evaluate::LogicalOperation>(&kindLogical.u)) {
                 if (logOp->logicalOperator == common::LogicalOperator::Eqv ||

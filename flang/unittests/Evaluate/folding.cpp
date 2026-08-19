@@ -9,6 +9,7 @@
 #include "flang/Testing/testing.h"
 #include <tuple>
 
+using namespace Fortran::common;
 using namespace Fortran::evaluate;
 
 // helper to call functions on all types from tuple
@@ -16,7 +17,7 @@ template <typename... T> struct RunOnTypes {};
 template <typename Test, typename... T>
 struct RunOnTypes<Test, std::tuple<T...>> {
   template <typename U> static void RunOnKinds() {
-    for (int kind : KindsByType<U::category>::kinds) {
+    for (KindsEnum kind : KindsByType<U::category>::kinds) {
       Test::template Run<U>(kind);
     }
   }
@@ -26,7 +27,7 @@ struct RunOnTypes<Test, std::tuple<T...>> {
 
 // test for fold.h GetScalarConstantValue function
 struct TestGetScalarConstantValue {
-  template <typename T> static void Run(int kind) {
+  template <typename T> static void Run(KindsEnum kind) {
     Expr<T> exprFullyTyped{MakeZeroExpr<T>(kind)};
     Expr<SomeKind<T::category>> exprSomeKind{exprFullyTyped};
     Expr<SomeType> exprSomeType{exprSomeKind};
@@ -39,7 +40,7 @@ struct TestGetScalarConstantValue {
 template <typename T>
 Scalar<T> CallHostRt(
     HostRuntimeWrapper func, FoldingContext &context, Scalar<T> x) {
-  const int kind{x.kind()};
+  const KindsEnum kind{x.kind()};
   return GetScalarConstantValue<T>(
       func(context, {AsGenericExpr(Constant<T>{kind, x})}))
       .value();
@@ -68,7 +69,8 @@ void TestHostRuntimeSubnormalFlushing() {
     // Test subnormal argument flushing
     if (auto callable{GetHostRuntimeWrapper("log", r4, {r4})}) {
       // Biggest IEEE 32bits subnormal power of two
-      const Scalar<FR4> x1{4, Scalar<FR4>::Word{4, 0x00400000}};
+      const Scalar<FR4> x1{
+          KindsEnum::Kind4, Scalar<FR4>::Word{KindsEnum::Kind4, 0x00400000}};
       Scalar<FR4> y1Flushing{CallHostRt<FR4>(*callable, flushingContext, x1)};
       Scalar<FR4> y1NoFlushing{
           CallHostRt<FR4>(*callable, noFlushingContext, x1)};

@@ -196,7 +196,7 @@ auto UnwrapExpr(B &x) -> common::Constify<A, B> * {
   return nullptr;
 }
 template <typename A, typename B>
-auto UnwrapExpr(int kind, B &x) -> common::Constify<A, B> * {
+auto UnwrapExpr(KindsEnum kind, B &x) -> common::Constify<A, B> * {
   using Ty = std::decay_t<B>;
   if (x.kind() != kind)
     return nullptr;
@@ -226,7 +226,7 @@ const A *UnwrapExpr(const std::optional<B> &x) {
   }
 }
 template <typename A, typename B>
-const A *UnwrapExpr(int kind, const std::optional<B> &x) {
+const A *UnwrapExpr(KindsEnum kind, const std::optional<B> &x) {
   if (x) {
     return UnwrapExpr<A>(kind, *x);
   } else {
@@ -241,7 +241,8 @@ template <typename A, typename B> A *UnwrapExpr(std::optional<B> &x) {
     return nullptr;
   }
 }
-template <typename A, typename B> A *UnwrapExpr(int kind, std::optional<B> &x) {
+template <typename A, typename B>
+A *UnwrapExpr(KindsEnum kind, std::optional<B> &x) {
   if (x) {
     return UnwrapExpr<A>(kind, *x);
   } else {
@@ -257,7 +258,8 @@ template <typename A, typename B> const A *UnwrapExpr(const B *x) {
   }
 }
 
-template <typename A, typename B> const A *UnwrapExpr(int kind, const B *x) {
+template <typename A, typename B>
+const A *UnwrapExpr(KindsEnum kind, const B *x) {
   if (x) {
     return UnwrapExpr<A>(kind, *x);
   } else {
@@ -273,7 +275,7 @@ template <typename A, typename B> A *UnwrapExpr(B *x) {
   }
 }
 
-template <typename A, typename B> A *UnwrapExpr(int kind, B *x) {
+template <typename A, typename B> A *UnwrapExpr(KindsEnum kind, B *x) {
   if (x) {
     return UnwrapExpr<A>(kind, *x);
   } else {
@@ -597,7 +599,7 @@ const Symbol *GetLastPointerSymbol(const evaluate::DataRef &);
 // one arbitrary expression to the type of another with ConvertTo(to, from).
 
 template <typename TO, TypeCategory FROMCAT>
-Expr<TO> ConvertToType(int toKind, Expr<SomeKind<FROMCAT>> &&x) {
+Expr<TO> ConvertToType(KindsEnum toKind, Expr<SomeKind<FROMCAT>> &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (FROMCAT == TO::category) {
     auto *already{std::get_if<Expr<TO>>(&x.u)};
@@ -627,13 +629,13 @@ Expr<TO> ConvertToType(int toKind, Expr<SomeKind<FROMCAT>> &&x) {
 }
 
 template <typename TO, TypeCategory FROMCAT>
-Expr<TO> ConvertToType(int toKind, Expr<Type<FROMCAT>> &&x) {
+Expr<TO> ConvertToType(KindsEnum toKind, Expr<Type<FROMCAT>> &&x) {
   return ConvertToType<TO, FROMCAT>(
       toKind, Expr<SomeKind<FROMCAT>>{std::move(x)});
 }
 
 template <typename TO>
-Expr<TO> ConvertToType(int toKind, BOZLiteralConstant &&x) {
+Expr<TO> ConvertToType(KindsEnum toKind, BOZLiteralConstant &&x) {
   static_assert(IsSpecificIntrinsicType<TO>);
   if constexpr (TO::category == TypeCategory::Integer ||
       TO::category == TypeCategory::Unsigned) {
@@ -666,7 +668,7 @@ std::optional<Expr<SomeType>> ConvertToType(
 // Conversions to the type of another expression
 template <TypeCategory TC, typename FROM>
 common::IfNoLvalue<Expr<Type<TC>>, FROM> ConvertTo(
-    int toKind, const Expr<Type<TC>> &to, FROM &&x) {
+    KindsEnum toKind, const Expr<Type<TC>> &to, FROM &&x) {
   return ConvertToType<Type<TC>>(toKind, std::move(x));
 }
 
@@ -676,7 +678,7 @@ common::IfNoLvalue<Expr<SomeKind<TC>>, FROM> ConvertTo(
   return common::visit(
       [&](const auto &toKindExpr) {
         using KindExpr = std::decay_t<decltype(toKindExpr)>;
-        const int toKind{toKindExpr.kind()};
+        const KindsEnum toKind{toKindExpr.kind()};
         return AsCategoryExpr(
             ConvertToType<ResultType<KindExpr>>(toKind, std::move(from)));
       },
@@ -687,7 +689,7 @@ common::IfNoLvalue<Expr<SomeKind<TC>>, FROM> ConvertTo(
 // kind of some category (usually but not necessarily distinct).
 template <TypeCategory TOCAT, typename VALUE>
 common::IfNoLvalue<Expr<SomeKind<TOCAT>>, VALUE> ConvertToKind(
-    int kind, VALUE &&x) {
+    KindsEnum kind, VALUE &&x) {
   return AsCategoryExpr(ConvertToType<Type<TOCAT>>(kind, std::move(x)));
 }
 
@@ -710,9 +712,9 @@ template <TypeCategory CAT>
 SameKindExprs<CAT, 2> AsSameKindExprs(
     Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {
   Expr<Type<CAT>> kx{std::get<Expr<Type<CAT>>>(std::move(x.u))};
-  int xKind{kx.kind()};
+  KindsEnum xKind{kx.kind()};
   Expr<Type<CAT>> ky{std::get<Expr<Type<CAT>>>(std::move(y.u))};
-  int yKind{ky.kind()};
+  KindsEnum yKind{ky.kind()};
   if (xKind == yKind) {
     return {SameExprs<Type<CAT>>{std::move(kx), std::move(ky)}};
   } else if (xKind < yKind) {
@@ -736,21 +738,21 @@ SameKindExprs<CAT, 2> AsSameKindExprs(
 using ConvertRealOperandsResult =
     std::optional<SameKindExprs<TypeCategory::Real, 2>>;
 ConvertRealOperandsResult ConvertRealOperands(parser::ContextualMessages &,
-    Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
+    Expr<SomeType> &&, Expr<SomeType> &&, KindsEnum defaultRealKind);
 
 // Per F'2018 R718, if both components are INTEGER, they are both converted
 // to default REAL and the result is default COMPLEX.  Otherwise, the
 // kind of the result is the kind of most precise REAL component, and the other
 // component is converted if necessary to its type.
 std::optional<Expr<SomeComplex>> ConstructComplex(parser::ContextualMessages &,
-    Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
+    Expr<SomeType> &&, Expr<SomeType> &&, KindsEnum defaultRealKind);
 std::optional<Expr<SomeComplex>> ConstructComplex(parser::ContextualMessages &,
     std::optional<Expr<SomeType>> &&, std::optional<Expr<SomeType>> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 
 template <typename A> Expr<TypeOf<A>> ScalarConstantToExpr(const A &x) {
   using Ty = TypeOf<A>;
-  const int kind{x.kind()};
+  const KindsEnum kind{x.kind()};
   static_assert(
       std::is_same_v<Scalar<Ty>, std::decay_t<A>>, "TypeOf<> is broken");
   return MakeConstantExpr<Ty>(kind, x);
@@ -788,23 +790,23 @@ Expr<SomeKind<CAT>> PromoteAndCombine(
 // powers.
 template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(parser::ContextualMessages &,
-    Expr<SomeType> &&, Expr<SomeType> &&, int defaultRealKind);
+    Expr<SomeType> &&, Expr<SomeType> &&, KindsEnum defaultRealKind);
 
 extern template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Divide>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Add>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 extern template std::optional<Expr<SomeType>> NumericOperation<Subtract>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 
 std::optional<Expr<SomeType>> Negation(
     parser::ContextualMessages &, Expr<SomeType> &&);
@@ -826,7 +828,7 @@ Expr<LogicalResult> PackageRelation(
 
 inline Expr<Type<TypeCategory::Logical>> LogicalNegation(
     Expr<Type<TypeCategory::Logical>> &&x) {
-  const int kind{x.kind()};
+  const KindsEnum kind{static_cast<KindsEnum>(x.kind())};
   return AsExpr(Not{kind, std::move(x)});
 }
 
@@ -907,17 +909,17 @@ struct TypeKindVisitor {
   using Result = std::optional<Expr<SomeType>>;
   using Types = CategoryTypes<CAT>;
 
-  TypeKindVisitor(int k, VALUE &&x) : kind{k}, value{std::move(x)} {}
-  TypeKindVisitor(int k, const VALUE &x) : kind{k}, value{x} {}
+  TypeKindVisitor(KindsEnum k, VALUE &&x) : kind{k}, value{std::move(x)} {}
+  TypeKindVisitor(KindsEnum k, const VALUE &x) : kind{k}, value{x} {}
 
-  template <typename T> Result Test(int k) {
+  template <typename T> Result Test(KindsEnum k) {
     if (kind == k) {
       return AsGenericExpr(TEMPLATE<T>{k, std::move(value)});
     }
     return std::nullopt;
   }
 
-  int kind;
+  KindsEnum kind;
   VALUE value;
 };
 
@@ -927,7 +929,7 @@ struct TypeKindVisitor {
 template <TypeCategory CATEGORY, template <typename> typename WRAPPER,
     typename WRAPPED>
 common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> WrapperHelper(
-    int kind, WRAPPED &&x) {
+    KindsEnum kind, WRAPPED &&x) {
   return SearchTypes(
       TypeKindVisitor<CATEGORY, WRAPPER, WRAPPED>{kind, std::move(x)});
 }
@@ -957,7 +959,7 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
         dyType.kind(), std::move(x));
   case TypeCategory::Derived:
     return AsGenericExpr(
-        Expr<SomeDerived>{WRAPPER<SomeDerived>{0, std::move(x)}});
+        Expr<SomeDerived>{WRAPPER<SomeDerived>{NoKind, std::move(x)}});
   }
 }
 
@@ -1282,7 +1284,7 @@ private:
 // If the type is Character or a derived type, take the length or type
 // (resp.) from a another Constant.
 template <typename T>
-Constant<T> PackageConstant(int kind, std::vector<Scalar<T>> &&elements,
+Constant<T> PackageConstant(KindsEnum kind, std::vector<Scalar<T>> &&elements,
     const Constant<T> &reference, const ConstantSubscripts &shape) {
   if constexpr (T::category == TypeCategory::Character) {
     return Constant<T>{

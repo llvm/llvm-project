@@ -508,7 +508,7 @@ struct LengthAndTypeCollector {
           const Fortran::evaluate::ArrayConstructor<T> &arrayCtorExpr,
           Fortran::lower::SymMap &, Fortran::lower::StatementContext &,
           mlir::SmallVectorImpl<mlir::Value> &) {
-    const int kind{arrayCtorExpr.kind()};
+    const int kind{static_cast<int>(arrayCtorExpr.kind())};
     // Numerical and Logical types.
     return Fortran::lower::getFIRType(&converter.getMLIRContext(), T::category,
                                       kind,
@@ -541,7 +541,7 @@ struct LengthAndTypeCollector<Character> {
           Fortran::lower::SymMap &symMap,
           Fortran::lower::StatementContext &stmtCtx,
           mlir::SmallVectorImpl<mlir::Value> &lengths) {
-    const int kind{arrayCtorExpr.kind()};
+    const int kind{static_cast<int>(arrayCtorExpr.kind())};
     llvm::SmallVector<Fortran::lower::LenParameterTy> typeLengths;
     if (const Fortran::evaluate::ExtentExpr *lenExpr = arrayCtorExpr.LEN()) {
       lengths.push_back(

@@ -589,16 +589,16 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     opts.featuresAsWritten.emplace_back(currentArg->getValue());
 
   if (args.hasArg(clang::options::OPT_fdisable_real_10))
-    opts.disabledRealKinds.push_back(10);
+    opts.disabledRealKinds.push_back(Fortran::common::KindsEnum::Kind10);
 
   if (args.hasArg(clang::options::OPT_fdisable_real_3))
-    opts.disabledRealKinds.push_back(3);
+    opts.disabledRealKinds.push_back(Fortran::common::KindsEnum::Kind3);
 
   if (args.hasArg(clang::options::OPT_fdisable_integer_2))
-    opts.disabledIntegerKinds.push_back(2);
+    opts.disabledIntegerKinds.push_back(Fortran::common::KindsEnum::Kind2);
 
   if (args.hasArg(clang::options::OPT_fdisable_integer_16))
-    opts.disabledIntegerKinds.push_back(16);
+    opts.disabledIntegerKinds.push_back(Fortran::common::KindsEnum::Kind16);
 
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
     opts.abi = a->getValue();
@@ -1176,11 +1176,15 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::options::OPT_fdefault_real_4)) {
     const llvm::opt::Option &opt = arg->getOption();
     if (opt.matches(clang::options::OPT_fdefault_real_8)) {
-      res.getDefaultKinds().set_defaultRealKind(8);
-      res.getDefaultKinds().set_doublePrecisionKind(16);
+      res.getDefaultKinds().set_defaultRealKind(
+          Fortran::common::KindsEnum::Kind8);
+      res.getDefaultKinds().set_doublePrecisionKind(
+          Fortran::common::KindsEnum::Kind16);
     } else if (opt.matches(clang::options::OPT_fdefault_real_4)) {
-      res.getDefaultKinds().set_defaultRealKind(4);
-      res.getDefaultKinds().set_doublePrecisionKind(8);
+      res.getDefaultKinds().set_defaultRealKind(
+          Fortran::common::KindsEnum::Kind4);
+      res.getDefaultKinds().set_doublePrecisionKind(
+          Fortran::common::KindsEnum::Kind8);
     }
   }
   if (const llvm::opt::Arg *arg =
@@ -1188,17 +1192,25 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::options::OPT_fdefault_integer_4)) {
     const llvm::opt::Option &opt = arg->getOption();
     if (opt.matches(clang::options::OPT_fdefault_integer_8)) {
-      res.getDefaultKinds().set_defaultIntegerKind(8);
-      res.getDefaultKinds().set_subscriptIntegerKind(8);
-      res.getDefaultKinds().set_sizeIntegerKind(8);
-      res.getDefaultKinds().set_defaultLogicalKind(8);
+      res.getDefaultKinds().set_defaultIntegerKind(
+          Fortran::common::KindsEnum::Kind8);
+      res.getDefaultKinds().set_subscriptIntegerKind(
+          Fortran::common::KindsEnum::Kind8);
+      res.getDefaultKinds().set_sizeIntegerKind(
+          Fortran::common::KindsEnum::Kind8);
+      res.getDefaultKinds().set_defaultLogicalKind(
+          Fortran::common::KindsEnum::Kind8);
     } else if (opt.matches(clang::options::OPT_fdefault_integer_4)) {
       // Note that the subscript integer kind is set to 8 here. If a
       // default-integer-kind is not provided, it is also set to 8.
-      res.getDefaultKinds().set_defaultIntegerKind(4);
-      res.getDefaultKinds().set_subscriptIntegerKind(8);
-      res.getDefaultKinds().set_sizeIntegerKind(4);
-      res.getDefaultKinds().set_defaultLogicalKind(4);
+      res.getDefaultKinds().set_defaultIntegerKind(
+          Fortran::common::KindsEnum::Kind4);
+      res.getDefaultKinds().set_subscriptIntegerKind(
+          Fortran::common::KindsEnum::Kind8);
+      res.getDefaultKinds().set_sizeIntegerKind(
+          Fortran::common::KindsEnum::Kind4);
+      res.getDefaultKinds().set_defaultLogicalKind(
+          Fortran::common::KindsEnum::Kind4);
     }
   }
   if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
@@ -1211,10 +1223,12 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
     // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
-    res.getDefaultKinds().set_doublePrecisionKind(8);
+    res.getDefaultKinds().set_doublePrecisionKind(
+        Fortran::common::KindsEnum::Kind8);
   }
   if (args.hasArg(clang::options::OPT_flarge_sizes))
-    res.getDefaultKinds().set_sizeIntegerKind(8);
+    res.getDefaultKinds().set_sizeIntegerKind(
+        Fortran::common::KindsEnum::Kind8);
 
   // -x cuda
   auto language = args.getLastArgValue(clang::options::OPT_x);

@@ -340,7 +340,7 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
               return common::visit(
                   [&](const auto &z) -> std::optional<Expr<SomeType>> {
                     using PartType = typename ResultType<decltype(z)>::Part;
-                    const int kind{z.kind()};
+                    const KindsEnum kind{z.kind()};
                     return AsGenericExpr(Designator<PartType>{kind,
                         ComplexPart{
                             ExtractDataRef(std::move(*zExpr)).value(), part}});
@@ -354,12 +354,13 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
               return common::visit(
                   [&](const auto &x) -> std::optional<Expr<SomeType>> {
                     using T = typename std::decay_t<decltype(x)>::Result;
-                    const int kind{x.kind()};
+                    const KindsEnum kind{x.kind()};
+                    const int kindBytes{static_cast<int>(kind)};
                     return AsGenericExpr(Designator<T>{kind,
                         Substring{ExtractDataRef(std::move(*cExpr)).value(),
-                            MakeSubscriptIntExpr(1 + (offset / kind)),
+                            MakeSubscriptIntExpr(1 + (offset / kindBytes)),
                             MakeSubscriptIntExpr(
-                                1 + ((offset + size - 1) / kind))}});
+                                1 + ((offset + size - 1) / kindBytes))}});
                   },
                   cExpr->u);
             }

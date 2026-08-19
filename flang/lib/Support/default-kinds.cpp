@@ -14,54 +14,55 @@ namespace Fortran::common {
 IntrinsicTypeDefaultKinds::IntrinsicTypeDefaultKinds() {}
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultIntegerKind(
-    int k) {
+    KindsEnum k) {
   defaultIntegerKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_subscriptIntegerKind(
-    int k) {
+    KindsEnum k) {
   subscriptIntegerKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_sizeIntegerKind(
-    int k) {
+    KindsEnum k) {
   sizeIntegerKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultRealKind(
-    int k) {
+    KindsEnum k) {
   defaultRealKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_doublePrecisionKind(
-    int k) {
+    KindsEnum k) {
   doublePrecisionKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_quadPrecisionKind(
-    int k) {
+    KindsEnum k) {
   quadPrecisionKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultCharacterKind(
-    int k) {
+    KindsEnum k) {
   defaultCharacterKind_ = k;
   return *this;
 }
 
 IntrinsicTypeDefaultKinds &IntrinsicTypeDefaultKinds::set_defaultLogicalKind(
-    int k) {
+    KindsEnum k) {
   defaultLogicalKind_ = k;
   return *this;
 }
 
-int IntrinsicTypeDefaultKinds::GetDefaultKind(TypeCategory category) const {
+KindsEnum IntrinsicTypeDefaultKinds::GetDefaultKind(
+    TypeCategory category) const {
   switch (category) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned:
@@ -75,7 +76,7 @@ int IntrinsicTypeDefaultKinds::GetDefaultKind(TypeCategory category) const {
     return defaultLogicalKind_;
   default:
     CRASH_NO_CASE;
-    return 0;
+    return KindsEnum::NoKind;
   }
 }
 } // namespace Fortran::common

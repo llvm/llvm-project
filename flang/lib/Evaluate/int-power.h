@@ -19,7 +19,7 @@ template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     const INT &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
-  const int realKind{base.kind()};
+  const KindsEnum realKind{base.kind()};
   CHECK(factor.kind() == base.kind());
   ValueWithRealFlags<REAL> result{factor};
   if (base.IsNotANumber()) {
@@ -56,8 +56,8 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
-  const int realKind{base.kind()};
-  const int intKind{power.kind()};
+  const KindsEnum realKind{base.kind()};
+  const KindsEnum intKind{power.kind()};
   REAL one{REAL::FromInteger(realKind, INT{intKind, 1}).value};
   return TimesIntPowerOf(one, base, power, rounding);
 }

@@ -9,6 +9,7 @@
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/expression.h"
@@ -1821,7 +1822,7 @@ static DynamicType GetBuiltinDerivedType(
   return DynamicType{derived};
 }
 
-static std::int64_t GetBuiltinKind(
+static KindsEnum GetBuiltinKind(
     const semantics::Scope *builtinsScope, const char *which) {
   if (!builtinsScope) {
     common::die("INTERNAL: The __fortran_builtins module was not found, and "
@@ -1839,12 +1840,12 @@ static std::int64_t GetBuiltinKind(
   const auto &details{
       DEREF(symbol.detailsIf<semantics::ObjectEntityDetails>())};
   if (const auto kind{ToInt64(details.init())}) {
-    return *kind;
+    return static_cast<KindsEnum>(*kind);
   } else {
     common::die(
         "INTERNAL: The __fortran_builtins module does not define the kind '%s'",
         which);
-    return -1;
+    return KindsEnum::InvalidKind;
   }
 }
 
@@ -2279,10 +2280,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       argOk = true;
       break;
     case KindCode::exactKind:
-      argOk = type->kind() == d.typePattern.kindValue;
+      argOk = type->kind() == static_cast<KindsEnum>(d.typePattern.kindValue);
       break;
     case KindCode::greaterOrEqualToKind:
-      argOk = type->kind() >= d.typePattern.kindValue;
+      argOk = type->kind() >= static_cast<KindsEnum>(d.typePattern.kindValue);
       break;
     case KindCode::sameAtom:
       if (!sameArg) {
@@ -2546,7 +2547,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         messages.Say(
             "%s(KIND=%jd) type not supported on this target."_err_en_US,
             parser::ToUpperCaseLetters(EnumToString(*category)),
-            defaults.quadPrecisionKind());
+            static_cast<std::intmax_t>(defaults.quadPrecisionKind()));
       }
       break;
     case KindCode::defaultLogicalKind:
@@ -2567,7 +2568,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (result.categorySet.test(aType->category())) {
           if (const auto *sameChar{UnwrapExpr<Expr<SomeCharacter>>(*sameArg)}) {
             if (auto len{ToInt64(Fold(context, sameChar->LEN()))}) {
-              resultType = DynamicType{aType->kind(), *len};
+              resultType =
+                  DynamicType{static_cast<KindsEnum>(aType->kind()), *len};
             } else {
               resultType = *aType;
             }
@@ -2575,14 +2577,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             resultType = *aType;
           }
         } else {
-          resultType = DynamicType{*category, aType->kind()};
+          resultType =
+              DynamicType{*category, static_cast<KindsEnum>(aType->kind())};
         }
       }
       break;
     case KindCode::sameKind:
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
-        resultType = DynamicType{*category, aType->kind()};
+        resultType =
+            DynamicType{*category, static_cast<KindsEnum>(aType->kind())};
       }
       break;
     case KindCode::operand:
@@ -2599,11 +2603,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(Fold(context, common::Clone(*expr)))}) {
             if (context.targetCharacteristics().IsTypeEnabled(
-                    *category, *code)) {
+                    *category, static_cast<KindsEnum>(*code))) {
               if (*category == TypeCategory::Character) { // ACHAR & CHAR
-                resultType = DynamicType{static_cast<int>(*code), 1};
+                resultType = DynamicType{static_cast<KindsEnum>(*code), 1};
               } else {
-                resultType = DynamicType{*category, static_cast<int>(*code)};
+                resultType =
+                    DynamicType{*category, static_cast<KindsEnum>(*code)};
               }
               break;
             }
@@ -2631,7 +2636,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         CHECK(kindDummyArg->flags.test(ArgFlag::defaultsToDefaultForResult));
       }
       if (!resultType) {
-        int kind{defaults.GetDefaultKind(*category)};
+        KindsEnum kind{defaults.GetDefaultKind(*category)};
         if (*category == TypeCategory::Character) { // ACHAR & CHAR
           resultType = DynamicType{kind, 1};
         } else {
@@ -2649,14 +2654,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::subscript:
       CHECK(result.categorySet == IntType);
       CHECK(*category == TypeCategory::Integer);
-      resultType =
-          DynamicType{TypeCategory::Integer, defaults.subscriptIntegerKind()};
+      resultType = DynamicType{TypeCategory::Integer,
+          static_cast<KindsEnum>(defaults.subscriptIntegerKind())};
       break;
     case KindCode::size:
       CHECK(result.categorySet == IntType);
       CHECK(*category == TypeCategory::Integer);
-      resultType =
-          DynamicType{TypeCategory::Integer, defaults.sizeIntegerKind()};
+      resultType = DynamicType{TypeCategory::Integer,
+          static_cast<KindsEnum>(defaults.sizeIntegerKind())};
       break;
     case KindCode::teamType:
       CHECK(result.categorySet == DerivedType);
@@ -2666,7 +2671,8 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::greaterOrEqualToKind:
     case KindCode::exactKind:
-      resultType = DynamicType{*category, result.kindValue};
+      resultType =
+          DynamicType{*category, static_cast<KindsEnum>(result.kindValue)};
       break;
     case KindCode::typeless:
     case KindCode::any:
@@ -3262,7 +3268,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
   }
   if (dummies.size() == 2) {
     // Handle SHAPE
-    DynamicType shapeType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    DynamicType shapeType{TypeCategory::Integer,
+        static_cast<KindsEnum>(defaults_.sizeIntegerKind())};
     if (arguments.size() >= 3 && arguments[2]) {
       if (auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
@@ -3277,7 +3284,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     dummies.emplace_back("shape"s, std::move(shape));
 
     // Handle LOWER
-    DynamicType lowerType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    DynamicType lowerType{TypeCategory::Integer,
+        static_cast<KindsEnum>(defaults_.sizeIntegerKind())};
     if (arguments.size() >= 4 && arguments[3]) {
       if (auto type{arguments[3]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
@@ -3331,7 +3339,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
     CHECK(arguments.size() == 3);
     const bool hasNchars{arguments[2].has_value()};
-    const int cCharKind = defaults_.GetDefaultKind(TypeCategory::Character);
+    const KindsEnum cCharKind{
+        defaults_.GetDefaultKind(TypeCategory::Character)};
 
     // Check first argument (CSTRARRAY or CSTRPTR) and optional third argument
     // (NCHARS)
@@ -3477,7 +3486,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Strpointer(
   }
   if (dummies.size() == 2) {
     // Add NCHARS dummy
-    DynamicType ncharsType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    DynamicType ncharsType{TypeCategory::Integer,
+        static_cast<KindsEnum>(defaults_.sizeIntegerKind())};
     if (arguments.size() >= 3 && arguments[2]) {
       if (const auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
@@ -3554,7 +3564,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
           !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true)) {
         if (typeAndShape->type().category() == TypeCategory::Character &&
-            typeAndShape->type().kind() == 1) {
+            typeAndShape->type().kind() == Kind1) {
           // Default character kind, but length is not known to be 1
           context.Warn(common::UsageWarning::CharacterInteroperability,
               arguments[0]->sourceLocation(),
@@ -3624,7 +3634,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Devloc(
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
           !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true)) {
         if (typeAndShape->type().category() == TypeCategory::Character &&
-            typeAndShape->type().kind() == 1) {
+            typeAndShape->type().kind() == Kind1) {
           // Default character kind, but length is not known to be 1
           context.Warn(common::UsageWarning::CharacterInteroperability,
               arguments[0]->sourceLocation(),
@@ -3805,7 +3815,7 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   default:
     CRASH_NO_CASE;
   }
-  int kind{interface.result.kindCode == KindCode::doublePrecision
+  KindsEnum kind{interface.result.kindCode == KindCode::doublePrecision
           ? defaults.doublePrecisionKind()
           : interface.result.kindCode == KindCode::quadPrecision
           ? defaults.quadPrecisionKind()

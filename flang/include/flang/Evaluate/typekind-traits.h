@@ -46,14 +46,17 @@ template <common::TypeCategory CAT, int KIND> struct TypeKind;
 template <int KIND> struct TypeKind<common::TypeCategory::Integer, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Integer};
   static constexpr int kind{KIND};
-  static constexpr int bits{value::IntegerValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{static_cast<KindsEnum>(KIND)};
+  static constexpr int bits{value::IntegerValue::bits(kindsEnum)};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = SignedT;
   using Scalar = value::IntegerValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Integer>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 using IntegerKindTypes = std::tuple<TypeKind<TypeCategory::Integer, 1>,
@@ -64,14 +67,17 @@ template <int KIND> struct TypeKind<common::TypeCategory::Unsigned, KIND> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Unsigned};
   static constexpr int kind{KIND};
-  static constexpr int bits{value::IntegerValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{static_cast<KindsEnum>(KIND)};
+  static constexpr int bits{value::IntegerValue::bits(kindsEnum)};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = UnsignedT;
   using Scalar = value::IntegerValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Unsigned>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 using UnsignedKindTypes = std::tuple<TypeKind<TypeCategory::Unsigned, 1>,
@@ -81,14 +87,17 @@ using UnsignedKindTypes = std::tuple<TypeKind<TypeCategory::Unsigned, 1>,
 template <int KIND> struct TypeKind<common::TypeCategory::Logical, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Logical};
   static constexpr int kind{KIND};
-  static constexpr int bits{value::LogicalValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{static_cast<KindsEnum>(KIND)};
+  static constexpr int bits{value::LogicalValue::bits(kindsEnum)};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = UnsignedT;
   using Scalar = value::LogicalValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Logical>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 using LogicalKindTypes = std::tuple<TypeKind<TypeCategory::Logical, 1>,
@@ -111,14 +120,17 @@ template <> struct RealHostType<64> {
 template <int KIND> struct TypeKind<common::TypeCategory::Real, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Real};
   static constexpr int kind{KIND};
-  static constexpr int bits{value::RealValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{static_cast<KindsEnum>(KIND)};
+  static constexpr int bits{value::RealValue::bits(kindsEnum)};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = typename detail::RealHostType<bits>::type;
   using Scalar = value::RealValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Real>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 using RealKindTypes =
@@ -129,10 +141,13 @@ using RealKindTypes =
 template <int KIND> struct TypeKind<common::TypeCategory::Complex, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Complex};
   static constexpr int kind{KIND};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{static_cast<KindsEnum>(KIND)};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Complex>;
   using Scalar = value::ComplexValue;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
   using Part = TypeKind<common::TypeCategory::Real, KIND>;
 };
 
@@ -145,39 +160,48 @@ template <> struct TypeKind<common::TypeCategory::Character, 1> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{1};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{Kind1};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using CharT = char;
   using StringT = std::basic_string<CharT>;
   using HostT = void;
   using Scalar = value::CharacterValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Character>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 template <> struct TypeKind<common::TypeCategory::Character, 2> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{2};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{Kind2};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using CharT = char16_t;
   using StringT = std::basic_string<CharT>;
   using HostT = void;
   using Scalar = value::CharacterValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Character>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 template <> struct TypeKind<common::TypeCategory::Character, 4> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{4};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr KindsEnum kindsEnum{Kind4};
+  static constexpr int bytesStored{value::IntegerValue::bytesStored(kindsEnum)};
   using CharT = char32_t;
   using StringT = std::basic_string<CharT>;
   using HostT = void;
   using Scalar = value::CharacterValue;
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Character>;
-  static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
+  static constexpr DynamicType GetType() {
+    return DynamicType{category, kindsEnum};
+  }
 };
 
 using CharacterKindTypes = std::tuple<TypeKind<TypeCategory::Character, 1>,

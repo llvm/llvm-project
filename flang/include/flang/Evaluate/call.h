@@ -296,9 +296,9 @@ struct SpecificIntrinsic {
 };
 
 struct ProcedureDesignator {
-  static int kind() {
+  static KindsEnum kind() {
     llvm_unreachable("This class has no kind");
-    return 0;
+    return NoKind;
   }
 
   EVALUATE_UNION_CLASS_BOILERPLATE(ProcedureDesignator)
@@ -338,9 +338,9 @@ using Chevrons = std::vector<Expr<SomeType>>;
 
 class ProcedureRef {
 public:
-  static int kind() {
+  static KindsEnum kind() {
     llvm_unreachable("This class has no kind");
-    return 0;
+    return NoKind;
   }
 
   CLASS_BOILERPLATE(ProcedureRef)
@@ -403,14 +403,14 @@ protected:
 
 template <typename A> class FunctionRef : public ProcedureRef {
 public:
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   using Result = A;
   CLASS_BOILERPLATE(FunctionRef)
 
-  explicit FunctionRef(int kind, ProcedureRef &&pr)
+  explicit FunctionRef(KindsEnum kind, ProcedureRef &&pr)
       : ProcedureRef{std::move(pr)}, kind_{kind} {}
-  FunctionRef(int kind, ProcedureDesignator &&p, ActualArguments &&a)
+  FunctionRef(KindsEnum kind, ProcedureDesignator &&p, ActualArguments &&a)
       : ProcedureRef{std::move(p), std::move(a)}, kind_{kind} {}
 
   std::optional<DynamicType> GetType() const {
@@ -429,7 +429,7 @@ public:
   }
 
 private:
-  int kind_;
+  KindsEnum kind_;
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

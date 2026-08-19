@@ -38,7 +38,7 @@ RealValueImpl::RealValueImpl(int kind, double x) {
     storage_ = std::signbit(x) ? RealValueImpl::NegativeZero(kind).storage_
                                : RealValueImpl::Zero(kind).storage_;
   } else if (std::isnan(x)) {
-    storage_ = RealValueImpl::NotANumber(kind).storage_;
+    storage_ = RealValueImpl::NotANumber(static_cast<KindsEnum>(kind)).storage_;
   } else if (std::isinf(x)) {
     storage_ = RealValueImpl::Infinity(kind, x < 0).storage_;
   } else {
@@ -54,9 +54,11 @@ RealValueImpl::RealValueImpl(int kind, double x) {
     // Convert() then applies the target kind's own IEEE rounding/overflow
     // semantics for the final narrowing (or widening).
     constexpr int wideKind{8};
-    RealValueImpl magnitude{
-        RealValueImpl::FromInteger(wideKind, IntegerValue{8, mantissa}).value};
-    magnitude = magnitude.SCALE(IntegerValue{4, exp - fracBits}).value;
+    RealValueImpl magnitude{RealValueImpl::FromInteger(
+        wideKind, IntegerValue{KindsEnum::Kind8, mantissa})
+            .value};
+    magnitude =
+        magnitude.SCALE(IntegerValue{KindsEnum::Kind4, exp - fracBits}).value;
     if (negative) {
       magnitude = magnitude.SetSign(true);
     }
@@ -74,12 +76,13 @@ RealValueImpl RealValueImpl::Zero(int kind) {
 
 RealValueImpl RealValueImpl::FromRawBytes(
     int kind, const void *raw, std::size_t expectedSize) {
-  return RealValueImpl{
-      kind, IntegerValue::FromRawBytes(kind, raw, expectedSize)};
+  return RealValueImpl{kind,
+      IntegerValue::FromRawBytes(
+          static_cast<KindsEnum>(kind), raw, expectedSize)};
 }
 
 void RealValueImpl::print(llvm::raw_ostream &os) const {
-  AsFortran(os, kind());
+  AsFortran(os, static_cast<int>(kind()));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -89,17 +92,17 @@ LLVM_DUMP_METHOD void RealValueImpl::dump() const {
 }
 #endif
 
-int RealValueImpl::kind() const {
+KindsEnum RealValueImpl::kind() const {
   if (IsMonostate()) {
     llvm_unreachable("uninitialized value has not a defined kind");
   }
 
-  return withWord([](const auto &v) -> int {
+  return withWord([](const auto &v) -> KindsEnum {
     using R = std::decay_t<decltype(v)>;
     if constexpr (std::is_same_v<R, R3>) {
-      return 3;
+      return KindsEnum::Kind3;
     }
-    return R::bits / 8;
+    return static_cast<KindsEnum>(R::bits / 8);
   });
 }
 
@@ -166,9 +169,9 @@ RealValueImpl RealValueImpl::TINY(int kind) {
       kind, [](auto p) { return FromWord(decltype(p)::TINY()); });
 }
 
-RealValueImpl RealValueImpl::NotANumber(int kind) {
-  return withWordProto(
-      kind, [](auto p) { return FromWord(decltype(p)::NotANumber()); });
+RealValueImpl RealValueImpl::NotANumber(KindsEnum kind) {
+  return withWordProto(static_cast<int>(kind),
+      [](auto p) { return FromWord(decltype(p)::NotANumber()); });
 }
 
 RealValueImpl RealValueImpl::SignalingNaN(int kind) {

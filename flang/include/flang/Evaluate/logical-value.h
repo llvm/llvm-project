@@ -14,6 +14,7 @@
 #include <utility>
 
 namespace Fortran::evaluate::value {
+using common::KindsEnum;
 
 /// A Fortran LOGICAL value.
 ///
@@ -32,22 +33,22 @@ public:
   LogicalValue &operator=(const LogicalValue &) = default;
   LogicalValue &operator=(LogicalValue &&) = default;
 
-  LogicalValue(int kind, const LogicalValue &v) : LogicalValue{v} {
+  LogicalValue(KindsEnum kind, const LogicalValue &v) : LogicalValue{v} {
     CHECK(kind == v.kind());
   }
 
-  LogicalValue(int kind, LogicalValue &&v) : LogicalValue{std::move(v)} {
+  LogicalValue(KindsEnum kind, LogicalValue &&v) : LogicalValue{std::move(v)} {
     CHECK(kind == v.kind());
   }
 
-  LogicalValue(int kind, bool truth) : word_(Represent(kind, truth)) {}
+  LogicalValue(KindsEnum kind, bool truth) : word_(Represent(kind, truth)) {}
 
-  LogicalValue(int kind, const Word &w) : word_(kind, w) {}
+  LogicalValue(KindsEnum kind, const Word &w) : word_(kind, w) {}
 
   /// Creates a logical with value 'false' of a given kind. This is in contrast
   /// to the default-ctor which creates a "monostate" that represents 'false' of
   /// a not-yet-known kind.
-  static LogicalValue Zero(int kind) { return LogicalValue{kind, false}; }
+  static LogicalValue Zero(KindsEnum kind) { return LogicalValue{kind, false}; }
 
   void print(llvm::raw_ostream &os) const;
 
@@ -60,21 +61,21 @@ public:
   bool IsMonostate() const { return word_.IsMonostate(); }
 
   /// The kind of the value currently stored.
-  int kind() const { return word_.kind(); }
+  KindsEnum kind() const { return word_.kind(); }
 
   int bits() const { return bits(kind()); }
-  static constexpr int bits(int kind) { return Word::bits(kind); }
+  static constexpr int bits(KindsEnum kind) { return Word::bits(kind); }
 
   /// Number of bytes accessed by FromRawBytes/StoreRawBytes
   std::size_t bytesStored() const { return bytesStored(kind()); }
-  static constexpr std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(KindsEnum kind) {
     return Word::bytesStored(kind);
   }
 
   Word word() const { return word_; }
 
   bool IsCanonical() const {
-    const int kind{this->kind()};
+    const KindsEnum kind{this->kind()};
     return word_ == canonicalFalse(kind) || word_ == canonicalTrue(kind);
   }
 
@@ -119,7 +120,7 @@ public:
   }
 
   static LogicalValue FromRawBytes(
-      int kind, const void *raw, std::size_t expectedSize) {
+      KindsEnum kind, const void *raw, std::size_t expectedSize) {
     Word w{Word::FromRawBytes(kind, raw, expectedSize)};
     return LogicalValue{w.kind(), w};
   }
@@ -129,11 +130,11 @@ public:
   }
 
 private:
-  static Word canonicalTrue(int kind) { return Word{kind, 1}; }
+  static Word canonicalTrue(KindsEnum kind) { return Word{kind, 1}; }
 
-  static Word canonicalFalse(int kind) { return Word{kind, 0}; }
+  static Word canonicalFalse(KindsEnum kind) { return Word{kind, 0}; }
 
-  static Word Represent(int kind, bool x) {
+  static Word Represent(KindsEnum kind, bool x) {
     return x ? canonicalTrue(kind) : canonicalFalse(kind);
   }
 

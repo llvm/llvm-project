@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_INTEGER_VALUE_H_
 #define FORTRAN_EVALUATE_INTEGER_VALUE_H_
 
+#include "flang/Common/type-kinds.h"
 #include "flang/Common/uint128.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/object-sizes.h"
@@ -23,6 +24,7 @@
 
 namespace Fortran::evaluate::value {
 class IntegerValueImpl;
+using common::KindsEnum;
 
 /// A two's-complement integer with dynamic bitwidth.
 ///
@@ -48,10 +50,10 @@ public:
   IntegerValue &operator=(const IntegerValue &);
   IntegerValue &operator=(IntegerValue &&);
 
-  IntegerValue(int kind, const IntegerValue &x) : IntegerValue(x) {
+  IntegerValue(KindsEnum kind, const IntegerValue &x) : IntegerValue(x) {
     CHECK(x.kind() == kind);
   }
-  IntegerValue(int kind, IntegerValue &&x) : IntegerValue(std::move(x)) {
+  IntegerValue(KindsEnum kind, IntegerValue &&x) : IntegerValue(std::move(x)) {
     CHECK(x.kind() == kind);
   }
 
@@ -64,7 +66,7 @@ public:
   // is a class type that never does.
   template <typename INT,
       typename = std::enable_if_t<std::numeric_limits<INT>::is_integer>>
-  IntegerValue(int kind, INT v) {
+  IntegerValue(KindsEnum kind, INT v) {
     if constexpr (sizeof(INT) > 8) {
       static_assert(sizeof(INT) == 16);
       ConstructFromIntegral(kind, static_cast<Fortran::common::uint128_t>(v));
@@ -79,7 +81,7 @@ public:
   /// Creates an integer with value 0 of a given kind. This is different from
   /// the default-ctor which creates a "monostate" that represents 0 of unknown
   /// kind.
-  static IntegerValue Zero(int kind);
+  static IntegerValue Zero(KindsEnum kind);
 
   void print(llvm::raw_ostream &os) const;
 
@@ -92,21 +94,21 @@ public:
   bool IsMonostate() const;
 
   /// The kind of the value currently stored.
-  int kind() const;
+  KindsEnum kind() const;
 
   int bits() const { return bits(kind()); }
-  static constexpr int bits(int kind) { return bytesStored(kind) * 8; }
+  static constexpr int bits(KindsEnum kind) { return bytesStored(kind) * 8; }
 
   /// Number of bytes accessed by FromRawBytes/StoreRawBytes
   std::size_t bytesStored() const { return bytesStored(kind()); }
-  static constexpr std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(KindsEnum kind) {
     switch (kind) {
-    case 3:
+    case KindsEnum::Kind3:
       return 2;
-    case 10:
+    case KindsEnum::Kind10:
       return 16;
     default:
-      return kind;
+      return static_cast<std::size_t>(kind);
     }
   }
 
@@ -120,13 +122,13 @@ public:
   bool operator>(const IntegerValue &y) const { return y < *this; }
 
   /// Left-justified mask (e.g., MASKL(1) has only its sign bit set)
-  static IntegerValue MASKL(int kind, int places);
+  static IntegerValue MASKL(KindsEnum kind, int places);
 
   /// Right-justified mask (e.g., MASKR(1) == 1, MASKR(2) == 3, &c.)
-  static IntegerValue MASKR(int kind, int places);
+  static IntegerValue MASKR(KindsEnum kind, int places);
 
   static ValueWithOverflow Read(
-      int kind, const char *&pp, int base, bool isSigned);
+      KindsEnum kind, const char *&pp, int base, bool isSigned);
 
   /// ZExt or Trunc
   static ValueWithOverflow ConvertUnsigned(
@@ -142,18 +144,18 @@ public:
   /// Omits a leading "0x".
   std::string Hexadecimal() const;
 
-  static constexpr int DIGITS(int kind) {
+  static constexpr int DIGITS(KindsEnum kind) {
     // don't count the sign bit
     return bits(kind) - 1;
   }
 
-  static IntegerValue HUGE(int kind);
+  static IntegerValue HUGE(KindsEnum kind);
 
-  static IntegerValue Least(int kind);
+  static IntegerValue Least(KindsEnum kind);
 
-  static int RANGE(int kind);
+  static int RANGE(KindsEnum kind);
 
-  static int UnsignedRANGE(int kind);
+  static int UnsignedRANGE(KindsEnum kind);
 
   bool IsZero() const;
 
@@ -312,12 +314,12 @@ public:
   PowerWithErrors Power(const IntegerValue &e) const;
 
   static IntegerValue FromRawBytes(
-      int kind, const void *raw, std::size_t expectedSize);
+      KindsEnum kind, const void *raw, std::size_t expectedSize);
   void StoreRawBytes(void *dst, size_t size, bool *changed = nullptr) const;
 
 private:
-  void ConstructFromIntegral(int kind, std::uint64_t n, bool isSigned);
-  void ConstructFromIntegral(int kind, Fortran::common::uint128_t n);
+  void ConstructFromIntegral(KindsEnum kind, std::uint64_t n, bool isSigned);
+  void ConstructFromIntegral(KindsEnum kind, Fortran::common::uint128_t n);
 
   static IntegerValue FromImpl(const IntegerValueImpl &x);
   static IntegerValue FromImpl(IntegerValueImpl &&x);

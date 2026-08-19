@@ -22,6 +22,7 @@
 
 namespace Fortran::evaluate {
 
+using common::KindsEnum;
 using common::Rounding;
 
 ENUM_CLASS(IeeeFeature, Denormal, Divide, Flags, Halting, Inf, Io, NaN,
@@ -50,17 +51,17 @@ public:
   void set_areSubnormalsFlushedToZero(bool yes = true);
 
   // Check if a given real kind has flushing control.
-  bool hasSubnormalFlushingControl(int kind) const;
+  bool hasSubnormalFlushingControl(KindsEnum kind) const;
   // Check if any or all real kinds have flushing control.
   bool hasSubnormalFlushingControl(bool any = false) const;
-  void set_hasSubnormalFlushingControl(int kind, bool yes = true);
+  void set_hasSubnormalFlushingControl(KindsEnum kind, bool yes = true);
 
   // Check if a given real kind has support for raising a nonstandard
   // ieee_denorm exception.
-  bool hasSubnormalExceptionSupport(int kind) const;
+  bool hasSubnormalExceptionSupport(KindsEnum kind) const;
   // Check if all real kinds have support for the ieee_denorm exception.
   bool hasSubnormalExceptionSupport() const;
-  void set_hasSubnormalExceptionSupport(int kind, bool yes = true);
+  void set_hasSubnormalExceptionSupport(KindsEnum kind, bool yes = true);
 
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
@@ -83,16 +84,14 @@ public:
   std::size_t maxByteSize() const { return maxByteSize_; }
   std::size_t maxAlignment() const { return maxAlignment_; }
 
-  static bool CanSupportType(common::TypeCategory, std::int64_t kind);
-  bool EnableType(common::TypeCategory category, std::int64_t kind,
+  static bool CanSupportType(common::TypeCategory, KindsEnum kind);
+  bool EnableType(common::TypeCategory category, KindsEnum kind,
       std::size_t byteSize, std::size_t align);
-  void DisableType(common::TypeCategory category, std::int64_t kind);
+  void DisableType(common::TypeCategory category, KindsEnum kind);
 
-  std::size_t GetByteSize(
-      common::TypeCategory category, std::int64_t kind) const;
-  std::size_t GetAlignment(
-      common::TypeCategory category, std::int64_t kind) const;
-  bool IsTypeEnabled(common::TypeCategory category, std::int64_t kind) const;
+  std::size_t GetByteSize(common::TypeCategory category, KindsEnum kind) const;
+  std::size_t GetAlignment(common::TypeCategory category, KindsEnum kind) const;
+  bool IsTypeEnabled(common::TypeCategory category, KindsEnum kind) const;
 
   int SelectedIntKind(std::int64_t precision = 0) const;
   int SelectedLogicalKind(std::int64_t bits = 1) const;
@@ -131,8 +130,8 @@ public:
   IeeeFeatures &ieeeFeatures() { return ieeeFeatures_; }
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
-  std::size_t integerKindForPointer() { return integerKindForPointer_; }
-  void set_integerKindForPointer(std::size_t newKind) {
+  KindsEnum integerKindForPointer() { return integerKindForPointer_; }
+  void set_integerKindForPointer(KindsEnum newKind) {
     integerKindForPointer_ = newKind;
   }
 
@@ -161,7 +160,7 @@ private:
       IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
       IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
       IeeeFeature::UnderflowControl};
-  std::size_t integerKindForPointer_{8}; /* For 64 bit pointer */
+  KindsEnum integerKindForPointer_{KindsEnum::Kind8}; /* For 64 bit pointer */
 };
 
 } // namespace Fortran::evaluate

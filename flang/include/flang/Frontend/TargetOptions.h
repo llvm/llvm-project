@@ -18,6 +18,7 @@
 #ifndef FORTRAN_FRONTEND_TARGETOPTIONS_H
 #define FORTRAN_FRONTEND_TARGETOPTIONS_H
 
+#include "flang/Common/type-kinds.h"
 #include <string>
 #include <vector>
 
@@ -43,10 +44,10 @@ public:
   std::vector<std::string> featuresAsWritten;
 
   /// The real KINDs disabled for this target
-  std::vector<int> disabledRealKinds;
+  std::vector<common::KindsEnum> disabledRealKinds;
 
   /// The integer KINDs disabled for this target
-  std::vector<int> disabledIntegerKinds;
+  std::vector<common::KindsEnum> disabledIntegerKinds;
 
   /// Extended Altivec ABI on AIX
   bool EnableAIXExtendedAltivecABI;

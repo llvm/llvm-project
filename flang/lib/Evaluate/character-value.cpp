@@ -41,30 +41,30 @@ CharacterValue &CharacterValue::operator=(CharacterValue &&x) {
   return *this;
 }
 
-CharacterValue::CharacterValue(int kind, std::string s) {
+CharacterValue::CharacterValue(KindsEnum kind, std::string s) {
   new (this) CharacterValueImpl(kind, std::move(s));
 }
 
-CharacterValue::CharacterValue(int kind, std::u16string s) {
-  CHECK(kind == 2);
+CharacterValue::CharacterValue(KindsEnum kind, std::u16string s) {
+  CHECK(kind == KindsEnum::Kind2);
   new (this) CharacterValueImpl(kind, std::move(s));
 }
 
-CharacterValue::CharacterValue(int kind, std::u32string s) {
-  CHECK(kind == 4);
+CharacterValue::CharacterValue(KindsEnum kind, std::u32string s) {
+  CHECK(kind == KindsEnum::Kind4);
   new (this) CharacterValueImpl(kind, std::move(s));
 }
 
-CharacterValue::CharacterValue(int kind, std::size_t n, char32_t c) {
+CharacterValue::CharacterValue(KindsEnum kind, std::size_t n, char32_t c) {
   new (this) CharacterValueImpl(kind, n, c);
 }
 
-CharacterValue CharacterValue::Zero(int kind) {
+CharacterValue CharacterValue::Zero(KindsEnum kind) {
   return FromImpl(CharacterValueImpl::Zero(kind));
 }
 
 CharacterValue CharacterValue::FromRawBytes(
-    int kind, const void *raw, size_t byteSize) {
+    KindsEnum kind, const void *raw, size_t byteSize) {
   return FromImpl(CharacterValueImpl::FromRawBytes(kind, raw, byteSize));
 }
 
@@ -80,7 +80,7 @@ bool CharacterValue::empty() const { return impl().empty(); }
 
 std::size_t CharacterValue::size() const { return impl().size(); }
 
-int CharacterValue::kind() const { return impl().kind(); }
+KindsEnum CharacterValue::kind() const { return impl().kind(); }
 
 std::optional<llvm::StringRef> CharacterValue::AsStringRef() const {
   return impl().AsStringRef();
@@ -108,11 +108,11 @@ bool CharacterValue::operator==(const CharacterValue &y) const {
   return impl() == y.impl();
 }
 
-CharacterValue CharacterValue::ToAscii(int kind) const {
+CharacterValue CharacterValue::ToAscii(KindsEnum kind) const {
   return FromImpl(impl().ToAscii(kind));
 }
 
-void CharacterValue::assign(int kind, std::size_t n, char32_t c) {
+void CharacterValue::assign(KindsEnum kind, std::size_t n, char32_t c) {
   impl().assign(kind, n, c);
 }
 

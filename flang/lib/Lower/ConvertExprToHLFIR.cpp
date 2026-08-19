@@ -1198,7 +1198,7 @@ struct BinaryOp<Fortran::evaluate::Divide<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    const int kind = op.kind();
+    const int kind = static_cast<int>(op.kind());
     mlir::Type ty = Fortran::lower::getFIRType(
         builder.getContext(), Fortran::common::TypeCategory::Complex, kind,
         /*params=*/{});
@@ -1223,7 +1223,7 @@ struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC>>> {
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    const int kind = op.kind();
+    const int kind = static_cast<int>(op.kind());
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
@@ -1238,7 +1238,7 @@ struct BinaryOp<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    const int kind = op.kind();
+    const int kind = static_cast<int>(op.kind());
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, kind,
                                                /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
@@ -1327,7 +1327,7 @@ struct BinaryOp<Fortran::evaluate::Relational<
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs,
                                          hlfir::Entity rhs) {
-    int bits = 8 * op.left().GetType().value().kind();
+    int bits = 8 * static_cast<int>(op.left().GetType().value().kind());
     auto signlessType = mlir::IntegerType::get(
         builder.getContext(), bits,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -1535,7 +1535,7 @@ struct UnaryOp<Fortran::evaluate::Negate<
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs) {
-    const int kind = op.kind();
+    const int kind = static_cast<int>(op.kind());
     // Like LLVM, integer negation is the binary op "0 - value"
     mlir::Type type = Fortran::lower::getFIRType(
         builder.getContext(), Fortran::common::TypeCategory::Integer, kind,
@@ -1554,9 +1554,9 @@ struct UnaryOp<Fortran::evaluate::Negate<
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs) {
-    const int kind = op.kind();
-    int bits = Fortran::evaluate::Type<
-        Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
+    const int kind = static_cast<int>(op.kind());
+    int bits = Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>::
+        Scalar::bits(static_cast<Fortran::common::KindsEnum>(kind));
     mlir::Type signlessType = mlir::IntegerType::get(
         builder.getContext(), bits,
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -1633,7 +1633,7 @@ struct UnaryOp<Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2>> {
   static hlfir::EntityWithAttributes gen(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          const Op &op, hlfir::Entity lhs) {
-    int kind = op.kind();
+    int kind = static_cast<int>(op.kind());
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
       return hlfir::convertCharacterKind(loc, builder, lhs, kind);
@@ -1765,7 +1765,7 @@ private:
   template <typename D, typename R, typename O>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, O> &op) {
-    const int rKind = op.kind();
+    const int rKind = static_cast<int>(op.kind());
     auto &builder = getBuilder();
     mlir::Location loc = getLoc();
     const int rank = op.Rank();
@@ -1811,7 +1811,7 @@ private:
   template <typename D, typename R, typename LO, typename RO>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
-    const int rKind = op.kind();
+    const int rKind = static_cast<int>(op.kind());
     auto &builder = getBuilder();
     mlir::Location loc = getLoc();
     const int rank = op.Rank();
@@ -1910,7 +1910,8 @@ private:
                                getStmtCtx())
             .genNamedEntity(desc.base());
     using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
-    const int resKind = Fortran::evaluate::DescriptorInquiry::kind();
+    const int resKind =
+        static_cast<int>(Fortran::evaluate::DescriptorInquiry::kind());
     mlir::Type resultType = getConverter().genType(ResTy::category, resKind);
     auto castResult = [&](mlir::Value v) {
       return hlfir::EntityWithAttributes{

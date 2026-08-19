@@ -21,10 +21,12 @@ IntegerValueImpl IntegerValueImpl::Zero(int kind) {
 
 IntegerValueImpl IntegerValueImpl::FromRawBytes(
     int kind, const void *raw, std::size_t expectedSize) {
-  CHECK(expectedSize == IntegerValue::bytesStored(kind));
+  CHECK(
+      expectedSize == IntegerValue::bytesStored(static_cast<KindsEnum>(kind)));
 
   return withWordProto(kind, [&](auto proto) {
-    assert(IntegerValue::bytesStored(kind) == sizeof(proto));
+    assert(IntegerValue::bytesStored(static_cast<KindsEnum>(kind)) ==
+        sizeof(proto));
     std::decay_t<decltype(proto)> t{};
     memcpy(&t, raw, sizeof(proto));
     return FromWord(t);

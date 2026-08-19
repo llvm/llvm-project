@@ -9,6 +9,7 @@
 #ifndef FORTRAN_EVALUATE_REAL_VALUE_H_
 #define FORTRAN_EVALUATE_REAL_VALUE_H_
 
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/integer-value.h"
 #include "flang/Evaluate/object-sizes.h"
 #include "flang/Evaluate/target.h"
@@ -20,6 +21,7 @@
 
 namespace Fortran::evaluate::value {
 class RealValueImpl;
+using common::KindsEnum;
 
 /// A floating-point value with dynamic precision.
 ///
@@ -39,33 +41,33 @@ public:
   RealValue &operator=(const RealValue &);
   RealValue &operator=(RealValue &&);
 
-  RealValue(int kind, const RealValue &v) : RealValue(v) {
+  RealValue(KindsEnum kind, const RealValue &v) : RealValue(v) {
     CHECK(kind == v.kind());
   }
-  RealValue(int kind, RealValue &&v) : RealValue(std::move(v)) {
+  RealValue(KindsEnum kind, RealValue &&v) : RealValue(std::move(v)) {
     CHECK(kind == v.kind());
   }
 
   /// Interpret w as the raw bit pattern for the given runtime kind.
-  RealValue(int kind, const Word &w);
+  RealValue(KindsEnum kind, const Word &w);
 
   /// Creates a floating-point value of a given kind from a host double,
   /// rounded to the target kind's precision (per the default rounding mode).
   /// Portable: does not assume that the host "double" shares any bit layout
   /// with the target kind, only that <cmath>'s frexp()/ldexp() are available.
-  RealValue(int kind, double x);
+  RealValue(KindsEnum kind, double x);
 
   /// Creates a floating-point with value +0.0 of a given kind. In contrast, the
   /// default ctor creates a "monostate" that represents +0.0 of unknown kind.
-  static RealValue Zero(int kind);
+  static RealValue Zero(KindsEnum kind);
 
   /// Creates a floating-point with value -0.0 of a given kind.
-  static RealValue NegativeZero(int kind);
+  static RealValue NegativeZero(KindsEnum kind);
 
-  static RealValue Infinity(int kind, bool negative = false);
+  static RealValue Infinity(KindsEnum kind, bool negative = false);
 
   /// A signaling NaN, as opposed to the quiet NaN returned by NotANumber().
-  static RealValue SignalingNaN(int kind);
+  static RealValue SignalingNaN(KindsEnum kind);
 
   void print(llvm::raw_ostream &os) const;
 
@@ -78,21 +80,21 @@ public:
   bool IsMonostate() const;
 
   /// The kind of the value currently stored.
-  int kind() const;
+  KindsEnum kind() const;
 
   int bits() const { return bits(kind()); }
-  static constexpr int bits(int kind) { return bytesStored(kind) * 8; }
+  static constexpr int bits(KindsEnum kind) { return bytesStored(kind) * 8; }
 
   /// Number of bytes accessed by FromRawBytes/StoreRawBytes
   std::size_t bytesStored() const { return bytesStored(kind()); }
-  static constexpr std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(KindsEnum kind) {
     switch (kind) {
-    case 3:
+    case KindsEnum::Kind3:
       return 2;
-    case 10:
+    case KindsEnum::Kind10:
       return 16;
     default:
-      return kind;
+      return static_cast<std::size_t>(kind);
     }
   }
 
@@ -164,21 +166,21 @@ public:
 
   IntegerValue EXPONENT() const;
 
-  static RealValue EPSILON(int kind);
+  static RealValue EPSILON(KindsEnum kind);
 
-  static RealValue HUGE(int kind);
+  static RealValue HUGE(KindsEnum kind);
 
-  static RealValue TINY(int kind);
+  static RealValue TINY(KindsEnum kind);
 
-  static int DIGITS(int kind);
+  static int DIGITS(KindsEnum kind);
 
-  static int PRECISION(int kind);
+  static int PRECISION(KindsEnum kind);
 
-  static int RANGE(int kind);
+  static int RANGE(KindsEnum kind);
 
-  static int MAXEXPONENT(int kind);
+  static int MAXEXPONENT(KindsEnum kind);
 
-  static int MINEXPONENT(int kind);
+  static int MINEXPONENT(KindsEnum kind);
 
   RealValue RRSPACING() const;
 
@@ -195,9 +197,9 @@ public:
   RealValue FlushSubnormalToZero() const;
 
   // TODO: Configurable NotANumber representations
-  static RealValue NotANumber(int kind);
+  static RealValue NotANumber(KindsEnum kind);
 
-  static ValueWithRealFlags<RealValue> FromInteger(int kind,
+  static ValueWithRealFlags<RealValue> FromInteger(KindsEnum kind,
       const IntegerValue &n, bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding);
 
@@ -210,7 +212,8 @@ public:
       common::RoundingMode mode = common::RoundingMode::ToZero,
       int toBits = 0) const;
 
-  static ValueWithRealFlags<RealValue> Convert(int kind, const RealValue &from,
+  static ValueWithRealFlags<RealValue> Convert(KindsEnum kind,
+      const RealValue &from,
       Rounding rounding = TargetCharacteristics::defaultRounding);
 
   Word RawBits() const;
@@ -218,7 +221,7 @@ public:
   /// Extracts "raw" biased exponent field.
   int Exponent() const;
 
-  static ValueWithRealFlags<RealValue> Read(int kind, const char *&pp,
+  static ValueWithRealFlags<RealValue> Read(KindsEnum kind, const char *&pp,
       Rounding rounding = TargetCharacteristics::defaultRounding);
 
   std::string DumpHexadecimal() const;
@@ -229,7 +232,7 @@ public:
       llvm::raw_ostream &o, int kind, bool minimal = false) const;
 
   static RealValue FromRawBytes(
-      int kind, const void *raw, std::size_t expectedSize);
+      KindsEnum kind, const void *raw, std::size_t expectedSize);
 
   void StoreRawBytes(void *dst, size_t size, bool *changed = nullptr) const;
 

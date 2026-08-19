@@ -29,7 +29,7 @@ inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
 }
 
 template <typename SCALAR>
-inline void LoadSerialValues(int kind, const char *src,
+inline void LoadSerialValues(KindsEnum kind, const char *src,
     llvm::MutableArrayRef<SCALAR> values, size_t stride) {
   for (auto it : llvm::enumerate(values)) {
     it.value() = SCALAR::FromRawBytes(
@@ -82,7 +82,7 @@ public:
   }
   Result Add(ConstantSubscript offset, std::size_t bytes,
       const Constant<Type<TypeCategory::Character>> &x, FoldingContext &) {
-    const int kind{x.kind()};
+    const KindsEnum kind{x.kind()};
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {
@@ -100,7 +100,7 @@ public:
         Result result{OkNoChange};
         for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
           value::CharacterValue scalar{x.At(at)};
-          auto scalarBytes{scalar.size() * kind};
+          auto scalarBytes{scalar.size() * static_cast<size_t>(kind)};
           if (scalarBytes != elementBytes) {
             result = LengthMismatch;
           }

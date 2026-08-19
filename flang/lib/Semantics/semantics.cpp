@@ -397,19 +397,19 @@ SemanticsContext::SemanticsContext(
 
 SemanticsContext::~SemanticsContext() {}
 
-int SemanticsContext::GetDefaultKind(TypeCategory category) const {
+KindsEnum SemanticsContext::GetDefaultKind(TypeCategory category) const {
   return defaultKinds_.GetDefaultKind(category);
 }
 
 const DeclTypeSpec &SemanticsContext::MakeNumericType(
-    TypeCategory category, int kind) {
-  if (kind == 0) {
+    TypeCategory category, KindsEnum kind) {
+  if (kind == KindsEnum::NoKind) {
     kind = GetDefaultKind(category);
   }
   return globalScope_.MakeNumericType(category, MakeKindExpr(kind));
 }
-const DeclTypeSpec &SemanticsContext::MakeLogicalType(int kind) {
-  if (kind == 0) {
+const DeclTypeSpec &SemanticsContext::MakeLogicalType(KindsEnum kind) {
+  if (kind == KindsEnum::NoKind) {
     kind = GetDefaultKind(TypeCategory::Logical);
   }
   return globalScope_.MakeLogicalType(MakeKindExpr(kind));

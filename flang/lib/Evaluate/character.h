@@ -19,6 +19,8 @@
 
 namespace Fortran::evaluate {
 
+using common::KindsEnum;
+
 class CharacterUtils {
   using Character = Scalar<Type<TypeCategory::Character>>;
   using CharT = char32_t;
@@ -27,7 +29,7 @@ public:
   // CHAR also implements ACHAR under assumption that character encodings
   // contain ASCII
   static Character CHAR(int kind, std::uint64_t code) {
-    return Character{kind, 1, static_cast<CharT>(code)};
+    return Character{static_cast<KindsEnum>(kind), 1, static_cast<CharT>(code)};
   }
 
   // ICHAR also implements IACHAR under assumption that character encodings
@@ -37,20 +39,23 @@ public:
     // Mask to the character kind width to avoid sign extension
     auto ch{static_cast<std::uint64_t>(c[0])};
     switch (c.kind()) {
-    case 1:
+    case Kind1:
       return static_cast<std::int64_t>(ch & 0xffu);
-    case 2:
+    case Kind2:
       return static_cast<std::int64_t>(ch & 0xffffu);
-    case 4:
+    case Kind4:
       return static_cast<std::int64_t>(ch & 0xffffffffu);
+    default:
+      llvm_unreachable("unsupported character kind");
     }
-    llvm_unreachable("unsupported character kind");
   }
 
-  static Character NEW_LINE(int kind) { return Character{kind, 1, NewLine()}; }
+  static Character NEW_LINE(int kind) {
+    return Character{static_cast<KindsEnum>(kind), 1, NewLine()};
+  }
 
   static Character ADJUSTL(const Character &str) {
-    const int kind{str.kind()};
+    const KindsEnum kind{str.kind()};
     auto pos{str.find_first_not_of(Space())};
     if (pos != Character::npos && pos != 0) {
       return Character{str.substr(pos) + Character{kind, pos, Space()}};
@@ -60,7 +65,7 @@ public:
   }
 
   static Character ADJUSTR(const Character &str) {
-    const int kind{str.kind()};
+    const KindsEnum kind{str.kind()};
     auto pos{str.find_last_not_of(Space())};
     if (pos != Character::npos && pos != str.length() - 1) {
       auto delta{str.length() - 1 - pos};
@@ -92,7 +97,7 @@ public:
   // Resize adds spaces on the right if the new size is bigger than the
   // original, or by trimming the rightmost characters otherwise.
   static Character Resize(const Character &str, std::size_t newLength) {
-    const int kind{str.kind()};
+    const KindsEnum kind{str.kind()};
     auto oldLength{str.length()};
     if (newLength > oldLength) {
       return str + Character{kind, newLength - oldLength, Space()};
@@ -112,7 +117,7 @@ public:
   }
 
   static Character REPEAT(const Character &str, ConstantSubscript ncopies) {
-    const int kind{str.kind()};
+    const KindsEnum kind{str.kind()};
     Character result{Character::Zero(kind)};
     if (!str.empty() && ncopies > 0) {
       result.reserve(ncopies * str.size());

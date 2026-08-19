@@ -38,31 +38,33 @@ RealValue &RealValue::operator=(RealValue &&x) {
   return *this;
 }
 
-RealValue::RealValue(int kind, const Word &w) {
-  new (this) RealValueImpl(kind, w);
+RealValue::RealValue(KindsEnum kind, const Word &w) {
+  new (this) RealValueImpl(static_cast<int>(kind), w);
 }
 
-RealValue::RealValue(int kind, double x) { new (this) RealValueImpl(kind, x); }
-
-RealValue RealValue::Zero(int kind) {
-  return FromImpl(RealValueImpl::Zero(kind));
+RealValue::RealValue(KindsEnum kind, double x) {
+  new (this) RealValueImpl(static_cast<int>(kind), x);
 }
 
-RealValue RealValue::NegativeZero(int kind) {
-  return FromImpl(RealValueImpl::NegativeZero(kind));
+RealValue RealValue::Zero(KindsEnum kind) {
+  return FromImpl(RealValueImpl::Zero(static_cast<int>(kind)));
 }
 
-RealValue RealValue::Infinity(int kind, bool negative) {
-  return FromImpl(RealValueImpl::Infinity(kind, negative));
+RealValue RealValue::NegativeZero(KindsEnum kind) {
+  return FromImpl(RealValueImpl::NegativeZero(static_cast<int>(kind)));
 }
 
-RealValue RealValue::SignalingNaN(int kind) {
-  return FromImpl(RealValueImpl::SignalingNaN(kind));
+RealValue RealValue::Infinity(KindsEnum kind, bool negative) {
+  return FromImpl(RealValueImpl::Infinity(static_cast<int>(kind), negative));
+}
+
+RealValue RealValue::SignalingNaN(KindsEnum kind) {
+  return FromImpl(RealValueImpl::SignalingNaN(static_cast<int>(kind)));
 }
 
 bool RealValue::IsMonostate() const { return impl().IsMonostate(); }
 
-int RealValue::kind() const { return impl().kind(); }
+KindsEnum RealValue::kind() const { return impl().kind(); }
 
 void RealValue::print(llvm::raw_ostream &os) const { impl().print(os); }
 
@@ -149,30 +151,36 @@ ValueWithRealFlags<RealValue> RealValue::KahanSummation(
 
 IntegerValue RealValue::EXPONENT() const { return impl().EXPONENT(); }
 
-RealValue RealValue::EPSILON(int kind) {
-  return FromImpl(RealValueImpl::EPSILON(kind));
+RealValue RealValue::EPSILON(KindsEnum kind) {
+  return FromImpl(RealValueImpl::EPSILON(static_cast<int>(kind)));
 }
 
-RealValue RealValue::HUGE(int kind) {
-  return FromImpl(RealValueImpl::HUGE(kind));
+RealValue RealValue::HUGE(KindsEnum kind) {
+  return FromImpl(RealValueImpl::HUGE(static_cast<int>(kind)));
 }
 
-RealValue RealValue::TINY(int kind) {
-  return FromImpl(RealValueImpl::TINY(kind));
+RealValue RealValue::TINY(KindsEnum kind) {
+  return FromImpl(RealValueImpl::TINY(static_cast<int>(kind)));
 }
 
-int RealValue::DIGITS(int kind) { return RealValueImpl::DIGITS(kind); }
-
-int RealValue::PRECISION(int kind) { return RealValueImpl::PRECISION(kind); }
-
-int RealValue::RANGE(int kind) { return RealValueImpl::RANGE(kind); }
-
-int RealValue::MAXEXPONENT(int kind) {
-  return RealValueImpl::MAXEXPONENT(kind);
+int RealValue::DIGITS(KindsEnum kind) {
+  return RealValueImpl::DIGITS(static_cast<int>(kind));
 }
 
-int RealValue::MINEXPONENT(int kind) {
-  return RealValueImpl::MINEXPONENT(kind);
+int RealValue::PRECISION(KindsEnum kind) {
+  return RealValueImpl::PRECISION(static_cast<int>(kind));
+}
+
+int RealValue::RANGE(KindsEnum kind) {
+  return RealValueImpl::RANGE(static_cast<int>(kind));
+}
+
+int RealValue::MAXEXPONENT(KindsEnum kind) {
+  return RealValueImpl::MAXEXPONENT(static_cast<int>(kind));
+}
+
+int RealValue::MINEXPONENT(KindsEnum kind) {
+  return RealValueImpl::MINEXPONENT(static_cast<int>(kind));
 }
 
 RealValue RealValue::RRSPACING() const { return FromImpl(impl().RRSPACING()); }
@@ -194,13 +202,14 @@ RealValue RealValue::FlushSubnormalToZero() const {
   return FromImpl(impl().FlushSubnormalToZero());
 }
 
-RealValue RealValue::NotANumber(int kind) {
+RealValue RealValue::NotANumber(KindsEnum kind) {
   return FromImpl(RealValueImpl::NotANumber(kind));
 }
 
 ValueWithRealFlags<RealValue> RealValue::FromInteger(
-    int kind, const IntegerValue &n, bool isUnsigned, Rounding rounding) {
-  return FromImpl(RealValueImpl::FromInteger(kind, n, isUnsigned, rounding));
+    KindsEnum kind, const IntegerValue &n, bool isUnsigned, Rounding rounding) {
+  return FromImpl(RealValueImpl::FromInteger(
+      static_cast<int>(kind), n, isUnsigned, rounding));
 }
 
 ValueWithRealFlags<RealValue> RealValue::ToWholeNumber(
@@ -213,8 +222,9 @@ ValueWithRealFlags<IntegerValue> RealValue::ToInteger(
 }
 
 ValueWithRealFlags<RealValue> RealValue::Convert(
-    int kind, const RealValue &from, Rounding rounding) {
-  return FromImpl(RealValueImpl::Convert(kind, from.impl(), rounding));
+    KindsEnum kind, const RealValue &from, Rounding rounding) {
+  return FromImpl(
+      RealValueImpl::Convert(static_cast<int>(kind), from.impl(), rounding));
 }
 
 IntegerValue RealValue::RawBits() const { return impl().RawBits(); }
@@ -222,8 +232,8 @@ IntegerValue RealValue::RawBits() const { return impl().RawBits(); }
 int RealValue::Exponent() const { return impl().Exponent(); }
 
 ValueWithRealFlags<RealValue> RealValue::Read(
-    int kind, const char *&pp, Rounding rounding) {
-  return FromImpl(RealValueImpl::Read(kind, pp, rounding));
+    KindsEnum kind, const char *&pp, Rounding rounding) {
+  return FromImpl(RealValueImpl::Read(static_cast<int>(kind), pp, rounding));
 }
 
 std::string RealValue::DumpHexadecimal() const {
@@ -236,8 +246,9 @@ llvm::raw_ostream &RealValue::AsFortran(
 }
 
 RealValue RealValue::FromRawBytes(
-    int kind, const void *raw, std::size_t expectedSize) {
-  return FromImpl(RealValueImpl::FromRawBytes(kind, raw, expectedSize));
+    KindsEnum kind, const void *raw, std::size_t expectedSize) {
+  return FromImpl(
+      RealValueImpl::FromRawBytes(static_cast<int>(kind), raw, expectedSize));
 }
 
 void RealValue::StoreRawBytes(void *dst, size_t size, bool *changed) const {

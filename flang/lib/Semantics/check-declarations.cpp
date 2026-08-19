@@ -1603,7 +1603,7 @@ bool CheckHelper::IsResultOkToDiffer(const FunctionResult &result) {
       category == TypeCategory::Derived) {
     return false;
   }
-  int kind{typeAndShape->type().kind()};
+  KindsEnum kind{typeAndShape->type().kind()};
   return kind == context_.GetDefaultKind(category) ||
       (category == TypeCategory::Real &&
           kind == context_.doublePrecisionKind());
@@ -3295,7 +3295,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
                 component.name(),
                 "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
           } else if (type->category() == DeclTypeSpec::Character && dyType &&
-              dyType->kind() == 1) {
+              dyType->kind() == KindsEnum::Kind1) {
             context().Warn(msgs, common::UsageWarning::BindCCharLength,
                 component.name(),
                 "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
@@ -3712,7 +3712,10 @@ void CheckHelper::CheckDioDummyIsDefaultInteger(
   if (const DeclTypeSpec *type{arg.GetType()};
       type && type->IsNumeric(TypeCategory::Integer)) {
     if (const auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
-        kind && *kind == context_.GetDefaultKind(TypeCategory::Integer)) {
+        kind &&
+        *kind ==
+            static_cast<std::int64_t>(
+                context_.GetDefaultKind(TypeCategory::Integer))) {
       return;
     }
   }
@@ -3799,8 +3802,9 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
     if (!IsAssumedLengthCharacter(*arg) ||
         (!kind ||
             *kind !=
-                context_.defaultKinds().GetDefaultKind(
-                    TypeCategory::Character))) {
+                static_cast<std::int64_t>(
+                    context_.defaultKinds().GetDefaultKind(
+                        TypeCategory::Character)))) {
       messages_.Say(arg->name(),
           "Dummy argument '%s' of a defined input/output procedure must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());

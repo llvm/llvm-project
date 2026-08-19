@@ -101,12 +101,12 @@ public:
             Fortran::common::TypeCategory TC2>
   static unsigned getHashValue(
       const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC1) + 2u) -
            (static_cast<unsigned>(kind) + 5u);
   }
   static unsigned getHashValue(const Fortran::evaluate::ComplexComponent &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return getHashValue(x.left()) -
            (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u +
            static_cast<unsigned>(kind);
@@ -118,49 +118,49 @@ public:
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC) + 5u) -
            (static_cast<unsigned>(kind) + 7u);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned
   getHashValue(const Fortran::evaluate::Add<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 23u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Subtract<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 19u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Multiply<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 29u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Divide<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 31u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned
   getHashValue(const Fortran::evaluate::Power<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 37u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 41u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.ordering) * 7u;
@@ -173,22 +173,22 @@ public:
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 43u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::evaluate::ComplexConstructor &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 47u +
            static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::evaluate::Concat &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 53u +
            static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::evaluate::SetLength &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 59u +
            static_cast<unsigned>(kind);
   }
@@ -267,7 +267,7 @@ public:
   template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
       const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC>> &x) {
-    const int kind{x.kind()};
+    const Fortran::common::KindsEnum kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 71u +
            static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.opr) * 11u;

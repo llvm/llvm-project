@@ -116,7 +116,8 @@ auto IsVariableHelper::operator()(const ProcedureDesignator &x) const
 // Conversions of COMPLEX component expressions to REAL.
 ConvertRealOperandsResult ConvertRealOperands(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
-    Expr<SomeType> &&y, int defaultRealKind) {
+    Expr<SomeType> &&y, KindsEnum defaultRealKind) {
+  const KindsEnum defaultRealKindEnum{defaultRealKind};
   return common::visit(
       common::visitors{
           [&](Expr<SomeInteger> &&ix,
@@ -125,33 +126,33 @@ ConvertRealOperandsResult ConvertRealOperands(
             // both integer operands are converted to default REAL.
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](Expr<SomeInteger> &&ix,
               Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](Expr<SomeUnsigned> &&ix,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](Expr<SomeUnsigned> &&ix,
               Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](Expr<SomeInteger> &&ix,
               Expr<SomeReal> &&ry) -> ConvertRealOperandsResult {
@@ -186,33 +187,33 @@ ConvertRealOperandsResult ConvertRealOperands(
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(by)))};
+                    defaultRealKindEnum, std::move(by)))};
           },
           [&](Expr<SomeUnsigned> &&ix,
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(ix)),
+                    defaultRealKindEnum, std::move(ix)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(by)))};
+                    defaultRealKindEnum, std::move(by)))};
           },
           [&](BOZLiteralConstant &&bx,
               Expr<SomeInteger> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(bx)),
+                    defaultRealKindEnum, std::move(bx)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](BOZLiteralConstant &&bx,
               Expr<SomeUnsigned> &&iy) -> ConvertRealOperandsResult {
             return {AsSameKindExprs<TypeCategory::Real>(
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(bx)),
+                    defaultRealKindEnum, std::move(bx)),
                 ConvertToKind<TypeCategory::Real>(
-                    defaultRealKind, std::move(iy)))};
+                    defaultRealKindEnum, std::move(iy)))};
           },
           [&](Expr<SomeReal> &&rx,
               BOZLiteralConstant &&by) -> ConvertRealOperandsResult {
@@ -265,7 +266,7 @@ std::optional<Expr<SomeType>> MixedRealLeft(
   return Package(common::visit(
       [&](auto &&rxk) -> Expr<SomeReal> {
         using resultType = ResultType<decltype(rxk)>;
-        const int resultKind = rxk.kind();
+        const KindsEnum resultKind{rxk.kind()};
         if constexpr (std::is_same_v<OPR<resultType>, Power<resultType>>) {
           return AsCategoryExpr(RealToIntPower<resultType>{
               resultKind, std::move(rxk), std::move(iy)});
@@ -286,7 +287,7 @@ static Expr<SomeComplex> MakeComplex(
 
 std::optional<Expr<SomeComplex>> ConstructComplex(
     parser::ContextualMessages &messages, Expr<SomeType> &&real,
-    Expr<SomeType> &&imaginary, int defaultRealKind) {
+    Expr<SomeType> &&imaginary, KindsEnum defaultRealKind) {
   if (auto converted{ConvertRealOperands(
           messages, std::move(real), std::move(imaginary), defaultRealKind)}) {
     return {common::visit(
@@ -300,7 +301,7 @@ std::optional<Expr<SomeComplex>> ConstructComplex(
 
 std::optional<Expr<SomeComplex>> ConstructComplex(
     parser::ContextualMessages &messages, std::optional<Expr<SomeType>> &&real,
-    std::optional<Expr<SomeType>> &&imaginary, int defaultRealKind) {
+    std::optional<Expr<SomeType>> &&imaginary, KindsEnum defaultRealKind) {
   if (auto parts{common::AllPresent(std::move(real), std::move(imaginary))}) {
     return ConstructComplex(messages, std::get<0>(std::move(*parts)),
         std::get<1>(std::move(*parts)), defaultRealKind);
@@ -332,7 +333,7 @@ Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
   return common::visit(
       [](auto &&x) {
         using RT = ResultType<decltype(x)>;
-        int rtKind{x.kind()};
+        auto rtKind{x.kind()};
         return AsCategoryExpr(ComplexConstructor{std::move(x),
             AsExpr(
                 Constant<RT>{rtKind, Scalar<RT>::Zero(rtKind), RT{rtKind}})});
@@ -346,13 +347,14 @@ Expr<SomeComplex> PromoteRealToComplex(Expr<SomeReal> &&someX) {
 template <template <typename> class OPR, TypeCategory RCAT>
 std::optional<Expr<SomeType>> MixedComplexLeft(
     parser::ContextualMessages &messages, const Expr<SomeComplex> &zx,
-    const Expr<SomeKind<RCAT>> &iry, [[maybe_unused]] int defaultRealKind) {
+    const Expr<SomeKind<RCAT>> &iry,
+    [[maybe_unused]] KindsEnum defaultRealKind) {
   if constexpr (RCAT == TypeCategory::Integer &&
       std::is_same_v<OPR<LargestReal>, Power<LargestReal>>) {
     // COMPLEX**INTEGER is a special case that doesn't convert the exponent.
     return Package(common::visit(
         [&](const auto &zxk) {
-          const int zxkKind{zxk.kind()};
+          const KindsEnum zxkKind{static_cast<KindsEnum>(zxk.kind())};
           using Ty = ResultType<decltype(zxk)>;
           return AsCategoryExpr(AsExpr(RealToIntPower<Ty>{
               zxkKind, common::Clone(zxk), common::Clone(iry)}));
@@ -398,7 +400,7 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
 template <template <typename> class OPR, TypeCategory LCAT>
 std::optional<Expr<SomeType>> MixedComplexRight(
     parser::ContextualMessages &messages, const Expr<SomeKind<LCAT>> &irx,
-    const Expr<SomeComplex> &zy, [[maybe_unused]] int defaultRealKind) {
+    const Expr<SomeComplex> &zy, [[maybe_unused]] KindsEnum defaultRealKind) {
   if constexpr (std::is_same_v<OPR<LargestReal>, Add<LargestReal>>) {
     // x + (a,b) -> (a,b) + x -> (a+x, b)
     return MixedComplexLeft<OPR, LCAT>(messages, zy, irx, defaultRealKind);
@@ -432,7 +434,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
   static_assert(XCAT == TypeCategory::Real || YCAT == TypeCategory::Real);
   return common::visit(
       [&](const auto &kx, const auto &ky) {
-        int maxKind{std::max(kx.kind(), ky.kind())};
+        KindsEnum maxKind{std::max(kx.kind(), ky.kind())};
         using ZTy = Type<TypeCategory::Complex>;
         auto cx{ConvertToType<ZTy>(maxKind, std::move(x))};
         auto cy{ConvertToType<ZTy>(maxKind, std::move(y))};
@@ -448,7 +450,7 @@ Expr<SomeComplex> PromoteMixedComplexReal(
 template <template <typename> class OPR>
 std::optional<Expr<SomeType>> NumericOperation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x,
-    Expr<SomeType> &&y, int defaultRealKind) {
+    Expr<SomeType> &&y, KindsEnum defaultRealKind) {
   return common::visit(
       common::visitors{
           [](Expr<SomeInteger> &&ix, Expr<SomeInteger> &&iy) {
@@ -471,7 +473,7 @@ std::optional<Expr<SomeType>> NumericOperation(
             return Package(common::visit(
                 [&](auto &&ryk) -> Expr<SomeReal> {
                   using resultType = ResultType<decltype(ryk)>;
-                  const int resultKind{ryk.kind()};
+                  const KindsEnum resultKind{ryk.kind()};
                   auto converted{
                       ConvertToType<resultType>(resultKind, std::move(ix))};
                   return AsCategoryExpr(OPR<resultType>{
@@ -577,19 +579,19 @@ std::optional<Expr<SomeType>> NumericOperation(
 
 template std::optional<Expr<SomeType>> NumericOperation<Power>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Multiply>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Divide>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Add>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 template std::optional<Expr<SomeType>> NumericOperation<Subtract>(
     parser::ContextualMessages &, Expr<SomeType> &&, Expr<SomeType> &&,
-    int defaultRealKind);
+    KindsEnum defaultRealKind);
 
 std::optional<Expr<SomeType>> Negation(
     parser::ContextualMessages &messages, Expr<SomeType> &&x) {
@@ -771,9 +773,9 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                 auto makeIntCall =
                     [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
                   using IntType = Type<TypeCategory::Integer>;
-                  constexpr int intKind{4};
+                  constexpr KindsEnum intKind{Kind4};
                   DynamicType enumType{*xDerived};
-                  DynamicType intResultType{TypeCategory::Integer, 4};
+                  DynamicType intResultType{TypeCategory::Integer, Kind4};
                   characteristics::DummyDataObject ddo{
                       characteristics::TypeAndShape{enumType}};
                   ddo.intent = common::Intent::In;
@@ -821,7 +823,8 @@ Expr<SomeLogical> BinaryLogicalOperation(
 }
 
 template <TypeCategory TO>
-std::optional<Expr<SomeType>> ConvertToNumeric(int kind, Expr<SomeType> &&x) {
+std::optional<Expr<SomeType>> ConvertToNumeric(
+    KindsEnum kind, Expr<SomeType> &&x) {
   static_assert(common::IsNumericTypeCategory(TO));
   return common::visit(
       [=](auto &&cx) -> std::optional<Expr<SomeType>> {
@@ -841,42 +844,44 @@ std::optional<Expr<SomeType>> ConvertToType(
   if (type.IsTypelessIntrinsicArgument()) {
     return std::nullopt;
   }
+  const bool hasKind{type.category() != TypeCategory::Derived};
+  const KindsEnum kind{hasKind ? static_cast<KindsEnum>(type.kind()) : NoKind};
   switch (type.category()) {
   case TypeCategory::Integer:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
       // Extension to C7109: allow BOZ literals to appear in integer contexts
       // when the type is unambiguous.
       return Expr<SomeType>{
-          ConvertToKind<TypeCategory::Integer>(type.kind(), std::move(*boz))};
+          ConvertToKind<TypeCategory::Integer>(kind, std::move(*boz))};
     }
-    return ConvertToNumeric<TypeCategory::Integer>(type.kind(), std::move(x));
+    return ConvertToNumeric<TypeCategory::Integer>(kind, std::move(x));
   case TypeCategory::Unsigned:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
       return Expr<SomeType>{
-          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*boz))};
+          ConvertToKind<TypeCategory::Unsigned>(kind, std::move(*boz))};
     }
     if (auto *cx{UnwrapExpr<Expr<SomeUnsigned>>(x)}) {
       return Expr<SomeType>{
-          ConvertToKind<TypeCategory::Unsigned>(type.kind(), std::move(*cx))};
+          ConvertToKind<TypeCategory::Unsigned>(kind, std::move(*cx))};
     }
     break;
   case TypeCategory::Real:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {
       return Expr<SomeType>{
-          ConvertToKind<TypeCategory::Real>(type.kind(), std::move(*boz))};
+          ConvertToKind<TypeCategory::Real>(kind, std::move(*boz))};
     }
-    return ConvertToNumeric<TypeCategory::Real>(type.kind(), std::move(x));
+    return ConvertToNumeric<TypeCategory::Real>(kind, std::move(x));
   case TypeCategory::Complex:
-    return ConvertToNumeric<TypeCategory::Complex>(type.kind(), std::move(x));
+    return ConvertToNumeric<TypeCategory::Complex>(kind, std::move(x));
   case TypeCategory::Character:
     if (auto *cx{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
       auto converted{
-          ConvertToKind<TypeCategory::Character>(type.kind(), std::move(*cx))};
+          ConvertToKind<TypeCategory::Character>(kind, std::move(*cx))};
       if (auto length{type.GetCharLength()}) {
         converted = common::visit(
             [&](auto &&x) {
               using CharacterType = ResultType<decltype(x)>;
-              const int characterKind{x.kind()};
+              const KindsEnum characterKind{x.kind()};
               return Expr<SomeCharacter>{Expr<CharacterType>{
                   SetLength{characterKind, std::move(x), std::move(*length)}}};
             },
@@ -888,7 +893,7 @@ std::optional<Expr<SomeType>> ConvertToType(
   case TypeCategory::Logical:
     if (auto *cx{UnwrapExpr<Expr<SomeLogical>>(x)}) {
       return Expr<SomeType>{
-          ConvertToKind<TypeCategory::Logical>(type.kind(), std::move(*cx))};
+          ConvertToKind<TypeCategory::Logical>(kind, std::move(*cx))};
     }
     break;
   case TypeCategory::Derived:
@@ -1351,14 +1356,14 @@ template <common::TypeCategory CAT> using Numeric = Type<CAT>;
 template <common::TypeCategory CAT> using NumericExpr = Expr<Numeric<CAT>>;
 
 template <common::TypeCategory CAT> struct SignedNumericTerm {
-  int kind() const { return expr.kind(); };
+  KindsEnum kind() const { return static_cast<KindsEnum>(expr.kind()); };
 
   NumericExpr<CAT> expr;
   bool isPositive;
 };
 
 template <common::TypeCategory CAT> struct SignedNumericExpr {
-  int kind() const { return expr.kind(); };
+  KindsEnum kind() const { return static_cast<KindsEnum>(expr.kind()); };
 
   NumericExpr<CAT> expr;
   bool isPositive;
@@ -1387,7 +1392,7 @@ template <common::TypeCategory CAT>
 static SignedNumericExpr<CAT> buildRightAssociatedSignedFold(
     llvm::MutableArrayRef<SignedNumericTerm<CAT>> terms) {
   assert(!terms.empty() && "cannot build empty signed fold");
-  const int kind{terms.front().kind()};
+  const KindsEnum kind{terms.front().kind()};
   const bool isPositive{terms.front().isPositive};
   NumericExpr<CAT> result{std::move(terms.back().expr)};
   for (std::size_t i{terms.size() - 1}; i > 0; --i) {
@@ -1407,7 +1412,7 @@ template <common::TypeCategory CAT>
 static SignedNumericExpr<CAT> buildSignedAdd(
     SignedNumericExpr<CAT> left, SignedNumericExpr<CAT> right) {
   CHECK(left.kind() == right.kind());
-  const int kind{left.kind()};
+  const KindsEnum kind{left.kind()};
   if (left.isPositive == right.isPositive) {
     return SignedNumericExpr<CAT>{
         NumericExpr<CAT>{Add<Numeric<CAT>>{
@@ -1730,17 +1735,18 @@ template <TypeCategory TO, TypeCategory FROM>
 static std::optional<Expr<SomeType>> DataConstantConversionHelper(
     FoldingContext &context, const DynamicType &toType,
     const Expr<SomeType> &expr) {
-  if (!common::IsValidKindOfIntrinsicType(FROM, toType.kind())) {
+  if (!common::IsValidKindOfIntrinsicType(
+          FROM, static_cast<KindsEnum>(toType.kind()))) {
     return std::nullopt;
   }
-  DynamicType sizedType{FROM, toType.kind()};
+  DynamicType sizedType{FROM, static_cast<KindsEnum>(toType.kind())};
   if (auto sized{
           Fold(context, ConvertToType(sizedType, Expr<SomeType>{expr}))}) {
     if (const auto *someExpr{UnwrapExpr<Expr<SomeKind<FROM>>>(*sized)}) {
       return common::visit(
           [](const auto &w) -> std::optional<Expr<SomeType>> {
             using FromType = ResultType<decltype(w)>;
-            const int kind{w.kind()};
+            const KindsEnum kind{static_cast<KindsEnum>(w.kind())};
             if (IsValidKindOfIntrinsicType(TO, kind)) {
               if (const auto *fromConst{UnwrapExpr<Constant<FromType>>(w)}) {
                 using LogicalType = value::LogicalValue;
@@ -1854,7 +1860,7 @@ std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,
 template <typename T> const Symbol *GetBoundSymbol(const Expr<T> &);
 const Symbol *GetBoundSymbol(const Expr<Type<TypeCategory::Integer>> &expr) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{expr.kind()};
+  const KindsEnum kind{static_cast<KindsEnum>(expr.kind())};
   return common::visit(
       common::visitors{
           [](const Extremum<T> &max) -> const Symbol * {
@@ -1875,7 +1881,9 @@ const Symbol *GetBoundSymbol(const Expr<Type<TypeCategory::Integer>> &expr) {
           [kind](const Convert<T, TypeCategory::Integer> &x) {
             return common::visit(
                 [kind](const auto &y) -> const Symbol * {
-                  int yKind{y.GetType() ? y.GetType()->kind() : 0};
+                  KindsEnum yKind{y.GetType()
+                          ? static_cast<KindsEnum>(y.GetType()->kind())
+                          : NoKind};
                   if (yKind <= kind) {
                     return GetBoundSymbol(y);
                   } else {

@@ -69,19 +69,17 @@ template <Fortran::common::TypeCategory TC>
 std::string mangleArrayLiteral(
     mlir::Type,
     const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>> &x) {
-  const int kind{x.kind()};
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
-                            x.shape(), TC, kind);
+                            x.shape(), TC, static_cast<int>(x.kind()));
 }
 
 inline std::string mangleArrayLiteral(
     mlir::Type,
     const Fortran::evaluate::Constant<
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>> &x) {
-  const int kind{x.kind()};
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), Fortran::common::TypeCategory::Character,
-                            kind, x.LEN());
+                            static_cast<int>(x.kind()), x.LEN());
 }
 
 inline std::string mangleArrayLiteral(

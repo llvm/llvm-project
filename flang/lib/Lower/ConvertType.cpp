@@ -34,7 +34,8 @@ using Fortran::common::VectorElementCategory;
 
 static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Real, kind)) {
+          Fortran::common::TypeCategory::Real,
+          static_cast<Fortran::common::KindsEnum>(kind))) {
     switch (kind) {
     case 2:
       return mlir::Float16Type::get(context);
@@ -54,13 +55,14 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
 }
 
 static int getIntegerBits(int kind) {
-  return Fortran::evaluate::Type<
-      Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
+  return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>::
+      Scalar::bits(static_cast<Fortran::common::KindsEnum>(kind));
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Integer, kind)) {
+          Fortran::common::TypeCategory::Integer,
+          static_cast<Fortran::common::KindsEnum>(kind))) {
     mlir::IntegerType::SignednessSemantics signedness =
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
                     : mlir::IntegerType::SignednessSemantics::Signless);
@@ -72,7 +74,8 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Logical, KIND))
+          Fortran::common::TypeCategory::Logical,
+          static_cast<Fortran::common::KindsEnum>(KIND)))
     return fir::LogicalType::get(context, KIND);
   return {};
 }
@@ -81,7 +84,8 @@ static mlir::Type genCharacterType(
     mlir::MLIRContext *context, int KIND,
     Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
   if (Fortran::common::IsValidKindOfIntrinsicType(
-          Fortran::common::TypeCategory::Character, KIND))
+          Fortran::common::TypeCategory::Character,
+          static_cast<Fortran::common::KindsEnum>(KIND)))
     return fir::CharacterType::get(context, KIND, len);
   return {};
 }
@@ -152,7 +156,8 @@ struct TypeBuilderImpl {
       // INTEGER, UNSIGNED, REAL, COMPLEX, CHARACTER, LOGICAL
       llvm::SmallVector<Fortran::lower::LenParameterTy> params;
       translateLenParameters(params, category, expr);
-      baseType = genFIRType(context, category, dynamicType->kind(), params);
+      baseType = genFIRType(context, category,
+                            static_cast<int>(dynamicType->kind()), params);
     }
     std::optional<Fortran::evaluate::Shape> shapeExpr =
         Fortran::evaluate::GetShape(converter.getFoldingContext(), expr);
@@ -487,8 +492,8 @@ struct TypeBuilderImpl {
         Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>;
     auto designator = Fortran::evaluate::Fold(
         converter.getFoldingContext(),
-        Fortran::evaluate::Expr<TC>{
-            Fortran::evaluate::Designator<TC>{kind, symbol}});
+        Fortran::evaluate::Expr<TC>{Fortran::evaluate::Designator<TC>{
+            static_cast<Fortran::common::KindsEnum>(kind), symbol}});
     if (auto len = toInt64(designator.LEN()))
       return *len;
     return fir::SequenceType::getUnknownExtent();

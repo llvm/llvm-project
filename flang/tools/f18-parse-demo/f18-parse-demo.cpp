@@ -406,10 +406,10 @@ int main(int argc, char *const argv[]) {
       options.predefinitions.emplace_back(
           arg.substr(2), std::optional<std::string>{});
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
-      defaultKinds.set_defaultRealKind(8);
+      defaultKinds.set_defaultRealKind(Fortran::common::KindsEnum::Kind8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
-      defaultKinds.set_defaultIntegerKind(8);
-      defaultKinds.set_defaultLogicalKind(8);
+      defaultKinds.set_defaultIntegerKind(Fortran::common::KindsEnum::Kind8);
+      defaultKinds.set_defaultLogicalKind(Fortran::common::KindsEnum::Kind8);
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18-parse-demo options:\n"

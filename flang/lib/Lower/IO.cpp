@@ -1116,7 +1116,7 @@ lowerStringLit(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   auto [buff, len] = genBuffer(converter, loc, *expr, strTy, lenTy, stmtCtx);
   mlir::Value kind;
   if (ty2) {
-    auto kindVal = expr->GetType().value().kind();
+    auto kindVal = static_cast<std::int64_t>(expr->GetType().value().kind());
     kind = mlir::arith::ConstantOp::create(
         builder, loc, builder.getIntegerAttr(ty2, kindVal));
   }
@@ -1954,8 +1954,9 @@ genNewunitSpec(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
       mlir::Value addr = builder.createConvert(
           loc, ioFuncTy.getInput(1),
           fir::getBase(converter.genExprAddr(loc, var, stmtCtx)));
-      auto kind = builder.createIntegerConstant(loc, ioFuncTy.getInput(2),
-                                                var->GetType().value().kind());
+      auto kind = builder.createIntegerConstant(
+          loc, ioFuncTy.getInput(2),
+          static_cast<std::int64_t>(var->GetType().value().kind()));
       llvm::SmallVector<mlir::Value> ioArgs = {cookie, addr, kind};
       return fir::CallOp::create(builder, loc, ioFunc, ioArgs).getResult(0);
     }

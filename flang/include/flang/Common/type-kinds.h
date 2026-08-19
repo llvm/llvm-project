@@ -14,53 +14,126 @@
 #include <cinttypes>
 
 // Canonical lists of supported Fortran kinds for each intrinsic type.
-#define FORTRAN_INTEGER_KINDS {1, 2, 4, 8, 16}
+#define FORTRAN_INTEGER_KINDS \
+  {Fortran::common::KindsEnum::Kind1, Fortran::common::KindsEnum::Kind2, \
+      Fortran::common::KindsEnum::Kind4, Fortran::common::KindsEnum::Kind8, \
+      Fortran::common::KindsEnum::Kind16}
 #define FORTRAN_UNSIGNED_KINDS FORTRAN_INTEGER_KINDS
-#define FORTRAN_REAL_KINDS {2, 3, 4, 8, 10, 16}
-#define FORTRAN_LOGICAL_KINDS {1, 2, 4, 8}
-#define FORTRAN_CHARACTER_KINDS {1, 2, 4}
+#define FORTRAN_REAL_KINDS \
+  {Fortran::common::KindsEnum::Kind2, Fortran::common::KindsEnum::Kind3, \
+      Fortran::common::KindsEnum::Kind4, Fortran::common::KindsEnum::Kind8, \
+      Fortran::common::KindsEnum::Kind10, Fortran::common::KindsEnum::Kind16}
+#define FORTRAN_LOGICAL_KINDS \
+  {Fortran::common::KindsEnum::Kind1, Fortran::common::KindsEnum::Kind2, \
+      Fortran::common::KindsEnum::Kind4, Fortran::common::KindsEnum::Kind8}
+#define FORTRAN_CHARACTER_KINDS \
+  {Fortran::common::KindsEnum::Kind1, Fortran::common::KindsEnum::Kind2, \
+      Fortran::common::KindsEnum::Kind4}
 
 namespace Fortran::common {
 
-static constexpr int IntegerKinds[] FORTRAN_INTEGER_KINDS;
-static constexpr int UnsignedKinds[] FORTRAN_UNSIGNED_KINDS;
-static constexpr int RealKinds[] FORTRAN_REAL_KINDS;
-static constexpr int LogicalKinds[] FORTRAN_LOGICAL_KINDS;
-static constexpr int CharacterKinds[] FORTRAN_CHARACTER_KINDS;
+/// All possible kinds. Used to strongly type Fortran KIND values.
+///
+/// Cannot use ENUM_CLASS here because it does not support assigned values.
+enum class KindsEnum : int {
+  InvalidKind = -1,
+  NoKind = 0,
+
+  Kind1 = 1,
+  Kind2 = 2,
+  Kind3 = 3,
+  Kind4 = 4,
+  Kind8 = 8,
+  Kind10 = 10,
+  Kind16 = 16,
+
+  // SpecialKinds
+  AssumedTypeKind = -3,
+  ClassKind = -2,
+  TypelessKind = -1,
+};
+
+inline constexpr bool operator<(KindsEnum a, KindsEnum b) {
+  return static_cast<int>(a) < static_cast<int>(b);
+}
+inline constexpr bool operator<=(KindsEnum a, KindsEnum b) {
+  return static_cast<int>(a) <= static_cast<int>(b);
+}
+inline constexpr bool operator>(KindsEnum a, KindsEnum b) {
+  return static_cast<int>(a) > static_cast<int>(b);
+}
+inline constexpr bool operator>=(KindsEnum a, KindsEnum b) {
+  return static_cast<int>(a) >= static_cast<int>(b);
+}
+
+inline constexpr KindsEnum IntegerKinds[] FORTRAN_INTEGER_KINDS;
+inline constexpr KindsEnum UnsignedKinds[] FORTRAN_UNSIGNED_KINDS;
+inline constexpr KindsEnum RealKinds[] FORTRAN_REAL_KINDS;
+inline constexpr KindsEnum LogicalKinds[] FORTRAN_LOGICAL_KINDS;
+inline constexpr KindsEnum CharacterKinds[] FORTRAN_CHARACTER_KINDS;
+
+/// Iterable lists of valid kinds for each TypeCategory for use by SearchTypes.
+template <TypeCategory CAT> struct KindsByType;
+template <> struct KindsByType<TypeCategory::Integer> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_INTEGER_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Unsigned> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_UNSIGNED_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Real> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_REAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Complex> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_REAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Logical> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_LOGICAL_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Character> {
+  static inline constexpr KindsEnum kinds[] FORTRAN_CHARACTER_KINDS;
+};
+template <> struct KindsByType<TypeCategory::Derived> {
+  static inline constexpr KindsEnum kinds[]{KindsEnum::NoKind};
+};
 
 static constexpr int maxKind{16};
 
 template <typename T, std::size_t N>
-static constexpr bool IsKindInList(const T (&kinds)[N], std::int64_t kind) {
+static constexpr bool IsKindInList(const T (&kinds)[N], KindsEnum kind) {
   for (std::size_t i{0}; i < N; ++i) {
-    if (kinds[i] == kind)
+    if (kinds[i] == static_cast<T>(kind))
       return true;
   }
   return false;
+}
+
+inline constexpr bool IsValidKind(KindsEnum kind) {
+  int val{static_cast<int>(kind)};
+  return 1 <= val && val <= maxKind;
 }
 
 // A predicate that is true when a kind value is a kind that could possibly
 // be supported for an intrinsic type category on some target instruction
 // set architecture.
 static constexpr bool IsValidKindOfIntrinsicType(
-    TypeCategory category, std::int64_t kind) {
+    TypeCategory category, KindsEnum kind) {
   switch (category) {
   case TypeCategory::Integer:
   case TypeCategory::Unsigned: {
-    constexpr int kinds[] = FORTRAN_INTEGER_KINDS;
+    constexpr auto &kinds = KindsByType<TypeCategory::Integer>::kinds;
     return IsKindInList(kinds, kind);
   }
   case TypeCategory::Real:
   case TypeCategory::Complex: {
-    constexpr int kinds[] = FORTRAN_REAL_KINDS;
+    constexpr auto &kinds = KindsByType<TypeCategory::Real>::kinds;
     return IsKindInList(kinds, kind);
   }
   case TypeCategory::Character: {
-    constexpr int kinds[] = FORTRAN_CHARACTER_KINDS;
+    constexpr auto &kinds = KindsByType<TypeCategory::Character>::kinds;
     return IsKindInList(kinds, kind);
   }
   case TypeCategory::Logical: {
-    constexpr int kinds[] = FORTRAN_LOGICAL_KINDS;
+    constexpr auto &kinds = KindsByType<TypeCategory::Logical>::kinds;
     return IsKindInList(kinds, kind);
   }
   default:
@@ -68,10 +141,11 @@ static constexpr bool IsValidKindOfIntrinsicType(
   }
 }
 
-static constexpr int TypeSizeInBytes(TypeCategory category, std::int64_t kind) {
+static constexpr KindsEnum TypeSizeInBytes(
+    TypeCategory category, KindsEnum kind) {
   if (IsValidKindOfIntrinsicType(category, kind)) {
     if (category == TypeCategory::Real || category == TypeCategory::Complex) {
-      int precision{PrecisionOfRealKind(kind)};
+      int precision{PrecisionOfRealKind(static_cast<int>(kind))};
       int bits{BitsForBinaryPrecision(precision)};
       if (bits == 80) { // x87 is stored in 16-byte containers
         bits = 128;
@@ -79,12 +153,12 @@ static constexpr int TypeSizeInBytes(TypeCategory category, std::int64_t kind) {
       if (category == TypeCategory::Complex) {
         bits *= 2;
       }
-      return bits >> 3;
+      return static_cast<KindsEnum>(bits >> 3);
     } else {
       return kind;
     }
   } else {
-    return -1;
+    return KindsEnum::InvalidKind;
   }
 }
 

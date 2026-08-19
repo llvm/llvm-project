@@ -31,7 +31,7 @@ using ExtentExpr = Expr<ExtentType>;
 using MaybeExtentExpr = std::optional<ExtentExpr>;
 using Shape = std::vector<MaybeExtentExpr>;
 
-inline constexpr int ExtentIntKind = Fortran::evaluate::SubscriptIntegerKind;
+inline constexpr KindsEnum ExtentIntKind = SubscriptIntegerKind;
 
 inline Constant<ExtentType> MakeExtentConstant(int64_t v) {
   return Constant<ExtentType>{

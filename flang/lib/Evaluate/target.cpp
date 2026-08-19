@@ -18,15 +18,16 @@ Rounding TargetCharacteristics::defaultRounding;
 
 TargetCharacteristics::TargetCharacteristics() {
   auto enableCategoryKinds{[this](TypeCategory category) {
-    for (int kind{1}; kind <= maxKind; ++kind) {
+    for (int i{1}; i <= maxKind; ++i) {
+      KindsEnum kind{static_cast<KindsEnum>(i)};
       if (CanSupportType(category, kind)) {
-        auto byteSize{
-            static_cast<std::size_t>(common::TypeSizeInBytes(category, kind))};
+        auto byteSize{static_cast<std::size_t>(
+            common::TypeSizeInBytes(category, static_cast<KindsEnum>(kind)))};
         std::size_t align{byteSize};
         if (category == TypeCategory::Complex) {
           align /= 2;
         }
-        EnableType(category, kind, byteSize, align);
+        EnableType(category, static_cast<KindsEnum>(kind), byteSize, align);
       }
     }
   }};
@@ -43,15 +44,15 @@ TargetCharacteristics::TargetCharacteristics() {
 }
 
 bool TargetCharacteristics::CanSupportType(
-    TypeCategory category, std::int64_t kind) {
+    TypeCategory category, KindsEnum kind) {
   return common::IsValidKindOfIntrinsicType(category, kind);
 }
 
 bool TargetCharacteristics::EnableType(common::TypeCategory category,
-    std::int64_t kind, std::size_t byteSize, std::size_t align) {
+    KindsEnum kind, std::size_t byteSize, std::size_t align) {
   if (CanSupportType(category, kind)) {
-    byteSize_[static_cast<int>(category)][kind] = byteSize;
-    align_[static_cast<int>(category)][kind] = align;
+    byteSize_[static_cast<int>(category)][static_cast<int>(kind)] = byteSize;
+    align_[static_cast<int>(category)][static_cast<int>(kind)] = align;
     maxByteSize_ = std::max(maxByteSize_, byteSize);
     maxAlignment_ = std::max(maxAlignment_, align);
     return true;
@@ -61,32 +62,32 @@ bool TargetCharacteristics::EnableType(common::TypeCategory category,
 }
 
 void TargetCharacteristics::DisableType(
-    common::TypeCategory category, std::int64_t kind) {
-  if (kind > 0 && kind <= maxKind) {
-    align_[static_cast<int>(category)][kind] = 0;
+    common::TypeCategory category, KindsEnum kind) {
+  if (IsValidKind(kind)) {
+    align_[static_cast<int>(category)][static_cast<int>(kind)] = 0;
   }
 }
 
 std::size_t TargetCharacteristics::GetByteSize(
-    common::TypeCategory category, std::int64_t kind) const {
-  if (kind > 0 && kind <= maxKind) {
-    return byteSize_[static_cast<int>(category)][kind];
+    common::TypeCategory category, KindsEnum kind) const {
+  if (IsValidKind(kind)) {
+    return byteSize_[static_cast<int>(category)][static_cast<int>(kind)];
   } else {
     return 0;
   }
 }
 
 std::size_t TargetCharacteristics::GetAlignment(
-    common::TypeCategory category, std::int64_t kind) const {
-  if (kind > 0 && kind <= maxKind) {
-    return align_[static_cast<int>(category)][kind];
+    common::TypeCategory category, KindsEnum kind) const {
+  if (IsValidKind(kind)) {
+    return align_[static_cast<int>(category)][static_cast<int>(kind)];
   } else {
     return 0;
   }
 }
 
 bool TargetCharacteristics::IsTypeEnabled(
-    common::TypeCategory category, std::int64_t kind) const {
+    common::TypeCategory category, KindsEnum kind) const {
   return GetAlignment(category, kind) > 0;
 }
 
@@ -102,16 +103,16 @@ void TargetCharacteristics::set_areSubnormalsFlushedToZero(bool yes) {
 }
 
 // Check if a given real kind has flushing control.
-bool TargetCharacteristics::hasSubnormalFlushingControl(int kind) const {
-  CHECK(kind > 0 && kind <= maxKind);
+bool TargetCharacteristics::hasSubnormalFlushingControl(KindsEnum kind) const {
+  CHECK(IsValidKind(kind));
   CHECK(CanSupportType(TypeCategory::Real, kind));
-  return hasSubnormalFlushingControl_[kind];
+  return hasSubnormalFlushingControl_[static_cast<int>(kind)];
 }
 
 // Check if any or all real kinds have flushing control.
 bool TargetCharacteristics::hasSubnormalFlushingControl(bool any) const {
   for (int kind{1}; kind <= maxKind; ++kind) {
-    if (CanSupportType(TypeCategory::Real, kind) &&
+    if (CanSupportType(TypeCategory::Real, static_cast<KindsEnum>(kind)) &&
         hasSubnormalFlushingControl_[kind] == any) {
       return any;
     }
@@ -120,22 +121,22 @@ bool TargetCharacteristics::hasSubnormalFlushingControl(bool any) const {
 }
 
 void TargetCharacteristics::set_hasSubnormalFlushingControl(
-    int kind, bool yes) {
-  CHECK(kind > 0 && kind <= maxKind);
-  hasSubnormalFlushingControl_[kind] = yes;
+    KindsEnum kind, bool yes) {
+  CHECK(IsValidKind(kind));
+  hasSubnormalFlushingControl_[static_cast<int>(kind)] = yes;
 }
 
 // Check if a given real kind has (nonstandard) ieee_denorm exception control.
-bool TargetCharacteristics::hasSubnormalExceptionSupport(int kind) const {
-  CHECK(kind > 0 && kind <= maxKind);
+bool TargetCharacteristics::hasSubnormalExceptionSupport(KindsEnum kind) const {
+  CHECK(IsValidKind(kind));
   CHECK(CanSupportType(TypeCategory::Real, kind));
-  return hasSubnormalExceptionSupport_[kind];
+  return hasSubnormalExceptionSupport_[static_cast<int>(kind)];
 }
 
 // Check if all real kinds have support for the ieee_denorm exception.
 bool TargetCharacteristics::hasSubnormalExceptionSupport() const {
   for (int kind{1}; kind <= maxKind; ++kind) {
-    if (CanSupportType(TypeCategory::Real, kind) &&
+    if (CanSupportType(TypeCategory::Real, static_cast<KindsEnum>(kind)) &&
         !hasSubnormalExceptionSupport_[kind]) {
       return false;
     }
@@ -144,9 +145,9 @@ bool TargetCharacteristics::hasSubnormalExceptionSupport() const {
 }
 
 void TargetCharacteristics::set_hasSubnormalExceptionSupport(
-    int kind, bool yes) {
-  CHECK(kind > 0 && kind <= maxKind);
-  hasSubnormalExceptionSupport_[kind] = yes;
+    KindsEnum kind, bool yes) {
+  CHECK(IsValidKind(kind));
+  hasSubnormalExceptionSupport_[static_cast<int>(kind)] = yes;
 }
 
 void TargetCharacteristics::set_roundingMode(Rounding rounding) {
@@ -160,9 +161,9 @@ public:
   SelectedIntKindVisitor(
       const TargetCharacteristics &targetCharacteristics, std::int64_t p)
       : targetCharacteristics_{targetCharacteristics}, precision_{p} {}
-  using Result = std::optional<int>;
+  using Result = std::optional<KindsEnum>;
   using Types = IntegerTypes;
-  template <typename T> Result Test(int kind) const {
+  template <typename T> Result Test(KindsEnum kind) const {
     if (Scalar<T>::RANGE(kind) >= precision_ &&
         targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
       return kind;
@@ -178,7 +179,7 @@ private:
 
 int TargetCharacteristics::SelectedIntKind(std::int64_t precision) const {
   if (auto kind{SearchTypes(SelectedIntKindVisitor{*this, precision})}) {
-    return *kind;
+    return static_cast<int>(*kind);
   } else {
     return -1;
   }
@@ -190,9 +191,9 @@ public:
   SelectedLogicalKindVisitor(
       const TargetCharacteristics &targetCharacteristics, std::int64_t bits)
       : targetCharacteristics_{targetCharacteristics}, bits_{bits} {}
-  using Result = std::optional<int>;
+  using Result = std::optional<KindsEnum>;
   using Types = LogicalTypes;
-  template <typename T> Result Test(int kind) const {
+  template <typename T> Result Test(KindsEnum kind) const {
     if (Scalar<T>::bits(kind) >= bits_ &&
         targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
       return kind;
@@ -208,7 +209,7 @@ private:
 
 int TargetCharacteristics::SelectedLogicalKind(std::int64_t bits) const {
   if (auto kind{SearchTypes(SelectedLogicalKindVisitor{*this, bits})}) {
-    return *kind;
+    return static_cast<int>(*kind);
   } else {
     return -1;
   }
@@ -221,13 +222,13 @@ public:
       std::int64_t p, std::int64_t r)
       : targetCharacteristics_{targetCharacteristics}, precision_{p}, range_{
                                                                           r} {}
-  using Result = std::optional<int>;
+  using Result = std::optional<KindsEnum>;
   using Types = RealTypes;
-  template <typename T> Result Test(int kind) const {
+  template <typename T> Result Test(KindsEnum kind) const {
     if (Scalar<T>::PRECISION(kind) >= precision_ &&
         Scalar<T>::RANGE(kind) >= range_ &&
         targetCharacteristics_.IsTypeEnabled(T::category, kind)) {
-      return {kind};
+      return kind;
     } else {
       return std::nullopt;
     }
@@ -245,7 +246,7 @@ int TargetCharacteristics::SelectedRealKind(
   }
   if (auto kind{
           SearchTypes(SelectedRealKindVisitor{*this, precision, range})}) {
-    return *kind;
+    return static_cast<int>(*kind);
   }
   // No kind has both sufficient precision and sufficient range.
   // The negative return value encodes whether any kinds exist that

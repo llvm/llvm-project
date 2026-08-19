@@ -23,8 +23,6 @@
 
 namespace Fortran::semantics {
 
-KindExpr MakeKindExpr(int v) { return evaluate::MakeSubscriptIntExpr(v); }
-
 DerivedTypeSpec::DerivedTypeSpec(SourceName name, const Symbol &typeSymbol)
     : name_{name}, originalTypeSymbol_{typeSymbol},
       typeSymbol_{typeSymbol.GetUltimate()} {
@@ -116,7 +114,7 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
   auto &messages{foldingContext.messages()};
   for (const Symbol &symbol : OrderParameterDeclarations(typeSymbol_)) {
     SourceName name{symbol.name()};
-    int parameterKind{evaluate::TypeParamInquiry::ResultKind};
+    KindsEnum parameterKind{evaluate::TypeParamInquiry::ResultKind};
     // Compute the integer kind value of the type parameter,
     // which may depend on the values of earlier ones.
     if (const auto *typeSpec{symbol.GetType()}) {
@@ -125,8 +123,9 @@ void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
         auto restorer{foldingContext.WithPDTInstance(*this)};
         auto folded{Fold(foldingContext, KindExpr{intrinType->kind()})};
         if (auto k{evaluate::ToInt64(folded)}; k &&
-            common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
-          parameterKind = static_cast<int>(*k);
+            common::IsValidKindOfIntrinsicType(
+                TypeCategory::Integer, static_cast<KindsEnum>(*k))) {
+          parameterKind = static_cast<KindsEnum>(*k);
         } else {
           messages.Say(
               "Type of type parameter '%s' (%s) is not a valid kind of INTEGER"_err_en_US,
@@ -672,11 +671,11 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     CHECK(kindExpr.has_value());
   }
   KindExpr folded{Fold(std::move(*kindExpr))};
-  int kind{context().GetDefaultKind(intrinsic.category())};
+  KindsEnum kind{context().GetDefaultKind(intrinsic.category())};
   if (auto value{evaluate::ToInt64(folded)}) {
     if (foldingContext().targetCharacteristics().IsTypeEnabled(
-            intrinsic.category(), *value)) {
-      kind = *value;
+            intrinsic.category(), static_cast<KindsEnum>(*value))) {
+      kind = static_cast<KindsEnum>(*value);
     } else {
       foldingContext().messages().Say(symbolName,
           "KIND parameter value (%jd) of intrinsic type %s did not resolve to a supported value"_err_en_US,

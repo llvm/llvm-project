@@ -22,7 +22,8 @@ namespace Fortran::semantics {
 
 template <typename T> class CaseValues {
 public:
-  CaseValues(int kind, SemanticsContext &c, const evaluate::DynamicType &t)
+  CaseValues(
+      KindsEnum kind, SemanticsContext &c, const evaluate::DynamicType &t)
       : kind_{kind}, context_{c}, caseExprType_{t} {}
 
   void Check(const std::list<parser::CaseConstruct::Case> &cases) {
@@ -87,7 +88,8 @@ private:
         auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
         if (auto converted{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(
-                    {T::category, kind_}, SomeExpr{folded}))}) {
+                    evaluate::DynamicType{T::category, kind_},
+                    SomeExpr{folded}))}) {
           if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
             auto back{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(*type, SomeExpr{*converted}))};
@@ -144,7 +146,7 @@ private:
   }
 
   struct Case {
-    explicit Case(int kind, const parser::Statement<parser::CaseStmt> &s)
+    explicit Case(KindsEnum kind, const parser::Statement<parser::CaseStmt> &s)
         : kind_{kind}, stmt{s} {}
     bool IsDefault() const { return !lower && !upper; }
     std::string AsFortran() const {
@@ -168,7 +170,7 @@ private:
       return result;
     }
 
-    int kind_;
+    KindsEnum kind_;
     const parser::Statement<parser::CaseStmt> &stmt;
     std::optional<Value> lower, upper;
   };
@@ -218,7 +220,7 @@ private:
     }
   }
 
-  int kind_;
+  KindsEnum kind_;
   SemanticsContext &context_;
   const evaluate::DynamicType &caseExprType_;
   std::list<Case> cases_;
@@ -228,7 +230,7 @@ private:
 template <TypeCategory CAT> struct TypeVisitor {
   using Result = bool;
   using Types = evaluate::CategoryTypes<CAT>;
-  template <typename T> Result Test(int kind) {
+  template <typename T> Result Test(KindsEnum kind) {
     if (kind == exprType.kind()) {
       CaseValues<T>(kind, context, exprType).Check(caseList);
       return true;
@@ -353,7 +355,8 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
           TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
       return;
     case TypeCategory::Logical:
-      CaseValues<evaluate::Type<TypeCategory::Logical>>{1, context_, *exprType}
+      CaseValues<evaluate::Type<TypeCategory::Logical>>{
+          KindsEnum::Kind1, context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:
@@ -364,9 +367,10 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
       if (const auto *derived{evaluate::GetDerivedTypeSpec(*exprType)}) {
         if (derived->IsEnumerationType()) {
           if (ConvertEnumCaseValues(context_, caseList, *derived)) {
-            evaluate::DynamicType intType{TypeCategory::Integer, 4};
+            evaluate::DynamicType intType{
+                TypeCategory::Integer, KindsEnum::Kind4};
             CaseValues<evaluate::Type<TypeCategory::Integer>>{
-                4, context_, intType}
+                KindsEnum::Kind4, context_, intType}
                 .Check(caseList);
           }
           return;

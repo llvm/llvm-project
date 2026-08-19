@@ -66,7 +66,8 @@ RT_API_ATTRS void Descriptor::Establish(TypeCode t, std::size_t elementBytes,
 
 RT_API_ATTRS std::size_t Descriptor::BytesFor(TypeCategory category, int kind) {
   Terminator terminator{__FILE__, __LINE__};
-  int bytes{common::TypeSizeInBytes(category, kind)};
+  int bytes{static_cast<int>(
+      common::TypeSizeInBytes(category, static_cast<common::KindsEnum>(kind)))};
   RUNTIME_CHECK(terminator, bytes > 0);
   return bytes;
 }

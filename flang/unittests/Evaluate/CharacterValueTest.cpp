@@ -37,11 +37,11 @@ struct KindName {
 template <typename T> class CharacterValueTypedKind : public testing::Test {};
 TYPED_TEST_SUITE(CharacterValueTypedKind, CharacterTypedKinds, KindName);
 
-class CharacterValueKind : public testing::TestWithParam<int> {};
+class CharacterValueKind : public testing::TestWithParam<KindsEnum> {};
 INSTANTIATE_TEST_SUITE_P(CharacterValueKind, CharacterValueKind,
     testing::ValuesIn(CharacterKinds),
-    [](const testing::TestParamInfo<int> &info) {
-      return "CHARACTER(" + std::to_string(info.param) + ")";
+    [](const testing::TestParamInfo<KindsEnum> &info) {
+      return "CHARACTER(" + std::to_string(static_cast<int>(info.param)) + ")";
     });
 
 //===----------------------------------------------------------------------===//
@@ -63,7 +63,7 @@ static testing::AssertionResult CharsEqual(const char *expectedExpr,
   EXPECT_PRED_FORMAT2(CharsEqual, expected, value)
 
 /// Writes one character of the value's own character type at "dst".
-static void PutChar(int kind, void *dst, char32_t c) {
+static void PutChar(KindsEnum kind, void *dst, char32_t c) {
   CharacterValue::withCharProto(kind, [=](auto proto) {
     using CharT = std::decay_t<decltype(proto)>;
     CharT raw{static_cast<CharT>(c)};
@@ -96,7 +96,7 @@ TEST(CharacterValue, Monostate) {
 TYPED_TEST(CharacterValueTypedKind, ConstructFromStdBasicString) {
   using CharT = typename TypeParam::CharT;
   using StringT = typename TypeParam::StringT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   CharT buffer[] = {'a', 'b', 'c', '\0'};
   CharacterValue v{kind, StringT{buffer}};
@@ -106,7 +106,7 @@ TYPED_TEST(CharacterValueTypedKind, ConstructFromStdBasicString) {
 }
 
 TEST_P(CharacterValueKind, Zero) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue zero{CharacterValue::Zero(kind)};
   CharacterValue empty{kind, ""};
   CharacterValue monostate;
@@ -121,7 +121,7 @@ TEST_P(CharacterValueKind, Zero) {
 }
 
 TEST_P(CharacterValueKind, FillConstructor) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue v(kind, 3, U'x');
   EXPECT_FALSE(v.IsMonostate());
@@ -137,18 +137,18 @@ TEST_P(CharacterValueKind, FillConstructor) {
 }
 
 TEST(CharacterValue, SubscriptWidensToChar32) {
-  CharacterValue u{1, std::string{"\x80"}};
+  CharacterValue u{KindsEnum::Kind1, std::string{"\x80"}};
   EXPECT_EQ(char32_t('\x80'), u[0]);
 
-  CharacterValue w{2, std::u16string{u"\u0100"}};
+  CharacterValue w{KindsEnum::Kind2, std::u16string{u"\u0100"}};
   EXPECT_EQ(char32_t{u'\u0100'}, w[0]);
 
-  CharacterValue v{4, std::u32string{U"\U0001F600"}};
+  CharacterValue v{KindsEnum::Kind4, std::u32string{U"\U0001F600"}};
   EXPECT_EQ(U'\U0001F600', v[0]);
 }
 
 TEST_P(CharacterValueKind, CopyAndMove) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abc"};
 
   CharacterValue copyConstructed{v};
@@ -171,7 +171,7 @@ TEST_P(CharacterValueKind, CopyAndMove) {
 }
 
 TEST_P(CharacterValueKind, CharSize) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue v{kind, "abcd"};
   EXPECT_EQ(kind, v.kind());
@@ -179,7 +179,7 @@ TEST_P(CharacterValueKind, CharSize) {
 }
 
 TEST_P(CharacterValueKind, SizeAndLength) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue v{kind, "hello"};
   EXPECT_FALSE(v.empty());
@@ -192,25 +192,27 @@ TEST_P(CharacterValueKind, SizeAndLength) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(CharacterValueKind, AsStringConversions) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abc"};
 
   // Only the conversion matching the stored character type is available.
-  EXPECT_EQ(kind == 1, v.AsStringRef().has_value());
-  EXPECT_EQ(kind == 1, v.AsStdString().has_value());
-  EXPECT_EQ(kind == 2, v.AsU16String().has_value());
-  EXPECT_EQ(kind == 4, v.AsU32String().has_value());
+  EXPECT_EQ(kind == KindsEnum::Kind1, v.AsStringRef().has_value());
+  EXPECT_EQ(kind == KindsEnum::Kind1, v.AsStdString().has_value());
+  EXPECT_EQ(kind == KindsEnum::Kind2, v.AsU16String().has_value());
+  EXPECT_EQ(kind == KindsEnum::Kind4, v.AsU32String().has_value());
 
   switch (kind) {
-  case 1:
+  case KindsEnum::Kind1:
     EXPECT_EQ("abc", *v.AsStringRef());
     EXPECT_EQ("abc", *v.AsStdString());
     break;
-  case 2:
+  case KindsEnum::Kind2:
     EXPECT_EQ(std::u16string{u"abc"}, *v.AsU16String());
     break;
-  case 4:
+  case KindsEnum::Kind4:
     EXPECT_EQ(std::u32string{U"abc"}, *v.AsU32String());
+    break;
+  default:
     break;
   }
   EXPECT_EQ("abc", v.ToStdString());
@@ -219,7 +221,7 @@ TEST_P(CharacterValueKind, AsStringConversions) {
 TYPED_TEST(CharacterValueTypedKind, ToBasicString) {
   using CharT = typename TypeParam::CharT;
   using StringT = typename TypeParam::StringT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   const CharT data[] = {'a', 'b', 'c', '\0'};
   CharacterValue v1{kind, data};
@@ -227,7 +229,7 @@ TYPED_TEST(CharacterValueTypedKind, ToBasicString) {
 }
 
 TEST_P(CharacterValueKind, WithStdString) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abcde"};
 
   // The callable sees the concrete std::basic_string<> for the stored kind.
@@ -238,11 +240,11 @@ TEST_P(CharacterValueKind, WithStdString) {
 }
 
 TEST_P(CharacterValueKind, ToAscii) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   // conversion to possible kinds
   CharacterValue v{kind, "abc"};
-  for (int to : std::initializer_list<int> FORTRAN_CHARACTER_KINDS) {
+  for (KindsEnum to : CharacterKinds) {
     CharacterValue converted{v.ToAscii(to)};
     EXPECT_EQ(to, converted.kind());
     EXPECT_CHARS_EQ("abc", converted);
@@ -250,7 +252,7 @@ TEST_P(CharacterValueKind, ToAscii) {
 
   // Conversion between kinds is defined only for 7-bit ASCII; anything else
   // yields an empty string.
-  CharacterValue nonascii{4, std::u32string{U"a\u0100b"}};
+  CharacterValue nonascii{KindsEnum::Kind4, std::u32string{U"a\u0100b"}};
   EXPECT_TRUE(nonascii.ToAscii(kind).empty());
   EXPECT_EQ(kind, nonascii.ToAscii(kind).kind());
 
@@ -265,7 +267,7 @@ TEST_P(CharacterValueKind, ToAscii) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(CharacterValueKind, Compare) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue abc{kind, "abc"};
   CharacterValue abd{kind, "abd"};
@@ -292,7 +294,7 @@ TEST_P(CharacterValueKind, Compare) {
 }
 
 TEST_P(CharacterValueKind, RelationalOperators) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue abc{kind, "abc"};
   CharacterValue abd{kind, "abd"};
 
@@ -326,7 +328,7 @@ TEST_P(CharacterValueKind, RelationalOperators) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(CharacterValueKind, AssignFill) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abc"};
 
   v.assign(kind, 2, 'z');
@@ -345,22 +347,22 @@ TEST_P(CharacterValueKind, AssignFromPointerAndLength) {
 
   // char
   v.assign("abcd", 3);
-  EXPECT_EQ(1, v.kind());
+  EXPECT_EQ(KindsEnum::Kind1, v.kind());
   EXPECT_CHARS_EQ("abc", v);
 
   // char16_t
   v.assign(u"abcd", 2);
-  EXPECT_EQ(2, v.kind());
+  EXPECT_EQ(KindsEnum::Kind2, v.kind());
   EXPECT_CHARS_EQ("ab", v);
 
   // char32_t
   v.assign(U"abcd", 4);
-  EXPECT_EQ(4, v.kind());
+  EXPECT_EQ(KindsEnum::Kind4, v.kind());
   EXPECT_CHARS_EQ("abcd", v);
 }
 
 TEST_P(CharacterValueKind, Erase) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abcdef"};
 
   v.erase(3);
@@ -373,7 +375,7 @@ TEST_P(CharacterValueKind, Erase) {
 }
 
 TEST_P(CharacterValueKind, Append) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "ab"};
 
   v.append(3, '!');
@@ -384,7 +386,7 @@ TEST_P(CharacterValueKind, Append) {
 }
 
 TEST_P(CharacterValueKind, Replace) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abcdef"};
 
   CharacterValue xy{kind, "XY"};
@@ -398,7 +400,7 @@ TEST_P(CharacterValueKind, Replace) {
 }
 
 TEST_P(CharacterValueKind, Substr) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abcdef"};
 
   EXPECT_CHARS_EQ("cdef", v.substr(2));
@@ -414,7 +416,7 @@ TEST_P(CharacterValueKind, Substr) {
 }
 
 TEST_P(CharacterValueKind, Reserve) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abc"};
 
   // Reserving capacity does not change the value.
@@ -425,7 +427,7 @@ TEST_P(CharacterValueKind, Reserve) {
 }
 
 TEST_P(CharacterValueKind, Subscript) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abc"};
   EXPECT_EQ(U'a', v[0]);
   EXPECT_EQ(U'b', v[1]);
@@ -433,7 +435,7 @@ TEST_P(CharacterValueKind, Subscript) {
 }
 
 TEST_P(CharacterValueKind, Concatenation) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue ab{kind, "ab"};
   CharacterValue cd{kind, "cd"};
   CharacterValue empty = CharacterValue::Zero(kind);
@@ -447,7 +449,7 @@ TEST_P(CharacterValueKind, Concatenation) {
 }
 
 TEST_P(CharacterValueKind, AppendAssignString) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue v{kind, "ab"};
   CharacterValue cd{kind, "cd"};
@@ -456,7 +458,7 @@ TEST_P(CharacterValueKind, AppendAssignString) {
 }
 
 TEST_P(CharacterValueKind, AppendAssignChar) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
 
   CharacterValue v{kind, "ab"};
   EXPECT_EQ(kind, v.kind());
@@ -473,7 +475,7 @@ TEST(CharacterValue, Npos) {
 }
 
 TEST_P(CharacterValueKind, Find) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue abcabc{kind, "abcabc"};
   CharacterValue bc{kind, "bc"};
   CharacterValue abc{kind, "abc"};
@@ -498,7 +500,7 @@ TEST_P(CharacterValueKind, Find) {
 }
 
 TEST_P(CharacterValueKind, RFind) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "abcabc"};
   CharacterValue bc{kind, "bc"};
   CharacterValue abc{kind, "abc"};
@@ -510,7 +512,7 @@ TEST_P(CharacterValueKind, RFind) {
 }
 
 TEST_P(CharacterValueKind, FindFirstOf) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "hello"};
   CharacterValue le{kind, "le"};
   CharacterValue h{kind, "he"};
@@ -524,7 +526,7 @@ TEST_P(CharacterValueKind, FindFirstOf) {
 }
 
 TEST_P(CharacterValueKind, FindLastOf) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "hello"};
   CharacterValue le{kind, "le"};
   CharacterValue o{kind, "o"};
@@ -536,7 +538,7 @@ TEST_P(CharacterValueKind, FindLastOf) {
 }
 
 TEST_P(CharacterValueKind, FindFirstNotOfCharacter) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue aab{kind, "aab"};
   CharacterValue aaa{kind, "aaa"};
 
@@ -546,7 +548,7 @@ TEST_P(CharacterValueKind, FindFirstNotOfCharacter) {
 }
 
 TEST_P(CharacterValueKind, FindLastNotOfCharacter) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue abb{kind, "abb"};
   CharacterValue bbb{kind, "bbb"};
 
@@ -556,7 +558,7 @@ TEST_P(CharacterValueKind, FindLastNotOfCharacter) {
 }
 
 TEST_P(CharacterValueKind, FindFirstNotOfSet) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "aabbc"};
   CharacterValue ab{kind, "ab"};
   CharacterValue abc{kind, "abc"};
@@ -573,7 +575,7 @@ TEST_P(CharacterValueKind, FindFirstNotOfSet) {
 }
 
 TEST_P(CharacterValueKind, FindLastNotOfSet) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue v{kind, "aabbc"};
   CharacterValue abc{kind, "abc"};
   CharacterValue bc{kind, "bc"};
@@ -594,13 +596,13 @@ TEST_P(CharacterValueKind, FindLastNotOfSet) {
 //===----------------------------------------------------------------------===//
 
 TEST_P(CharacterValueKind, Data) {
-  const int kind{GetParam()};
+  const KindsEnum kind{GetParam()};
   CharacterValue abc{kind, "abc"};
   CharacterValue same{abc};
   CharacterValue v{kind, "abc"};
   const CharacterValue &constRef{v};
 
-  ASSERT_EQ(v.bytesStored(), std::size_t(3 * kind));
+  ASSERT_EQ(v.bytesStored(), std::size_t(3) * static_cast<std::size_t>(kind));
   ASSERT_EQ(same.bytesStored(), v.bytesStored());
   EXPECT_EQ(v.data(), static_cast<void *>(v.charData()));
   EXPECT_EQ(constRef.data(), static_cast<const void *>(constRef.charData()));
@@ -612,7 +614,7 @@ TEST_P(CharacterValueKind, Data) {
 }
 
 TYPED_TEST(CharacterValueTypedKind, At) {
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   CharacterValue v{kind, "abc"};
   const CharacterValue &constRef{v};
 
@@ -629,7 +631,7 @@ TYPED_TEST(CharacterValueTypedKind, At) {
 
 TYPED_TEST(CharacterValueTypedKind, StoreRawBytes) {
   using CharT = typename TypeParam::CharT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   CharacterValue v{kind, "abc"};
 
   CharT buffer[4]{};
@@ -671,7 +673,7 @@ TYPED_TEST(CharacterValueTypedKind, StoreRawBytes) {
 
 TYPED_TEST(CharacterValueTypedKind, FromRawBytes) {
   using CharT = typename TypeParam::CharT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
 
   CharT data[] = {'a', 'b', 'c', '\0'};
   CharacterValue reference{kind, std::basic_string<CharT>(data)};
@@ -689,7 +691,7 @@ TYPED_TEST(CharacterValueTypedKind, FromRawBytes) {
 
 TYPED_TEST(CharacterValueTypedKind, Print) {
   using CharT = typename TypeParam::CharT;
-  constexpr int kind{TypeParam::kind};
+  constexpr KindsEnum kind{TypeParam::kindsEnum};
   constexpr int pos{CharacterKindPos<TypeParam>};
 
   llvm::SmallString<128> buf;

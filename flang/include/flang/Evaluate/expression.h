@@ -60,14 +60,14 @@ using common::RelationalOperator;
 // maps to some instantiation of Type<CATEGORY, KIND>, SomeKind<CATEGORY>,
 // or SomeType.  (Exception: BOZ literal constants in generic Expr<SomeType>.)
 template <typename A> using ResultType = typename std::decay_t<A>::Result;
-template <typename A> constexpr int ResultKind = std::decay_t<A>::kind();
+template <typename A> constexpr KindsEnum ResultKind = std::decay_t<A>::kind();
 
 // Common Expr<> behaviors: every Expr<T> derives from ExpressionBase<T>.
 template <typename RESULT> class ExpressionBase {
 public:
   using Result = RESULT;
 
-  int kind() const;
+  KindsEnum kind() const;
 
 private:
   using Derived = Expr<Result>;
@@ -128,7 +128,7 @@ public:
       (operands == 1 && std::is_same_v<Result, SomeDerived>));
   template <int J> using Operand = std::tuple_element_t<J, OperandTypes>;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   // Unary operations wrap a single Expr with a CopyableIndirection.
   // Binary operations wrap a tuple of CopyableIndirections to Exprs.
@@ -139,11 +139,11 @@ private:
 
 public:
   CLASS_BOILERPLATE(Operation)
-  explicit Operation(int kind, const Expr<OPERANDS> &...x)
+  explicit Operation(KindsEnum kind, const Expr<OPERANDS> &...x)
       : kind_{kind}, operand_{x...} {
     CHECK_KIND(kind, RESULT);
   }
-  explicit Operation(int kind, Expr<OPERANDS> &&...x)
+  explicit Operation(KindsEnum kind, Expr<OPERANDS> &&...x)
       : kind_{kind}, operand_{std::move(x)...} {
     CHECK_KIND(kind, RESULT);
   }
@@ -208,7 +208,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  int kind_;
+  KindsEnum kind_;
   Container operand_;
 };
 
@@ -415,7 +415,7 @@ template <typename T> class ConditionalExpr {
 public:
   using Result = T;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   CLASS_BOILERPLATE(ConditionalExpr)
   ConditionalExpr(Expr<LogicalResult> &&cond, Expr<Result> &&thenVal,
@@ -451,7 +451,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  int kind_;
+  KindsEnum kind_;
   common::CopyableIndirection<Expr<LogicalResult>> condition_;
   common::CopyableIndirection<Expr<Result>> thenValue_;
   common::CopyableIndirection<Expr<Result>> elseValue_;
@@ -464,7 +464,7 @@ struct ImpliedDoIndex {
   using Result = SubscriptInteger;
   bool operator==(const ImpliedDoIndex &) const;
 
-  static constexpr int kind() { return SubscriptIntegerKind; }
+  static constexpr KindsEnum kind() { return SubscriptIntegerKind; }
 
   static constexpr DynamicType GetType() {
     return {TypeCategory::Integer, kind()};
@@ -541,23 +541,23 @@ public:
   using Result = RESULT;
   using Base = ArrayConstructorValues<Result>;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ArrayConstructor)
-  explicit ArrayConstructor(int kind, Base &&values)
+  explicit ArrayConstructor(KindsEnum kind, Base &&values)
       : Base{std::move(values)}, kind_{kind} {
     CHECK_KIND(kind, RESULT);
   }
   template <typename T>
-  explicit ArrayConstructor(int kind, const Expr<T> &) : kind_{kind} {
+  explicit ArrayConstructor(KindsEnum kind, const Expr<T> &) : kind_{kind} {
     CHECK_KIND(kind, RESULT);
   }
-  static constexpr Result result(int kind) { return Result{kind}; }
+  static constexpr Result result(KindsEnum kind) { return Result{kind}; }
   DynamicType GetType() const { return {Result::category, kind_}; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
-  int kind_;
+  KindsEnum kind_;
 };
 
 template <>
@@ -567,20 +567,20 @@ public:
   using Result = Type<TypeCategory::Character>;
   using Base = ArrayConstructorValues<Result>;
 
-  constexpr int kind() const { return kind_; }
+  constexpr KindsEnum kind() const { return kind_; }
 
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ArrayConstructor)
-  explicit ArrayConstructor(int kind, Base &&values)
+  explicit ArrayConstructor(KindsEnum kind, Base &&values)
       : Base{std::move(values)}, kind_{kind} {
-    CHECK(kind != 0);
+    CHECK(kind != NoKind);
   }
   template <typename T>
-  explicit ArrayConstructor(int kind, const Expr<T> &) : kind_{kind} {
-    CHECK(kind != 0);
+  explicit ArrayConstructor(KindsEnum kind, const Expr<T> &) : kind_{kind} {
+    CHECK(kind != NoKind);
   }
   ArrayConstructor &set_LEN(Expr<SubscriptInteger> &&);
   bool operator==(const ArrayConstructor &) const;
-  static constexpr Result result(int kind) { return Result{kind}; }
+  static constexpr Result result(KindsEnum kind) { return Result{kind}; }
   DynamicType GetType() const { return {Result::category, kind()}; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   const Expr<SubscriptInteger> *LEN() const {
@@ -588,7 +588,7 @@ public:
   }
 
 private:
-  int kind_;
+  KindsEnum kind_;
   std::optional<common::CopyableIndirection<Expr<SubscriptInteger>>> length_;
 };
 
@@ -599,7 +599,7 @@ public:
   using Result = SomeDerived;
   using Base = ArrayConstructorValues<Result>;
 
-  constexpr int kind() const { return 0; }
+  constexpr KindsEnum kind() const { return NoKind; }
 
   CLASS_BOILERPLATE(ArrayConstructor)
 
@@ -609,9 +609,9 @@ public:
   explicit ArrayConstructor(const A &prototype)
       : result_{prototype.GetType().value().GetDerivedTypeSpec()} {}
   template <typename A>
-  explicit ArrayConstructor(int kind, const A &prototype)
+  explicit ArrayConstructor(KindsEnum kind, const A &prototype)
       : result_{prototype.GetType().value().GetDerivedTypeSpec()} {
-    CHECK(kind == 0);
+    CHECK(kind == NoKind);
   }
 
   bool operator==(const ArrayConstructor &) const;
@@ -683,7 +683,7 @@ public:
   using Result = Type<TypeCategory::Real>;
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-  explicit Expr(int kind, const Scalar<Result> &x)
+  explicit Expr(KindsEnum kind, const Scalar<Result> &x)
       : u{Constant<Result>{kind, x}} {}
 
 private:
@@ -709,7 +709,7 @@ class Expr<Type<TypeCategory::Complex>>
 public:
   using Result = Type<TypeCategory::Complex>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-  explicit Expr(int kind, const Scalar<Result> &x)
+  explicit Expr(KindsEnum kind, const Scalar<Result> &x)
       : u{Constant<Result>{kind, x}} {}
   using Operations = std::variant<Parentheses<Result>, Negate<Result>,
       Convert<Result, TypeCategory::Complex>, Add<Result>, Subtract<Result>,
@@ -733,9 +733,9 @@ class Expr<Type<TypeCategory::Character>>
 public:
   using Result = Type<TypeCategory::Character>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
-  explicit Expr(int kind, const Scalar<Result> &x)
+  explicit Expr(KindsEnum kind, const Scalar<Result> &x)
       : u{Constant<Result>{kind, x}} {}
-  explicit Expr(int kind, Scalar<Result> &&x)
+  explicit Expr(KindsEnum kind, Scalar<Result> &&x)
       : u{Constant<Result>{kind, std::move(x)}} {}
 
   std::optional<Expr<SubscriptInteger>> LEN() const;
@@ -791,7 +791,7 @@ template <> class Relational<SomeType> {
 public:
   using Result = LogicalResult;
   EVALUATE_UNION_CLASS_BOILERPLATE(Relational)
-  int kind() const {
+  KindsEnum kind() const {
     return common::visit([](const auto &x) { return x.kind(); }, u);
   }
   static constexpr DynamicType GetType() {
@@ -823,9 +823,9 @@ public:
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x.kind(), x}} {}
-  explicit Expr(int kind, const Scalar<Result> &x)
+  explicit Expr(KindsEnum kind, const Scalar<Result> &x)
       : u{Constant<Result>{kind, x}} {}
-  explicit Expr(int kind, bool x)
+  explicit Expr(KindsEnum kind, bool x)
       : u{Constant<Result>{kind, Scalar<Result>{kind, x}}} {}
 
 private:
@@ -860,7 +860,7 @@ class StructureConstructor {
 public:
   using Result = SomeDerived;
 
-  static int kind() { return 0; }
+  static KindsEnum kind() { return NoKind; }
 
   explicit StructureConstructor(const semantics::DerivedTypeSpec &spec)
       : result_{spec} {}
@@ -923,8 +923,8 @@ public:
   using Result = SomeKind<CAT>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
-  int kind() const {
-    return common::visit([](auto v) -> int { return v.kind(); }, u);
+  KindsEnum kind() const {
+    return common::visit([](auto v) { return v.kind(); }, u);
   }
 
   common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
@@ -947,11 +947,11 @@ using CategoryExpression = common::MapTemplate<Expr, SomeCategory>;
 // distinguishable from other integer constants, since they are permitted
 // to be used in only a few situations.
 using BOZLiteralConstant = typename LargestReal::Scalar::Word;
-static constexpr int BOZLiteralConstantKind = LargestRealKind;
+static constexpr KindsEnum BOZLiteralConstantKind = LargestRealKind;
 
 // Null pointers without MOLD= arguments are typed by context.
 struct NullPointer {
-  static constexpr int kind() { return 0; }
+  static constexpr KindsEnum kind() { return NoKind; }
 
   constexpr bool operator==(const NullPointer &) const { return true; }
   static constexpr int Rank() { return 0; }
@@ -970,7 +970,7 @@ template <> class Expr<SomeType> : public ExpressionBase<SomeType> {
 public:
   using Result = SomeType;
 
-  static int kind() { return 0; }
+  static KindsEnum kind() { return NoKind; }
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
 
@@ -1061,24 +1061,25 @@ FOR_EACH_INTRINSIC_KIND(extern template class ArrayConstructor, )
   FOR_EACH_INTRINSIC_KIND(template class ConditionalExpr, )
 
 template <typename T>
-inline Expr<T> MakeConstantExpr(int kind, const Scalar<T> &v) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, const Scalar<T> &v) {
   CHECK(kind == v.kind());
   return Expr<T>{Constant<T>{kind, v}};
 }
 
-template <typename T> inline Expr<T> MakeConstantExpr(int kind, Scalar<T> &&v) {
+template <typename T>
+inline Expr<T> MakeConstantExpr(KindsEnum kind, Scalar<T> &&v) {
   CHECK(kind == v.kind());
   return Expr<T>{Constant<T>{kind, std::move(v)}};
 }
 
 template <typename T>
-inline Expr<T> MakeConstantExpr(int kind, const Constant<T> &c) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, const Constant<T> &c) {
   CHECK(kind == c.kind());
   return Expr<T>{c};
 }
 
 template <typename T>
-inline Expr<T> MakeConstantExpr(int kind, Constant<T> &&c) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, Constant<T> &&c) {
   CHECK(kind == c.kind());
   return Expr<T>{std::move(c)};
 }
@@ -1086,30 +1087,30 @@ inline Expr<T> MakeConstantExpr(int kind, Constant<T> &&c) {
 template <typename T,
     typename =
         std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Character>>>>
-inline Expr<T> MakeConstantExpr(int kind, const std::string &v) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, const std::string &v) {
   return Expr<T>{MakeConstant<T>(kind, v)};
 }
 
 template <typename T,
     typename = std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Integer>>>>
-inline Expr<T> MakeConstantExpr(int kind, int64_t v) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, int64_t v) {
   return Expr<T>{Constant<T>{kind, Scalar<T>{kind, v}}};
 }
 
 template <typename T,
     typename =
         std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Unsigned>>>>
-inline Expr<T> MakeConstantExpr(int kind, uint64_t v) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, uint64_t v) {
   return Expr<T>{Constant<T>{kind, Scalar<T>{kind, v}}};
 }
 
 template <typename T,
     typename = std::enable_if_t<std::is_same_v<T, Type<TypeCategory::Logical>>>>
-inline Expr<T> MakeConstantExpr(int kind, bool v) {
+inline Expr<T> MakeConstantExpr(KindsEnum kind, bool v) {
   return Expr<T>{Constant<T>{kind, Scalar<T>{kind, v}}};
 }
 
-template <typename T> inline Expr<T> MakeZeroExpr(int kind) {
+template <typename T> inline Expr<T> MakeZeroExpr(KindsEnum kind) {
   return MakeConstantExpr<T>(kind, Scalar<T>::Zero(kind));
 }
 
@@ -1127,6 +1128,10 @@ inline Expr<SubscriptInteger> MakeSubscriptIntExpr(
     Scalar<SubscriptInteger> &&v) {
   return Expr<SubscriptInteger>{
       Constant<SubscriptInteger>{SubscriptIntegerKind, std::move(v)}};
+}
+
+inline Expr<SubscriptInteger> MakeKindExpr(KindsEnum v) {
+  return MakeSubscriptIntExpr(static_cast<int>(v));
 }
 
 inline Expr<CInteger> MakeCIntegerExpr(int32_t v) {

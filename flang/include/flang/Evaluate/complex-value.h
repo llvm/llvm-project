@@ -17,6 +17,7 @@ class raw_ostream;
 }
 
 namespace Fortran::evaluate::value {
+using common::KindsEnum;
 
 /// A complex floating-point value with dynamic precision.
 ///
@@ -40,22 +41,22 @@ public:
   explicit ComplexValue(const RealValue &r)
       : ComplexValue{r, RealValue::Zero(r.kind())} {}
 
-  ComplexValue(int kind, const RealValue &r) : ComplexValue{r} {
+  ComplexValue(KindsEnum kind, const RealValue &r) : ComplexValue{r} {
     CHECK(kind == r.kind());
   }
 
-  ComplexValue(int kind, const ComplexValue &v) : ComplexValue{v} {
+  ComplexValue(KindsEnum kind, const ComplexValue &v) : ComplexValue{v} {
     CHECK(kind == v.kind());
   }
 
-  ComplexValue(int kind, ComplexValue &&v) : ComplexValue{std::move(v)} {
+  ComplexValue(KindsEnum kind, ComplexValue &&v) : ComplexValue{std::move(v)} {
     CHECK(kind == v.kind());
   }
 
   /// Creates a complex value (+0.0 + +0.0i) of a given kind. This is
   /// different from the default-ctor which creates a "monostate" that
   /// represents zero of unknown kind.
-  static ComplexValue Zero(int kind) {
+  static ComplexValue Zero(KindsEnum kind) {
     RealValue zero{RealValue::Zero(kind)};
     return ComplexValue{zero, zero};
   }
@@ -74,7 +75,7 @@ public:
   }
 
   /// The kind of the value currently stored.
-  int kind() const {
+  KindsEnum kind() const {
     CHECK(re_.kind() == im_.kind());
     return re_.kind();
   }
@@ -83,7 +84,7 @@ public:
   std::size_t bytesStored() const {
     return re_.bytesStored() + im_.bytesStored();
   }
-  static constexpr std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(KindsEnum kind) {
     return 2 * RealValue::bytesStored(kind);
   }
 
@@ -118,7 +119,7 @@ public:
     return re_.IsSignalingNaN() || im_.IsSignalingNaN();
   }
 
-  static ValueWithRealFlags<ComplexValue> FromInteger(int kind,
+  static ValueWithRealFlags<ComplexValue> FromInteger(KindsEnum kind,
       const IntegerValue &n, bool isUnsigned = false,
       Rounding rounding = TargetCharacteristics::defaultRounding);
 
@@ -146,7 +147,7 @@ public:
     return ComplexValue{re_.FlushSubnormalToZero(), im_.FlushSubnormalToZero()};
   }
 
-  static ComplexValue NotANumber(int kind) {
+  static ComplexValue NotANumber(KindsEnum kind) {
     return {RealValue::NotANumber(kind), RealValue::NotANumber(kind)};
   }
 
@@ -157,7 +158,7 @@ public:
   void StoreRawBytes(void *dst, size_t size, bool *changed = nullptr) const;
 
   static ComplexValue FromRawBytes(
-      int kind, const void *raw, std::size_t expectedSize);
+      KindsEnum kind, const void *raw, std::size_t expectedSize);
 
   // TODO: unit testing
 
