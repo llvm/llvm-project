@@ -412,6 +412,9 @@ private:
       __it = std::next(__first, __mod);
 
     } else {
+      // Defensive: an empty base makes the whole product empty, so any non-zero advance from a
+      // valid iterator is already undefined. Keep the iterator pinned to begin rather than
+      // dividing by zero. Not reachable from well-defined calls, hence untested.
       if constexpr (_Np > 0) {
         __advance<_Np - 1>(__x);
       }
