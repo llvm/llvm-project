@@ -1947,6 +1947,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::strong_ordering summary provider",
                 "std::strong_ordering",
                 eTypeOptionHideChildren | eTypeOptionHideValue, false);
+
+  AddCXXSummary(cpp_category_sp, MsvcStlFilesystemPathSummaryProvider,
+                "MSVC STL/libstdc++ std::filesystem::path summary provider",
+                "^std::filesystem::(__cxx11::)?path$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
