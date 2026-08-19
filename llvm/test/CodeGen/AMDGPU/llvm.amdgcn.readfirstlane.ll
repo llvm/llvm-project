@@ -1749,108 +1749,108 @@ define void @test_readfirstlane_v32f16(ptr addrspace(1) %out, <32 x half> %src) 
 ; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
 ; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v4
 ; CHECK-GISEL-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
 ; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
 ; CHECK-GISEL-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v0
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v4, v4, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v6
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v1
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s20, s4, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v5, v5, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v4
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v3, v5, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v7
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s6, v2
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s21, s5, 16
 ; CHECK-GISEL-NEXT:    s_and_b32 s4, s4, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s20, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v8
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v2, v6, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v5
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v4, v6, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v8
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s7, v3
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s22, s6, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s4, s4, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s5, s5, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s21, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v9
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v3, v7, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v2
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v5, v7, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v9
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s8, v4
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s23, s7, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s5, s5, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s6, s6, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s22, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v10
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v8, v8, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v3
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v6, v8, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v8, 16, v10
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v5
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s24, s8, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s6, s6, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s7, s7, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s23, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v11
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v9, v9, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v8
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v7, v9, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v9, 16, v11
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v6
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s25, s9, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s7, s7, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s8, s8, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s24, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v12
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v6, v10, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v9
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v8, v10, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v10, 16, v12
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s11, v7
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s26, s10, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s8, s8, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s9, s9, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s25, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v13
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v7, v11, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v6
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v9, v11, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v11, 16, v13
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s12, v8
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s27, s11, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s9, s9, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s10, s10, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s26, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v10, 16, v14
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v12, v12, v18 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v7
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v10, v12, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v12, 16, v14
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s13, v9
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s28, s12, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s10, s10, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s11, s11, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s27, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v11, 16, v15
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v13, v13, v19 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v12
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v11, v13, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v13, 16, v15
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s14, v10
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s29, s13, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s11, s11, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s12, s12, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s28, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v18, 16, v16
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v10, v14, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v13
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v12, v14, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v14, 16, v16
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s15, v11
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s40, s14, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s12, s12, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s13, s13, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s29, 16
-; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v19, 16, v17
-; CHECK-GISEL-NEXT:    v_or_b32_sdwa v11, v15, v11 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v14, 16, v18
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v10
+; CHECK-GISEL-NEXT:    v_or_b32_sdwa v13, v15, v13 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; CHECK-GISEL-NEXT:    v_lshrrev_b32_e32 v15, 16, v17
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s16, v12
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s41, s15, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s13, s13, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s14, s14, 0xffff
 ; CHECK-GISEL-NEXT:    s_lshl_b32 s20, s40, 16
 ; CHECK-GISEL-NEXT:    v_or_b32_sdwa v14, v16, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v15, 16, v19
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v11
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s17, v13
 ; CHECK-GISEL-NEXT:    s_lshr_b32 s42, s16, 16
 ; CHECK-GISEL-NEXT:    s_or_b32 s14, s14, s20
 ; CHECK-GISEL-NEXT:    s_and_b32 s15, s15, 0xffff

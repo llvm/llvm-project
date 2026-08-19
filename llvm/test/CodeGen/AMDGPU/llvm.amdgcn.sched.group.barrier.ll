@@ -1052,18 +1052,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GISEL-NEXT:    v_accvgpr_read_b32 v29, a93
 ; GISEL-NEXT:    v_accvgpr_read_b32 v30, a94
 ; GISEL-NEXT:    v_accvgpr_read_b32 v31, a95
-; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    v_mfma_f32_32x32x1f32 a[128:159], v33, v34, a[128:159]
-; GISEL-NEXT:    ds_write_b128 v64, v[0:3]
-; GISEL-NEXT:    ds_write_b128 v64, v[4:7] offset:16
 ; GISEL-NEXT:    v_accvgpr_read_b32 v63, a31
-; GISEL-NEXT:    ds_write_b128 v64, v[8:11] offset:32
-; GISEL-NEXT:    ds_write_b128 v64, v[12:15] offset:48
-; GISEL-NEXT:    ds_write_b128 v64, v[16:19] offset:64
-; GISEL-NEXT:    ds_write_b128 v64, v[20:23] offset:80
-; GISEL-NEXT:    ds_write_b128 v64, v[24:27] offset:96
-; GISEL-NEXT:    ds_write_b128 v64, v[28:31] offset:112
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a32
 ; GISEL-NEXT:    v_accvgpr_read_b32 v62, a30
 ; GISEL-NEXT:    v_accvgpr_read_b32 v61, a29
 ; GISEL-NEXT:    v_accvgpr_read_b32 v60, a28
@@ -1072,6 +1061,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GISEL-NEXT:    v_accvgpr_read_b32 v57, a25
 ; GISEL-NEXT:    v_accvgpr_read_b32 v56, a24
 ; GISEL-NEXT:    v_accvgpr_read_b32 v55, a23
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    v_mfma_f32_32x32x1f32 a[128:159], v33, v34, a[128:159]
+; GISEL-NEXT:    ds_write_b128 v64, v[0:3]
+; GISEL-NEXT:    ds_write_b128 v64, v[4:7] offset:16
 ; GISEL-NEXT:    v_accvgpr_read_b32 v54, a22
 ; GISEL-NEXT:    v_accvgpr_read_b32 v53, a21
 ; GISEL-NEXT:    v_accvgpr_read_b32 v52, a20
@@ -1095,6 +1088,13 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GISEL-NEXT:    v_accvgpr_read_b32 v34, a2
 ; GISEL-NEXT:    v_accvgpr_read_b32 v33, a1
 ; GISEL-NEXT:    v_accvgpr_read_b32 v32, a0
+; GISEL-NEXT:    ds_write_b128 v64, v[8:11] offset:32
+; GISEL-NEXT:    ds_write_b128 v64, v[12:15] offset:48
+; GISEL-NEXT:    ds_write_b128 v64, v[16:19] offset:64
+; GISEL-NEXT:    ds_write_b128 v64, v[20:23] offset:80
+; GISEL-NEXT:    ds_write_b128 v64, v[24:27] offset:96
+; GISEL-NEXT:    ds_write_b128 v64, v[28:31] offset:112
+; GISEL-NEXT:    v_accvgpr_read_b32 v0, a32
 ; GISEL-NEXT:    v_accvgpr_read_b32 v1, a33
 ; GISEL-NEXT:    v_accvgpr_read_b32 v2, a34
 ; GISEL-NEXT:    v_accvgpr_read_b32 v3, a35
@@ -1137,13 +1137,6 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GISEL-NEXT:    ds_write_b128 v65, v[0:3] offset:16384
 ; GISEL-NEXT:    ds_write_b128 v65, v[4:7] offset:16400
 ; GISEL-NEXT:    v_accvgpr_read_b32 v32, a96
-; GISEL-NEXT:    ds_write_b128 v65, v[8:11] offset:16416
-; GISEL-NEXT:    ds_write_b128 v65, v[12:15] offset:16432
-; GISEL-NEXT:    ds_write_b128 v65, v[16:19] offset:16448
-; GISEL-NEXT:    ds_write_b128 v65, v[20:23] offset:16464
-; GISEL-NEXT:    ds_write_b128 v65, v[24:27] offset:16480
-; GISEL-NEXT:    ds_write_b128 v65, v[28:31] offset:16496
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a128
 ; GISEL-NEXT:    v_accvgpr_read_b32 v33, a97
 ; GISEL-NEXT:    v_accvgpr_read_b32 v34, a98
 ; GISEL-NEXT:    v_accvgpr_read_b32 v35, a99
@@ -1175,6 +1168,13 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_MFMA_cluster(ptr ad
 ; GISEL-NEXT:    v_accvgpr_read_b32 v61, a125
 ; GISEL-NEXT:    v_accvgpr_read_b32 v62, a126
 ; GISEL-NEXT:    v_accvgpr_read_b32 v63, a127
+; GISEL-NEXT:    ds_write_b128 v65, v[8:11] offset:16416
+; GISEL-NEXT:    ds_write_b128 v65, v[12:15] offset:16432
+; GISEL-NEXT:    ds_write_b128 v65, v[16:19] offset:16448
+; GISEL-NEXT:    ds_write_b128 v65, v[20:23] offset:16464
+; GISEL-NEXT:    ds_write_b128 v65, v[24:27] offset:16480
+; GISEL-NEXT:    ds_write_b128 v65, v[28:31] offset:16496
+; GISEL-NEXT:    v_accvgpr_read_b32 v0, a128
 ; GISEL-NEXT:    v_accvgpr_read_b32 v1, a129
 ; GISEL-NEXT:    v_accvgpr_read_b32 v2, a130
 ; GISEL-NEXT:    v_accvgpr_read_b32 v3, a131
@@ -2307,9 +2307,8 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, s8, v4
 ; GISEL-NEXT:    s_cselect_b32 s0, 0, s0
 ; GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a32
-; GISEL-NEXT:    v_accvgpr_read_b32 v79, a31
 ; GISEL-NEXT:    s_cselect_b32 s0, 0x7f800000, s0
+; GISEL-NEXT:    v_accvgpr_read_b32 v0, a32
 ; GISEL-NEXT:    v_accvgpr_read_b32 v1, a33
 ; GISEL-NEXT:    v_accvgpr_read_b32 v2, a34
 ; GISEL-NEXT:    v_accvgpr_read_b32 v3, a35
@@ -2367,13 +2366,13 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_accvgpr_read_b32 v50, a2
 ; GISEL-NEXT:    v_accvgpr_read_b32 v49, a1
 ; GISEL-NEXT:    v_accvgpr_read_b32 v48, a0
-; GISEL-NEXT:    ds_write_b128 v81, v[48:51] offset:8192
-; GISEL-NEXT:    ds_write_b128 v81, v[52:55] offset:8208
-; GISEL-NEXT:    v_accvgpr_read_b32 v24, a64
 ; GISEL-NEXT:    v_accvgpr_read_b32 v63, a15
 ; GISEL-NEXT:    v_accvgpr_read_b32 v62, a14
 ; GISEL-NEXT:    v_accvgpr_read_b32 v61, a13
 ; GISEL-NEXT:    v_accvgpr_read_b32 v60, a12
+; GISEL-NEXT:    ds_write_b128 v81, v[48:51] offset:8192
+; GISEL-NEXT:    ds_write_b128 v81, v[52:55] offset:8208
+; GISEL-NEXT:    v_accvgpr_read_b32 v24, a64
 ; GISEL-NEXT:    v_accvgpr_read_b32 v25, a65
 ; GISEL-NEXT:    v_accvgpr_read_b32 v26, a66
 ; GISEL-NEXT:    v_accvgpr_read_b32 v27, a67
@@ -2405,17 +2404,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_accvgpr_read_b32 v53, a93
 ; GISEL-NEXT:    v_accvgpr_read_b32 v54, a94
 ; GISEL-NEXT:    v_accvgpr_read_b32 v55, a95
-; GISEL-NEXT:    ds_write_b128 v81, v[60:63] offset:8240
-; GISEL-NEXT:    ds_write_b128 v81, v[24:27] offset:16384
-; GISEL-NEXT:    ds_write_b128 v81, v[28:31] offset:16400
-; GISEL-NEXT:    v_accvgpr_read_b32 v0, a96
-; GISEL-NEXT:    ds_write_b128 v81, v[32:35] offset:16416
-; GISEL-NEXT:    ds_write_b128 v81, v[36:39] offset:16432
-; GISEL-NEXT:    ds_write_b128 v81, v[40:43] offset:16448
-; GISEL-NEXT:    ds_write_b128 v81, v[44:47] offset:16464
-; GISEL-NEXT:    ds_write_b128 v81, v[48:51] offset:16480
-; GISEL-NEXT:    ds_write_b128 v81, v[52:55] offset:16496
-; GISEL-NEXT:    v_accvgpr_read_b32 v32, a128
+; GISEL-NEXT:    v_accvgpr_read_b32 v79, a31
 ; GISEL-NEXT:    v_accvgpr_read_b32 v78, a30
 ; GISEL-NEXT:    v_accvgpr_read_b32 v77, a29
 ; GISEL-NEXT:    v_accvgpr_read_b32 v76, a28
@@ -2431,6 +2420,10 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_accvgpr_read_b32 v66, a18
 ; GISEL-NEXT:    v_accvgpr_read_b32 v65, a17
 ; GISEL-NEXT:    v_accvgpr_read_b32 v64, a16
+; GISEL-NEXT:    ds_write_b128 v81, v[60:63] offset:8240
+; GISEL-NEXT:    ds_write_b128 v81, v[24:27] offset:16384
+; GISEL-NEXT:    ds_write_b128 v81, v[28:31] offset:16400
+; GISEL-NEXT:    v_accvgpr_read_b32 v0, a96
 ; GISEL-NEXT:    v_accvgpr_read_b32 v1, a97
 ; GISEL-NEXT:    v_accvgpr_read_b32 v2, a98
 ; GISEL-NEXT:    v_accvgpr_read_b32 v3, a99
@@ -2462,6 +2455,13 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GISEL-NEXT:    v_accvgpr_read_b32 v29, a125
 ; GISEL-NEXT:    v_accvgpr_read_b32 v30, a126
 ; GISEL-NEXT:    v_accvgpr_read_b32 v31, a127
+; GISEL-NEXT:    ds_write_b128 v81, v[32:35] offset:16416
+; GISEL-NEXT:    ds_write_b128 v81, v[36:39] offset:16432
+; GISEL-NEXT:    ds_write_b128 v81, v[40:43] offset:16448
+; GISEL-NEXT:    ds_write_b128 v81, v[44:47] offset:16464
+; GISEL-NEXT:    ds_write_b128 v81, v[48:51] offset:16480
+; GISEL-NEXT:    ds_write_b128 v81, v[52:55] offset:16496
+; GISEL-NEXT:    v_accvgpr_read_b32 v32, a128
 ; GISEL-NEXT:    v_accvgpr_read_b32 v33, a129
 ; GISEL-NEXT:    v_accvgpr_read_b32 v34, a130
 ; GISEL-NEXT:    v_accvgpr_read_b32 v35, a131

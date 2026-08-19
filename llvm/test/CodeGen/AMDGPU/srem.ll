@@ -5606,7 +5606,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    v_subb_u32_e32 v20, vcc, 0, v8, vcc
 ; TAHITI-NEXT:    v_madmk_f32 v11, v18, 0x4f800000, v11
 ; TAHITI-NEXT:    v_rcp_f32_e32 v11, v11
-; TAHITI-NEXT:    s_mov_b64 s[6:7], 0
 ; TAHITI-NEXT:    v_mul_f32_e32 v11, 0x5f7ffffc, v11
 ; TAHITI-NEXT:    v_mul_f32_e32 v18, 0x2f800000, v11
 ; TAHITI-NEXT:    v_trunc_f32_e32 v18, v18
@@ -5712,13 +5711,14 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    v_xor_b32_e32 v9, v9, v19
 ; TAHITI-NEXT:    v_xor_b32_e32 v11, v8, v19
 ; TAHITI-NEXT:    v_sub_i32_e32 v8, vcc, v9, v19
+; TAHITI-NEXT:    s_mov_b64 s[0:1], 0
 ; TAHITI-NEXT:    v_subb_u32_e32 v9, vcc, v11, v19, vcc
 ; TAHITI-NEXT:    s_branch .LBB12_3
 ; TAHITI-NEXT:  .LBB12_2:
-; TAHITI-NEXT:    s_mov_b64 s[6:7], -1
+; TAHITI-NEXT:    s_mov_b64 s[0:1], -1
 ; TAHITI-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; TAHITI-NEXT:  .LBB12_3: ; %Flow7
-; TAHITI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
+; TAHITI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; TAHITI-NEXT:    s_cselect_b32 s0, 1, 0
 ; TAHITI-NEXT:    s_cmp_lg_u32 s0, 1
 ; TAHITI-NEXT:    s_cbranch_scc1 .LBB12_5
@@ -6399,7 +6399,6 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_subb_u32_e32 v23, vcc, 0, v10, vcc
 ; TONGA-NEXT:    v_madmk_f32 v13, v14, 0x4f800000, v13
 ; TONGA-NEXT:    v_rcp_f32_e32 v13, v13
-; TONGA-NEXT:    s_mov_b64 s[6:7], 0
 ; TONGA-NEXT:    v_mul_f32_e32 v13, 0x5f7ffffc, v13
 ; TONGA-NEXT:    v_mul_f32_e32 v14, 0x2f800000, v13
 ; TONGA-NEXT:    v_trunc_f32_e32 v14, v14
@@ -6494,11 +6493,12 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    v_xor_b32_e32 v13, v10, v20
 ; TONGA-NEXT:    v_sub_u32_e32 v10, vcc, v11, v20
 ; TONGA-NEXT:    v_subb_u32_e32 v11, vcc, v13, v20, vcc
+; TONGA-NEXT:    s_mov_b64 s[0:1], 0
 ; TONGA-NEXT:    s_branch .LBB12_9
 ; TONGA-NEXT:  .LBB12_8:
-; TONGA-NEXT:    s_mov_b64 s[6:7], -1
+; TONGA-NEXT:    s_mov_b64 s[0:1], -1
 ; TONGA-NEXT:  .LBB12_9: ; %Flow6
-; TONGA-NEXT:    s_and_b64 s[0:1], s[6:7], exec
+; TONGA-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; TONGA-NEXT:    s_cselect_b32 s0, 1, 0
 ; TONGA-NEXT:    s_cmp_lg_u32 s0, 1
 ; TONGA-NEXT:    s_cbranch_scc1 .LBB12_11

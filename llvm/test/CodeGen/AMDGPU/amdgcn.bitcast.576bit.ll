@@ -3397,9 +3397,9 @@ define inreg <36 x i16> @bitcast_v18i32_to_v36i16_scalar(<18 x i32> inreg %a, i3
 ; SI-NEXT:    s_lshr_b32 s75, s19, 16
 ; SI-NEXT:    s_lshr_b32 s76, s17, 16
 ; SI-NEXT:  .LBB13_5: ; %end
-; SI-NEXT:    s_lshl_b32 s9, s56, 16
-; SI-NEXT:    s_and_b32 s11, s16, 0xffff
-; SI-NEXT:    s_or_b32 s9, s11, s9
+; SI-NEXT:    s_and_b32 s9, s16, 0xffff
+; SI-NEXT:    s_lshl_b32 s11, s56, 16
+; SI-NEXT:    s_or_b32 s9, s9, s11
 ; SI-NEXT:    s_and_b32 s11, s17, 0xffff
 ; SI-NEXT:    s_lshl_b32 s13, s76, 16
 ; SI-NEXT:    s_or_b32 s11, s11, s13
@@ -4780,17 +4780,17 @@ define inreg <18 x i32> @bitcast_v36i16_to_v18i32_scalar(<36 x i16> inreg %a, i3
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -6163,9 +6163,9 @@ define inreg <36 x half> @bitcast_v18i32_to_v36f16_scalar(<18 x i32> inreg %a, i
 ; SI-NEXT:    s_lshr_b32 s75, s19, 16
 ; SI-NEXT:    s_lshr_b32 s76, s17, 16
 ; SI-NEXT:  .LBB17_5: ; %end
-; SI-NEXT:    s_lshl_b32 s9, s56, 16
-; SI-NEXT:    s_and_b32 s11, s16, 0xffff
-; SI-NEXT:    s_or_b32 s9, s11, s9
+; SI-NEXT:    s_and_b32 s9, s16, 0xffff
+; SI-NEXT:    s_lshl_b32 s11, s56, 16
+; SI-NEXT:    s_or_b32 s9, s9, s11
 ; SI-NEXT:    s_and_b32 s11, s17, 0xffff
 ; SI-NEXT:    s_lshl_b32 s13, s76, 16
 ; SI-NEXT:    s_or_b32 s11, s11, s13
@@ -6750,10 +6750,10 @@ define <18 x i32> @bitcast_v36f16_to_v18i32(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v41
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v45
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v40
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v44
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_or_b32_e32 v1, v2, v3
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v40
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v44
+; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v55
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v43
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
@@ -6852,118 +6852,118 @@ define <18 x i32> @bitcast_v36f16_to_v18i32(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v45
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v41
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v43
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v43
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v55
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v54
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, v53
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v55
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v42
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, v54
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v42
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v63
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v53
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v7, v52
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v63
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v51
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
-; SI-NEXT:    v_or_b32_e32 v5, v7, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; SI-NEXT:    v_or_b32_e32 v6, v8, v6
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v50
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v49
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_or_b32_e32 v7, v8, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v9, v58
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v57
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v11, v39
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v38
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_or_b32_e32 v10, v11, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v12, v47
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_or_b32_e32 v11, v13, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v46
 ; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; SI-NEXT:    v_or_b32_e32 v12, v14, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v14, v36
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
@@ -7595,8 +7595,8 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    v_readfirstlane_b32 s8, v2
 ; SI-NEXT:    v_readfirstlane_b32 s10, v1
 ; SI-NEXT:    v_readfirstlane_b32 s13, v0
-; SI-NEXT:    s_lshr_b32 s11, s29, 16
-; SI-NEXT:    s_lshr_b32 s14, s28, 16
+; SI-NEXT:    s_lshr_b32 s12, s29, 16
+; SI-NEXT:    s_lshr_b32 s15, s28, 16
 ; SI-NEXT:    s_lshr_b32 s72, s27, 16
 ; SI-NEXT:    s_lshr_b32 s73, s26, 16
 ; SI-NEXT:    s_lshr_b32 s74, s25, 16
@@ -7611,8 +7611,8 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    s_lshr_b32 s91, s16, 16
 ; SI-NEXT:    s_lshr_b32 s7, s6, 16
 ; SI-NEXT:    s_lshr_b32 s9, s8, 16
-; SI-NEXT:    s_lshr_b32 s12, s10, 16
-; SI-NEXT:    s_lshr_b32 s15, s13, 16
+; SI-NEXT:    s_lshr_b32 s11, s10, 16
+; SI-NEXT:    s_lshr_b32 s14, s13, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB19_2
@@ -7620,17 +7620,17 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -7654,16 +7654,16 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    s_lshl_b32 s5, s72, 16
 ; SI-NEXT:    s_or_b32 s47, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s14, 16
+; SI-NEXT:    s_lshl_b32 s5, s15, 16
 ; SI-NEXT:    s_or_b32 s48, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s11, 16
+; SI-NEXT:    s_lshl_b32 s5, s12, 16
 ; SI-NEXT:    s_or_b32 s49, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s13, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s15, 16
+; SI-NEXT:    s_lshl_b32 s5, s14, 16
 ; SI-NEXT:    s_or_b32 s50, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s10, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s12, 16
+; SI-NEXT:    s_lshl_b32 s5, s11, 16
 ; SI-NEXT:    s_or_b32 s51, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s8, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s9, 16
@@ -7683,149 +7683,149 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    s_cbranch_scc1 .LBB19_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s91
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, s17
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s89
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s19
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s20
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s89
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s88
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s19
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s18
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s88
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s21
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s22
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s79
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s20
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s78
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s79
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s21
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s22
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s24
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
+; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s78
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; SI-NEXT:    v_or_b32_e32 v6, v8, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s75
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s25
-; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s24
+; SI-NEXT:    v_or_b32_e32 v7, v8, v7
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s25
 ; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
 ; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; SI-NEXT:    v_or_b32_e32 v5, v6, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s27
-; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
-; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s28
+; SI-NEXT:    v_or_b32_e32 v8, v10, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
+; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; SI-NEXT:    v_or_b32_e32 v9, v11, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s72
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; SI-NEXT:    v_or_b32_e32 v6, v7, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s27
+; SI-NEXT:    v_or_b32_e32 v10, v11, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s15
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s28
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s13
+; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    v_or_b32_e32 v7, v8, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s75
+; SI-NEXT:    v_or_b32_e32 v11, v13, v11
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s12
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; SI-NEXT:    v_or_b32_e32 v12, v14, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s14
+; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
+; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_cvt_f32_f16_e32 v16, s10
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; SI-NEXT:    v_cvt_f32_f16_e32 v16, s13
+; SI-NEXT:    v_or_b32_e32 v13, v14, v13
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s11
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s10
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; SI-NEXT:    v_or_b32_e32 v8, v9, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
 ; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, s6
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; SI-NEXT:    v_or_b32_e32 v9, v10, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_or_b32_e32 v10, v11, v10
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s72
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; SI-NEXT:    v_or_b32_e32 v11, v12, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s14
-; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
-; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; SI-NEXT:    v_or_b32_e32 v12, v13, v12
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s11
-; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
-; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; SI-NEXT:    v_or_b32_e32 v13, v14, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s15
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
-; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; SI-NEXT:    v_or_b32_e32 v14, v15, v14
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s12
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; SI-NEXT:    v_or_b32_e32 v15, v16, v15
+; SI-NEXT:    v_or_b32_e32 v14, v16, v14
 ; SI-NEXT:    v_cvt_f32_f16_e32 v16, s9
+; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; SI-NEXT:    v_or_b32_e32 v15, v17, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s7
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, s6
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
+; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
+; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; SI-NEXT:    v_or_b32_e32 v16, v17, v16
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s7
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; SI-NEXT:    v_or_b32_e32 v17, v18, v17
+; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v18
+; SI-NEXT:    v_or_b32_e32 v17, v19, v17
 ; SI-NEXT:    s_branch .LBB19_6
 ; SI-NEXT:  .LBB19_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s36
@@ -7998,13 +7998,13 @@ define inreg <18 x i32> @bitcast_v36f16_to_v18i32_scalar(<36 x half> inreg %a, i
 ; VI-NEXT:  ; %bb.4: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x200
 ; VI-NEXT:    v_mov_b32_e32 v0, s91
-; VI-NEXT:    v_mov_b32_e32 v2, s90
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v17
-; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v3, s17, v17
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v1, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v1, s90
+; VI-NEXT:    v_add_f16_sdwa v1, v1, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_add_f16_e32 v2, s17, v17
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s89
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v17
@@ -11179,15 +11179,15 @@ define inreg <36 x i16> @bitcast_v18f32_to_v36i16_scalar(<18 x float> inreg %a, 
 ; SI-NEXT:    v_add_f32_e64 v0, s16, 1.0
 ; SI-NEXT:    v_lshr_b64 v[25:26], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[26:27], v[0:1], 16
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v9
-; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v7
-; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v5
-; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v36, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v17
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
+; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
+; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:    s_branch .LBB29_6
 ; SI-NEXT:  .LBB29_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s16
@@ -11208,15 +11208,15 @@ define inreg <36 x i16> @bitcast_v18f32_to_v36i16_scalar(<18 x float> inreg %a, 
 ; SI-NEXT:    v_mov_b32_e32 v15, s7
 ; SI-NEXT:    v_mov_b32_e32 v16, s4
 ; SI-NEXT:    v_mov_b32_e32 v17, s5
-; SI-NEXT:    v_mov_b32_e32 v36, s60
-; SI-NEXT:    v_mov_b32_e32 v35, s61
-; SI-NEXT:    v_mov_b32_e32 v34, s62
-; SI-NEXT:    v_mov_b32_e32 v33, s63
-; SI-NEXT:    v_mov_b32_e32 v32, s72
-; SI-NEXT:    v_mov_b32_e32 v31, s73
-; SI-NEXT:    v_mov_b32_e32 v30, s74
-; SI-NEXT:    v_mov_b32_e32 v29, s75
-; SI-NEXT:    v_mov_b32_e32 v28, s76
+; SI-NEXT:    v_mov_b32_e32 v35, s60
+; SI-NEXT:    v_mov_b32_e32 v34, s61
+; SI-NEXT:    v_mov_b32_e32 v33, s62
+; SI-NEXT:    v_mov_b32_e32 v32, s63
+; SI-NEXT:    v_mov_b32_e32 v31, s72
+; SI-NEXT:    v_mov_b32_e32 v30, s73
+; SI-NEXT:    v_mov_b32_e32 v29, s74
+; SI-NEXT:    v_mov_b32_e32 v28, s75
+; SI-NEXT:    v_mov_b32_e32 v27, s76
 ; SI-NEXT:    v_mov_b32_e32 v18, s8
 ; SI-NEXT:    v_mov_b32_e32 v19, s10
 ; SI-NEXT:    v_mov_b32_e32 v20, s12
@@ -11227,51 +11227,51 @@ define inreg <36 x i16> @bitcast_v18f32_to_v36i16_scalar(<18 x float> inreg %a, 
 ; SI-NEXT:    v_mov_b32_e32 v25, s46
 ; SI-NEXT:    v_mov_b32_e32 v26, s56
 ; SI-NEXT:  .LBB29_6: ; %end
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v26
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v36
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v25
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v35
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v34
 ; SI-NEXT:    v_or_b32_e32 v4, v4, v24
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v34
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v33
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v23
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v33
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v32
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v22
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v32
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v31
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v21
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v31
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v30
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v20
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v30
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v29
 ; SI-NEXT:    v_or_b32_e32 v14, v14, v19
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v28
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v18
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v28
+; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v26
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v25
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v24
@@ -12792,17 +12792,17 @@ define inreg <18 x float> @bitcast_v36i16_to_v18f32_scalar(<36 x i16> inreg %a, 
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -14147,15 +14147,15 @@ define inreg <36 x half> @bitcast_v18f32_to_v36f16_scalar(<18 x float> inreg %a,
 ; SI-NEXT:    v_add_f32_e64 v0, s16, 1.0
 ; SI-NEXT:    v_lshr_b64 v[25:26], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[26:27], v[0:1], 16
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v9
-; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v7
-; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v5
-; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v36, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v17
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
+; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
+; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:    s_branch .LBB33_6
 ; SI-NEXT:  .LBB33_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s16
@@ -14176,15 +14176,15 @@ define inreg <36 x half> @bitcast_v18f32_to_v36f16_scalar(<18 x float> inreg %a,
 ; SI-NEXT:    v_mov_b32_e32 v15, s7
 ; SI-NEXT:    v_mov_b32_e32 v16, s4
 ; SI-NEXT:    v_mov_b32_e32 v17, s5
-; SI-NEXT:    v_mov_b32_e32 v36, s60
-; SI-NEXT:    v_mov_b32_e32 v35, s61
-; SI-NEXT:    v_mov_b32_e32 v34, s62
-; SI-NEXT:    v_mov_b32_e32 v33, s63
-; SI-NEXT:    v_mov_b32_e32 v32, s72
-; SI-NEXT:    v_mov_b32_e32 v31, s73
-; SI-NEXT:    v_mov_b32_e32 v30, s74
-; SI-NEXT:    v_mov_b32_e32 v29, s75
-; SI-NEXT:    v_mov_b32_e32 v28, s76
+; SI-NEXT:    v_mov_b32_e32 v35, s60
+; SI-NEXT:    v_mov_b32_e32 v34, s61
+; SI-NEXT:    v_mov_b32_e32 v33, s62
+; SI-NEXT:    v_mov_b32_e32 v32, s63
+; SI-NEXT:    v_mov_b32_e32 v31, s72
+; SI-NEXT:    v_mov_b32_e32 v30, s73
+; SI-NEXT:    v_mov_b32_e32 v29, s74
+; SI-NEXT:    v_mov_b32_e32 v28, s75
+; SI-NEXT:    v_mov_b32_e32 v27, s76
 ; SI-NEXT:    v_mov_b32_e32 v18, s8
 ; SI-NEXT:    v_mov_b32_e32 v19, s10
 ; SI-NEXT:    v_mov_b32_e32 v20, s12
@@ -14195,51 +14195,51 @@ define inreg <36 x half> @bitcast_v18f32_to_v36f16_scalar(<18 x float> inreg %a,
 ; SI-NEXT:    v_mov_b32_e32 v25, s46
 ; SI-NEXT:    v_mov_b32_e32 v26, s56
 ; SI-NEXT:  .LBB33_6: ; %end
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v26
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v36
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v35
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v25
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v35
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v34
 ; SI-NEXT:    v_or_b32_e32 v4, v4, v24
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v34
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v33
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v23
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v33
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v32
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v22
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v32
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v31
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v21
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v31
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v30
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v20
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v30
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v29
 ; SI-NEXT:    v_or_b32_e32 v14, v14, v19
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v28
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v18
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v28
+; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v26
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v25
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v24
@@ -14964,10 +14964,10 @@ define <18 x float> @bitcast_v36f16_to_v18f32(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v41
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v45
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v40
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v44
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_or_b32_e32 v1, v2, v3
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v40
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v44
+; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v55
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v43
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
@@ -15066,118 +15066,118 @@ define <18 x float> @bitcast_v36f16_to_v18f32(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v45
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v41
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v43
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v43
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v55
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v54
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, v53
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v55
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v42
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, v54
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v42
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v63
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v53
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v7, v52
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v63
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v51
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
-; SI-NEXT:    v_or_b32_e32 v5, v7, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; SI-NEXT:    v_or_b32_e32 v6, v8, v6
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v50
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v49
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_or_b32_e32 v7, v8, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v9, v58
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v57
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v11, v39
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v38
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_or_b32_e32 v10, v11, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v12, v47
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_or_b32_e32 v11, v13, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v46
 ; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; SI-NEXT:    v_or_b32_e32 v12, v14, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v14, v36
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
@@ -15809,8 +15809,8 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; SI-NEXT:    v_readfirstlane_b32 s8, v2
 ; SI-NEXT:    v_readfirstlane_b32 s10, v1
 ; SI-NEXT:    v_readfirstlane_b32 s13, v0
-; SI-NEXT:    s_lshr_b32 s11, s29, 16
-; SI-NEXT:    s_lshr_b32 s14, s28, 16
+; SI-NEXT:    s_lshr_b32 s12, s29, 16
+; SI-NEXT:    s_lshr_b32 s15, s28, 16
 ; SI-NEXT:    s_lshr_b32 s72, s27, 16
 ; SI-NEXT:    s_lshr_b32 s73, s26, 16
 ; SI-NEXT:    s_lshr_b32 s74, s25, 16
@@ -15825,8 +15825,8 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; SI-NEXT:    s_lshr_b32 s91, s16, 16
 ; SI-NEXT:    s_lshr_b32 s7, s6, 16
 ; SI-NEXT:    s_lshr_b32 s9, s8, 16
-; SI-NEXT:    s_lshr_b32 s12, s10, 16
-; SI-NEXT:    s_lshr_b32 s15, s13, 16
+; SI-NEXT:    s_lshr_b32 s11, s10, 16
+; SI-NEXT:    s_lshr_b32 s14, s13, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB35_2
@@ -15834,17 +15834,17 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -15868,16 +15868,16 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; SI-NEXT:    s_lshl_b32 s5, s72, 16
 ; SI-NEXT:    s_or_b32 s47, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s14, 16
+; SI-NEXT:    s_lshl_b32 s5, s15, 16
 ; SI-NEXT:    s_or_b32 s48, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s11, 16
+; SI-NEXT:    s_lshl_b32 s5, s12, 16
 ; SI-NEXT:    s_or_b32 s49, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s13, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s15, 16
+; SI-NEXT:    s_lshl_b32 s5, s14, 16
 ; SI-NEXT:    s_or_b32 s50, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s10, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s12, 16
+; SI-NEXT:    s_lshl_b32 s5, s11, 16
 ; SI-NEXT:    s_or_b32 s51, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s8, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s9, 16
@@ -15897,149 +15897,149 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; SI-NEXT:    s_cbranch_scc1 .LBB35_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s91
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, s17
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s89
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s19
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s20
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s89
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s88
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s19
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s18
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s88
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s21
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s22
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s79
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s20
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s78
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s79
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s21
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s22
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s24
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
+; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s78
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; SI-NEXT:    v_or_b32_e32 v6, v8, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s75
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s25
-; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s24
+; SI-NEXT:    v_or_b32_e32 v7, v8, v7
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s25
 ; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
 ; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; SI-NEXT:    v_or_b32_e32 v5, v6, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s27
-; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
-; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s28
+; SI-NEXT:    v_or_b32_e32 v8, v10, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
+; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; SI-NEXT:    v_or_b32_e32 v9, v11, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s72
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; SI-NEXT:    v_or_b32_e32 v6, v7, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s27
+; SI-NEXT:    v_or_b32_e32 v10, v11, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s15
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s28
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s13
+; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    v_or_b32_e32 v7, v8, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s75
+; SI-NEXT:    v_or_b32_e32 v11, v13, v11
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s12
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; SI-NEXT:    v_or_b32_e32 v12, v14, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s14
+; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
+; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_cvt_f32_f16_e32 v16, s10
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; SI-NEXT:    v_cvt_f32_f16_e32 v16, s13
+; SI-NEXT:    v_or_b32_e32 v13, v14, v13
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s11
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s10
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; SI-NEXT:    v_or_b32_e32 v8, v9, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
 ; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, s6
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; SI-NEXT:    v_or_b32_e32 v9, v10, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_or_b32_e32 v10, v11, v10
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s72
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; SI-NEXT:    v_or_b32_e32 v11, v12, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s14
-; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
-; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; SI-NEXT:    v_or_b32_e32 v12, v13, v12
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s11
-; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
-; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; SI-NEXT:    v_or_b32_e32 v13, v14, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s15
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
-; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; SI-NEXT:    v_or_b32_e32 v14, v15, v14
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s12
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; SI-NEXT:    v_or_b32_e32 v15, v16, v15
+; SI-NEXT:    v_or_b32_e32 v14, v16, v14
 ; SI-NEXT:    v_cvt_f32_f16_e32 v16, s9
+; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; SI-NEXT:    v_or_b32_e32 v15, v17, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s7
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, s6
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
+; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
+; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; SI-NEXT:    v_or_b32_e32 v16, v17, v16
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s7
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; SI-NEXT:    v_or_b32_e32 v17, v18, v17
+; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v18
+; SI-NEXT:    v_or_b32_e32 v17, v19, v17
 ; SI-NEXT:    s_branch .LBB35_6
 ; SI-NEXT:  .LBB35_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s36
@@ -16212,13 +16212,13 @@ define inreg <18 x float> @bitcast_v36f16_to_v18f32_scalar(<36 x half> inreg %a,
 ; VI-NEXT:  ; %bb.4: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x200
 ; VI-NEXT:    v_mov_b32_e32 v0, s91
-; VI-NEXT:    v_mov_b32_e32 v2, s90
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v17
-; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v3, s17, v17
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v1, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v1, s90
+; VI-NEXT:    v_add_f16_sdwa v1, v1, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_add_f16_e32 v2, s17, v17
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s89
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v17
@@ -18226,9 +18226,9 @@ define inreg <36 x i16> @bitcast_v9i64_to_v36i16_scalar(<9 x i64> inreg %a, i32 
 ; SI-NEXT:    s_lshr_b64 s[46:47], s[18:19], 16
 ; SI-NEXT:    s_lshr_b64 s[56:57], s[16:17], 16
 ; SI-NEXT:  .LBB41_5: ; %end
-; SI-NEXT:    s_lshl_b32 s9, s56, 16
-; SI-NEXT:    s_and_b32 s11, s16, 0xffff
-; SI-NEXT:    s_or_b32 s9, s11, s9
+; SI-NEXT:    s_and_b32 s9, s16, 0xffff
+; SI-NEXT:    s_lshl_b32 s11, s56, 16
+; SI-NEXT:    s_or_b32 s9, s9, s11
 ; SI-NEXT:    s_and_b32 s11, s17, 0xffff
 ; SI-NEXT:    s_lshl_b32 s13, s76, 16
 ; SI-NEXT:    s_or_b32 s11, s11, s13
@@ -19609,17 +19609,17 @@ define inreg <9 x i64> @bitcast_v36i16_to_v9i64_scalar(<36 x i16> inreg %a, i32 
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -21002,9 +21002,9 @@ define inreg <36 x half> @bitcast_v9i64_to_v36f16_scalar(<9 x i64> inreg %a, i32
 ; SI-NEXT:    s_lshr_b64 s[46:47], s[18:19], 16
 ; SI-NEXT:    s_lshr_b64 s[56:57], s[16:17], 16
 ; SI-NEXT:  .LBB45_5: ; %end
-; SI-NEXT:    s_lshl_b32 s9, s56, 16
-; SI-NEXT:    s_and_b32 s11, s16, 0xffff
-; SI-NEXT:    s_or_b32 s9, s11, s9
+; SI-NEXT:    s_and_b32 s9, s16, 0xffff
+; SI-NEXT:    s_lshl_b32 s11, s56, 16
+; SI-NEXT:    s_or_b32 s9, s9, s11
 ; SI-NEXT:    s_and_b32 s11, s17, 0xffff
 ; SI-NEXT:    s_lshl_b32 s13, s76, 16
 ; SI-NEXT:    s_or_b32 s11, s11, s13
@@ -21589,10 +21589,10 @@ define <9 x i64> @bitcast_v36f16_to_v9i64(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v41
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v45
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v40
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v44
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_or_b32_e32 v1, v2, v3
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v40
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v44
+; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v55
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v43
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
@@ -21691,118 +21691,118 @@ define <9 x i64> @bitcast_v36f16_to_v9i64(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v45
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v41
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v43
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v43
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v55
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v54
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, v53
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v55
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v42
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, v54
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v42
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v63
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v53
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v7, v52
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v63
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v51
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
-; SI-NEXT:    v_or_b32_e32 v5, v7, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; SI-NEXT:    v_or_b32_e32 v6, v8, v6
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v50
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v49
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_or_b32_e32 v7, v8, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v9, v58
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v57
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v11, v39
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v38
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_or_b32_e32 v10, v11, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v12, v47
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_or_b32_e32 v11, v13, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v46
 ; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; SI-NEXT:    v_or_b32_e32 v12, v14, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v14, v36
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
@@ -22434,8 +22434,8 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; SI-NEXT:    v_readfirstlane_b32 s8, v2
 ; SI-NEXT:    v_readfirstlane_b32 s10, v1
 ; SI-NEXT:    v_readfirstlane_b32 s13, v0
-; SI-NEXT:    s_lshr_b32 s11, s29, 16
-; SI-NEXT:    s_lshr_b32 s14, s28, 16
+; SI-NEXT:    s_lshr_b32 s12, s29, 16
+; SI-NEXT:    s_lshr_b32 s15, s28, 16
 ; SI-NEXT:    s_lshr_b32 s72, s27, 16
 ; SI-NEXT:    s_lshr_b32 s73, s26, 16
 ; SI-NEXT:    s_lshr_b32 s74, s25, 16
@@ -22450,8 +22450,8 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; SI-NEXT:    s_lshr_b32 s91, s16, 16
 ; SI-NEXT:    s_lshr_b32 s7, s6, 16
 ; SI-NEXT:    s_lshr_b32 s9, s8, 16
-; SI-NEXT:    s_lshr_b32 s12, s10, 16
-; SI-NEXT:    s_lshr_b32 s15, s13, 16
+; SI-NEXT:    s_lshr_b32 s11, s10, 16
+; SI-NEXT:    s_lshr_b32 s14, s13, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB47_2
@@ -22459,17 +22459,17 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -22493,16 +22493,16 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; SI-NEXT:    s_lshl_b32 s5, s72, 16
 ; SI-NEXT:    s_or_b32 s47, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s14, 16
+; SI-NEXT:    s_lshl_b32 s5, s15, 16
 ; SI-NEXT:    s_or_b32 s48, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s11, 16
+; SI-NEXT:    s_lshl_b32 s5, s12, 16
 ; SI-NEXT:    s_or_b32 s49, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s13, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s15, 16
+; SI-NEXT:    s_lshl_b32 s5, s14, 16
 ; SI-NEXT:    s_or_b32 s50, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s10, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s12, 16
+; SI-NEXT:    s_lshl_b32 s5, s11, 16
 ; SI-NEXT:    s_or_b32 s51, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s8, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s9, 16
@@ -22522,149 +22522,149 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; SI-NEXT:    s_cbranch_scc1 .LBB47_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s91
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, s17
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s89
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s19
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s20
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s89
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s88
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s19
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s18
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s88
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s21
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s22
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s79
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s20
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s78
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s79
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s21
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s22
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s24
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
+; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s78
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; SI-NEXT:    v_or_b32_e32 v6, v8, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s75
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s25
-; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s24
+; SI-NEXT:    v_or_b32_e32 v7, v8, v7
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s25
 ; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
 ; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; SI-NEXT:    v_or_b32_e32 v5, v6, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s27
-; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
-; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s28
+; SI-NEXT:    v_or_b32_e32 v8, v10, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
+; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; SI-NEXT:    v_or_b32_e32 v9, v11, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s72
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; SI-NEXT:    v_or_b32_e32 v6, v7, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s27
+; SI-NEXT:    v_or_b32_e32 v10, v11, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s15
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s28
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s13
+; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    v_or_b32_e32 v7, v8, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s75
+; SI-NEXT:    v_or_b32_e32 v11, v13, v11
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s12
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; SI-NEXT:    v_or_b32_e32 v12, v14, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s14
+; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
+; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_cvt_f32_f16_e32 v16, s10
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; SI-NEXT:    v_cvt_f32_f16_e32 v16, s13
+; SI-NEXT:    v_or_b32_e32 v13, v14, v13
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s11
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s10
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; SI-NEXT:    v_or_b32_e32 v8, v9, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
 ; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, s6
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; SI-NEXT:    v_or_b32_e32 v9, v10, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_or_b32_e32 v10, v11, v10
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s72
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; SI-NEXT:    v_or_b32_e32 v11, v12, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s14
-; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
-; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; SI-NEXT:    v_or_b32_e32 v12, v13, v12
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s11
-; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
-; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; SI-NEXT:    v_or_b32_e32 v13, v14, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s15
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
-; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; SI-NEXT:    v_or_b32_e32 v14, v15, v14
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s12
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; SI-NEXT:    v_or_b32_e32 v15, v16, v15
+; SI-NEXT:    v_or_b32_e32 v14, v16, v14
 ; SI-NEXT:    v_cvt_f32_f16_e32 v16, s9
+; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; SI-NEXT:    v_or_b32_e32 v15, v17, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s7
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, s6
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
+; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
+; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; SI-NEXT:    v_or_b32_e32 v16, v17, v16
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s7
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; SI-NEXT:    v_or_b32_e32 v17, v18, v17
+; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v18
+; SI-NEXT:    v_or_b32_e32 v17, v19, v17
 ; SI-NEXT:    s_branch .LBB47_6
 ; SI-NEXT:  .LBB47_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s36
@@ -22837,13 +22837,13 @@ define inreg <9 x i64> @bitcast_v36f16_to_v9i64_scalar(<36 x half> inreg %a, i32
 ; VI-NEXT:  ; %bb.4: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x200
 ; VI-NEXT:    v_mov_b32_e32 v0, s91
-; VI-NEXT:    v_mov_b32_e32 v2, s90
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v17
-; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v3, s17, v17
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v1, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v1, s90
+; VI-NEXT:    v_add_f16_sdwa v1, v1, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_add_f16_e32 v2, s17, v17
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s89
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v17
@@ -23216,22 +23216,22 @@ define <36 x i16> @bitcast_v9f64_to_v36i16(<9 x double> %a, i32 %b) #0 {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; SI-NEXT:    ; implicit-def: $vgpr31
+; SI-NEXT:    ; implicit-def: $vgpr30
 ; SI-NEXT:    ; implicit-def: $vgpr35
-; SI-NEXT:    ; implicit-def: $vgpr29
+; SI-NEXT:    ; implicit-def: $vgpr27
 ; SI-NEXT:    ; implicit-def: $vgpr34
-; SI-NEXT:    ; implicit-def: $vgpr26
+; SI-NEXT:    ; implicit-def: $vgpr25
 ; SI-NEXT:    ; implicit-def: $vgpr33
 ; SI-NEXT:    ; implicit-def: $vgpr23
 ; SI-NEXT:    ; implicit-def: $vgpr32
 ; SI-NEXT:    ; implicit-def: $vgpr22
-; SI-NEXT:    ; implicit-def: $vgpr30
+; SI-NEXT:    ; implicit-def: $vgpr31
 ; SI-NEXT:    ; implicit-def: $vgpr21
-; SI-NEXT:    ; implicit-def: $vgpr28
+; SI-NEXT:    ; implicit-def: $vgpr29
 ; SI-NEXT:    ; implicit-def: $vgpr20
-; SI-NEXT:    ; implicit-def: $vgpr27
+; SI-NEXT:    ; implicit-def: $vgpr28
 ; SI-NEXT:    ; implicit-def: $vgpr19
-; SI-NEXT:    ; implicit-def: $vgpr25
+; SI-NEXT:    ; implicit-def: $vgpr26
 ; SI-NEXT:    ; implicit-def: $vgpr18
 ; SI-NEXT:    ; implicit-def: $vgpr24
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -23244,14 +23244,14 @@ define <36 x i16> @bitcast_v9f64_to_v36i16(<9 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_alignbit_b32 v21, v11, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v22, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v23, v7, v6, 16
-; SI-NEXT:    v_alignbit_b32 v26, v5, v4, 16
-; SI-NEXT:    v_alignbit_b32 v29, v3, v2, 16
-; SI-NEXT:    v_alignbit_b32 v31, v1, v0, 16
+; SI-NEXT:    v_alignbit_b32 v25, v5, v4, 16
+; SI-NEXT:    v_alignbit_b32 v27, v3, v2, 16
+; SI-NEXT:    v_alignbit_b32 v30, v1, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v24, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v25, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
@@ -23275,68 +23275,68 @@ define <36 x i16> @bitcast_v9f64_to_v36i16(<9 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_alignbit_b32 v21, v11, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v22, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v23, v7, v6, 16
-; SI-NEXT:    v_alignbit_b32 v26, v5, v4, 16
-; SI-NEXT:    v_alignbit_b32 v29, v3, v2, 16
-; SI-NEXT:    v_alignbit_b32 v31, v1, v0, 16
+; SI-NEXT:    v_alignbit_b32 v25, v5, v4, 16
+; SI-NEXT:    v_alignbit_b32 v27, v3, v2, 16
+; SI-NEXT:    v_alignbit_b32 v30, v1, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v24, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v25, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:  .LBB48_4: ; %end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; SI-NEXT:    v_or_b32_e32 v0, v0, v31
+; SI-NEXT:    v_or_b32_e32 v0, v0, v30
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v31, 16, v35
-; SI-NEXT:    v_or_b32_e32 v2, v2, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v35
+; SI-NEXT:    v_or_b32_e32 v2, v2, v27
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v34
-; SI-NEXT:    v_or_b32_e32 v4, v4, v26
+; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v34
+; SI-NEXT:    v_or_b32_e32 v4, v4, v25
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v33
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v33
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v23
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v32
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v22
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v30
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v31
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v21
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v28
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v29
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v20
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v27
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v28
 ; SI-NEXT:    v_or_b32_e32 v14, v14, v19
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v26
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v18
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v17
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v24
-; SI-NEXT:    v_or_b32_e32 v1, v1, v31
-; SI-NEXT:    v_or_b32_e32 v3, v3, v29
-; SI-NEXT:    v_or_b32_e32 v5, v5, v26
+; SI-NEXT:    v_or_b32_e32 v1, v1, v30
+; SI-NEXT:    v_or_b32_e32 v3, v3, v27
+; SI-NEXT:    v_or_b32_e32 v5, v5, v25
 ; SI-NEXT:    v_or_b32_e32 v7, v7, v23
 ; SI-NEXT:    v_or_b32_e32 v9, v9, v22
 ; SI-NEXT:    v_or_b32_e32 v11, v11, v21
@@ -23844,8 +23844,8 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_lshr_b64 v[22:23], v[8:9], 16
 ; SI-NEXT:    v_add_f64 v[2:3], s[18:19], 1.0
 ; SI-NEXT:    v_lshr_b64 v[23:24], v[6:7], 16
-; SI-NEXT:    v_add_f64 v[0:1], s[16:17], 1.0
 ; SI-NEXT:    v_lshr_b64 v[24:25], v[4:5], 16
+; SI-NEXT:    v_add_f64 v[0:1], s[16:17], 1.0
 ; SI-NEXT:    v_lshr_b64 v[25:26], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[26:27], v[0:1], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v17
@@ -23856,11 +23856,9 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v36, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v1
 ; SI-NEXT:    s_branch .LBB49_6
 ; SI-NEXT:  .LBB49_5:
-; SI-NEXT:    v_mov_b32_e32 v1, s17
-; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v17, s7
 ; SI-NEXT:    v_mov_b32_e32 v15, s5
 ; SI-NEXT:    v_mov_b32_e32 v13, s29
@@ -23869,6 +23867,8 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v7, s23
 ; SI-NEXT:    v_mov_b32_e32 v5, s21
 ; SI-NEXT:    v_mov_b32_e32 v3, s19
+; SI-NEXT:    v_mov_b32_e32 v1, s17
+; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v2, s18
 ; SI-NEXT:    v_mov_b32_e32 v4, s20
 ; SI-NEXT:    v_mov_b32_e32 v6, s22
@@ -23885,7 +23885,7 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v33, s63
 ; SI-NEXT:    v_mov_b32_e32 v34, s62
 ; SI-NEXT:    v_mov_b32_e32 v35, s61
-; SI-NEXT:    v_mov_b32_e32 v36, s60
+; SI-NEXT:    v_mov_b32_e32 v27, s60
 ; SI-NEXT:    v_mov_b32_e32 v26, s56
 ; SI-NEXT:    v_mov_b32_e32 v25, s46
 ; SI-NEXT:    v_mov_b32_e32 v24, s44
@@ -23896,14 +23896,14 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_mov_b32_e32 v19, s10
 ; SI-NEXT:    v_mov_b32_e32 v18, s8
 ; SI-NEXT:  .LBB49_6: ; %end
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
@@ -23916,7 +23916,7 @@ define inreg <36 x i16> @bitcast_v9f64_to_v36i16_scalar(<9 x double> inreg %a, i
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v26
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v36
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v25
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v35
@@ -25425,17 +25425,17 @@ define inreg <9 x double> @bitcast_v36i16_to_v9f64_scalar(<36 x i16> inreg %a, i
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -26112,22 +26112,22 @@ define <36 x half> @bitcast_v9f64_to_v36f16(<9 x double> %a, i32 %b) #0 {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v18
-; SI-NEXT:    ; implicit-def: $vgpr31
+; SI-NEXT:    ; implicit-def: $vgpr30
 ; SI-NEXT:    ; implicit-def: $vgpr35
-; SI-NEXT:    ; implicit-def: $vgpr29
+; SI-NEXT:    ; implicit-def: $vgpr27
 ; SI-NEXT:    ; implicit-def: $vgpr34
-; SI-NEXT:    ; implicit-def: $vgpr26
+; SI-NEXT:    ; implicit-def: $vgpr25
 ; SI-NEXT:    ; implicit-def: $vgpr33
 ; SI-NEXT:    ; implicit-def: $vgpr23
 ; SI-NEXT:    ; implicit-def: $vgpr32
 ; SI-NEXT:    ; implicit-def: $vgpr22
-; SI-NEXT:    ; implicit-def: $vgpr30
+; SI-NEXT:    ; implicit-def: $vgpr31
 ; SI-NEXT:    ; implicit-def: $vgpr21
-; SI-NEXT:    ; implicit-def: $vgpr28
+; SI-NEXT:    ; implicit-def: $vgpr29
 ; SI-NEXT:    ; implicit-def: $vgpr20
-; SI-NEXT:    ; implicit-def: $vgpr27
+; SI-NEXT:    ; implicit-def: $vgpr28
 ; SI-NEXT:    ; implicit-def: $vgpr19
-; SI-NEXT:    ; implicit-def: $vgpr25
+; SI-NEXT:    ; implicit-def: $vgpr26
 ; SI-NEXT:    ; implicit-def: $vgpr18
 ; SI-NEXT:    ; implicit-def: $vgpr24
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -26140,14 +26140,14 @@ define <36 x half> @bitcast_v9f64_to_v36f16(<9 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_alignbit_b32 v21, v11, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v22, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v23, v7, v6, 16
-; SI-NEXT:    v_alignbit_b32 v26, v5, v4, 16
-; SI-NEXT:    v_alignbit_b32 v29, v3, v2, 16
-; SI-NEXT:    v_alignbit_b32 v31, v1, v0, 16
+; SI-NEXT:    v_alignbit_b32 v25, v5, v4, 16
+; SI-NEXT:    v_alignbit_b32 v27, v3, v2, 16
+; SI-NEXT:    v_alignbit_b32 v30, v1, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v24, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v25, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
@@ -26171,68 +26171,68 @@ define <36 x half> @bitcast_v9f64_to_v36f16(<9 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_alignbit_b32 v21, v11, v10, 16
 ; SI-NEXT:    v_alignbit_b32 v22, v9, v8, 16
 ; SI-NEXT:    v_alignbit_b32 v23, v7, v6, 16
-; SI-NEXT:    v_alignbit_b32 v26, v5, v4, 16
-; SI-NEXT:    v_alignbit_b32 v29, v3, v2, 16
-; SI-NEXT:    v_alignbit_b32 v31, v1, v0, 16
+; SI-NEXT:    v_alignbit_b32 v25, v5, v4, 16
+; SI-NEXT:    v_alignbit_b32 v27, v3, v2, 16
+; SI-NEXT:    v_alignbit_b32 v30, v1, v0, 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v24, 16, v17
-; SI-NEXT:    v_lshrrev_b32_e32 v25, 16, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v13
-; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v11
-; SI-NEXT:    v_lshrrev_b32_e32 v30, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v26, 16, v15
+; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v13
+; SI-NEXT:    v_lshrrev_b32_e32 v29, 16, v11
+; SI-NEXT:    v_lshrrev_b32_e32 v31, 16, v9
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v1
 ; SI-NEXT:  .LBB52_4: ; %end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    v_lshlrev_b32_e32 v31, 16, v31
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v30
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v27
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v21
 ; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
 ; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v19
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v16
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
-; SI-NEXT:    v_or_b32_e32 v0, v0, v31
+; SI-NEXT:    v_or_b32_e32 v0, v0, v30
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v31, 16, v35
-; SI-NEXT:    v_or_b32_e32 v2, v2, v29
+; SI-NEXT:    v_lshlrev_b32_e32 v30, 16, v35
+; SI-NEXT:    v_or_b32_e32 v2, v2, v27
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v29, 16, v34
-; SI-NEXT:    v_or_b32_e32 v4, v4, v26
+; SI-NEXT:    v_lshlrev_b32_e32 v27, 16, v34
+; SI-NEXT:    v_or_b32_e32 v4, v4, v25
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v33
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v33
 ; SI-NEXT:    v_or_b32_e32 v6, v6, v23
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v32
 ; SI-NEXT:    v_or_b32_e32 v8, v8, v22
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v30
+; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v31
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v21
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v28
+; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v29
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v20
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v27
+; SI-NEXT:    v_lshlrev_b32_e32 v20, 16, v28
 ; SI-NEXT:    v_or_b32_e32 v14, v14, v19
 ; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v19, 16, v26
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v18
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v17
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v24
-; SI-NEXT:    v_or_b32_e32 v1, v1, v31
-; SI-NEXT:    v_or_b32_e32 v3, v3, v29
-; SI-NEXT:    v_or_b32_e32 v5, v5, v26
+; SI-NEXT:    v_or_b32_e32 v1, v1, v30
+; SI-NEXT:    v_or_b32_e32 v3, v3, v27
+; SI-NEXT:    v_or_b32_e32 v5, v5, v25
 ; SI-NEXT:    v_or_b32_e32 v7, v7, v23
 ; SI-NEXT:    v_or_b32_e32 v9, v9, v22
 ; SI-NEXT:    v_or_b32_e32 v11, v11, v21
@@ -26740,8 +26740,8 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_lshr_b64 v[22:23], v[8:9], 16
 ; SI-NEXT:    v_add_f64 v[2:3], s[18:19], 1.0
 ; SI-NEXT:    v_lshr_b64 v[23:24], v[6:7], 16
-; SI-NEXT:    v_add_f64 v[0:1], s[16:17], 1.0
 ; SI-NEXT:    v_lshr_b64 v[24:25], v[4:5], 16
+; SI-NEXT:    v_add_f64 v[0:1], s[16:17], 1.0
 ; SI-NEXT:    v_lshr_b64 v[25:26], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[26:27], v[0:1], 16
 ; SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v17
@@ -26752,11 +26752,9 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v34, 16, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v35, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v36, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v27, 16, v1
 ; SI-NEXT:    s_branch .LBB53_6
 ; SI-NEXT:  .LBB53_5:
-; SI-NEXT:    v_mov_b32_e32 v1, s17
-; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v17, s7
 ; SI-NEXT:    v_mov_b32_e32 v15, s5
 ; SI-NEXT:    v_mov_b32_e32 v13, s29
@@ -26765,6 +26763,8 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_mov_b32_e32 v7, s23
 ; SI-NEXT:    v_mov_b32_e32 v5, s21
 ; SI-NEXT:    v_mov_b32_e32 v3, s19
+; SI-NEXT:    v_mov_b32_e32 v1, s17
+; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v2, s18
 ; SI-NEXT:    v_mov_b32_e32 v4, s20
 ; SI-NEXT:    v_mov_b32_e32 v6, s22
@@ -26781,7 +26781,7 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_mov_b32_e32 v33, s63
 ; SI-NEXT:    v_mov_b32_e32 v34, s62
 ; SI-NEXT:    v_mov_b32_e32 v35, s61
-; SI-NEXT:    v_mov_b32_e32 v36, s60
+; SI-NEXT:    v_mov_b32_e32 v27, s60
 ; SI-NEXT:    v_mov_b32_e32 v26, s56
 ; SI-NEXT:    v_mov_b32_e32 v25, s46
 ; SI-NEXT:    v_mov_b32_e32 v24, s44
@@ -26792,14 +26792,14 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_mov_b32_e32 v19, s10
 ; SI-NEXT:    v_mov_b32_e32 v18, s8
 ; SI-NEXT:  .LBB53_6: ; %end
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
+; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v25
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
+; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v23
 ; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
 ; SI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
 ; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v10
@@ -26812,7 +26812,7 @@ define inreg <36 x half> @bitcast_v9f64_to_v36f16_scalar(<9 x double> inreg %a, 
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v26
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v36
+; SI-NEXT:    v_lshlrev_b32_e32 v26, 16, v27
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v25
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v25, 16, v35
@@ -27525,10 +27525,10 @@ define <9 x double> @bitcast_v36f16_to_v9f64(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v41
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v45
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v40
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v44
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_or_b32_e32 v1, v2, v3
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v40
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v44
+; SI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v55
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v43
 ; SI-NEXT:    v_or_b32_e32 v2, v2, v3
@@ -27627,118 +27627,118 @@ define <9 x double> @bitcast_v36f16_to_v9f64(<36 x half> %a, i32 %b) #0 {
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v45
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v41
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v44
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v40
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v43
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v43
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v55
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v54
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, v53
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v55
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v42
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, v54
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v42
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v63
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, v53
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v62
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; SI-NEXT:    v_cvt_f32_f16_e32 v7, v52
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v63
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v51
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, v61
-; SI-NEXT:    v_or_b32_e32 v5, v7, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, v60
 ; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; SI-NEXT:    v_or_b32_e32 v6, v8, v6
 ; SI-NEXT:    v_cvt_f32_f16_e32 v8, v50
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, v59
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v49
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_or_b32_e32 v7, v8, v7
 ; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v9, v58
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, v48
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_or_b32_e32 v8, v10, v8
 ; SI-NEXT:    v_cvt_f32_f16_e32 v10, v57
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
 ; SI-NEXT:    v_or_b32_e32 v9, v11, v9
 ; SI-NEXT:    v_cvt_f32_f16_e32 v11, v39
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, v56
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v38
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_or_b32_e32 v10, v11, v10
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v12, v47
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, v37
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_or_b32_e32 v11, v13, v11
 ; SI-NEXT:    v_cvt_f32_f16_e32 v13, v46
 ; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
 ; SI-NEXT:    v_or_b32_e32 v12, v14, v12
 ; SI-NEXT:    v_cvt_f32_f16_e32 v14, v36
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
@@ -28370,8 +28370,8 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; SI-NEXT:    v_readfirstlane_b32 s8, v2
 ; SI-NEXT:    v_readfirstlane_b32 s10, v1
 ; SI-NEXT:    v_readfirstlane_b32 s13, v0
-; SI-NEXT:    s_lshr_b32 s11, s29, 16
-; SI-NEXT:    s_lshr_b32 s14, s28, 16
+; SI-NEXT:    s_lshr_b32 s12, s29, 16
+; SI-NEXT:    s_lshr_b32 s15, s28, 16
 ; SI-NEXT:    s_lshr_b32 s72, s27, 16
 ; SI-NEXT:    s_lshr_b32 s73, s26, 16
 ; SI-NEXT:    s_lshr_b32 s74, s25, 16
@@ -28386,8 +28386,8 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; SI-NEXT:    s_lshr_b32 s91, s16, 16
 ; SI-NEXT:    s_lshr_b32 s7, s6, 16
 ; SI-NEXT:    s_lshr_b32 s9, s8, 16
-; SI-NEXT:    s_lshr_b32 s12, s10, 16
-; SI-NEXT:    s_lshr_b32 s15, s13, 16
+; SI-NEXT:    s_lshr_b32 s11, s10, 16
+; SI-NEXT:    s_lshr_b32 s14, s13, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB55_2
@@ -28395,17 +28395,17 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s91, 16
 ; SI-NEXT:    s_or_b32 s36, s4, s5
+; SI-NEXT:    s_and_b32 s4, s17, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s90, 16
+; SI-NEXT:    s_or_b32 s37, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s89, 16
 ; SI-NEXT:    s_or_b32 s38, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s19, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s88, 16
-; SI-NEXT:    s_and_b32 s40, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s41, s90, 16
 ; SI-NEXT:    s_or_b32 s39, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s79, 16
-; SI-NEXT:    s_or_b32 s37, s40, s41
 ; SI-NEXT:    s_or_b32 s40, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s21, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s78, 16
@@ -28429,16 +28429,16 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; SI-NEXT:    s_lshl_b32 s5, s72, 16
 ; SI-NEXT:    s_or_b32 s47, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s14, 16
+; SI-NEXT:    s_lshl_b32 s5, s15, 16
 ; SI-NEXT:    s_or_b32 s48, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s11, 16
+; SI-NEXT:    s_lshl_b32 s5, s12, 16
 ; SI-NEXT:    s_or_b32 s49, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s13, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s15, 16
+; SI-NEXT:    s_lshl_b32 s5, s14, 16
 ; SI-NEXT:    s_or_b32 s50, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s10, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s12, 16
+; SI-NEXT:    s_lshl_b32 s5, s11, 16
 ; SI-NEXT:    s_or_b32 s51, s4, s5
 ; SI-NEXT:    s_and_b32 s4, s8, 0xffff
 ; SI-NEXT:    s_lshl_b32 s5, s9, 16
@@ -28458,149 +28458,149 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; SI-NEXT:    s_cbranch_scc1 .LBB55_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s91
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s16
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s90
 ; SI-NEXT:    v_cvt_f32_f16_e32 v3, s17
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
-; SI-NEXT:    v_or_b32_e32 v1, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s89
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s19
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s20
 ; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
 ; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s89
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s88
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s19
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s18
+; SI-NEXT:    v_or_b32_e32 v1, v3, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s88
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s21
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s22
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s79
+; SI-NEXT:    v_or_b32_e32 v2, v2, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; SI-NEXT:    v_or_b32_e32 v3, v5, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s20
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s78
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
 ; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
 ; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; SI-NEXT:    v_or_b32_e32 v3, v4, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, s79
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s21
+; SI-NEXT:    v_or_b32_e32 v4, v4, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s22
 ; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
-; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s24
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
+; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
 ; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s78
+; SI-NEXT:    v_or_b32_e32 v5, v7, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; SI-NEXT:    v_or_b32_e32 v6, v8, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s23
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s75
+; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
+; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
+; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
 ; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
 ; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s25
-; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s24
+; SI-NEXT:    v_or_b32_e32 v7, v8, v7
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s25
 ; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
 ; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; SI-NEXT:    v_or_b32_e32 v5, v6, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v6, s77
+; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
+; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
 ; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s27
-; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
-; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s28
+; SI-NEXT:    v_or_b32_e32 v8, v10, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
+; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
+; SI-NEXT:    v_or_b32_e32 v9, v11, v9
+; SI-NEXT:    v_cvt_f32_f16_e32 v11, s26
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s72
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
 ; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; SI-NEXT:    v_or_b32_e32 v6, v7, v6
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s76
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s27
+; SI-NEXT:    v_or_b32_e32 v10, v11, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s15
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s28
 ; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
 ; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
-; SI-NEXT:    v_add_f32_e32 v7, 0x38000000, v7
-; SI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s13
+; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
 ; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; SI-NEXT:    v_or_b32_e32 v7, v8, v7
-; SI-NEXT:    v_cvt_f32_f16_e32 v8, s75
+; SI-NEXT:    v_or_b32_e32 v11, v13, v11
+; SI-NEXT:    v_cvt_f32_f16_e32 v13, s12
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; SI-NEXT:    v_or_b32_e32 v12, v14, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s29
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s14
+; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
+; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
 ; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
 ; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_cvt_f32_f16_e32 v16, s10
-; SI-NEXT:    v_add_f32_e32 v8, 0x38000000, v8
-; SI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
+; SI-NEXT:    v_cvt_f32_f16_e32 v16, s13
+; SI-NEXT:    v_or_b32_e32 v13, v14, v13
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v15, s11
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s10
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; SI-NEXT:    v_or_b32_e32 v8, v9, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v9, s74
+; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
+; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
 ; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
 ; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, s6
-; SI-NEXT:    v_add_f32_e32 v9, 0x38000000, v9
-; SI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; SI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; SI-NEXT:    v_or_b32_e32 v9, v10, v9
-; SI-NEXT:    v_cvt_f32_f16_e32 v10, s73
-; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
-; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; SI-NEXT:    v_or_b32_e32 v10, v11, v10
-; SI-NEXT:    v_cvt_f32_f16_e32 v11, s72
-; SI-NEXT:    v_add_f32_e32 v11, 0x38000000, v11
-; SI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; SI-NEXT:    v_or_b32_e32 v11, v12, v11
-; SI-NEXT:    v_cvt_f32_f16_e32 v12, s14
-; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
-; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; SI-NEXT:    v_or_b32_e32 v12, v13, v12
-; SI-NEXT:    v_cvt_f32_f16_e32 v13, s11
-; SI-NEXT:    v_add_f32_e32 v13, 0x38000000, v13
-; SI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; SI-NEXT:    v_or_b32_e32 v13, v14, v13
-; SI-NEXT:    v_cvt_f32_f16_e32 v14, s15
-; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
-; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; SI-NEXT:    v_or_b32_e32 v14, v15, v14
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s12
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; SI-NEXT:    v_or_b32_e32 v15, v16, v15
+; SI-NEXT:    v_or_b32_e32 v14, v16, v14
 ; SI-NEXT:    v_cvt_f32_f16_e32 v16, s9
+; SI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
+; SI-NEXT:    v_or_b32_e32 v15, v17, v15
+; SI-NEXT:    v_cvt_f32_f16_e32 v17, s8
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s7
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, s6
 ; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
 ; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
+; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
+; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
+; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
+; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
 ; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
 ; SI-NEXT:    v_or_b32_e32 v16, v17, v16
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s7
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; SI-NEXT:    v_or_b32_e32 v17, v18, v17
+; SI-NEXT:    v_lshlrev_b32_e32 v17, 16, v18
+; SI-NEXT:    v_or_b32_e32 v17, v19, v17
 ; SI-NEXT:    s_branch .LBB55_6
 ; SI-NEXT:  .LBB55_5:
 ; SI-NEXT:    v_mov_b32_e32 v0, s36
@@ -28773,13 +28773,13 @@ define inreg <9 x double> @bitcast_v36f16_to_v9f64_scalar(<36 x half> inreg %a, 
 ; VI-NEXT:  ; %bb.4: ; %cmp.true
 ; VI-NEXT:    v_mov_b32_e32 v17, 0x200
 ; VI-NEXT:    v_mov_b32_e32 v0, s91
-; VI-NEXT:    v_mov_b32_e32 v2, s90
 ; VI-NEXT:    v_add_f16_sdwa v0, v0, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v1, s16, v17
-; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_add_f16_e32 v3, s17, v17
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v1, v3, v2
+; VI-NEXT:    v_mov_b32_e32 v1, s90
+; VI-NEXT:    v_add_f16_sdwa v1, v1, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_add_f16_e32 v2, s17, v17
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s89
 ; VI-NEXT:    v_add_f16_sdwa v2, v2, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_add_f16_e32 v3, s18, v17
@@ -29993,210 +29993,228 @@ define inreg <36 x half> @bitcast_v36i16_to_v36f16_scalar(<36 x i16> inreg %a, i
 ; SI-NEXT:    v_writelane_b32 v18, s51, 9
 ; SI-NEXT:    v_writelane_b32 v18, s52, 10
 ; SI-NEXT:    v_writelane_b32 v18, s53, 11
-; SI-NEXT:    v_writelane_b32 v18, s30, 12
-; SI-NEXT:    v_writelane_b32 v18, s31, 13
-; SI-NEXT:    v_readfirstlane_b32 s51, v3
-; SI-NEXT:    v_readfirstlane_b32 s53, v2
-; SI-NEXT:    v_readfirstlane_b32 s48, v1
-; SI-NEXT:    v_readfirstlane_b32 s50, v0
-; SI-NEXT:    s_lshr_b32 vcc_lo, s29, 16
-; SI-NEXT:    s_lshr_b32 s39, s28, 16
-; SI-NEXT:    s_lshr_b32 s95, s27, 16
-; SI-NEXT:    s_lshr_b32 s38, s26, 16
-; SI-NEXT:    s_lshr_b32 s94, s25, 16
-; SI-NEXT:    s_lshr_b32 s37, s24, 16
-; SI-NEXT:    s_lshr_b32 s93, s23, 16
-; SI-NEXT:    s_lshr_b32 s36, s22, 16
-; SI-NEXT:    s_lshr_b32 s92, s21, 16
-; SI-NEXT:    s_lshr_b32 s35, s20, 16
-; SI-NEXT:    s_lshr_b32 s91, s19, 16
-; SI-NEXT:    s_lshr_b32 s34, s18, 16
-; SI-NEXT:    s_lshr_b32 s90, s17, 16
-; SI-NEXT:    s_lshr_b32 s31, s16, 16
-; SI-NEXT:    s_lshr_b32 s30, s51, 16
-; SI-NEXT:    s_lshr_b32 s52, s53, 16
-; SI-NEXT:    s_lshr_b32 vcc_hi, s48, 16
-; SI-NEXT:    s_lshr_b32 s49, s50, 16
+; SI-NEXT:    v_writelane_b32 v18, s54, 12
+; SI-NEXT:    v_writelane_b32 v18, s55, 13
+; SI-NEXT:    v_writelane_b32 v18, s64, 14
+; SI-NEXT:    v_writelane_b32 v18, s65, 15
+; SI-NEXT:    v_writelane_b32 v18, s66, 16
+; SI-NEXT:    v_writelane_b32 v18, s67, 17
+; SI-NEXT:    v_writelane_b32 v18, s68, 18
+; SI-NEXT:    v_writelane_b32 v18, s69, 19
+; SI-NEXT:    v_writelane_b32 v18, s70, 20
+; SI-NEXT:    v_writelane_b32 v18, s71, 21
+; SI-NEXT:    v_writelane_b32 v18, s80, 22
+; SI-NEXT:    v_writelane_b32 v18, s81, 23
+; SI-NEXT:    v_writelane_b32 v18, s82, 24
+; SI-NEXT:    v_writelane_b32 v18, s83, 25
+; SI-NEXT:    v_writelane_b32 v18, s84, 26
+; SI-NEXT:    v_writelane_b32 v18, s85, 27
+; SI-NEXT:    v_writelane_b32 v18, s86, 28
+; SI-NEXT:    v_writelane_b32 v18, s87, 29
+; SI-NEXT:    v_writelane_b32 v18, s30, 30
+; SI-NEXT:    v_writelane_b32 v18, s31, 31
+; SI-NEXT:    v_readfirstlane_b32 s85, v3
+; SI-NEXT:    v_readfirstlane_b32 s87, v2
+; SI-NEXT:    v_readfirstlane_b32 s82, v1
+; SI-NEXT:    v_readfirstlane_b32 s84, v0
+; SI-NEXT:    s_lshr_b32 s64, s29, 16
+; SI-NEXT:    s_lshr_b32 s81, s28, 16
+; SI-NEXT:    s_lshr_b32 s55, s27, 16
+; SI-NEXT:    s_lshr_b32 s80, s26, 16
+; SI-NEXT:    s_lshr_b32 s54, s25, 16
+; SI-NEXT:    s_lshr_b32 s71, s24, 16
+; SI-NEXT:    s_lshr_b32 s53, s23, 16
+; SI-NEXT:    s_lshr_b32 s70, s22, 16
+; SI-NEXT:    s_lshr_b32 s52, s21, 16
+; SI-NEXT:    s_lshr_b32 s69, s20, 16
+; SI-NEXT:    s_lshr_b32 s51, s19, 16
+; SI-NEXT:    s_lshr_b32 s68, s18, 16
+; SI-NEXT:    s_lshr_b32 s50, s17, 16
+; SI-NEXT:    s_lshr_b32 s67, s16, 16
+; SI-NEXT:    s_lshr_b32 s66, s85, 16
+; SI-NEXT:    s_lshr_b32 s86, s87, 16
+; SI-NEXT:    s_lshr_b32 s65, s82, 16
+; SI-NEXT:    s_lshr_b32 s83, s84, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB57_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
 ; SI-NEXT:    s_and_b32 s5, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s90, 16
+; SI-NEXT:    s_lshl_b32 s7, s50, 16
 ; SI-NEXT:    s_and_b32 s4, s16, 0xffff
-; SI-NEXT:    s_lshl_b32 s46, s31, 16
-; SI-NEXT:    s_or_b32 s47, s5, s7
+; SI-NEXT:    s_lshl_b32 s38, s67, 16
+; SI-NEXT:    s_or_b32 s39, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s19, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s91, 16
-; SI-NEXT:    s_or_b32 s40, s4, s46
+; SI-NEXT:    s_lshl_b32 s7, s51, 16
+; SI-NEXT:    s_or_b32 s44, s4, s38
 ; SI-NEXT:    s_and_b32 s4, s18, 0xffff
-; SI-NEXT:    s_lshl_b32 s56, s34, 16
-; SI-NEXT:    s_or_b32 s57, s5, s7
+; SI-NEXT:    s_lshl_b32 s36, s68, 16
+; SI-NEXT:    s_or_b32 s37, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s21, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s92, 16
-; SI-NEXT:    s_or_b32 s14, s4, s56
+; SI-NEXT:    s_lshl_b32 s7, s52, 16
+; SI-NEXT:    s_or_b32 s42, s4, s36
 ; SI-NEXT:    s_and_b32 s4, s20, 0xffff
-; SI-NEXT:    s_lshl_b32 s58, s35, 16
-; SI-NEXT:    s_or_b32 s59, s5, s7
+; SI-NEXT:    s_lshl_b32 s34, s69, 16
+; SI-NEXT:    s_or_b32 s35, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s23, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s93, 16
-; SI-NEXT:    s_or_b32 s12, s4, s58
+; SI-NEXT:    s_lshl_b32 s7, s53, 16
+; SI-NEXT:    s_or_b32 s40, s4, s34
 ; SI-NEXT:    s_and_b32 s4, s22, 0xffff
-; SI-NEXT:    s_lshl_b32 s60, s36, 16
-; SI-NEXT:    s_or_b32 s61, s5, s7
+; SI-NEXT:    s_lshl_b32 s30, s70, 16
+; SI-NEXT:    s_or_b32 s31, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s25, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s94, 16
-; SI-NEXT:    s_or_b32 s10, s4, s60
+; SI-NEXT:    s_lshl_b32 s7, s54, 16
+; SI-NEXT:    s_or_b32 s14, s4, s30
 ; SI-NEXT:    s_and_b32 s4, s24, 0xffff
-; SI-NEXT:    s_lshl_b32 s62, s37, 16
-; SI-NEXT:    s_or_b32 s63, s5, s7
+; SI-NEXT:    s_lshl_b32 vcc_lo, s71, 16
+; SI-NEXT:    s_or_b32 vcc_hi, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s27, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s95, 16
-; SI-NEXT:    s_or_b32 s8, s4, s62
+; SI-NEXT:    s_lshl_b32 s7, s55, 16
+; SI-NEXT:    s_or_b32 s12, s4, vcc_lo
 ; SI-NEXT:    s_and_b32 s4, s26, 0xffff
-; SI-NEXT:    s_lshl_b32 s72, s38, 16
-; SI-NEXT:    s_or_b32 s73, s5, s7
+; SI-NEXT:    s_lshl_b32 s94, s80, 16
+; SI-NEXT:    s_or_b32 s95, s5, s7
 ; SI-NEXT:    s_and_b32 s5, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, vcc_lo, 16
-; SI-NEXT:    s_or_b32 s6, s4, s72
+; SI-NEXT:    s_lshl_b32 s7, s64, 16
+; SI-NEXT:    s_or_b32 s10, s4, s94
 ; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s44, s39, 16
-; SI-NEXT:    s_or_b32 s45, s5, s7
-; SI-NEXT:    s_and_b32 s5, s48, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, vcc_hi, 16
-; SI-NEXT:    s_or_b32 s4, s4, s44
-; SI-NEXT:    s_lshl_b32 s42, s49, 16
-; SI-NEXT:    s_or_b32 s43, s5, s7
-; SI-NEXT:    s_and_b32 s5, s51, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s30, 16
-; SI-NEXT:    s_lshr_b64 s[74:75], s[44:45], 16
-; SI-NEXT:    s_and_b32 s44, s50, 0xffff
-; SI-NEXT:    s_or_b32 s79, s5, s7
-; SI-NEXT:    s_lshl_b32 s78, s52, 16
-; SI-NEXT:    s_or_b32 s44, s44, s42
-; SI-NEXT:    s_lshr_b64 s[76:77], s[42:43], 16
-; SI-NEXT:    s_and_b32 s42, s53, 0xffff
-; SI-NEXT:    s_mov_b32 s41, s47
-; SI-NEXT:    s_lshr_b64 s[46:47], s[46:47], 16
-; SI-NEXT:    s_mov_b32 s15, s57
-; SI-NEXT:    s_lshr_b64 s[56:57], s[56:57], 16
-; SI-NEXT:    s_mov_b32 s13, s59
-; SI-NEXT:    s_lshr_b64 s[58:59], s[58:59], 16
-; SI-NEXT:    s_mov_b32 s11, s61
-; SI-NEXT:    s_lshr_b64 s[60:61], s[60:61], 16
-; SI-NEXT:    s_mov_b32 s9, s63
-; SI-NEXT:    s_lshr_b64 s[62:63], s[62:63], 16
-; SI-NEXT:    s_mov_b32 s7, s73
-; SI-NEXT:    s_lshr_b64 s[72:73], s[72:73], 16
-; SI-NEXT:    s_mov_b32 s5, s45
-; SI-NEXT:    s_mov_b32 s45, s43
-; SI-NEXT:    s_or_b32 s42, s42, s78
-; SI-NEXT:    s_mov_b32 s43, s79
-; SI-NEXT:    s_lshr_b64 s[78:79], s[78:79], 16
-; SI-NEXT:    s_mov_b64 s[88:89], 0
+; SI-NEXT:    s_lshl_b32 s92, s81, 16
+; SI-NEXT:    s_or_b32 s93, s5, s7
+; SI-NEXT:    s_and_b32 s5, s82, 0xffff
+; SI-NEXT:    s_lshl_b32 s7, s65, 16
+; SI-NEXT:    s_or_b32 s8, s4, s92
+; SI-NEXT:    s_and_b32 s4, s84, 0xffff
+; SI-NEXT:    s_lshl_b32 s90, s83, 16
+; SI-NEXT:    s_or_b32 s91, s5, s7
+; SI-NEXT:    s_and_b32 s5, s85, 0xffff
+; SI-NEXT:    s_lshl_b32 s7, s66, 16
+; SI-NEXT:    s_or_b32 s6, s4, s90
+; SI-NEXT:    s_and_b32 s4, s87, 0xffff
+; SI-NEXT:    s_lshl_b32 s88, s86, 16
+; SI-NEXT:    s_or_b32 s89, s5, s7
+; SI-NEXT:    s_or_b32 s4, s4, s88
+; SI-NEXT:    s_lshr_b64 s[46:47], s[38:39], 16
+; SI-NEXT:    s_lshr_b64 s[56:57], s[36:37], 16
+; SI-NEXT:    s_lshr_b64 s[58:59], s[34:35], 16
+; SI-NEXT:    s_lshr_b64 s[60:61], s[30:31], 16
+; SI-NEXT:    s_lshr_b64 s[62:63], vcc, 16
+; SI-NEXT:    s_lshr_b64 s[72:73], s[94:95], 16
+; SI-NEXT:    s_lshr_b64 s[74:75], s[92:93], 16
+; SI-NEXT:    s_lshr_b64 s[76:77], s[90:91], 16
+; SI-NEXT:    s_lshr_b64 s[78:79], s[88:89], 16
+; SI-NEXT:    s_mov_b64 s[48:49], 0
+; SI-NEXT:    s_mov_b32 s45, s39
+; SI-NEXT:    s_mov_b32 s43, s37
+; SI-NEXT:    s_mov_b32 s41, s35
+; SI-NEXT:    s_mov_b32 s15, s31
+; SI-NEXT:    s_mov_b32 s13, vcc_hi
+; SI-NEXT:    s_mov_b32 s11, s95
+; SI-NEXT:    s_mov_b32 s9, s93
+; SI-NEXT:    s_mov_b32 s7, s91
+; SI-NEXT:    s_mov_b32 s5, s89
 ; SI-NEXT:    s_branch .LBB57_3
 ; SI-NEXT:  .LBB57_2:
-; SI-NEXT:    s_mov_b64 s[88:89], -1
-; SI-NEXT:    ; implicit-def: $sgpr40
-; SI-NEXT:    ; implicit-def: $sgpr46
-; SI-NEXT:    ; implicit-def: $sgpr14
-; SI-NEXT:    ; implicit-def: $sgpr56
-; SI-NEXT:    ; implicit-def: $sgpr12
-; SI-NEXT:    ; implicit-def: $sgpr58
-; SI-NEXT:    ; implicit-def: $sgpr10
-; SI-NEXT:    ; implicit-def: $sgpr60
-; SI-NEXT:    ; implicit-def: $sgpr8
-; SI-NEXT:    ; implicit-def: $sgpr62
-; SI-NEXT:    ; implicit-def: $sgpr6
-; SI-NEXT:    ; implicit-def: $sgpr72
-; SI-NEXT:    ; implicit-def: $sgpr4
-; SI-NEXT:    ; implicit-def: $sgpr74
+; SI-NEXT:    s_mov_b64 s[48:49], -1
 ; SI-NEXT:    ; implicit-def: $sgpr44
-; SI-NEXT:    ; implicit-def: $sgpr76
+; SI-NEXT:    ; implicit-def: $sgpr46
 ; SI-NEXT:    ; implicit-def: $sgpr42
+; SI-NEXT:    ; implicit-def: $sgpr56
+; SI-NEXT:    ; implicit-def: $sgpr40
+; SI-NEXT:    ; implicit-def: $sgpr58
+; SI-NEXT:    ; implicit-def: $sgpr14
+; SI-NEXT:    ; implicit-def: $sgpr60
+; SI-NEXT:    ; implicit-def: $sgpr12
+; SI-NEXT:    ; implicit-def: $sgpr62
+; SI-NEXT:    ; implicit-def: $sgpr10
+; SI-NEXT:    ; implicit-def: $sgpr72
+; SI-NEXT:    ; implicit-def: $sgpr8
+; SI-NEXT:    ; implicit-def: $sgpr74
+; SI-NEXT:    ; implicit-def: $sgpr6
+; SI-NEXT:    ; implicit-def: $sgpr76
+; SI-NEXT:    ; implicit-def: $sgpr4
 ; SI-NEXT:    ; implicit-def: $sgpr78
 ; SI-NEXT:  .LBB57_3: ; %Flow
-; SI-NEXT:    s_and_b64 s[88:89], s[88:89], exec
+; SI-NEXT:    s_and_b64 s[88:89], s[48:49], exec
 ; SI-NEXT:    s_cselect_b32 s47, 1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s47, 1
 ; SI-NEXT:    s_cbranch_scc1 .LBB57_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
-; SI-NEXT:    s_add_i32 s53, s53, 3
-; SI-NEXT:    s_and_b32 s4, s53, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s52, 16
+; SI-NEXT:    s_add_i32 s87, s87, 3
+; SI-NEXT:    s_and_b32 s4, s87, 0xffff
+; SI-NEXT:    s_lshl_b32 s5, s86, 16
+; SI-NEXT:    s_add_i32 s85, s85, 3
 ; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_add_i32 s51, s51, 3
-; SI-NEXT:    s_add_i32 s42, s4, 0x30000
-; SI-NEXT:    s_and_b32 s4, s51, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s30, 16
-; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_add_i32 s50, s50, 3
-; SI-NEXT:    s_add_i32 s43, s4, 0x30000
-; SI-NEXT:    s_and_b32 s4, s50, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s49, 16
-; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_add_i32 s48, s48, 3
-; SI-NEXT:    s_add_i32 s44, s4, 0x30000
-; SI-NEXT:    s_and_b32 s4, s48, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, vcc_hi, 16
-; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_add_i32 s28, s28, 3
-; SI-NEXT:    s_add_i32 s45, s4, 0x30000
-; SI-NEXT:    s_and_b32 s4, s28, 0xffff
-; SI-NEXT:    s_lshl_b32 s5, s39, 16
-; SI-NEXT:    s_add_i32 s29, s29, 3
-; SI-NEXT:    s_or_b32 s4, s5, s4
-; SI-NEXT:    s_and_b32 s5, s29, 0xffff
-; SI-NEXT:    s_lshl_b32 s6, vcc_lo, 16
-; SI-NEXT:    s_add_i32 s26, s26, 3
+; SI-NEXT:    s_and_b32 s5, s85, 0xffff
+; SI-NEXT:    s_lshl_b32 s6, s66, 16
+; SI-NEXT:    s_add_i32 s84, s84, 3
 ; SI-NEXT:    s_or_b32 s5, s6, s5
-; SI-NEXT:    s_and_b32 s6, s26, 0xffff
-; SI-NEXT:    s_lshl_b32 s7, s38, 16
-; SI-NEXT:    s_add_i32 s27, s27, 3
+; SI-NEXT:    s_and_b32 s6, s84, 0xffff
+; SI-NEXT:    s_lshl_b32 s7, s83, 16
+; SI-NEXT:    s_add_i32 s82, s82, 3
 ; SI-NEXT:    s_or_b32 s6, s7, s6
-; SI-NEXT:    s_and_b32 s7, s27, 0xffff
-; SI-NEXT:    s_lshl_b32 s8, s95, 16
-; SI-NEXT:    s_add_i32 s24, s24, 3
+; SI-NEXT:    s_and_b32 s7, s82, 0xffff
+; SI-NEXT:    s_lshl_b32 s8, s65, 16
+; SI-NEXT:    s_add_i32 s28, s28, 3
 ; SI-NEXT:    s_or_b32 s7, s8, s7
-; SI-NEXT:    s_and_b32 s8, s24, 0xffff
-; SI-NEXT:    s_lshl_b32 s9, s37, 16
-; SI-NEXT:    s_add_i32 s25, s25, 3
+; SI-NEXT:    s_and_b32 s8, s28, 0xffff
+; SI-NEXT:    s_lshl_b32 s9, s81, 16
+; SI-NEXT:    s_add_i32 s29, s29, 3
 ; SI-NEXT:    s_or_b32 s8, s9, s8
-; SI-NEXT:    s_and_b32 s9, s25, 0xffff
-; SI-NEXT:    s_lshl_b32 s10, s94, 16
-; SI-NEXT:    s_add_i32 s22, s22, 3
+; SI-NEXT:    s_and_b32 s9, s29, 0xffff
+; SI-NEXT:    s_lshl_b32 s10, s64, 16
+; SI-NEXT:    s_add_i32 s26, s26, 3
 ; SI-NEXT:    s_or_b32 s9, s10, s9
-; SI-NEXT:    s_and_b32 s10, s22, 0xffff
-; SI-NEXT:    s_lshl_b32 s11, s36, 16
-; SI-NEXT:    s_add_i32 s23, s23, 3
+; SI-NEXT:    s_and_b32 s10, s26, 0xffff
+; SI-NEXT:    s_lshl_b32 s11, s80, 16
+; SI-NEXT:    s_add_i32 s27, s27, 3
 ; SI-NEXT:    s_or_b32 s10, s11, s10
-; SI-NEXT:    s_and_b32 s11, s23, 0xffff
-; SI-NEXT:    s_lshl_b32 s12, s93, 16
-; SI-NEXT:    s_add_i32 s20, s20, 3
+; SI-NEXT:    s_and_b32 s11, s27, 0xffff
+; SI-NEXT:    s_lshl_b32 s12, s55, 16
+; SI-NEXT:    s_add_i32 s24, s24, 3
 ; SI-NEXT:    s_or_b32 s11, s12, s11
-; SI-NEXT:    s_and_b32 s12, s20, 0xffff
-; SI-NEXT:    s_lshl_b32 s13, s35, 16
-; SI-NEXT:    s_add_i32 s21, s21, 3
+; SI-NEXT:    s_and_b32 s12, s24, 0xffff
+; SI-NEXT:    s_lshl_b32 s13, s71, 16
+; SI-NEXT:    s_add_i32 s25, s25, 3
 ; SI-NEXT:    s_or_b32 s12, s13, s12
-; SI-NEXT:    s_and_b32 s13, s21, 0xffff
-; SI-NEXT:    s_lshl_b32 s14, s92, 16
-; SI-NEXT:    s_add_i32 s18, s18, 3
+; SI-NEXT:    s_and_b32 s13, s25, 0xffff
+; SI-NEXT:    s_lshl_b32 s14, s54, 16
+; SI-NEXT:    s_add_i32 s22, s22, 3
 ; SI-NEXT:    s_or_b32 s13, s14, s13
-; SI-NEXT:    s_and_b32 s14, s18, 0xffff
-; SI-NEXT:    s_lshl_b32 s15, s34, 16
-; SI-NEXT:    s_add_i32 s19, s19, 3
+; SI-NEXT:    s_and_b32 s14, s22, 0xffff
+; SI-NEXT:    s_lshl_b32 s15, s70, 16
+; SI-NEXT:    s_add_i32 s23, s23, 3
 ; SI-NEXT:    s_or_b32 s14, s15, s14
-; SI-NEXT:    s_and_b32 s15, s19, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s91, 16
+; SI-NEXT:    s_and_b32 s15, s23, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s53, 16
+; SI-NEXT:    s_add_i32 s20, s20, 3
+; SI-NEXT:    s_or_b32 s15, s22, s15
+; SI-NEXT:    s_and_b32 s20, s20, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s69, 16
+; SI-NEXT:    s_or_b32 s20, s22, s20
+; SI-NEXT:    s_add_i32 s21, s21, 3
+; SI-NEXT:    s_add_i32 s40, s20, 0x30000
+; SI-NEXT:    s_and_b32 s20, s21, 0xffff
+; SI-NEXT:    s_lshl_b32 s21, s52, 16
+; SI-NEXT:    s_or_b32 s20, s21, s20
+; SI-NEXT:    s_add_i32 s18, s18, 3
+; SI-NEXT:    s_add_i32 s41, s20, 0x30000
+; SI-NEXT:    s_and_b32 s18, s18, 0xffff
+; SI-NEXT:    s_lshl_b32 s20, s68, 16
+; SI-NEXT:    s_or_b32 s18, s20, s18
+; SI-NEXT:    s_add_i32 s19, s19, 3
+; SI-NEXT:    s_add_i32 s42, s18, 0x30000
+; SI-NEXT:    s_and_b32 s18, s19, 0xffff
+; SI-NEXT:    s_lshl_b32 s19, s51, 16
+; SI-NEXT:    s_or_b32 s18, s19, s18
 ; SI-NEXT:    s_add_i32 s16, s16, 3
-; SI-NEXT:    s_or_b32 s15, s18, s15
+; SI-NEXT:    s_add_i32 s43, s18, 0x30000
 ; SI-NEXT:    s_and_b32 s16, s16, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s31, 16
+; SI-NEXT:    s_lshl_b32 s18, s67, 16
 ; SI-NEXT:    s_or_b32 s16, s18, s16
 ; SI-NEXT:    s_add_i32 s17, s17, 3
-; SI-NEXT:    s_add_i32 s40, s16, 0x30000
+; SI-NEXT:    s_add_i32 s44, s16, 0x30000
 ; SI-NEXT:    s_and_b32 s16, s17, 0xffff
-; SI-NEXT:    s_lshl_b32 s17, s90, 16
+; SI-NEXT:    s_lshl_b32 s17, s50, 16
 ; SI-NEXT:    s_or_b32 s16, s17, s16
 ; SI-NEXT:    s_add_i32 s4, s4, 0x30000
 ; SI-NEXT:    s_add_i32 s5, s5, 0x30000
@@ -30210,100 +30228,118 @@ define inreg <36 x half> @bitcast_v36i16_to_v36f16_scalar(<36 x i16> inreg %a, i
 ; SI-NEXT:    s_add_i32 s13, s13, 0x30000
 ; SI-NEXT:    s_add_i32 s14, s14, 0x30000
 ; SI-NEXT:    s_add_i32 s15, s15, 0x30000
-; SI-NEXT:    s_add_i32 s41, s16, 0x30000
-; SI-NEXT:    s_lshr_b64 s[46:47], s[40:41], 16
-; SI-NEXT:    s_lshr_b64 s[56:57], s[14:15], 16
-; SI-NEXT:    s_lshr_b64 s[58:59], s[12:13], 16
-; SI-NEXT:    s_lshr_b64 s[60:61], s[10:11], 16
-; SI-NEXT:    s_lshr_b64 s[62:63], s[8:9], 16
-; SI-NEXT:    s_lshr_b64 s[72:73], s[6:7], 16
-; SI-NEXT:    s_lshr_b64 s[74:75], s[4:5], 16
-; SI-NEXT:    s_lshr_b64 s[76:77], s[44:45], 16
-; SI-NEXT:    s_lshr_b64 s[78:79], s[42:43], 16
-; SI-NEXT:    s_lshr_b32 s90, s41, 16
-; SI-NEXT:    s_lshr_b32 s91, s15, 16
-; SI-NEXT:    s_lshr_b32 s92, s13, 16
-; SI-NEXT:    s_lshr_b32 s93, s11, 16
-; SI-NEXT:    s_lshr_b32 s94, s9, 16
-; SI-NEXT:    s_lshr_b32 s95, s7, 16
-; SI-NEXT:    s_lshr_b32 vcc_lo, s5, 16
-; SI-NEXT:    s_lshr_b32 vcc_hi, s45, 16
-; SI-NEXT:    s_lshr_b32 s30, s43, 16
+; SI-NEXT:    s_add_i32 s45, s16, 0x30000
+; SI-NEXT:    s_lshr_b64 s[46:47], s[44:45], 16
+; SI-NEXT:    s_lshr_b64 s[56:57], s[42:43], 16
+; SI-NEXT:    s_lshr_b64 s[58:59], s[40:41], 16
+; SI-NEXT:    s_lshr_b64 s[60:61], s[14:15], 16
+; SI-NEXT:    s_lshr_b64 s[62:63], s[12:13], 16
+; SI-NEXT:    s_lshr_b64 s[72:73], s[10:11], 16
+; SI-NEXT:    s_lshr_b64 s[74:75], s[8:9], 16
+; SI-NEXT:    s_lshr_b64 s[76:77], s[6:7], 16
+; SI-NEXT:    s_lshr_b64 s[78:79], s[4:5], 16
+; SI-NEXT:    s_lshr_b32 s50, s45, 16
+; SI-NEXT:    s_lshr_b32 s51, s43, 16
+; SI-NEXT:    s_lshr_b32 s52, s41, 16
+; SI-NEXT:    s_lshr_b32 s53, s15, 16
+; SI-NEXT:    s_lshr_b32 s54, s13, 16
+; SI-NEXT:    s_lshr_b32 s55, s11, 16
+; SI-NEXT:    s_lshr_b32 s64, s9, 16
+; SI-NEXT:    s_lshr_b32 s65, s7, 16
+; SI-NEXT:    s_lshr_b32 s66, s5, 16
 ; SI-NEXT:  .LBB57_5: ; %end
-; SI-NEXT:    s_and_b32 s16, s40, 0xffff
+; SI-NEXT:    s_and_b32 s16, s44, 0xffff
 ; SI-NEXT:    s_lshl_b32 s17, s46, 16
 ; SI-NEXT:    s_or_b32 s16, s16, s17
-; SI-NEXT:    s_and_b32 s17, s41, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s90, 16
+; SI-NEXT:    s_and_b32 s17, s45, 0xffff
+; SI-NEXT:    s_lshl_b32 s18, s50, 16
 ; SI-NEXT:    s_or_b32 s17, s17, s18
-; SI-NEXT:    s_and_b32 s14, s14, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s56, 16
-; SI-NEXT:    s_or_b32 s14, s14, s18
-; SI-NEXT:    s_and_b32 s15, s15, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s91, 16
-; SI-NEXT:    s_or_b32 s15, s15, s18
-; SI-NEXT:    s_and_b32 s12, s12, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s58, 16
-; SI-NEXT:    s_or_b32 s12, s12, s18
-; SI-NEXT:    s_and_b32 s13, s13, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s92, 16
-; SI-NEXT:    s_or_b32 s13, s13, s18
-; SI-NEXT:    s_and_b32 s10, s10, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s60, 16
-; SI-NEXT:    s_or_b32 s10, s10, s18
-; SI-NEXT:    s_and_b32 s11, s11, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s93, 16
-; SI-NEXT:    s_or_b32 s11, s11, s18
-; SI-NEXT:    s_and_b32 s8, s8, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s62, 16
-; SI-NEXT:    s_or_b32 s8, s8, s18
-; SI-NEXT:    s_and_b32 s9, s9, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s94, 16
-; SI-NEXT:    s_or_b32 s9, s9, s18
-; SI-NEXT:    s_and_b32 s6, s6, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s72, 16
-; SI-NEXT:    s_or_b32 s6, s6, s18
-; SI-NEXT:    s_and_b32 s7, s7, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s95, 16
-; SI-NEXT:    s_or_b32 s7, s7, s18
-; SI-NEXT:    s_and_b32 s4, s4, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, s74, 16
-; SI-NEXT:    s_or_b32 s4, s4, s18
-; SI-NEXT:    s_and_b32 s5, s5, 0xffff
-; SI-NEXT:    s_lshl_b32 s18, vcc_lo, 16
-; SI-NEXT:    s_or_b32 s5, s5, s18
-; SI-NEXT:    s_and_b32 s18, s44, 0xffff
-; SI-NEXT:    s_lshl_b32 s19, s76, 16
+; SI-NEXT:    s_and_b32 s18, s42, 0xffff
+; SI-NEXT:    s_lshl_b32 s19, s56, 16
 ; SI-NEXT:    s_or_b32 s18, s18, s19
-; SI-NEXT:    s_and_b32 s19, s45, 0xffff
-; SI-NEXT:    s_lshl_b32 s20, vcc_hi, 16
+; SI-NEXT:    s_and_b32 s19, s43, 0xffff
+; SI-NEXT:    s_lshl_b32 s20, s51, 16
 ; SI-NEXT:    s_or_b32 s19, s19, s20
-; SI-NEXT:    s_and_b32 s20, s42, 0xffff
-; SI-NEXT:    s_lshl_b32 s21, s78, 16
+; SI-NEXT:    s_and_b32 s20, s40, 0xffff
+; SI-NEXT:    s_lshl_b32 s21, s58, 16
 ; SI-NEXT:    s_or_b32 s20, s20, s21
-; SI-NEXT:    s_and_b32 s21, s43, 0xffff
-; SI-NEXT:    s_lshl_b32 s22, s30, 16
+; SI-NEXT:    s_and_b32 s21, s41, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s52, 16
 ; SI-NEXT:    s_or_b32 s21, s21, s22
-; SI-NEXT:    v_readlane_b32 s30, v18, 12
+; SI-NEXT:    s_and_b32 s14, s14, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s60, 16
+; SI-NEXT:    s_or_b32 s14, s14, s22
+; SI-NEXT:    s_and_b32 s15, s15, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s53, 16
+; SI-NEXT:    s_or_b32 s15, s15, s22
+; SI-NEXT:    s_and_b32 s12, s12, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s62, 16
+; SI-NEXT:    s_or_b32 s12, s12, s22
+; SI-NEXT:    s_and_b32 s13, s13, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s54, 16
+; SI-NEXT:    s_or_b32 s13, s13, s22
+; SI-NEXT:    s_and_b32 s10, s10, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s72, 16
+; SI-NEXT:    s_or_b32 s10, s10, s22
+; SI-NEXT:    s_and_b32 s11, s11, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s55, 16
+; SI-NEXT:    s_or_b32 s11, s11, s22
+; SI-NEXT:    s_and_b32 s8, s8, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s74, 16
+; SI-NEXT:    s_or_b32 s8, s8, s22
+; SI-NEXT:    s_and_b32 s9, s9, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s64, 16
+; SI-NEXT:    s_or_b32 s9, s9, s22
+; SI-NEXT:    s_and_b32 s6, s6, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s76, 16
+; SI-NEXT:    s_or_b32 s6, s6, s22
+; SI-NEXT:    s_and_b32 s7, s7, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s65, 16
+; SI-NEXT:    s_or_b32 s7, s7, s22
+; SI-NEXT:    s_and_b32 s4, s4, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s78, 16
+; SI-NEXT:    s_or_b32 s4, s4, s22
+; SI-NEXT:    s_and_b32 s5, s5, 0xffff
+; SI-NEXT:    s_lshl_b32 s22, s66, 16
+; SI-NEXT:    s_or_b32 s5, s5, s22
+; SI-NEXT:    v_readlane_b32 s30, v18, 30
 ; SI-NEXT:    v_mov_b32_e32 v0, s16
 ; SI-NEXT:    v_mov_b32_e32 v1, s17
-; SI-NEXT:    v_mov_b32_e32 v2, s14
-; SI-NEXT:    v_mov_b32_e32 v3, s15
-; SI-NEXT:    v_mov_b32_e32 v4, s12
-; SI-NEXT:    v_mov_b32_e32 v5, s13
-; SI-NEXT:    v_mov_b32_e32 v6, s10
-; SI-NEXT:    v_mov_b32_e32 v7, s11
-; SI-NEXT:    v_mov_b32_e32 v8, s8
-; SI-NEXT:    v_mov_b32_e32 v9, s9
-; SI-NEXT:    v_mov_b32_e32 v10, s6
-; SI-NEXT:    v_mov_b32_e32 v11, s7
-; SI-NEXT:    v_mov_b32_e32 v12, s4
-; SI-NEXT:    v_mov_b32_e32 v13, s5
-; SI-NEXT:    v_mov_b32_e32 v14, s18
-; SI-NEXT:    v_mov_b32_e32 v15, s19
-; SI-NEXT:    v_mov_b32_e32 v16, s20
-; SI-NEXT:    v_mov_b32_e32 v17, s21
-; SI-NEXT:    v_readlane_b32 s31, v18, 13
+; SI-NEXT:    v_mov_b32_e32 v2, s18
+; SI-NEXT:    v_mov_b32_e32 v3, s19
+; SI-NEXT:    v_mov_b32_e32 v4, s20
+; SI-NEXT:    v_mov_b32_e32 v5, s21
+; SI-NEXT:    v_mov_b32_e32 v6, s14
+; SI-NEXT:    v_mov_b32_e32 v7, s15
+; SI-NEXT:    v_mov_b32_e32 v8, s12
+; SI-NEXT:    v_mov_b32_e32 v9, s13
+; SI-NEXT:    v_mov_b32_e32 v10, s10
+; SI-NEXT:    v_mov_b32_e32 v11, s11
+; SI-NEXT:    v_mov_b32_e32 v12, s8
+; SI-NEXT:    v_mov_b32_e32 v13, s9
+; SI-NEXT:    v_mov_b32_e32 v14, s6
+; SI-NEXT:    v_mov_b32_e32 v15, s7
+; SI-NEXT:    v_mov_b32_e32 v16, s4
+; SI-NEXT:    v_mov_b32_e32 v17, s5
+; SI-NEXT:    v_readlane_b32 s31, v18, 31
+; SI-NEXT:    v_readlane_b32 s87, v18, 29
+; SI-NEXT:    v_readlane_b32 s86, v18, 28
+; SI-NEXT:    v_readlane_b32 s85, v18, 27
+; SI-NEXT:    v_readlane_b32 s84, v18, 26
+; SI-NEXT:    v_readlane_b32 s83, v18, 25
+; SI-NEXT:    v_readlane_b32 s82, v18, 24
+; SI-NEXT:    v_readlane_b32 s81, v18, 23
+; SI-NEXT:    v_readlane_b32 s80, v18, 22
+; SI-NEXT:    v_readlane_b32 s71, v18, 21
+; SI-NEXT:    v_readlane_b32 s70, v18, 20
+; SI-NEXT:    v_readlane_b32 s69, v18, 19
+; SI-NEXT:    v_readlane_b32 s68, v18, 18
+; SI-NEXT:    v_readlane_b32 s67, v18, 17
+; SI-NEXT:    v_readlane_b32 s66, v18, 16
+; SI-NEXT:    v_readlane_b32 s65, v18, 15
+; SI-NEXT:    v_readlane_b32 s64, v18, 14
+; SI-NEXT:    v_readlane_b32 s55, v18, 13
+; SI-NEXT:    v_readlane_b32 s54, v18, 12
 ; SI-NEXT:    v_readlane_b32 s53, v18, 11
 ; SI-NEXT:    v_readlane_b32 s52, v18, 10
 ; SI-NEXT:    v_readlane_b32 s51, v18, 9
@@ -31618,28 +31654,28 @@ define inreg <36 x i16> @bitcast_v36f16_to_v36i16_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 ; 4-byte Folded Spill
-; SI-NEXT:    v_readfirstlane_b32 s8, v3
-; SI-NEXT:    v_readfirstlane_b32 s6, v2
-; SI-NEXT:    v_readfirstlane_b32 s9, v1
-; SI-NEXT:    v_readfirstlane_b32 s7, v0
-; SI-NEXT:    s_lshr_b32 s40, s29, 16
-; SI-NEXT:    s_lshr_b32 s43, s28, 16
-; SI-NEXT:    s_lshr_b32 s15, s27, 16
-; SI-NEXT:    s_lshr_b32 s45, s26, 16
-; SI-NEXT:    s_lshr_b32 s14, s25, 16
-; SI-NEXT:    s_lshr_b32 s46, s24, 16
-; SI-NEXT:    s_lshr_b32 s13, s23, 16
-; SI-NEXT:    s_lshr_b32 s56, s22, 16
-; SI-NEXT:    s_lshr_b32 s12, s21, 16
+; SI-NEXT:    v_readfirstlane_b32 s46, v3
+; SI-NEXT:    v_readfirstlane_b32 s8, v2
+; SI-NEXT:    v_readfirstlane_b32 s45, v1
+; SI-NEXT:    v_readfirstlane_b32 s11, v0
+; SI-NEXT:    s_lshr_b32 s44, s29, 16
+; SI-NEXT:    s_lshr_b32 s7, s28, 16
+; SI-NEXT:    s_lshr_b32 s43, s27, 16
+; SI-NEXT:    s_lshr_b32 s10, s26, 16
+; SI-NEXT:    s_lshr_b32 s42, s25, 16
+; SI-NEXT:    s_lshr_b32 s12, s24, 16
+; SI-NEXT:    s_lshr_b32 s41, s23, 16
+; SI-NEXT:    s_lshr_b32 s13, s22, 16
+; SI-NEXT:    s_lshr_b32 s40, s21, 16
 ; SI-NEXT:    s_lshr_b32 s57, s20, 16
-; SI-NEXT:    s_lshr_b32 s11, s19, 16
+; SI-NEXT:    s_lshr_b32 s15, s19, 16
 ; SI-NEXT:    s_lshr_b32 s58, s18, 16
-; SI-NEXT:    s_lshr_b32 s10, s17, 16
+; SI-NEXT:    s_lshr_b32 s14, s17, 16
 ; SI-NEXT:    s_lshr_b32 s59, s16, 16
-; SI-NEXT:    s_lshr_b32 s47, s8, 16
-; SI-NEXT:    s_lshr_b32 s42, s6, 16
-; SI-NEXT:    s_lshr_b32 s41, s9, 16
-; SI-NEXT:    s_lshr_b32 s44, s7, 16
+; SI-NEXT:    s_lshr_b32 s56, s46, 16
+; SI-NEXT:    s_lshr_b32 s6, s8, 16
+; SI-NEXT:    s_lshr_b32 s47, s45, 16
+; SI-NEXT:    s_lshr_b32 s9, s11, 16
 ; SI-NEXT:    v_readfirstlane_b32 s4, v4
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB59_2
@@ -31654,151 +31690,153 @@ define inreg <36 x i16> @bitcast_v36f16_to_v36i16_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    s_cmp_lg_u32 s4, 1
 ; SI-NEXT:    s_cbranch_scc1 .LBB59_5
 ; SI-NEXT:  ; %bb.4: ; %cmp.true
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, s58
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, s59
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s16
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s18
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s20
-; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v3
+; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s56
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_or_b32_e32 v48, v3, v2
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s46
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_or_b32_e32 v36, v1, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s57
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s56
-; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s43
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v37, v5
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, s46
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s45
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, s44
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s42
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s29
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v14, v1
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, s47
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v16, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s40
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v37
+; SI-NEXT:    v_or_b32_e32 v17, v3, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s45
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v37, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v7, s23
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s44
 ; SI-NEXT:    v_cvt_f16_f32_e32 v38, v1
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s15
-; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v38
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s19
-; SI-NEXT:    v_or_b32_e32 v13, v1, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, s27
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s14
-; SI-NEXT:    v_cvt_f16_f32_e32 v39, v3
-; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v48, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v39
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s25
-; SI-NEXT:    v_or_b32_e32 v11, v1, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s13
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v48
+; SI-NEXT:    v_cvt_f16_f32_e32 v39, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v38
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s29
+; SI-NEXT:    v_or_b32_e32 v15, v1, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s43
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s27
 ; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
 ; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v49, v3
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v7
 ; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_or_b32_e32 v9, v5, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, s12
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v39
+; SI-NEXT:    v_or_b32_e32 v13, v5, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s42
 ; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v49
-; SI-NEXT:    v_or_b32_e32 v7, v3, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s21
+; SI-NEXT:    v_or_b32_e32 v11, v3, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s25
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s41
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v5, s11
 ; SI-NEXT:    v_cvt_f16_f32_e32 v50, v1
 ; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v3
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v5
-; SI-NEXT:    v_cvt_f16_f32_e32 v52, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v5, s23
+; SI-NEXT:    v_cvt_f16_f32_e32 v51, v3
 ; SI-NEXT:    v_lshlrev_b32_e32 v3, 16, v50
-; SI-NEXT:    v_or_b32_e32 v5, v1, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, s10
-; SI-NEXT:    v_cvt_f32_f16_e32 v21, s17
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
+; SI-NEXT:    v_or_b32_e32 v9, v1, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s40
+; SI-NEXT:    v_add_f32_e32 v5, 0x38000000, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v7, s21
+; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v51
 ; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v53, v3
-; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v21
-; SI-NEXT:    v_cvt_f16_f32_e32 v21, v3
-; SI-NEXT:    v_cvt_f32_f16_e32 v15, s41
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v52
-; SI-NEXT:    v_or_b32_e32 v3, v17, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v17, s9
-; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v53
-; SI-NEXT:    v_or_b32_e32 v1, v21, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v21, s8
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v15
-; SI-NEXT:    v_cvt_f16_f32_e32 v51, v15
-; SI-NEXT:    v_add_f32_e32 v15, 0x38000000, v17
-; SI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; SI-NEXT:    v_add_f32_e32 v17, 0x38000000, v21
-; SI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v51
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, s58
-; SI-NEXT:    v_or_b32_e32 v15, v15, v21
-; SI-NEXT:    v_lshlrev_b32_e32 v21, 16, v37
-; SI-NEXT:    v_cvt_f32_f16_e32 v20, s22
-; SI-NEXT:    v_or_b32_e32 v17, v17, v21
-; SI-NEXT:    v_cvt_f32_f16_e32 v21, s24
-; SI-NEXT:    v_add_f32_e32 v2, 0x38000000, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_add_f32_e32 v20, 0x38000000, v20
-; SI-NEXT:    v_add_f32_e32 v21, 0x38000000, v21
-; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
-; SI-NEXT:    v_cvt_f16_f32_e32 v20, v20
-; SI-NEXT:    v_cvt_f16_f32_e32 v21, v21
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-NEXT:    v_cvt_f16_f32_e32 v52, v3
+; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v7
+; SI-NEXT:    v_or_b32_e32 v7, v5, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s15
+; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_lshlrev_b32_e32 v5, 16, v52
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s17
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_or_b32_e32 v5, v3, v5
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, s19
+; SI-NEXT:    v_cvt_f16_f32_e32 v53, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, s14
+; SI-NEXT:    v_cvt_f32_f16_e32 v4, s20
+; SI-NEXT:    v_add_f32_e32 v3, 0x38000000, v3
+; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v54, v1
+; SI-NEXT:    v_add_f32_e32 v1, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v53
+; SI-NEXT:    v_or_b32_e32 v3, v3, v8
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v54
+; SI-NEXT:    v_or_b32_e32 v1, v1, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v8, s13
+; SI-NEXT:    v_cvt_f16_f32_e32 v6, v6
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v4
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v4
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s22
+; SI-NEXT:    v_add_f32_e32 v4, 0x38000000, v8
+; SI-NEXT:    v_cvt_f16_f32_e32 v8, v4
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v6, s12
+; SI-NEXT:    v_or_b32_e32 v55, v10, v4
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v12
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s24
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v6
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v6
+; SI-NEXT:    v_add_f32_e32 v6, 0x38000000, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v6
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v8
+; SI-NEXT:    s_waitcnt expcnt(4)
+; SI-NEXT:    v_or_b32_e32 v41, v10, v6
+; SI-NEXT:    v_cvt_f32_f16_e32 v10, s10
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v14
+; SI-NEXT:    v_or_b32_e32 v40, v12, v8
+; SI-NEXT:    v_cvt_f32_f16_e32 v12, s26
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s7
+; SI-NEXT:    v_cvt_f32_f16_e32 v16, s28
+; SI-NEXT:    v_add_f32_e32 v10, 0x38000000, v10
+; SI-NEXT:    v_cvt_f16_f32_e32 v10, v10
+; SI-NEXT:    v_add_f32_e32 v12, 0x38000000, v12
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_cvt_f16_f32_e32 v12, v12
+; SI-NEXT:    v_cvt_f16_f32_e32 v14, v14
+; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v16
+; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s9
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
+; SI-NEXT:    s_waitcnt expcnt(2)
+; SI-NEXT:    v_or_b32_e32 v43, v12, v10
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v14
+; SI-NEXT:    v_cvt_f32_f16_e32 v14, s11
+; SI-NEXT:    v_or_b32_e32 v42, v16, v12
+; SI-NEXT:    v_add_f32_e32 v16, 0x38000000, v18
+; SI-NEXT:    v_cvt_f32_f16_e32 v18, s6
+; SI-NEXT:    v_cvt_f32_f16_e32 v19, s8
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v14
+; SI-NEXT:    v_cvt_f16_f32_e32 v20, v14
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v18
+; SI-NEXT:    v_cvt_f16_f32_e32 v16, v16
+; SI-NEXT:    v_cvt_f16_f32_e32 v18, v14
+; SI-NEXT:    v_add_f32_e32 v14, 0x38000000, v19
+; SI-NEXT:    v_cvt_f16_f32_e32 v19, v14
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v16
+; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v18
 ; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_or_b32_e32 v45, v18, v2
-; SI-NEXT:    v_or_b32_e32 v43, v19, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v18, s26
-; SI-NEXT:    v_or_b32_e32 v42, v20, v6
-; SI-NEXT:    v_or_b32_e32 v55, v21, v8
-; SI-NEXT:    v_cvt_f32_f16_e32 v19, s28
-; SI-NEXT:    v_cvt_f32_f16_e32 v20, s7
-; SI-NEXT:    v_cvt_f32_f16_e32 v21, s6
-; SI-NEXT:    v_add_f32_e32 v18, 0x38000000, v18
-; SI-NEXT:    v_add_f32_e32 v19, 0x38000000, v19
-; SI-NEXT:    v_add_f32_e32 v20, 0x38000000, v20
-; SI-NEXT:    v_add_f32_e32 v21, 0x38000000, v21
-; SI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; SI-NEXT:    v_cvt_f16_f32_e32 v19, v19
-; SI-NEXT:    v_cvt_f16_f32_e32 v20, v20
-; SI-NEXT:    v_cvt_f16_f32_e32 v21, v21
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
-; SI-NEXT:    v_or_b32_e32 v44, v18, v10
-; SI-NEXT:    v_or_b32_e32 v41, v19, v12
-; SI-NEXT:    v_or_b32_e32 v40, v20, v14
-; SI-NEXT:    v_or_b32_e32 v54, v21, v16
+; SI-NEXT:    v_or_b32_e32 v45, v20, v14
+; SI-NEXT:    v_or_b32_e32 v44, v19, v16
 ; SI-NEXT:    v_lshr_b64 v[34:35], v[0:1], 16
 ; SI-NEXT:    v_lshr_b64 v[32:33], v[2:3], 16
 ; SI-NEXT:    v_lshr_b64 v[30:31], v[4:5], 16
@@ -31810,102 +31848,100 @@ define inreg <36 x i16> @bitcast_v36f16_to_v36i16_scalar(<36 x half> inreg %a, i
 ; SI-NEXT:    v_lshr_b64 v[18:19], v[16:17], 16
 ; SI-NEXT:    s_branch .LBB59_6
 ; SI-NEXT:  .LBB59_5:
-; SI-NEXT:    v_mov_b32_e32 v37, s47
+; SI-NEXT:    v_mov_b32_e32 v37, s56
+; SI-NEXT:    v_mov_b32_e32 v38, s47
+; SI-NEXT:    v_mov_b32_e32 v39, s44
+; SI-NEXT:    v_mov_b32_e32 v49, s43
+; SI-NEXT:    v_mov_b32_e32 v50, s42
 ; SI-NEXT:    v_mov_b32_e32 v51, s41
-; SI-NEXT:    v_mov_b32_e32 v38, s40
-; SI-NEXT:    v_mov_b32_e32 v39, s15
-; SI-NEXT:    v_mov_b32_e32 v48, s14
-; SI-NEXT:    v_mov_b32_e32 v49, s13
-; SI-NEXT:    v_mov_b32_e32 v50, s12
-; SI-NEXT:    v_mov_b32_e32 v52, s11
-; SI-NEXT:    v_mov_b32_e32 v53, s10
+; SI-NEXT:    v_mov_b32_e32 v52, s40
+; SI-NEXT:    v_mov_b32_e32 v53, s15
+; SI-NEXT:    v_mov_b32_e32 v54, s14
 ; SI-NEXT:    v_mov_b32_e32 v1, s17
-; SI-NEXT:    v_mov_b32_e32 v54, s6
-; SI-NEXT:    s_waitcnt expcnt(5)
-; SI-NEXT:    v_mov_b32_e32 v40, s7
-; SI-NEXT:    s_waitcnt expcnt(4)
-; SI-NEXT:    v_mov_b32_e32 v41, s28
-; SI-NEXT:    s_waitcnt expcnt(1)
-; SI-NEXT:    v_mov_b32_e32 v44, s26
-; SI-NEXT:    v_mov_b32_e32 v55, s24
-; SI-NEXT:    v_mov_b32_e32 v42, s22
-; SI-NEXT:    v_mov_b32_e32 v43, s20
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v45, s18
-; SI-NEXT:    v_mov_b32_e32 v36, s16
 ; SI-NEXT:    v_mov_b32_e32 v3, s19
 ; SI-NEXT:    v_mov_b32_e32 v5, s21
 ; SI-NEXT:    v_mov_b32_e32 v7, s23
 ; SI-NEXT:    v_mov_b32_e32 v9, s25
 ; SI-NEXT:    v_mov_b32_e32 v11, s27
 ; SI-NEXT:    v_mov_b32_e32 v13, s29
-; SI-NEXT:    v_mov_b32_e32 v15, s9
-; SI-NEXT:    v_mov_b32_e32 v17, s8
+; SI-NEXT:    v_mov_b32_e32 v15, s45
+; SI-NEXT:    v_mov_b32_e32 v17, s46
+; SI-NEXT:    s_waitcnt expcnt(1)
+; SI-NEXT:    v_mov_b32_e32 v44, s8
+; SI-NEXT:    s_waitcnt expcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v45, s11
+; SI-NEXT:    v_mov_b32_e32 v42, s28
+; SI-NEXT:    v_mov_b32_e32 v43, s26
+; SI-NEXT:    v_mov_b32_e32 v40, s24
+; SI-NEXT:    v_mov_b32_e32 v41, s22
+; SI-NEXT:    v_mov_b32_e32 v55, s20
+; SI-NEXT:    v_mov_b32_e32 v48, s18
+; SI-NEXT:    v_mov_b32_e32 v36, s16
 ; SI-NEXT:    v_mov_b32_e32 v34, s59
 ; SI-NEXT:    v_mov_b32_e32 v32, s58
 ; SI-NEXT:    v_mov_b32_e32 v30, s57
-; SI-NEXT:    v_mov_b32_e32 v28, s56
-; SI-NEXT:    v_mov_b32_e32 v26, s46
-; SI-NEXT:    v_mov_b32_e32 v24, s45
-; SI-NEXT:    v_mov_b32_e32 v22, s43
-; SI-NEXT:    v_mov_b32_e32 v20, s44
-; SI-NEXT:    v_mov_b32_e32 v18, s42
+; SI-NEXT:    v_mov_b32_e32 v28, s13
+; SI-NEXT:    v_mov_b32_e32 v26, s12
+; SI-NEXT:    v_mov_b32_e32 v24, s10
+; SI-NEXT:    v_mov_b32_e32 v22, s7
+; SI-NEXT:    v_mov_b32_e32 v20, s9
+; SI-NEXT:    v_mov_b32_e32 v18, s6
 ; SI-NEXT:  .LBB59_6: ; %end
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v34
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v36
-; SI-NEXT:    v_or_b32_e32 v0, v2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v36
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v34
+; SI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v53
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v54
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v2
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v32
-; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v45
-; SI-NEXT:    v_or_b32_e32 v2, v4, v2
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v48
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v32
+; SI-NEXT:    v_or_b32_e32 v2, v2, v4
 ; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v52
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v53
 ; SI-NEXT:    v_or_b32_e32 v3, v3, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v30
-; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v43
-; SI-NEXT:    v_or_b32_e32 v4, v6, v4
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v55
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v30
+; SI-NEXT:    v_or_b32_e32 v4, v4, v6
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v50
+; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v52
 ; SI-NEXT:    v_or_b32_e32 v5, v5, v6
-; SI-NEXT:    v_lshlrev_b32_e32 v6, 16, v28
-; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v42
-; SI-NEXT:    v_or_b32_e32 v6, v8, v6
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v41
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v28
+; SI-NEXT:    v_or_b32_e32 v6, v6, v8
 ; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v49
+; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v51
 ; SI-NEXT:    v_or_b32_e32 v7, v7, v8
-; SI-NEXT:    v_lshlrev_b32_e32 v8, 16, v26
-; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v55
-; SI-NEXT:    v_or_b32_e32 v8, v10, v8
+; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v40
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v26
+; SI-NEXT:    v_or_b32_e32 v8, v8, v10
 ; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v48
+; SI-NEXT:    v_lshlrev_b32_e32 v10, 16, v50
 ; SI-NEXT:    v_or_b32_e32 v9, v9, v10
-; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v44
+; SI-NEXT:    v_and_b32_e32 v10, 0xffff, v43
 ; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v24
 ; SI-NEXT:    v_or_b32_e32 v10, v10, v12
 ; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v39
+; SI-NEXT:    v_lshlrev_b32_e32 v12, 16, v49
 ; SI-NEXT:    v_or_b32_e32 v11, v11, v12
-; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v41
+; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v42
 ; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v22
 ; SI-NEXT:    v_or_b32_e32 v12, v12, v14
 ; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v38
+; SI-NEXT:    v_lshlrev_b32_e32 v14, 16, v39
 ; SI-NEXT:    v_or_b32_e32 v13, v13, v14
-; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v40
+; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v45
+; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v20
+; SI-NEXT:    v_or_b32_e32 v14, v14, v16
+; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
+; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v38
+; SI-NEXT:    v_or_b32_e32 v15, v15, v16
+; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v44
 ; SI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; SI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
-; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v20
-; SI-NEXT:    v_or_b32_e32 v14, v14, v16
-; SI-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; SI-NEXT:    v_lshlrev_b32_e32 v16, 16, v51
-; SI-NEXT:    v_or_b32_e32 v15, v15, v16
-; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v54
 ; SI-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
 ; SI-NEXT:    v_or_b32_e32 v16, v16, v18
 ; SI-NEXT:    v_and_b32_e32 v17, 0xffff, v17
