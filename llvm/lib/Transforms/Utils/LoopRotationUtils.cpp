@@ -46,9 +46,6 @@ STATISTIC(NumInstrsHoisted,
 STATISTIC(NumInstrsDuplicated,
           "Number of instructions cloned into loop preheader");
 
-// Probability that a rotated loop has zero trip count / is never entered.
-static constexpr uint32_t ZeroTripCountWeights[] = {1, 127};
-
 namespace {
 /// A simple loop rotation transformation.
 class LoopRotate {
@@ -222,6 +219,26 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   if (WeightMD != getBranchWeightMDNode(LoopBI))
     return;
 
+  // A conditional copied guard and latch use the same weights {x, y}:
+  //
+  //    |  |--------             |
+  //    V  V       |             V
+  //   Br {x, y}   |            Br {x, y}
+  //   |       |   |            |     |
+  //  x|      y|   |  becomes: x|    y|  |------
+  //   V       V   |            |     V  V     |
+  // Exit    Loop  |            |     Loop     |
+  //           |   |            |    Br {x, y} |
+  //           -----            |    |     |   |
+  //                          x |  x |    y|   |
+  //                            V    V     -----
+  //                             Exit
+  //
+  // This preserves block frequencies, including multi-exit loops when the
+  // guard stays conditional.
+  if (HasConditionalPreHeader)
+    return;
+
   SmallVector<uint32_t, 2> Weights;
   extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
@@ -232,108 +249,32 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   if (SuccsSwapped)
     std::swap(OrigLoopExitWeight, OrigLoopBackedgeWeight);
 
-  // Update branch weights. Consider the following edge-counts:
-  //
-  //    |  |--------             |
-  //    V  V       |             V
-  //   Br i1 ...   |            Br i1 ...
-  //   |       |   |            |     |
-  //  x|      y|   |  becomes:  |   y0|  |-----
-  //   V       V   |            |     V  V    |
-  // Exit    Loop  |            |    Loop     |
-  //           |   |            |   Br i1 ... |
-  //           -----            |   |      |  |
-  //                          x0| x1|   y1 |  |
-  //                            V   V      ----
-  //                            Exit
-  //
-  // The following must hold:
-  //  -  x == x0 + x1        # counts to "exit" must stay the same.
-  //  - y0 == x - x0 == x1   # how often loop was entered at all.
-  //  - y1 == y - y0         # How often loop was repeated (after first iter.).
-  //
-  // We cannot generally deduce how often we had a zero-trip count loop so we
-  // have to make a guess for how to distribute x among the new x0 and x1.
-
-  uint32_t ExitWeight0;    // aka x0
-  uint32_t ExitWeight1;    // aka x1
-  uint32_t EnterWeight;    // aka y0
-  uint32_t LoopBackWeight; // aka y1
+  // The first iteration is now unconditional. Keep the historical single-exit
+  // latch adjustment. This does not account for side exits on multi-exit
+  // loops when the guard folds away.
+  uint32_t ExitWeight;
+  uint32_t LoopBackWeight;
   if (OrigLoopExitWeight > 0 && OrigLoopBackedgeWeight > 0) {
-    ExitWeight0 = 0;
-    if (HasConditionalPreHeader) {
-      // Here we cannot know how many 0-trip count loops we have, so we guess:
-      if (OrigLoopBackedgeWeight >= OrigLoopExitWeight) {
-        // If the loop count is bigger than the exit count then we set
-        // probabilities as if 0-trip count nearly never happens.
-        ExitWeight0 = ZeroTripCountWeights[0];
-        // Scale up counts if necessary so we can match `ZeroTripCountWeights`
-        // for the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
-        while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
-          // ... but don't overflow.
-          uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
-          if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
-              (OrigLoopExitWeight & HighBit) != 0)
-            break;
-          OrigLoopBackedgeWeight <<= 1;
-          OrigLoopExitWeight <<= 1;
-        }
-      } else {
-        // If there's a higher exit-count than backedge-count then we set
-        // probabilities as if there are only 0-trip and 1-trip cases.
-        ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
-      }
-    } else {
-      // Theoretically, if the loop body must be executed at least once, the
-      // backedge count must be not less than exit count. However the branch
-      // weight collected by sampling-based PGO may be not very accurate due to
-      // sampling. Therefore this workaround is required here to avoid underflow
-      // of unsigned in following update of branch weight.
-      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
-        OrigLoopBackedgeWeight = OrigLoopExitWeight;
-    }
-    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
-    ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
-    EnterWeight = ExitWeight1;
-    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
-    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+    // Sampling can report fewer backedges than exits. Clamp to avoid underflow.
+    if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+      OrigLoopBackedgeWeight = OrigLoopExitWeight;
+    ExitWeight = OrigLoopExitWeight;
+    LoopBackWeight = OrigLoopBackedgeWeight - OrigLoopExitWeight;
   } else if (OrigLoopExitWeight == 0) {
-    if (OrigLoopBackedgeWeight == 0) {
-      // degenerate case... keep everything zero...
-      ExitWeight0 = 0;
-      ExitWeight1 = 0;
-      EnterWeight = 0;
-      LoopBackWeight = 0;
-    } else {
-      // Special case "LoopExitWeight == 0" weights which behaves like an
-      // endless where we don't want loop-enttry (y0) to be the same as
-      // loop-exit (x1).
-      ExitWeight0 = 0;
-      ExitWeight1 = 0;
-      EnterWeight = 1;
-      LoopBackWeight = OrigLoopBackedgeWeight;
-    }
+    ExitWeight = 0;
+    LoopBackWeight = OrigLoopBackedgeWeight;
   } else {
-    // loop is never entered.
+    // Loop is never entered.
     assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
-    ExitWeight0 = 1;
-    ExitWeight1 = 1;
-    EnterWeight = 0;
+    ExitWeight = 1;
     LoopBackWeight = 0;
   }
 
   const uint32_t LoopBIWeights[] = {
-      SuccsSwapped ? LoopBackWeight : ExitWeight1,
-      SuccsSwapped ? ExitWeight1 : LoopBackWeight,
+      SuccsSwapped ? LoopBackWeight : ExitWeight,
+      SuccsSwapped ? ExitWeight : LoopBackWeight,
   };
   setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
-  if (HasConditionalPreHeader) {
-    const uint32_t PreHeaderBIWeights[] = {
-        SuccsSwapped ? EnterWeight : ExitWeight0,
-        SuccsSwapped ? ExitWeight0 : EnterWeight,
-    };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
-  }
 }
 
 /// Rotate loop LP. Return true if the loop is rotated.
