@@ -101,8 +101,11 @@ static bool isFoldableWithAddendsRemoved(const ConcatInputSection *isec) {
 static void getNormalizedData(const ConcatInputSection *isec,
                              SmallVectorImpl<uint8_t> &buf) {
   buf.assign(isec->data.begin(), isec->data.end());
-  for (const Relocation &r : isec->relocs)
-    target->relocateOne(buf.data() + r.offset, r, /*va=*/0, /*relocVA=*/0);
+  for (const Relocation &r : isec->relocs) {
+    size_t size = 1ULL << r.length;
+    if (r.offset + size <= buf.size())
+      memset(buf.data() + r.offset, 0, size);
+  }
 }
 
 static bool compareData(const ConcatInputSection *ia,
@@ -113,6 +116,8 @@ static bool compareData(const ConcatInputSection *ia,
     return true;
   if (!isFoldableWithAddendsRemoved(ia))
     return false;
+  assert(isFoldableWithAddendsRemoved(ib));
+
   SmallVector<uint8_t, 64> bufA, bufB;
   getNormalizedData(ia, bufA);
   getNormalizedData(ib, bufB);
