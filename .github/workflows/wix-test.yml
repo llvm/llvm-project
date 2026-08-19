@@ -1,0 +1,14 @@
+on:
+  push:
+
+jobs:
+  wix-test:
+    runs-on: windows-11-arm
+    steps:
+      - shell: bash
+        run: |
+          dotnet tool install --global wix
+          cmake -G Ninja -S . -B build
+          ninja -C build package
+
+
