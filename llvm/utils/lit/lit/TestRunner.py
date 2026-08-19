@@ -403,7 +403,7 @@ def _make_out_sink(stdout: int | TextIO, is_last: bool) -> IO[bytes] | None:
         last stage or a non-pipe target, which don't need this sink.
     """
     if stdout == subprocess.PIPE and not is_last:
-        return tempfile.SpooledTemporaryFile(max_size=1 << 20)
+        return tempfile.SpooledTemporaryFile(max_size=1 << 20, mode="w+")
     return None
 
 
