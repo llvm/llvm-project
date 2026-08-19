@@ -273,11 +273,15 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
+  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
   if(LIBC_UNITTEST_C_TEST)
     list(APPEND fq_deps_list libc.test.UnitTest.LibcCTest)
   else()
-    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-      libc.test.UnitTest.ErrnoSetterMatcher)
+    list(APPEND fq_deps_list
+      libc.src.__support.StringUtil.error_to_string
+      libc.test.UnitTest.ErrnoSetterMatcher
+      libc.test.UnitTest.LibcDeathTestExecutors
+    )
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
@@ -298,11 +302,6 @@ function(create_libc_unittest fq_target_name)
         message(STATUS "  ${fq_target_name} depends on ${dep}")
       endforeach()
     endif()
-  endif()
-
-  list(APPEND fq_deps_list libc.test.UnitTest.LibcTest)
-  if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND fq_deps_list libc.test.UnitTest.LibcDeathTestExecutors)
   endif()
 
   get_object_files_for_test(
