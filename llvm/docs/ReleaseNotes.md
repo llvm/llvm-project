@@ -136,6 +136,11 @@ Makes programs 10x faster by doing Special New Thing.
   The `llvm.vp.merge` will be folded away but the `%evl` will be propagated to
   the add instruction.
 
+* Introduced the generic `!atomic.ignore.denormal.mode` metadata for
+  floating-point `atomicrmw` instructions, generalizing the previously
+  AMDGPU-specific `!amdgpu.ignore.denormal.mode`. Old IR using the previous
+  name is automatically upgraded.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be

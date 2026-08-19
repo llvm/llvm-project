@@ -20561,7 +20561,7 @@ bool SITargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
 // On older subtargets, global FP atomic instructions have a hardcoded FP mode
 // and do not support FP32 denormals, and only support v2f16/f64 denormals.
 static bool atomicIgnoresDenormalModeOrFPModeIsFTZ(const AtomicRMWInst *RMW) {
-  if (RMW->hasMetadata("amdgpu.ignore.denormal.mode"))
+  if (RMW->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode))
     return true;
 
   const fltSemantics &Flt = RMW->getType()->getScalarType()->getFltSemantics();

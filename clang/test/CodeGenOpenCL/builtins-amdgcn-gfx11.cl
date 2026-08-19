@@ -59,8 +59,8 @@ void test_s_wait_event_export_ready() {
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// GCN: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
-// AMDGCNSPIRV: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("device") monotonic, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
+// GCN: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+// AMDGCNSPIRV: = atomicrmw fadd ptr addrspace(1) %addr, float %x syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 #if !defined(__SPIRV__)
 void test_global_add_f32(float *rtn, global float *addr, float x) {
 #else

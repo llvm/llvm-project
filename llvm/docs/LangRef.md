@@ -8719,6 +8719,34 @@ to the SSA value of the pointer operand.
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
 
+(md_atomic.ignore.denormal.mode)=
+
+#### '`atomic.ignore.denormal.mode`' Metadata
+
+The `atomic.ignore.denormal.mode` metadata may be attached to floating-point
+{ref}`atomicrmw <i_atomicrmw>` instructions. It indicates that the handling of
+denormal inputs and results is insignificant, and may be inconsistent with the
+denormal mode the function otherwise operates in, as described by
+{ref}`denormal_fpenv <denormal_fpenv>`.
+
+This is necessary to emit a native atomic instruction on targets and address
+spaces where the atomic unit has a fixed denormal behavior which need not match
+the denormal mode of the containing function. For example, AMDGPU global memory
+atomics unconditionally flush float denormals, as does the NVPTX `atom.add`
+instruction.
+
+The metadata must reference a single metadata node with no entries; the contents
+of the node are ignored.
+
+```llvm
+%res = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+
+!0 = !{}
+```
+
+This metadata was previously spelled `amdgpu.ignore.denormal.mode`. The old name
+is automatically upgraded when reading old IR.
+
 #### '`type`' Metadata
 
 See {doc}`TypeMetadata`.

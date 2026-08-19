@@ -2447,24 +2447,28 @@ cases. This will typically be used in conjunction with
 
 .. _amdgpu_no_remote_memory_access:
 
-'``amdgpu.ignore.denormal.mode``' Metadata
+'``atomic.ignore.denormal.mode``' Metadata
 ------------------------------------------
 
-For use with :ref:`atomicrmw <i_atomicrmw>` floating-point
-operations. Indicates the handling of denormal inputs and results is
-insignificant and may be inconsistent with the expected floating-point
-mode. This is necessary to emit a native atomic instruction on some
-targets for some address spaces where float denormals are
-unconditionally flushed. This is typically used in conjunction with
+This is generic IR metadata for floating-point :ref:`atomicrmw
+<i_atomicrmw>` operations; see `'atomic.ignore.denormal.mode' Metadata
+<https://llvm.org/docs/LangRef.html#atomic-ignore-denormal-mode-metadata>`_
+in the language reference for its definition. It is required to emit a
+native atomic instruction for AMDGPU global memory, which
+unconditionally flushes float denormals.
+
+On AMDGPU this is typically used in conjunction with
 :ref:`\!amdgpu.no.remote.memory.access<amdgpu_no_remote_memory_access>`
 and
-:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`
+:ref:`\!amdgpu.no.fine.grained.memory<amdgpu_no_fine_grained_memory>`.
 
+This metadata was previously named ``amdgpu.ignore.denormal.mode``; the
+old name is automatically upgraded when reading old IR.
 
 .. code-block:: llvm
 
-  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
-  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res0 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0
+  %res1 = atomicrmw fadd ptr addrspace(1) %ptr, float %value seq_cst, align 4, !atomic.ignore.denormal.mode !0, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
 
   !0 = !{}
 
