@@ -16,7 +16,6 @@
 #ifndef LLVM_ADT_FOLDINGSET_H
 #define LLVM_ADT_FOLDINGSET_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,7 +31,7 @@
 
 namespace llvm {
 
-/// This folding set used for two purposes:
+/// This folding set is used for two purposes:
 ///   1. Given information about a node we want to create, look up the unique
 ///      instance of the node in the set.  If the node already exists, return
 ///      it, otherwise return the bucket it should be inserted into.
@@ -46,7 +45,7 @@ namespace llvm {
 /// FoldingSetNode.  The node class must also define a Profile method used to
 /// establish the unique bits of data for the node.  The Profile method is
 /// passed a FoldingSetNodeID object which is used to gather the bits.  Just
-/// call one of the Add* functions defined in the FoldingSetBase::NodeID class.
+/// call one of the Add* functions defined in the FoldingSetNodeID class.
 /// NOTE: That the folding set does not own the nodes and it is the
 /// responsibility of the user to dispose of the nodes.
 ///
@@ -98,7 +97,8 @@ namespace llvm {
 /// 3) If you get a NULL result from FindNodeOrInsertPos then you can insert a
 /// new node with InsertNode;
 ///
-///    MyFoldingSet.InsertNode(M, InsertPoint);
+///    MyNode *N = new MyNode(Name, Value);
+///    MyFoldingSet.InsertNode(N, InsertPoint);
 ///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
@@ -328,11 +328,11 @@ public:
   unsigned size() const { return NumNodes; }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return NumNodes == 0; }
+  [[nodiscard]] bool empty() const { return NumNodes == 0; }
 
   /// Returns the number of nodes permitted in the folding set
   /// before a rebucket operation is performed.
-  unsigned capacity() {
+  unsigned capacity() const {
     // We allow a load factor of up to 2.0,
     // so that means our capacity is NumBuckets * 2
     return NumBuckets * 2;
@@ -381,7 +381,7 @@ protected:
   /// was removed or false if the node was not in the folding set.
   LLVM_ABI bool RemoveNode(Node *N);
 
-  /// If there is an existing simple Node exactly equal to the node \p N,
+  /// If there is an existing node exactly equal to the node \p N,
   /// return it.  Otherwise, insert \p N and return it instead.
   LLVM_ABI Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
 
@@ -458,14 +458,14 @@ public:
   /// won't cause a rebucket operation. reserve is permitted to allocate more
   /// space than requested by EltCount.
   void reserve(unsigned EltCount) {
-    return FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
+    FoldingSetBase::reserve(EltCount, Derived::getFoldingSetInfo());
   }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
   bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     return static_cast<T *>(
@@ -642,7 +642,7 @@ public:
     return Set.FindNodeOrInsertPos(ID, InsertPos);
   }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     T *Result = Set.GetOrInsertNode(N);
@@ -670,7 +670,7 @@ public:
   unsigned size() const { return Set.size(); }
 
   /// Returns true if there are no nodes in the folding set.
-  bool empty() const { return Set.empty(); }
+  [[nodiscard]] bool empty() const { return Set.empty(); }
 };
 
 //===----------------------------------------------------------------------===//

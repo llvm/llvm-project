@@ -134,7 +134,7 @@ LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeHardwareLoopsLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLibcallLoweringInfoWrapperPass(PassRegistry &);
 LLVM_ABI void initializeMIRProfileLoaderPassPass(PassRegistry &);
-LLVM_ABI void initializeIRTranslatorPass(PassRegistry &);
+LLVM_ABI void initializeIRTranslatorLegacyPass(PassRegistry &);
 LLVM_ABI void initializeIVUsersWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIfConverterPass(PassRegistry &);
 LLVM_ABI void
@@ -158,7 +158,7 @@ LLVM_ABI void initializeLazyBranchProbabilityInfoPassPass(PassRegistry &);
 LLVM_ABI void initializeLazyMachineBlockFrequencyInfoPassPass(PassRegistry &);
 LLVM_ABI void initializeLazyValueInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLegacyLICMPassPass(PassRegistry &);
-LLVM_ABI void initializeLegalizerPass(PassRegistry &);
+LLVM_ABI void initializeLegalizerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeGISelValueTrackingAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLiveDebugValuesLegacyPass(PassRegistry &);
