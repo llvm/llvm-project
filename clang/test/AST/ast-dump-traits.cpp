@@ -95,8 +95,8 @@ constexpr std::strong_ordering test_strong_ordering_type_trait() {
 // CHECK-NEXT:   |-TemplateTypeParmDecl {{.*}} <col:20, col:26> col:26{{( imported)?}} referenced class depth 0 index 1 U
 // CHECK-NEXT:   `-FunctionDecl {{.*}} <line:54:1, line:56:1> line:54:32{{( imported)?}} constexpr test_strong_ordering_type_trait 'std::strong_ordering ()'
 // CHECK-NEXT:     `-CompoundStmt {{.*}} <col:66, line:56:1>
-// CHECK-NEXT:       `-ReturnStmt {{.*}} <line:55:3, col:36>
-// CHECK-NEXT:         `-TypeTraitExpr {{.*}} <col:10, col:36> 'std::strong_ordering' __builtin_type_order
+// CHECK-NEXT:       `-ReturnStmt {{.*}} <line:55:3, col:35>
+// CHECK-NEXT:         `-TypeTraitExpr {{.*}} <col:10, col:35> 'std::strong_ordering' __builtin_type_order
 // CHECK-NEXT:           |-TemplateTypeParmType {{.*}} 'T' dependent{{( imported)?}} depth 0 index 0
 // CHECK-NEXT:           | `-TemplateTypeParm {{.*}} 'T'
 // CHECK-NEXT:           `-TemplateTypeParmType {{.*}} 'U' dependent{{( imported)?}} depth 0 index 1
