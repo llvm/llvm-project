@@ -61,8 +61,6 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   FloatABI::ABIType FloatABI = F.getParent()->getFloatABI();
-  if (FloatABI == FloatABI::Default)
-    FloatABI = Options.FloatABIType;
 
   std::string Key = CPU + TuneCPU + FS;
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";

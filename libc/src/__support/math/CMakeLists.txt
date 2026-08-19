@@ -5398,12 +5398,12 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.common
     libc.src.__support.macros.optimization
     libc.src.__support.uint128
-    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(
