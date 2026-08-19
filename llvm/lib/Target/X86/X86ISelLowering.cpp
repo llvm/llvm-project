@@ -51989,8 +51989,7 @@ static SDValue combineI8AndNotIntoI32AndNot(SDNode *N, const SDLoc &DL,
     return SDValue();
   }
 
-  if (X.getValueType() != MVT::i8)
-    return SDValue();
+  X = DAG.getBitcast(MVT::i8, X);
   if (auto *C = dyn_cast<ConstantSDNode>(Y); C && !C->isOpaque())
     return SDValue();
 

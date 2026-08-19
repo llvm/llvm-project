@@ -381,7 +381,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
+; Keep the byte test idiom when the AND result feeds a SETCC.
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
@@ -2195,6 +2195,36 @@ define i8 @andn8(i8 %x, i8 %y) {
 ; EGPR-NEXT:    # kill: def $al killed $al killed $eax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %not = xor i8 %x, 255
+  %and = and i8 %not, %y
+  ret i8 %and
+}
+
+define i8 @andn8_v8i1(<8 x i1> %x, i8 %y) {
+; X86-LABEL: andn8_v8i1:
+; X86:       # %bb.0:
+; X86:         andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86:         retl
+;
+; X64-LABEL: andn8_v8i1:
+; X64:       # %bb.0:
+; X64-NEXT:    psllw $15, %xmm0
+; X64-NEXT:    packsswb %xmm0, %xmm0
+; X64-NEXT:    pmovmskb %xmm0, %eax
+; X64-NEXT:    andnl %edi, %eax, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8_v8i1:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    psllw $15, %xmm0 # encoding: [0x66,0x0f,0x71,0xf0,0x0f]
+; EGPR-NEXT:    packsswb %xmm0, %xmm0 # encoding: [0x66,0x0f,0x63,0xc0]
+; EGPR-NEXT:    pmovmskb %xmm0, %eax # encoding: [0x66,0x0f,0xd7,0xc0]
+; EGPR-NEXT:    andnl %edi, %eax, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf2,0xc7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not.mask = xor <8 x i1> %x,
+      <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  %not = bitcast <8 x i1> %not.mask to i8
   %and = and i8 %not, %y
   ret i8 %and
 }
