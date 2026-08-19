@@ -905,8 +905,8 @@ add_fp_unittest(
   HDRS
     RoundEvenTest.h
   DEPENDS
-    libc.src.__support.FPUtil.float128
     libc.src.math.roundevenf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
