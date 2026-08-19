@@ -722,6 +722,9 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
 
     // Add an in-place GOT/TLS/Stubs build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_aarch64);
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(aarch64::optimizeGOTAndStubAccesses);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
