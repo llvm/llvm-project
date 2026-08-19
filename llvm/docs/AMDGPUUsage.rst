@@ -5670,6 +5670,35 @@ defined in table :ref:`amdgpu-amdhsa-code-object-metadata-map-table-v4`.
                                                 A canonical target ID must be
                                                 used. See :ref:`amdgpu-target-triples`
                                                 and :ref:`amdgpu-target-id`.
+     "amdhsa.globals"  sequence of              Sequence of the maps for each global
+                       map                      variable defined in the code object with
+                                                external linkage whose allocated size
+                                                differs from its declared size. Absent
+                                                when no global variable is affected.
+                                                Local symbols are excluded because their
+                                                names are not unique across code objects.
+                                                See
+                                                :ref:`amdgpu-amdhsa-code-object-global-metadata-map-table-v4`
+                                                for the definition of the keys included
+                                                in that map.
+     ================= ============== ========= =======================================
+
+..
+
+  .. table:: AMDHSA Code Object V4 Global Metadata Map
+     :name: amdgpu-amdhsa-code-object-global-metadata-map-table-v4
+
+     ================= ============== ========= =======================================
+     String Key        Value Type     Required? Description
+     ================= ============== ========= =======================================
+     ".name"           string         Required  Name of the global variable ELF symbol.
+     ".size"           integer        Required  Size in bytes of the global variable as
+                                                declared in the source. This is less
+                                                than the size of the ELF symbol when a
+                                                sanitizer has appended a redzone to the
+                                                variable, in which case ``st_size``
+                                                describes the padded object rather than
+                                                the declared one.
      ================= ============== ========= =======================================
 
 .. _amdgpu-amdhsa-code-object-metadata-v5:

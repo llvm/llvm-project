@@ -61,6 +61,7 @@ class MetadataVerifier {
                           bool Required);
   bool verifyKernelArgs(msgpack::DocNode &Node);
   bool verifyKernel(msgpack::DocNode &Node);
+  bool verifyGlobal(msgpack::DocNode &Node);
 
 public:
   /// Construct a MetadataVerifier, specifying whether it will operate in \p

@@ -291,6 +291,19 @@ bool MetadataVerifier::verifyKernel(msgpack::DocNode &Node) {
   return true;
 }
 
+bool MetadataVerifier::verifyGlobal(msgpack::DocNode &Node) {
+  if (!Node.isMap())
+    return false;
+  auto &GlobalMap = Node.getMap();
+
+  if (!verifyScalarEntry(GlobalMap, ".name", true, msgpack::Type::String))
+    return false;
+  if (!verifyIntegerEntry(GlobalMap, ".size", true))
+    return false;
+
+  return true;
+}
+
 bool MetadataVerifier::verify(msgpack::DocNode &HSAMetadataRoot) {
   if (!HSAMetadataRoot.isMap())
     return false;
@@ -309,6 +322,13 @@ bool MetadataVerifier::verify(msgpack::DocNode &HSAMetadataRoot) {
               return verifyScalar(Node, msgpack::Type::String);
             });
           }))
+    return false;
+  if (!verifyEntry(RootMap, "amdhsa.globals", false,
+                   [this](msgpack::DocNode &Node) {
+                     return verifyArray(Node, [this](msgpack::DocNode &Node) {
+                       return verifyGlobal(Node);
+                     });
+                   }))
     return false;
   if (!verifyEntry(RootMap, "amdhsa.kernels", true,
                    [this](msgpack::DocNode &Node) {

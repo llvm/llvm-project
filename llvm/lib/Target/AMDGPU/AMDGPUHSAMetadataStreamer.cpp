@@ -233,6 +233,31 @@ void MetadataStreamerMsgPackV4::emitPrintf(const Module &Mod) {
   getRootMetadata("amdhsa.printf") = Printf;
 }
 
+void MetadataStreamerMsgPackV4::emitGlobals(const Module &Mod) {
+  auto Globals = HSAMetadataDoc->getArrayNode();
+  for (const GlobalVariable &GV : Mod.globals()) {
+    const MDNode *UnpaddedSize =
+        GV.getMetadata(LLVMContext::MD_sanitize_unpadded_size);
+    if (!UnpaddedSize)
+      continue;
+    // A local name is not unique across the code objects a consumer may merge,
+    // and a global with no storage here was padded where it is defined.
+    if (GV.hasLocalLinkage() || GV.isDeclarationForLinker())
+      continue;
+
+    auto Global = HSAMetadataDoc->getMapNode();
+    Global[".name"] = HSAMetadataDoc->getNode(GV.getName());
+    Global[".size"] = HSAMetadataDoc->getNode(
+        mdconst::extract<ConstantInt>(UnpaddedSize->getOperand(0))
+            ->getZExtValue());
+    Globals.push_back(Global);
+  }
+
+  // Absence of the key is what tells a consumer st_size is the declared size.
+  if (!Globals.empty())
+    getRootMetadata("amdhsa.globals") = Globals;
+}
+
 void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
                                                    msgpack::MapDocNode Kern) {
   // TODO: What about other languages?
@@ -562,6 +587,7 @@ void MetadataStreamerMsgPackV4::begin(const Module &Mod,
   emitVersion();
   emitTargetID(TargetID);
   emitPrintf(Mod);
+  emitGlobals(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
   DelayedExprs->clear();
 }
