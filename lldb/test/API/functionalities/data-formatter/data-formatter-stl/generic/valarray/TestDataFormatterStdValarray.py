@@ -182,3 +182,48 @@ class StdValarrayDataFormatterTestCase(TestBase):
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_not_stolen_by_msvc(self):
+        """libstdc++ valarray must not get the MSVC size=raw-field-count summary."""
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        va = self.frame().FindVariable("va_int")
+        self.assertTrue(va.IsValid())
+        summary = va.GetSummary() or ""
+        self.assertNotIn("size=2", summary)
+        self.expect("frame variable va_int", matching=False, substrs=["size=2"])
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp", False)
+        )
+        va_int = self.frame().FindVariable("va_int")
+        self.assertEqual(va_int.GetNumChildren(), 4)
+        self.expect("frame variable va_int", substrs=["va_int = size=4"])
+        va_empty = self.frame().FindVariable("va_empty")
+        self.assertEqual(va_empty.GetNumChildren(), 0)
+        self.expect("frame variable va_empty", substrs=["size=0"])
+        va_ref = self.frame().FindVariable("va_ref")
+        self.assertEqual(va_ref.GetNumChildren(), 4)
+        lldbutil.continue_to_breakpoint(process, bkpt)
+        self.expect(
+            "frame variable va_int",
+            substrs=[
+                "va_int = size=4",
+                "[0] = 1",
+                "[1] = 12",
+                "[2] = 123",
+                "[3] = 1234",
+            ],
+        )
+        self.assertEqual(va_ref.GetNumChildren(), 4)
+        self.assertEqual(va_ref.GetChildAtIndex(3).GetValueAsSigned(), 1234)
+        self.expect(
+            "frame variable va_double",
+            substrs=["va_double = size=4", "[0] = 1", "[1] = 0.5"],
+        )
