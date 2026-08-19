@@ -1,0 +1,121 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -o - %s | FileCheck %s
+
+---
+name:            single_anti_hint
+tracksRegLiveness: true
+# CHECK-LABEL: name: single_anti_hint
+# CHECK:      registers:
+# CHECK:   - { id: 3, class: vreg_128_align2, preferred-register: '', flags: [  ],
+# CHECK-NEXT:       anti-hints: [ '%1' ] }
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vreg_512_align2 }
+  - { id: 2, class: vreg_512_align2 }
+  - { id: 3, class: vreg_128_align2, anti-hints: [ '%1' ] }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %1.sub0_sub1, %1.sub2_sub3, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vreg_128_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    S_ENDPGM 0, implicit %2, implicit %3
+...
+
+---
+name:            multiple_anti_hints
+tracksRegLiveness: true
+# CHECK-LABEL: name: multiple_anti_hints
+# CHECK:      registers:
+# CHECK:   - { id: 3, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+# CHECK-NEXT:       '%1',
+# CHECK-NEXT:       '%2' ] }
+# CHECK-NEXT:   - { id: 4, class: vreg_128_align2, preferred-register: '', flags: [  ],
+# CHECK-NEXT:       anti-hints: [ '%2' ] }
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vreg_512_align2 }
+  - { id: 2, class: vreg_512_align2 }
+  - { id: 3, class: vgpr_32, anti-hints: [ '%1', '%2' ] }
+  - { id: 4, class: vreg_128_align2, anti-hints: [ '%2' ] }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vreg_512_align2 = contract V_MFMA_F32_32X32X16_FP8_FP8_vgprcd_e64 %1.sub0_sub1, %1.sub2_sub3, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 4096, %0, implicit $exec
+    %4:vreg_128_align2 = DS_READ_B128_gfx9 %3, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    S_ENDPGM 0, implicit %2, implicit %4
+...
+
+---
+name:            duplicate_anti_hints
+tracksRegLiveness: true
+# CHECK-LABEL: name: duplicate_anti_hints
+# CHECK:      registers:
+# CHECK:   - { id: 2, class: vgpr_32, preferred-register: '', flags: [  ], anti-hints: [
+# CHECK-NEXT:       '%1' ] }
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vreg_512_align2 }
+  - { id: 2, class: vgpr_32, anti-hints: [ '%1', '%1' ] }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vgpr_32 = V_ADD_U32_e32 4096, %0, implicit $exec
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+name:            anti_hint_with_preferred_register
+tracksRegLiveness: true
+# CHECK-LABEL: name: anti_hint_with_preferred_register
+# CHECK:      registers:
+# CHECK:   - { id: 2, class: vgpr_32, preferred-register: '$vgpr8', flags: [  ],
+# CHECK-NEXT:       anti-hints: [ '%1' ] }
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vreg_512_align2 }
+  - { id: 2, class: vgpr_32, preferred-register: '$vgpr8', anti-hints: [ '%1' ] }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_512_align2 = IMPLICIT_DEF
+    %2:vgpr_32 = V_ADD_U32_e32 4096, %0, implicit $exec
+    S_ENDPGM 0, implicit %1, implicit %2
+...
+
+---
+name:            empty_anti_hints
+tracksRegLiveness: true
+# CHECK-LABEL: name: empty_anti_hints
+# CHECK:      registers:
+# CHECK:   - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT: liveins:
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32, anti-hints: [  ] }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_ADD_U32_e32 4096, %0, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name:            no_anti_hints
+tracksRegLiveness: true
+# CHECK-LABEL: name: no_anti_hints
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
+# CHECK-NEXT: liveins:
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body: |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = V_ADD_U32_e32 4096, %0, implicit $exec
+    S_ENDPGM 0, implicit %1
+...
