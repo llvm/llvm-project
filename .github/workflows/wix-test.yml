@@ -12,7 +12,7 @@ jobs:
           echo "cmake_minimum_required(VERSION 3.20.0)" > CMakeLists.txt
           echo "add_executable(test test.c)" >> CMakeLists.txt
           echo "include(CPack)" >> CMakeLists.txt
-          cmake -G Ninja -S . -B build
+          cmake -G Ninja -S . -B build -DCPACK_GENERATOR=WIX
           ninja -C build package
 
 
