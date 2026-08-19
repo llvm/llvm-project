@@ -40,8 +40,8 @@ void fork_and_execle_normal_exit(char **envp) {
 void fork_and_execle_signal_exit(char **envp) {
   pid_t pid = LIBC_NAMESPACE::fork();
   if (pid == 0) {
-    const char *path = "libc_execle_test_signal_exit";
-    LIBC_NAMESPACE::execle(path, const_cast<char *>("execle_test_signal_exit"),
+    const char *path = "libc_exec_test_signal_exit";
+    LIBC_NAMESPACE::execle(path, const_cast<char *>("exec_test_signal_exit"),
                            static_cast<char *>(nullptr), envp);
   }
   ASSERT_TRUE(pid > 0);
