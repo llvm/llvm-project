@@ -44,6 +44,13 @@
 #include <unistd.h>
 #endif
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#else
+#define TARGET_OS_TV 0
+#define TARGET_OS_WATCH 0
+#endif
+
 #include "InstrProfiling.h"
 #include "InstrProfilingUtil.h"
 
@@ -589,7 +596,8 @@ void llvm_reset_counters(void) {
   }
 }
 
-#if !defined(_WIN32) && !defined(__wasm__)
+// `fork` is not available on Windows, WASM, tvOS or watchOS.
+#if !defined(_WIN32) && !defined(__wasm__) && !TARGET_OS_TV && !TARGET_OS_WATCH
 COMPILER_RT_VISIBILITY
 pid_t __gcov_fork() {
   pid_t parent_pid = getpid();
