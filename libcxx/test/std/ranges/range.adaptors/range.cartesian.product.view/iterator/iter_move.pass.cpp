@@ -12,6 +12,7 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <iterator>
 #include <ranges>
 #include <tuple>
@@ -58,6 +59,20 @@ constexpr bool test() {
       assert(r1.iter_move_called_times == 2);
       assert(r2.iter_move_called_times == 2);
     }
+  }
+
+  { // non-simple bases -- the noexcept spec is spelled in terms of maybe-const<Const, ...>,
+    // so instantiate it at Const == false
+    std::array a{1, 2, 3};
+    std::array b{10, 20};
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
+    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
+    static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+
+    auto it = v.begin();
+    static_assert(std::is_same_v<decltype(std::ranges::iter_move(it)), std::tuple<int&&, int&&>>);
+    static_assert(noexcept(std::ranges::iter_move(it)));
+    assert(std::ranges::iter_move(it) == std::make_tuple(1, 10));
   }
 
   return true;
