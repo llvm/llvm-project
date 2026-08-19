@@ -1082,14 +1082,12 @@ public:
     if (none_of(M.globals(), isNotYetLoweredLDSVariable))
       return false;
 
-    bool Changed = superAlignLDSGlobals(M);
+    superAlignLDSGlobals(M);
 
     CallGraph CG(M);
 
-    Changed |= eliminateGVConstantExprUsesFromAllInstructions(
-        M, isNotYetLoweredLDSVariable);
-
-    Changed = true; // todo: narrow this down
+    eliminateGVConstantExprUsesFromAllInstructions(M,
+                                                   isNotYetLoweredLDSVariable);
 
     // For each kernel, what variables does it access directly or through
     // callees
@@ -1270,7 +1268,7 @@ public:
           GV.eraseFromParent();
       }
 
-    return Changed;
+    return true;
   }
 
 private:
