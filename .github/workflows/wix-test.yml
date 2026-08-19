@@ -10,7 +10,7 @@ jobs:
           dotnet tool install --global wix
           choco install wixtoolset
           #which candle.exe
-
+      - run: echo "${env:WIX}bin" >> $env:GITHUB_PATH
       - shell: bash
         run: |
           which candle.exe
