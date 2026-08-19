@@ -796,7 +796,7 @@ private:
         // iteration counts. If two loops have different loop guards
         // there is no mechanism in loop fusion to make their fusion legal.
         // The trivial case where the guards compare two constant values can be
-        // ignored. Those guards will be optimized away by other paaes.
+        // ignored. Those guards will be optimized away by other passes.
         if (FC0.GuardBranch && FC1.GuardBranch &&
             !haveIdenticalGuards(FC0, FC1)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
