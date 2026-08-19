@@ -2362,9 +2362,12 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
   MangleContext &MC = CGM.getCXXABI().getMangleContext();
   if (!CGM.getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
-  bool ShouldMangle = MC.shouldMangleDeclName(ND, IgnoreAsmLabel);
+  bool ShouldMangle = !IgnoreAsmLabel? MC.shouldMangleDeclName(ND): MC.shouldMangleDeclNameIgnoringAsmLabel(ND);
   if (ShouldMangle)
-    MC.mangleName(GD.getWithDecl(ND), Out, IgnoreAsmLabel);
+    if (!IgnoreAsmLabel)
+      MC.mangleName(GD.getWithDecl(ND), Out);
+    else
+      MC.mangleNameIgnoringAsmLabel(GD.getWithDecl(ND), Out);
   else {
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
