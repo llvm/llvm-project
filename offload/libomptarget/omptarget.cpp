@@ -32,6 +32,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 #include <cassert>
 #include <cstdint>
@@ -2320,11 +2321,11 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   PrivateArgumentManagerTy PrivateArgumentManager(Device, AsyncInfo);
 
-  int NumClangLaunchArgs = KernelArgs.NumArgs;
+  llvm::SaveAndRestore<uint32_t> NumClangLaunchArgs(KernelArgs.NumArgs);
   int Ret = OFFLOAD_SUCCESS;
-  if (NumClangLaunchArgs) {
+  if (NumClangLaunchArgs.get()) {
     // Process data, such as data mapping, before launching the kernel
-    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+    Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs.get(),
                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                             KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
@@ -2374,10 +2375,10 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     return OFFLOAD_FAIL;
   }
 
-  if (NumClangLaunchArgs) {
+  if (NumClangLaunchArgs.get()) {
     // Transfer data back and deallocate target memory for (first-)private
     // variables
-    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
+    Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs.get(),
                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
