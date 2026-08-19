@@ -1987,7 +1987,7 @@ def VOP_Pseudo_Scalar_F16_NoInline : VOP_Pseudo_Scalar<SReg_32_XEXEC, SSrc_NoInl
 // scalar transcendental instruction.
 multiclass VOP3PseudoScalarInst_F16<string opName> {
   let TRANS = 1, isReMaterializable = 1, SchedRW = [WritePseudoScalarTrans] in {
-    let SubtargetPredicate = HasF16PseudoScalarTransWithInlineConstants in {
+    let SubtargetPredicate = Predicate<"Subtarget->hasPseudoScalarTrans() && !Subtarget->hasNoF16PseudoScalarTransInlineConstants()"> in {
       defm NAME : VOP3PseudoScalarInst<opName, VOP_Pseudo_Scalar_F16>;
     }
 
