@@ -161,11 +161,12 @@ add_entrypoint_object(
   HDRS
     ../ceilf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.ceilf128
 )
 
 add_entrypoint_object(
-    ceilbf16
+  ceilbf16
   SRCS
     ceilbf16.cpp
   HDRS
@@ -190,7 +191,7 @@ add_entrypoint_object(
     daddf128.cpp
   HDRS
     ../daddf128.h
- DEPENDS
+  DEPENDS
     libc.src.__support.math.daddf128
 )
 
@@ -607,7 +608,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-    truncbf16
+  truncbf16
   SRCS
     truncbf16.cpp
   HDRS
@@ -663,11 +664,12 @@ add_entrypoint_object(
   HDRS
     ../floorf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.floorf128
 )
 
 add_entrypoint_object(
-    floorbf16
+  floorbf16
   SRCS
     floorbf16.cpp
   HDRS
@@ -727,7 +729,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-    roundbf16
+  roundbf16
   SRCS
     roundbf16.cpp
   HDRS
@@ -1585,6 +1587,19 @@ add_entrypoint_object(
     ../ilogbbf16.h
   DEPENDS
     libc.src.__support.math.ilogbbf16
+)
+
+add_entrypoint_object(
+  lgammaf16
+  SRCS
+    lgammaf16.cpp
+  HDRS
+    ../lgammaf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.lgammaf16
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -2683,6 +2698,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.sqrtf128
 )
 
@@ -4739,7 +4755,7 @@ add_entrypoint_object(
     libc.src.__support.math.cbrt
 )
 
-add_entrypoint_object (
+add_entrypoint_object(
   cbrtbf16
   SRCS
     cbrtbf16.cpp

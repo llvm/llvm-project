@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
@@ -24,7 +24,7 @@
     unreachable
   }
 
-  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-lds-size"="32768" "target-cpu"="gfx90a" }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-lds-size"="32768" }
 ...
 ---
 name:            multi_store_spill_slot

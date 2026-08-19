@@ -179,3 +179,32 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
 // Lower bound 10 should appear in the embox/store of the new allocation.
 // CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !fir.box<!fir.array<3xi32>>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+
+// Test: allocatable backed by a non-default (CUF) allocator must NOT be
+// separated. The reallocation has to stay in hlfir.assign ... realloc so that
+// it is routed through the runtime and honors the allocator recorded in the
+// descriptor (pinned/managed/unified), instead of an inline host fir.allocmem.
+func.func @test_pinned_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<pinned>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  return
+}
+// CHECK-LABEL: func.func @test_pinned_allocator
+// Non-default allocator: keep the realloc assign, do not inline the allocation.
+// CHECK: hlfir.assign %{{.*}} to %{{.*}} realloc
+// CHECK-NOT: fir.allocmem
+// Test: same for a managed allocatable (also host-accessible, non-default alloc).
+func.func @test_managed_allocator(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, %arg1: !fir.ref<!fir.array<10xf64>>) {
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %a:2 = hlfir.declare %arg0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %b:2 = hlfir.declare %arg1(%shape) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.array<10xf64>>)
+  hlfir.assign %b#0 to %a#0 realloc : !fir.ref<!fir.array<10xf64>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+  return
+}
+// CHECK-LABEL: func.func @test_managed_allocator
+// CHECK: hlfir.assign %{{.*}} to %{{.*}} realloc
+// CHECK-NOT: fir.allocmem

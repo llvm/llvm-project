@@ -1,31 +1,31 @@
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 < %s | FileCheck --check-prefix=OSABI-UNK %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=iceland < %s | FileCheck --check-prefix=OSABI-UNK %s
-; RUN: llc -mtriple=amdgcn-amd-unknown -mcpu=gfx802 -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-UNK-ELF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 < %s| FileCheck --check-prefix=OSABI-HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland < %s | FileCheck --check-prefix=OSABI-HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-HSA-ELF %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 < %s | FileCheck --check-prefix=OSABI-PAL %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=iceland < %s | FileCheck --check-prefix=OSABI-PAL %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx802 -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
+; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
+; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
+; RUN: llc -mtriple=amdgpu8.02-amd-unknown -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-UNK-ELF %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s| FileCheck --check-prefix=OSABI-HSA %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s | FileCheck --check-prefix=OSABI-HSA %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-HSA-ELF %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
+; RUN: llc -mtriple=amdgpu8.02-amd-amdpal -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
 ; RUN: llc -mtriple=r600 < %s | FileCheck --check-prefix=R600 %s
 
 ; OSABI-UNK-NOT: .hsa_code_object_version
 ; OSABI-UNK-NOT: .hsa_code_object_isa
-; OSABI-UNK: .amd_amdgpu_isa "amdgcn-amd-unknown-unknown-gfx802"
+; OSABI-UNK: .amd_amdgpu_isa "amdgpu8.02-amd-unknown-unknown-gfx802"
 ; OSABI-UNK-NOT: .amd_amdgpu_hsa_metadata
 ; OSABI-UNK-NOT: .amd_amdgpu_pal_metadata
 
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 ; OSABI-UNK-ELF: AMD HSA ISA Name:
-; OSABI-UNK-ELF: amdgcn-amd-unknown-unknown-gfx802
+; OSABI-UNK-ELF: amdgpu8.02-amd-unknown-unknown-gfx802
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 
-; OSABI-HSA: amdhsa.target:   amdgcn-amd-amdhsa-unknown-gfx802
+; OSABI-HSA: amdhsa.target:   amdgpu8.02-amd-amdhsa-unknown-gfx802
 ; OSABI-HSA: amdhsa.version:
 ; OSABI-HSA: .end_amdgpu_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
@@ -46,20 +46,20 @@
 ; OSABI-HSA-ELF:     .vgpr_count:     0
 ; OSABI-HSA-ELF:     .vgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .wavefront_size: 64
-; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa-unknown-gfx802
+; OSABI-HSA-ELF: amdhsa.target:   amdgpu8.02-amd-amdhsa-unknown-gfx802
 ; OSABI-HSA-ELF: amdhsa.version:
 ; OSABI-HSA-ELF:   - 1
 ; OSABI-HSA-ELF:   - 1
 ; OSABI-HSA-ELF: ...
 ; OSABI-HSA-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 
-; OSABI-PAL: .amd_amdgpu_isa  "amdgcn-amd-amdpal-unknown-gfx802"
+; OSABI-PAL: .amd_amdgpu_isa  "amdgpu8.02-amd-amdpal-unknown-gfx802"
 ; OSABI-PAL: .amdgpu_pal_metadata
 ; OSABI-PAL-NOT: .amd_amdgpu_hsa_metadata
 
 ; OSABI-PAL-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 ; OSABI-PAL-ELF: AMD HSA ISA Name:
-; OSABI-PAL-ELF: amdgcn-amd-amdpal-unknown-gfx802
+; OSABI-PAL-ELF: amdgpu8.02-amd-amdpal-unknown-gfx802
 ; OSABI-PAL-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-PAL-ELF: NT_AMDGPU_METADATA (AMDGPU Metadata)
 ; OSABI-PAL-ELF: AMDGPU Metadata:

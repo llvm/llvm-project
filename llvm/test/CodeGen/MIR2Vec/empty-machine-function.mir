@@ -1,0 +1,37 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llvm-ir2vec triplets --mode=mir %s -o /dev/null
+
+# A function whose MIR body is absent embeds to
+# the zero vector instead.
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define void @no_body() { ret void }
+
+  define void @has_body() { ret void }
+...
+---
+name:            has_body
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    RET 0
+...
+
+# The function vector is zero and there are no blocks to list.
+
+# CHECK: MIR2Vec embeddings for machine function no_body:
+# CHECK-NEXT: Machine Function vector:  [ 0.00  0.00  0.00 ]
+# CHECK-NEXT: Machine basic block vectors:
+# CHECK-NEXT: Machine instruction vectors:
+
+# A function in the same module still embeds normally: RET = [1.0 1.1 1.2]
+# plus the [0.1 0.1 0.1] immediate operand.
+
+# CHECK-NEXT: MIR2Vec embeddings for machine function has_body:
+# CHECK-NEXT: Machine Function vector:  [ 1.10  1.20  1.30 ]
+# CHECK-NEXT: Machine basic block vectors:
+# CHECK-NEXT: Machine basic block: has_body:BB0:
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]

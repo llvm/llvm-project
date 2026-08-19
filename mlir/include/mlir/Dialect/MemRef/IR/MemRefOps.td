@@ -1511,6 +1511,12 @@ def MemRef_ReinterpretCastOp
     Consecutive `reinterpret_cast` operations on memref's with static
     dimensions.
 
+    This operation is intended for cases where the user can guarantee the
+    validity of the constructed descriptor. Neither static nor runtime
+    verification check that the resulting descriptor is in-bounds. Accessing
+    memory outside the underlying allocation through the resulting memref is
+    undefined behavior.
+
     We distinguish between *underlying memory* — the sequence of elements as
     they appear in the contiguous memory of the memref — and the
     *strided memref*, which refers to the underlying memory interpreted
@@ -2174,8 +2180,10 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     The offset, size and stride operands must be in-bounds with respect to the
     source memref. When possible, the static operation verifier will detect
     out-of-bounds subviews. Subviews that cannot be confirmed to be in-bounds
-    or out-of-bounds based on compile-time information are valid. However,
-    performing an out-of-bounds subview at runtime is undefined behavior.
+    or out-of-bounds based on compile-time information are valid. The
+    `-generate-runtime-verification` pass can insert runtime bound checks.
+    Otherwise, performing an out-of-bounds subview at runtime is undefined
+    behavior.
 
     Example 1:
 

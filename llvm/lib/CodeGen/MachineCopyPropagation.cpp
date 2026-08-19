@@ -62,6 +62,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1499,7 +1500,7 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "MCP: Searching paired spill for reload: ");
     LLVM_DEBUG(MI.dump());
     MachineInstr *MaybeSpill =
-        Tracker.findLastSeenDefInCopy(MI, Src, *TRI, *TII, UseCopyInstr);
+        Tracker.findAvailCopy(MI, Src, *TRI, *TII, UseCopyInstr);
     bool MaybeSpillIsChained = ChainLeader.count(MaybeSpill);
     if (!MaybeSpillIsChained && MaybeSpill &&
         IsSpillReloadPair(*MaybeSpill, MI)) {

@@ -38,10 +38,6 @@ def SDTX86VFCMP : SDTypeProfile<1, 3, [SDTCisFP<0>, SDTCisVec<0>,
                                        SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                        SDTCisVT<3, i8>]>;
 
-// Floating point max and min.
-def X86fmin    : SDNode<"X86ISD::FMIN",      SDTFPBinOp>;
-def X86fmax    : SDNode<"X86ISD::FMAX",      SDTFPBinOp>;
-
 // Scalar intrinsic floating point max and min.
 def X86fmins   : SDNode<"X86ISD::FMINS",     SDTFPBinOp>;
 def X86fmaxs   : SDNode<"X86ISD::FMAXS",     SDTFPBinOp>;
@@ -52,20 +48,12 @@ def X86fminc    : SDNode<"X86ISD::FMINC", SDTFPBinOp,
 def X86fmaxc    : SDNode<"X86ISD::FMAXC", SDTFPBinOp,
     [SDNPCommutative, SDNPAssociative]>;
 
-let IsStrictFP = true in {
-  // Floating point max and min.
-  def X86strict_fmin : SDNode<"X86ISD::STRICT_FMIN", SDTFPBinOp,
-                              [SDNPHasChain]>;
-  def X86strict_fmax : SDNode<"X86ISD::STRICT_FMAX", SDTFPBinOp,
-                              [SDNPHasChain]>;
-}
-
 def X86any_fmin : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmin node:$src1, node:$src2),
-                            (X86fmin node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmin node:$src1, node:$src2),
+                            (pseudo_fmin node:$src1, node:$src2)]>;
 def X86any_fmax : PatFrags<(ops node:$src1, node:$src2),
-                           [(X86strict_fmax node:$src1, node:$src2),
-                            (X86fmax node:$src1, node:$src2)]>;
+                           [(strict_pseudo_fmax node:$src1, node:$src2),
+                            (pseudo_fmax node:$src1, node:$src2)]>;
 
 // Bitwise logical AND of floating point values. This corresponds
 // to X86::ANDPS or X86::ANDPD.
@@ -1376,6 +1364,15 @@ def bc_v16i32 : PatFrag<(ops node:$in), (v16i32 (bitconvert node:$in))>;
 def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
+
+// Match node if each vector elements' upper half bits are zero.
+class X86upperzero <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned EltBits = Op.getScalarValueSizeInBits();
+  APInt UpperMask = APInt::getHighBitsSet(EltBits, EltBits / 2);
+  return CurDAG->MaskedValueIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
 
 // Match node that has known zeros in every element except the lowest.
 class X86vzelts <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{

@@ -230,7 +230,7 @@ define <1 x i32> @intrinsic_column_major_load_dot_product_i32_v8(ptr %lhs_addres
 ; CHECK-LABEL: @intrinsic_column_major_load_dot_product_i32_v8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <8 x i32>, ptr [[RHS_ADDRESS:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[LHS_ADDRESS:%.*]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[LHS_ADDRESS:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i32> [[TMP0]], [[COL_LOAD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <1 x i32> poison, i32 [[TMP2]], i64 0

@@ -26,7 +26,8 @@
 using namespace lldb_private;
 using namespace lldb;
 
-uint32_t ThreadPlanStepOverRange::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOverRange::s_default_flag_values =
+    ThreadPlanShouldStopHere::eStepPastLine0;
 
 // ThreadPlanStepOverRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
@@ -55,21 +56,21 @@ void ThreadPlanStepOverRange::GetDescription(Stream *s,
   };
 
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step over");
+    s->PutCString("step over");
     PrintFailureIfAny();
     return;
   }
 
-  s->Printf("Stepping over");
+  s->PutCString("Stepping over");
   bool printed_line_info = false;
   if (m_addr_context.line_entry.IsValid()) {
-    s->Printf(" line ");
+    s->PutCString(" line ");
     m_addr_context.line_entry.DumpStopContext(s, false);
     printed_line_info = true;
   }
 
   if (!printed_line_info || level == eDescriptionLevelVerbose) {
-    s->Printf(" using ranges: ");
+    s->PutCString(" using ranges: ");
     DumpRanges(s);
   }
 

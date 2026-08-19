@@ -16,6 +16,7 @@
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"

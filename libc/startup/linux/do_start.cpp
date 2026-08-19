@@ -10,17 +10,22 @@
 #include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "hdr/stdint_proxy.h"
+#include "hdr/sys_mman_macros.h"
+#include "hdr/types/struct_link_map.h"
+#include "hdr/types/struct_r_debug.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
+#include "src/errno/program_invocation_name.h"
+#include "src/errno/program_invocation_short_name.h"
+#include "src/link/_r_debug.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "src/unistd/environ.h"
 #include "startup/linux/gnu_property_section.h"
 #include "startup/linux/irelative.h"
 
-#include <sys/mman.h>
 #include <sys/syscall.h>
 
 extern "C" int main(int argc, char **argv, char **envp);
@@ -39,10 +44,17 @@ extern uintptr_t __fini_array_end[];
 // on how the program is loaded exactly.
 [[gnu::weak,
   gnu::visibility("hidden")]] extern const ElfW(Dyn) _DYNAMIC[]; // NOLINT
+
+// Debuggers look for this function by name. Carefully consider any changes.
+void _r_debug_state() { // NOLINT
+  asm volatile("");
+}
 }
 
 namespace LIBC_NAMESPACE_DECL {
 AppProperties app;
+
+static struct link_map main_map;
 
 using InitCallback = void(int, char **, char **);
 using FiniCallback = void(void);
@@ -82,6 +94,15 @@ static TLSDescriptor tls;
 
   // Initialize the POSIX global declared in unistd.h
   environ = reinterpret_cast<char **>(env_ptr);
+
+  if (app.args->argc > 0 && app.args->argv[0] != 0) {
+    program_invocation_name = reinterpret_cast<char *>(app.args->argv[0]);
+    program_invocation_short_name = program_invocation_name;
+    for (char *p = program_invocation_name; *p != '\0'; ++p) {
+      if (*p == '/')
+        program_invocation_short_name = p + 1;
+    }
+  }
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
@@ -132,6 +153,18 @@ static TLSDescriptor tls;
     // TODO: adjust PT_GNU_STACK
   }
 
+  main_map.l_addr = base;
+  main_map.l_name = const_cast<char *>("");
+  main_map.l_ld = const_cast<ElfW(Dyn) *>(_DYNAMIC);
+  main_map.l_next = nullptr;
+  main_map.l_prev = nullptr;
+
+  _r_debug.r_version = 1;
+  _r_debug.r_map = &main_map;
+  _r_debug.r_brk = reinterpret_cast<uintptr_t>(&_r_debug_state);
+  _r_debug.r_state = RT_CONSISTENT;
+  _r_debug.r_ldbase = base;
+
   // Process IRELATIVE relocations (ifunc resolvers).
   // Skips when no ifuncs are present in the binary.
   if (reinterpret_cast<uintptr_t>(__rela_iplt_start) !=
@@ -149,7 +182,7 @@ static TLSDescriptor tls;
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
-  self.attrib = &main_thread_attrib;
+  internal::self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
 

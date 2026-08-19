@@ -52,6 +52,10 @@ public:
                                   unsigned Idx) const override {
     return 0;
   }
+  const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const override {
+    return nullptr;
+  }
   const int *
   getRegClassPressureSets(const TargetRegisterClass *RC) const override {
     static const int Bogus[] = {0, -1};
@@ -88,8 +92,9 @@ public:
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr,
+                            nullptr),
         FL(), TL(TM, *this) {}
   ~BogusSubtarget() override = default;
 
@@ -142,9 +147,9 @@ public:
     AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
     MRI = std::make_unique<MCRegisterInfo>();
     STI = std::make_unique<MCSubtargetInfo>(
-        Triple(""), "", "", "", ArrayRef<StringRef>{},
-        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr);
+        Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
+        ArrayRef<SubtargetSubTypeKV>{}, ArrayRef<SubtargetSubTypeAliasKV>{},
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

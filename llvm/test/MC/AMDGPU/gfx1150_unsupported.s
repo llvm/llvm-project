@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1150 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1150 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.50 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.50 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 v_cvt_f32_bf8 v1, 3
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

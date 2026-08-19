@@ -52,6 +52,19 @@ func.func @par_dims_block_thread() {
 
 // -----
 
+// CHECK-LABEL: func @active_par_dims_attr
+func.func @active_par_dims_attr() {
+  %private = acc.privatize {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : () -> !acc.private_type<memref<i32>>
+  %local = acc.private_local %private {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+      : (!acc.private_type<memref<i32>>) -> memref<i32>
+  return
+}
+// CHECK: acc.privatize {{.*}}{acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+// CHECK: acc.private_local {{.*}}{acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>}
+
+// -----
+
 // All GPU parallel dimensions (par_dim values) in par_dims list
 func.func @par_dims_all_dims() {
   %c0 = arith.constant 0 : index
@@ -157,6 +170,20 @@ func.func @compute_region_two_dims(%data: memref<8xi32>,
 // CHECK: acc.compute_region launch(%{{.*}} = %[[W0]], %{{.*}} = %[[W1]]) ins({{.*}}) : (memref<8xi32>, memref<i32>) {
 // CHECK:   acc.yield
 // CHECK: } {origin = "acc.parallel"}
+
+// -----
+
+// CHECK-LABEL: func @reduction_init_with_bounds
+func.func @reduction_init_with_bounds(%arg0: memref<?xi32>, %lb: index, %ext: index) {
+  %c1 = arith.constant 1 : index
+  %bnd = acc.bounds lowerbound(%lb : index) extent(%ext : index) stride(%c1 : index)
+  %0 = acc.reduction_init %arg0 bounds(%bnd) <add> : memref<?xi32> {
+    acc.yield %arg0 : memref<?xi32>
+  }
+  return
+}
+// CHECK: %[[BND:.*]] = acc.bounds
+// CHECK: acc.reduction_init %{{.*}} bounds(%[[BND]]) <add> : memref<?xi32>
 
 // -----
 

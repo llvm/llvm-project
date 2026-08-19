@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu6.00 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
+; RUN: llc -mtriple=amdgpu8.03 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SICIVI %s
+; RUN: llc -mtriple=amdgpu9.00 -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; Test addressing modes when the scratch base is not a frame index.
 

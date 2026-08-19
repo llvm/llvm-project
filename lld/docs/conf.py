@@ -22,6 +22,7 @@ globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+myst_enable_extensions.append("deflist")
 
 # General information about the project.
 project = "lld"
@@ -218,6 +219,25 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+
+# This can be treated as its own sphinx extension. setup() will be called by
+# sphinx. In it, register a function to be called when the configuration has
+# been initialized. The configuration will contain the values of the -D options
+# passed to sphinx-build on the command line.
+#
+# See llvm/cmake/modules/AddSphinxTarget.cmake for details on how sphinx-build
+# is invoked.
+def setup(app):
+    app.connect("config-inited", myst_substitutions_update)
+
+
+# Override the myst_parser substitutions map after the configuration has been
+# initialized.
+def myst_substitutions_update(app, config):
+    config.myst_substitutions.update(
+        {"release": config.release, "version": config.version}
+    )
 
 
 # FIXME: Define intersphinx configuration.

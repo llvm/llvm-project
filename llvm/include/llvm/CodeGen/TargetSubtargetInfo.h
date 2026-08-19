@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -30,6 +31,7 @@
 namespace llvm {
 
 class APInt;
+class BitVector;
 class MachineFunction;
 class ScheduleDAGMutation;
 class CallLowering;
@@ -43,6 +45,7 @@ class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
+struct MCSchedModel;
 struct MCWriteLatencyEntry;
 struct MCWriteProcResEntry;
 class RegisterBankInfo;
@@ -68,10 +71,11 @@ struct SchedRegion;
 class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<StringRef> PN,
+                      StringRef FS, StringTable PN,
                       ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
-                      const MCWriteProcResEntry *WPR,
+                      ArrayRef<SubtargetSubTypeAliasKV> PA,
+                      const MCSchedModel *PSM, const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,
                       const unsigned *OC, const unsigned *FP);
@@ -144,6 +148,18 @@ public:
   /// or specific subtarget.
   virtual const InstrItineraryData *getInstrItineraryData() const {
     return nullptr;
+  }
+
+  /// Return the number of extra cycles the processor takes to recover from a
+  /// branch misprediction. Defaults to the value in the scheduling model.
+  virtual unsigned getMispredictionPenalty() const {
+    return getSchedModel().MispredictPenalty;
+  }
+
+  /// Return the expected latency of load instructions. Defaults to the value
+  /// in the scheduling model.
+  virtual unsigned getLoadLatency() const {
+    return getSchedModel().LoadLatency;
   }
 
   /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
@@ -338,13 +354,12 @@ public:
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;
 
-  /// True if the register allocator should use the allocation orders exactly as
-  /// written in the tablegen descriptions, false if it should allocate
-  /// the specified physical register later if is it callee-saved.
-  virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           MCRegister PhysReg) const {
-    return false;
-  }
+  /// Constructs a Mask of physical registers whose allocation orders should be
+  /// used exactly as written in the TableGen descriptions, rather than
+  /// allocating them later if they are callee-saved. Mask is empty on entry
+  /// and must either remain empty or cover all physical registers.
+  virtual void getCSRAllocationOrderMask(const MachineFunction &MF,
+                                         BitVector &Mask) const {}
 
   /// Classify a global function reference. This mainly used to fetch target
   /// special flags for lowering a function address. For example mark a function

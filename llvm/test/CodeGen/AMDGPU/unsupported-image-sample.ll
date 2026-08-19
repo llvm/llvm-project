@@ -1,10 +1,10 @@
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck -check-prefixes=GFX9 %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx908 < %s | FileCheck -check-prefixes=GFX9 %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GFX9 %s
-; RUN: not llc -O0 -mtriple=amdgcn -mcpu=gfx90a < %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
-; RUN: not llc -O0 -mtriple=amdgcn -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefixes=GFX942 %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX1030 %s
-; RUN: llc -O0 -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX1100 %s
+; RUN: llc -O0 -mtriple=amdgpu9.06 < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: llc -O0 -mtriple=amdgpu9.08 < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: llc -O0 -mtriple=amdgpu9 --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GFX9 %s
+; RUN: not llc -O0 -mtriple=amdgpu9.0a < %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
+; RUN: not llc -O0 -mtriple=amdgpu9.42 < %s 2>&1 | FileCheck -check-prefixes=GFX942 %s
+; RUN: llc -O0 -mtriple=amdgpu10.30 < %s | FileCheck -check-prefixes=GFX1030 %s
+; RUN: llc -O0 -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GFX1100 %s
 
 ; GFX9-LABEL: image_sample_test:
 ; GFX9: image_sample_lz

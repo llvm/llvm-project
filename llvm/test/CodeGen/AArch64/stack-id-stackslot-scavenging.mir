@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -start-before=greedy -stop-after=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -start-before=greedy -stop-after=prolog-epilog %s -o - | FileCheck %s
 ...
 # Ensure that an object with a different stack-id is not allocated to a
 # callee-save slot using stack-slot scavenging. This test saves X28 which

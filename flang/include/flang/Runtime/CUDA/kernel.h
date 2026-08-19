@@ -10,7 +10,6 @@
 #define FORTRAN_RUNTIME_CUDA_KERNEL_H_
 
 #include "flang/Runtime/entry-names.h"
-#include <cstddef>
 #include <stdint.h>
 
 extern "C" {

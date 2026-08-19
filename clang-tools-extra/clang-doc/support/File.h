@@ -11,8 +11,8 @@
 /// such as creating directories and writing output files.
 ///
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_FILE_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_FILE_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
@@ -28,4 +28,4 @@ llvm::SmallString<128> computeRelativePath(llvm::StringRef Destination,
 } // namespace doc
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_FILE_H

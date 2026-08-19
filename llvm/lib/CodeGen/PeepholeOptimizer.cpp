@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -574,10 +575,8 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
@@ -746,8 +745,11 @@ public:
                const TargetInstrInfo *TII = nullptr)
       : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
-      Def = MRI.getVRegDef(Reg);
-      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
+      if (DI != MRI.def_end()) {
+        Def = DI->getParent();
+        DefIdx = DI.getOperandNo();
+      }
     }
   }
 
@@ -1722,8 +1724,6 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

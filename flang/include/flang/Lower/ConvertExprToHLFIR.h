@@ -21,7 +21,6 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRDialect.h"
 
 namespace mlir {
 class Location;

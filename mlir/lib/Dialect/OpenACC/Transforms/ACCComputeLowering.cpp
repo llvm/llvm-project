@@ -78,41 +78,6 @@ namespace {
 // Helper functions
 //===----------------------------------------------------------------------===//
 
-/// Strip index_cast operations from a value before checking for a constant.
-static Value stripIndexCasts(Value val) {
-  while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())
-    val = castOp.getIn();
-  return val;
-}
-
-template <typename ComputeOpT>
-static bool isGangWorkerVectorAllOne(ComputeOpT op) {
-  auto numGangs = op.getNumGangsValues();
-  if (numGangs.empty())
-    return false;
-  for (Value gangSize : numGangs) {
-    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
-      return false;
-  }
-  Value numWorkers = op.getNumWorkersValue();
-  if (!numWorkers)
-    return false;
-  Value vectorLength = op.getVectorLengthValue();
-  if (!vectorLength)
-    return false;
-  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
-         isConstantIntValue(stripIndexCasts(vectorLength), 1);
-}
-
-/// A compute construct is "effectively serial" when it specifies
-/// num_gangs(1), num_workers(1), and vector_length(1). This is because
-/// these are the only parallelism dimensions expressible from OpenACC spec
-/// point-of-view and is consistent with how `serial` semantics are defined.
-template <typename ComputeOpT>
-static bool isEffectivelySerial(ComputeOpT op) {
-  return isGangWorkerVectorAllOne(op);
-}
-
 static bool isOpInComputeRegion(Operation *op) {
   Region *region = op->getBlock()->getParent();
   return getEnclosingComputeOp(*region) != nullptr;
@@ -120,9 +85,9 @@ static bool isOpInComputeRegion(Operation *op) {
 
 static bool isOpInSerialRegion(Operation *op) {
   if (auto parallelOp = op->getParentOfType<ParallelOp>())
-    return isEffectivelySerial(parallelOp);
+    return parallelOp.isEffectivelySerial();
   if (auto kernelsOp = op->getParentOfType<KernelsOp>())
-    return isEffectivelySerial(kernelsOp);
+    return kernelsOp.isEffectivelySerial();
   if (op->getParentOfType<SerialOp>())
     return true;
   if (auto computeRegion = op->getParentOfType<ComputeRegionOp>())
@@ -136,10 +101,6 @@ static bool isOpInSerialRegion(Operation *op) {
     }
   }
   return false;
-}
-
-static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
-  op->setAttr(GPUParallelDimsAttr::name, attr);
 }
 
 /// Clone defining ops of constant live-in values into `region`, rewrite uses
@@ -170,19 +131,6 @@ static void materializeConstantLiveInsIntoRegion(Region &region,
     replaceAllUsesInRegionWith(v, newV, region);
     liveInValues.remove(v);
   }
-}
-
-/// Insert a parallel dimension into the list, maintaining order by
-/// GPUParallelDimAttr::getOrder (descending).
-static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
-                         GPUParallelDimAttr parDim) {
-  GPUParallelDimAttr *lb = llvm::lower_bound(
-      parDims, parDim,
-      [](const GPUParallelDimAttr &a, const GPUParallelDimAttr &b) {
-        return a.getOrder() > b.getOrder();
-      });
-  if (lb == parDims.end() || *lb != parDim)
-    parDims.insert(lb, parDim);
 }
 
 /// Return the device type from which gang/worker/vector clauses should be read.
@@ -247,7 +195,7 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
   } else if constexpr (llvm::is_one_of<ComputeConstructT, ParallelOp,
                                        KernelsOp>::value) {
-    if (isEffectivelySerial(computeOp))
+    if (computeOp.isEffectivelySerial())
       return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
 
     deviceType = getParDimsDeviceType(computeOp, deviceType);

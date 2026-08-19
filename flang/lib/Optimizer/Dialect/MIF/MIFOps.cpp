@@ -10,14 +10,10 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
-#include <tuple>
 
 template <class T>
 static llvm::LogicalResult checkCorank(T op) {
@@ -271,9 +267,9 @@ void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
 
 llvm::LogicalResult mif::AllocCoarrayOp::verify() {
   if (hasAllocatableOrPointerComponent(getBox().getType()))
-    TODO(getLoc(),
-         "Derived type coarray with at least one ALLOCATABLE or POINTER "
-         "component");
+    return emitOpError(
+        "not implemented: Derived type coarray with at least one ALLOCATABLE"
+        " or POINTER component");
 
   fir::BoxType lcElemType =
       mlir::dyn_cast<fir::BoxType>(getLcobounds().getType());
@@ -349,6 +345,9 @@ void mif::ImageIndexOp::build(mlir::OpBuilder &builder,
 llvm::LogicalResult mif::ImageIndexOp::verify() {
   if (getCoarray())
     return checkCorank(*this);
+  mlir::Type subTy = getSub().getType();
+  if (!fir::getFortranElementType(subTy).isInteger(64))
+    return emitOpError("sub should be a boxed array of I64 elements.");
   return mlir::success();
 }
 

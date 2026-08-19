@@ -274,13 +274,16 @@ private:
       if (AS)
         Type += std::to_string(*AS);
     } else if (T.consume_back("const")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "C";
     } else if (T.consume_back("volatile")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "D";
     } else if (T.consume_back("restrict")) {
-      ParseType(T);
+      if (!T.empty())
+        ParseType(T);
       Type += "R";
     } else if (T.consume_back("&")) {
       // References may have an address space qualifier immediately before them.

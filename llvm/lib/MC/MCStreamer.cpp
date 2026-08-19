@@ -413,7 +413,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
   if (LFIRewriter)
-    LFIRewriter->onLabel(Symbol);
+    LFIRewriter->onLabel(Symbol, *this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -742,6 +742,28 @@ void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, PACSym, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, Offset, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
@@ -1283,6 +1305,9 @@ void MCStreamer::finish(SMLoc EndLoc) {
     return;
   }
 
+  if (LFIRewriter)
+    LFIRewriter->finish(*this);
+
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
     TS->finish();
@@ -1527,6 +1552,20 @@ void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
+static void reportBundlingUnsupported(MCStreamer &S) {
+  S.getContext().reportError(
+      S.getStartTokLoc(),
+      "aligned bundling is not supported by this object file format");
+}
+void MCStreamer::emitBundleAlignMode(Align) {
+  reportBundlingUnsupported(*this);
+}
+void MCStreamer::emitBundleLock(bool, const MCSubtargetInfo &) {
+  reportBundlingUnsupported(*this);
+}
+void MCStreamer::emitBundleUnlock(const MCSubtargetInfo &) {
+  reportBundlingUnsupported(*this);
+}
 void MCStreamer::finishImpl() {}
 
 bool MCStreamer::popSection() {

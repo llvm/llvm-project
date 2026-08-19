@@ -94,9 +94,12 @@ private:
 
   /// Try to vectorize a list of operands.
   /// \param MaxVFOnly Vectorize only using maximal allowed register size.
+  /// \param StandaloneSeeds \p VL are the standalone seeds: the vector factor
+  /// is limited by a single register and the windows, overlapping with the
+  /// rejected ones, are not retried.
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
-                          bool MaxVFOnly = false);
+                          bool MaxVFOnly = false, bool StandaloneSeeds = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
@@ -110,6 +113,16 @@ private:
 
   /// Vectorize the store instructions collected in Stores.
   bool vectorizeStoreChains(slpvectorizer::BoUpSLP &R);
+
+  /// Try to vectorize the standalone seeds \p Seeds in the groups of the
+  /// compatible instructions, \p IsLessGroup orders the groups.
+  bool vectorizeSeeds(SmallVectorImpl<Value *> &Seeds,
+                      function_ref<bool(Value *, Value *)> IsLessGroup,
+                      slpvectorizer::BoUpSLP &R);
+
+  /// Try to vectorize the instructions with the single user in \p BB as the
+  /// standalone seeds.
+  bool vectorizeOnceUsedSeeds(BasicBlock *BB, slpvectorizer::BoUpSLP &R);
 
   /// Vectorize the index computations of the getelementptr instructions
   /// collected in GEPs.
@@ -171,11 +184,24 @@ private:
                                           unsigned Idx, unsigned MinVF,
                                           unsigned &Size);
 
+  /// Single vectorization attempt for a store chain. \p vectorizeStoreChain
+  /// wraps this to retry once with runtime alias checks enabled when the
+  /// normal attempt is blocked only by runtime-checkable may-alias
+  /// dependencies.
+  std::optional<bool> vectorizeStoreChainImpl(ArrayRef<Value *> Chain,
+                                              slpvectorizer::BoUpSLP &R,
+                                              unsigned Idx, unsigned MinVF,
+                                              unsigned &Size);
+
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
           &Visited,
       bool AllowMaskedStores = true);
+
+  /// Set by runImpl() when runtime alias check versioning changed the CFG, so
+  /// run() can drop CFG-analysis preservation only when necessary.
+  bool CFGChanged = false;
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;

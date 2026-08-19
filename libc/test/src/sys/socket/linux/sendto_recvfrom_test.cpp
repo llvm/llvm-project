@@ -12,12 +12,11 @@
 
 #include "src/unistd/close.h"
 
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
 #include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

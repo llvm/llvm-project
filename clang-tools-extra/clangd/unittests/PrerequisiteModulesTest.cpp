@@ -17,6 +17,7 @@
 #include "ModulesBuilder.h"
 #include "Preamble.h"
 #include "ProjectModules.h"
+#include "SemanticHighlighting.h"
 #include "TestTU.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -575,7 +576,8 @@ int use() { return a; }
 
   ModulesBuilder Builder(CDB);
 
-  auto UseInfo = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  auto UseInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
   ASSERT_TRUE(UseInfo);
 
   HeaderSearchOptions HSOpts;
@@ -1667,6 +1669,55 @@ void use() {}
 
   EXPECT_FALSE(isPreambleCompatible(*Preamble, Inputs,
                                     getFullPath("Consumer.cpp"), *NewCI));
+}
+
+TEST_F(PrerequisiteModulesTests, ModuleSemanticHighlighting) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  llvm::StringRef AnnotatedCode = R"cpp(
+      module;
+      $import[[import]] M;
+      export module highlight;
+      $export[[export]] void foo() {
+      }
+)cpp";
+  Annotations UseCpp(AnnotatedCode);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export struct TypeFromModule {};
+)cpp");
+
+  CDB.addFile("Use.cpp", UseCpp.code());
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Use.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Inputs, /*StoreInMemory=*/true,
+                    /*PeambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
+                              Preamble);
+
+  ASSERT_TRUE(AST);
+
+  auto Actual = getSemanticHighlightings(AST.value(),
+                                         /*IncludeInactiveRegionTokens=*/true);
+  auto HasToken = [&](llvm::StringRef Name, HighlightingKind Kind) {
+    return llvm::any_of(Actual, [&](const HighlightingToken &T) {
+      return T.Kind == Kind && T.R == UseCpp.range(Name);
+    });
+  };
+  EXPECT_TRUE(HasToken("import", HighlightingKind::Modifier));
+  EXPECT_TRUE(HasToken("export", HighlightingKind::Modifier));
 }
 
 } // namespace

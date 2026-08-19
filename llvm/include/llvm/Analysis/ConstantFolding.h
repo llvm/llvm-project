@@ -170,7 +170,9 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     bool AllowNonDeterministic = true);
 
 LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Constant *> Ops, Type *Ty);
+                                         ArrayRef<Constant *> Ops, Type *Ty,
+                                         const DataLayout &DL,
+                                         Function *CxtF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

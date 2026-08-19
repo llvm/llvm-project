@@ -45,8 +45,7 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[STARTVAL:%.*]], [[N_VEC]]
@@ -150,8 +149,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[ENTRY:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = sub i64 [[STARTVAL1:%.*]], [[N_VEC]]
@@ -280,8 +278,7 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1025, [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 4
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = sub i64 1024, [[N_VEC]]

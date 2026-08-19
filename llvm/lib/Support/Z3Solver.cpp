@@ -825,19 +825,11 @@ public:
       }
 
       // FIXME: This function is also used to retrieve floating-point values,
-      // which can be 16, 32, 64 or 128 bits long. Bitvectors can be anything
-      // between 1 and 64 bits long, which is the reason we have this weird
-      // guard. In the future, we need proper calls in the backend to retrieve
-      // floating-points and its special values (NaN, +/-infinity, +/-zero),
-      // then we can drop this weird condition.
-      if (Sort->getBitvectorSortSize() <= 64 ||
-          Sort->getBitvectorSortSize() == 128) {
-        Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
-        return true;
-      }
-
-      assert(false && "Bitwidth not supported!");
-      return false;
+      // which can be 16, 32, 64 or 128 bits long. In the future, we need proper
+      // calls in the backend to retrieve floating-points and its special values
+      // (NaN, +/-infinity, +/-zero).
+      Int = getBitvector(AST, Int.getBitWidth(), Int.isUnsigned());
+      return true;
     }
 
     if (Sort->isBooleanSort()) {

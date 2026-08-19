@@ -5,8 +5,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i7(
@@ -20,7 +19,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i7
@@ -68,8 +67,7 @@ for.end:
 }
 
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i3_zext(
@@ -83,7 +81,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i3

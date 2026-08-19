@@ -15,6 +15,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/BorrowedStackFrame.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -105,7 +106,7 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
-                       "Frame provider reached end at index {0}: {1}", idx);
+                       "Frame provider reached end at index {1}: {0}", idx);
         SetAllFramesFetched();
         break;
       }
@@ -637,6 +638,14 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       if (curr_frame->GetStackID() != prev_frame->GetStackID())
         break;
 
+      // Never adopt a frame borrowed from another StackFrameList, which only a
+      // provider's SyntheticStackFrameList hands out: it keeps reporting the
+      // index of the frame it borrows, and the update below cannot change
+      // that. Skipping it is safe because the merge only carries cached state
+      // onto a frame this list has already unwound correctly.
+      if (llvm::isa<BorrowedStackFrame>(prev_frame))
+        continue;
+
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
@@ -644,7 +653,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
-      s.Printf("\n    Copying previous frame to current frame");
+      s.PutCString("\n    Copying previous frame to current frame");
 #endif
     }
     // We are done with the old stack frame list, we can release it now.
@@ -762,7 +771,7 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
 
 static bool CompareStackID(const StackFrameSP &stack_sp,
                            const StackID &stack_id) {
-  return stack_sp->GetStackID() < stack_id;
+  return stack_sp->GetStackID().IsYoungerThan(stack_id);
 }
 
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
@@ -804,14 +813,12 @@ bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
 }
 
 void StackFrameList::SelectMostRelevantFrame() {
-  // Don't call into the frame recognizers on the private state thread as
-  // they can cause code to run in the target, and that can cause deadlocks
-  // when fetching stop events for the expression.
+  // Don't call into the frame recognizers while evaluating an expression on
+  // the private state thread, as they can cause code to run in the inferior
+  // process, and that can cause deadlocks when fetching stop events for the
+  // expression.
   Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return;
-
-  if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
+  if (!policy.capabilities.can_run_frame_recognizers)
     return;
 
   Log *log = GetLog(LLDBLog::Thread);

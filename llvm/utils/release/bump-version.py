@@ -188,6 +188,11 @@ if __name__ == "__main__":
             "llvm/utils/lit/lit/__init__.py",
             LitProcessor(args),
         ),
+        # IR2Vec Python Bindings configuration
+        (
+            "llvm/tools/llvm-ir2vec/Bindings/python/ir2vec/__init__.py",
+            LitProcessor(args),
+        ),
         # mlgo-utils configuration
         (
             "llvm/utils/mlgo-utils/mlgo/__init__.py",

@@ -364,6 +364,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeNameMatchStyle, "match-style", lldb::CompletionType::eNoCompletion, g_name_match_style, { nullptr, false }, "Specify the kind of match to use when looking up names." },
     { lldb::eArgTypePluginDomain, "plugin-domain", lldb::CompletionType::eNoCompletion, g_plugin_domain_values, { nullptr, false }, "The domain to apply the plugin operation to." },
     { lldb::eArgTypeBreakpointResolverMask, "resolver-mask", lldb::CompletionType::eNoCompletion, g_resolver_mask_values, { nullptr, false }, "Specify the breakpoint resolver type your override will handle. Can be specified more than once to specify a mask of resolver types." },
+    { lldb::eArgTypeScriptedExtension, "scripting-extension", lldb::CompletionType::eScriptedExtensionCompletion, {}, { nullptr, false }, "The name of a scripting extension." },
     // clang-format on
 };
 

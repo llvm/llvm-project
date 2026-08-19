@@ -77,17 +77,30 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   setTruncStoreAction(MVT::i32, MVT::i8, Expand);
   setTruncStoreAction(MVT::i16, MVT::i8, Expand);
 
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i8, Promote);
-  setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
-  if (Subtarget.atLeastM68020())
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, Legal);
-  else
-    setOperationAction({ISD::MUL, ISD::SDIV, ISD::UDIV}, MVT::i32, LibCall);
+  // M68k can't natively div/rem 8-bit values, but we define our own patterns
+  // that handle the integer promotion, so it's marked as legal here.
+  setOperationAction(ISD::MUL, MVT::i8, Promote);
+  setOperationAction(ISD::MUL, MVT::i16, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i8, Legal);
+  setOperationAction({ISD::SDIV, ISD::UDIV}, MVT::i16, Legal);
+
+  if (Subtarget.atLeastM68020()) {
+    setOperationAction(ISD::MUL, MVT::i32, Legal);
+    setOperationAction(ISD::SDIV, MVT::i32, Legal);
+    setOperationAction(ISD::UDIV, MVT::i32, Legal);
+  } else {
+    setOperationAction(ISD::MUL, MVT::i32, LibCall);
+    setOperationAction(ISD::SDIV, MVT::i32, LibCall);
+    setOperationAction(ISD::UDIV, MVT::i32, LibCall);
+  }
   setOperationAction(ISD::MUL, MVT::i64, LibCall);
 
-  for (auto OP :
-       {ISD::SREM, ISD::UREM, ISD::UDIVREM, ISD::SDIVREM,
-        ISD::MULHS, ISD::MULHU, ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i8, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i16, Legal);
+  setOperationAction({ISD::SREM, ISD::UREM}, MVT::i32, LibCall);
+
+  for (auto OP : {ISD::UDIVREM, ISD::SDIVREM, ISD::MULHS, ISD::MULHU,
+                  ISD::UMUL_LOHI, ISD::SMUL_LOHI}) {
     setOperationAction(OP, MVT::i8, Promote);
     setOperationAction(OP, MVT::i16, Legal);
     setOperationAction(OP, MVT::i32, LibCall);
@@ -99,7 +112,7 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
   }
 
   for (auto OP : {ISD::SMULO, ISD::UMULO}) {
-    setOperationAction(OP, MVT::i8,  Custom);
+    setOperationAction(OP, MVT::i8, Custom);
     setOperationAction(OP, MVT::i16, Custom);
     setOperationAction(OP, MVT::i32, Custom);
   }
@@ -134,8 +147,11 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
     setOperationAction(ISD::SETCCCARRY, VT, Custom);
   }
 
+  setOperationAction(ISD::BSWAP, MVT::i8, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i16, Expand);
+  setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+
   for (auto VT : {MVT::i8, MVT::i16, MVT::i32}) {
-    setOperationAction(ISD::BSWAP, VT, Expand);
     setOperationAction(ISD::CTTZ, VT, Expand);
     setOperationAction(ISD::CTLZ, VT, Expand);
     setOperationAction(ISD::CTPOP, VT, Expand);
@@ -198,12 +214,14 @@ M68kTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 Register
-M68kTargetLowering::getExceptionPointerRegister(const Constant *) const {
+M68kTargetLowering::getExceptionPointerRegister(ExceptionHandling EH,
+                                                const Constant *) const {
   return M68k::D0;
 }
 
 Register
-M68kTargetLowering::getExceptionSelectorRegister(const Constant *) const {
+M68kTargetLowering::getExceptionSelectorRegister(ExceptionHandling EH,
+                                                 const Constant *) const {
   return M68k::D1;
 }
 
@@ -230,6 +248,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "M68kGenCallingConv.inc"
 
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };
@@ -2188,7 +2207,7 @@ SDValue M68kTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   }
   if (Op0.getValueType() == MVT::i1 && (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     if (isOneConstant(Op1)) {
-      ISD::CondCode NewCC = ISD::GlobalISel::getSetCCInverse(CC, true);
+      ISD::CondCode NewCC = ISD::getSetCCInverse(CC, Op0.getValueType());
       return DAG.getSetCC(DL, VT, Op0, DAG.getConstant(0, DL, MVT::i1), NewCC);
     }
     if (!isNullConstant(Op1)) {

@@ -59,7 +59,6 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -72,7 +71,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -279,6 +277,8 @@ bool CodeGenAction::beginSourceFileAction() {
         makeOffloadModuleOpts(ci.getInvocation().getLangOpts()));
     mlir::omp::setOpenMPVersionAttribute(
         lb.getModule(), ci.getInvocation().getLangOpts().OpenMPVersion);
+    if (!ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
+      setOpenMPIntegerWrapAround(lb.getModule(), false);
   }
 
   if (ci.getInvocation().getLangOpts().FastRealMod) {
@@ -762,6 +762,10 @@ void CodeGenAction::generateLLVMIR() {
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenACC))
+    config.EnableOpenACC = true;
+
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
@@ -916,8 +920,8 @@ static void generateMachineCodeOrAssemblyImpl(
       llvm::driver::createTLII(triple, codeGenOpts.getVecLib());
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
   codeGenPasses.add(new llvm::RuntimeLibraryInfoWrapper(
-      triple, tm.Options.ExceptionModel, tm.Options.FloatABIType,
-      tm.Options.EABIVersion, tm.Options.MCOptions.ABIName, tm.Options.VecLib));
+      tm.Options.ExceptionModel, tm.Options.EABIVersion,
+      tm.Options.MCOptions.ABIName, tm.Options.VecLib));
 
   std::unique_ptr<llvm::ToolOutputFile> dwoOS;
   if (!codeGenOpts.SplitDwarfOutput.empty()) {
@@ -1036,8 +1040,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
-        triple, targetMachine->Options.ExceptionModel,
-        targetMachine->Options.FloatABIType, targetMachine->Options.EABIVersion,
+        targetMachine->Options.ExceptionModel,
+        targetMachine->Options.EABIVersion,
         targetMachine->Options.MCOptions.ABIName,
         targetMachine->Options.VecLib);
   });
@@ -1420,6 +1424,8 @@ void CodeGenAction::executeAction() {
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
   targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
+  targetMachine.Options.MCOptions.CompressDebugSections =
+      codeGenOpts.getCompressDebugSections();
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 

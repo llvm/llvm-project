@@ -2210,8 +2210,8 @@ bool RegisterContextUnwind::ReadFrameAddress(
       UNWIND_LOG(log, "CFA value set by DWARF expression is {0:x}", address);
       return true;
     }
-    UNWIND_LOG(log, "Failed to set CFA value via DWARF expression: {0}",
-               fmt_consume(result.takeError()));
+    LLDB_LOG_ERROR(log, result.takeError(),
+                   "Failed to set CFA value via DWARF expression: {0}");
     break;
   }
   case UnwindPlan::Row::FAValue::isRaSearch: {
@@ -2273,9 +2273,8 @@ lldb::addr_t RegisterContextUnwind::GetReturnAddressHint(int32_t plan_offset) {
                 *next->m_sym_ctx.symbol))
       hint += *expected_size;
     else {
-      UNWIND_LOG_VERBOSE(GetLog(LLDBLog::Unwind),
-                         "Could not retrieve parameter size: {0}",
-                         fmt_consume(expected_size.takeError()));
+      LLDB_LOG_ERRORV(GetLog(LLDBLog::Unwind), expected_size.takeError(),
+                      "Could not retrieve parameter size: {0}");
       return LLDB_INVALID_ADDRESS;
     }
   }

@@ -39,6 +39,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 
@@ -333,6 +334,10 @@ void SymbolFileDWARF::Terminate() {
 
 llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
   return "DWARF and DWARF3 debug symbol file reader.";
+}
+
+llvm::StringRef SymbolFileDWARF::GetDwoDiagnosticSuffix() {
+  return LLDB_DWO_DIAGNOSTIC_SUFFIX;
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
@@ -933,7 +938,8 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
         ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
     }
   } else {
-    LLDB_LOG_ERROR(log, die_ranges.takeError(), "DIE({1:x}): {0}", die.GetID());
+    LLDB_LOG_ERRORV(log, die_ranges.takeError(), "DIE({1:x}): {0}",
+                    die.GetID());
   }
   if (ranges.empty())
     return nullptr;
@@ -1917,13 +1923,14 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     }
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
-        "{1:x16}",
-        error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
+        "{1:x16}. {2}",
+        error_dwo_path.GetPath().c_str(), cu_die.GetOffset(),
+        GetDwoDiagnosticSuffix()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
-          "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded");
+          "unable to locate separate debug file (dwo, dwp). {0}",
+          GetDwoDiagnosticSuffix());
     }
     return nullptr;
   }
@@ -3368,8 +3375,8 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
         ParseBlocksRecursive(*comp_unit, &func.GetBlock(false),
                              function_die.GetFirstChild(), function_file_addr);
     } else {
-      LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                     "{1:x}: {0}", dwarf_cu->GetOffset());
+      LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                      "{1:x}: {0}", dwarf_cu->GetOffset());
     }
   }
 
@@ -3405,8 +3412,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         if (!ranges->empty())
           func_lo_pc = ranges->begin()->LowPC;
       } else {
-        LLDB_LOG_ERROR(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
-                       "DIE({1:x}): {0}", function_die.GetID());
+        LLDB_LOG_ERRORV(GetLog(DWARFLog::DebugInfo), ranges.takeError(),
+                        "DIE({1:x}): {0}", function_die.GetID());
       }
       if (func_lo_pc != LLDB_INVALID_ADDRESS) {
         const size_t num_variables =

@@ -401,14 +401,40 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
-static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
-    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
-  if (std::distance(Begin, End) != 1)
-    return false;
-  NamedDecl *ND = *Begin;
-  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
-    return TTP->isParameterPack();
-  return false;
+DependentTemplateIdExpr::DependentTemplateIdExpr(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
+           OK_Ordinary),
+      NameInfo(NameInfo), Name(Name) {
+  KWAndArgs.initializeFrom(/*TemplateKWLoc=*/{}, TemplateArgs,
+                           getTrailingObjects());
+  setDependence(computeDependence(this));
+}
+
+DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
+                                                 unsigned NumTemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Empty) {
+  KWAndArgs.NumTemplateArgs = NumTemplateArgs;
+}
+
+DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<TemplateArgumentLoc>(TemplateArgs.size()),
+      alignof(DependentTemplateIdExpr));
+  return new (Mem)
+      DependentTemplateIdExpr(Context, NameInfo, Name, TemplateArgs);
+}
+
+DependentTemplateIdExpr *
+DependentTemplateIdExpr::CreateEmpty(const ASTContext &Context,
+                                     unsigned NumTemplateArgs) {
+  void *Mem =
+      Context.Allocate(totalSizeToAlloc<TemplateArgumentLoc>(NumTemplateArgs),
+                       alignof(DependentTemplateIdExpr));
+  return new (Mem) DependentTemplateIdExpr(EmptyShell(), NumTemplateArgs);
 }
 
 // UnresolvedLookupExpr
@@ -419,11 +445,10 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(
-          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
-          NameInfo, TemplateArgs, Begin, End, KnownDependent,
-          KnownInstantiationDependent,
-          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
+    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
+                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
+                   KnownDependent, KnownInstantiationDependent,
+                   /*KnownContainsUnexpandedParameterPack=*/false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -1602,14 +1627,13 @@ CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {
-    NamedDecl *decl = *begin;
+    NamedDecl *decl = (*begin)->getUnderlyingDecl();
     if (isa<UnresolvedUsingValueDecl>(decl))
       return false;
 
     // Unresolved member expressions should only contain methods and
     // method templates.
-    if (cast<CXXMethodDecl>(decl->getUnderlyingDecl()->getAsFunction())
-            ->isStatic())
+    if (cast<CXXMethodDecl>(decl->getAsFunction())->isStatic())
       return false;
   } while (++begin != end);
 
@@ -2030,4 +2054,16 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionSelectExprClass, Empty) {}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(const ASTContext &C,
+                                               InitListExpr *Range, Expr *Idx)
+    : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary) {
+  setDependence(ExprDependence::TypeValueInstantiation);
+  SubExprs[RANGE] = Range;
+  SubExprs[INDEX] = Idx;
 }
