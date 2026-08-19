@@ -16,7 +16,7 @@ define void @outside_user_blocks_tail_folding(ptr nocapture readonly %ptr, i32 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[SIZE:%.*]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[SIZE]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[SIZE]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[SIZE]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i32 [[SIZE]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[N_VEC]]

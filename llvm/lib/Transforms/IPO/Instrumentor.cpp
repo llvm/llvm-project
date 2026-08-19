@@ -30,6 +30,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -43,12 +44,16 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/IPO/InstrumentorUtils.h"
+#include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
 #include <cassert>
 #include <cstdint>
@@ -189,6 +194,8 @@ public:
   }
 
 private:
+  void linkRuntime();
+
   /// Indicate if the module should be instrumented based on the target.
   bool shouldInstrumentTarget();
 
@@ -237,6 +244,68 @@ static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
     return RX;
   }
   return Regex();
+}
+
+void InstrumentorImpl::linkRuntime() {
+  const auto RuntimeBitcode = IConf.RuntimeBitcode->getString();
+  if (RuntimeBitcode.empty())
+    return;
+
+  SMDiagnostic Err;
+  auto RTM = parseIRFile(RuntimeBitcode, Err, M.getContext());
+  if (!RTM) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        Twine("Failed to parse runtime bitcode file '") + RuntimeBitcode +
+            Twine("':\n") + M.getName(),
+        DS_Error));
+    return;
+  }
+
+  auto InternalizeCallback = [&](Module &M, const StringSet<> &GVS) {
+    internalizeModule(M, [&GVS](const GlobalValue &GV) {
+      return !GV.hasName() || !GVS.count(GV.getName());
+    });
+  };
+
+  if (Linker::linkModules(M, std::move(RTM), 0, InternalizeCallback)) {
+    IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
+        "Failed to link in runtime bitcode", DS_Error));
+    return;
+  }
+
+  if (!IConf.InlineRuntimeEagerly->getBool())
+    return;
+
+  for (auto [I, _] : IIRB.NewInsts) {
+    auto *CI = dyn_cast<CallInst>(I);
+    if (!CI || isa<IntrinsicInst>(CI))
+      continue;
+
+    InlineFunctionInfo IFI;
+    auto InlineResult = InlineFunction(*CI, IFI);
+    if (!InlineResult.isSuccess()) {
+      std::string WarnMsg;
+      raw_string_ostream SS(WarnMsg);
+      SS << "Inlining of runtime call failed: "
+         << CI->getCalledFunction()->getName() << "\n";
+      SS << "Reason: " << InlineResult.getFailureReason() << "\n";
+      SS << "Signatures: " << *CI->getFunctionType() << " vs "
+         << *CI->getCalledFunction()->getFunctionType() << "\n";
+      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(WarnMsg, DS_Warning));
+    }
+  }
+
+  // Promote any eligible instrumentor-associated allocas to registers.
+  for (auto It : IIRB.AllocaMap) {
+    auto *Fn = It.first.first;
+    DominatorTree DT(*Fn);
+    auto &Allocas = *It.second;
+    erase_if(Allocas,
+             [](const AllocaInst *AI) { return !isAllocaPromotable(AI); });
+    PromoteMemToReg(Allocas, DT);
+    delete It.second;
+  }
+  IIRB.AllocaMap.clear();
 }
 
 bool InstrumentorImpl::shouldInstrumentTarget() {
@@ -466,6 +535,8 @@ bool InstrumentorImpl::instrument() {
 
   for (Function &Fn : M)
     Changed |= instrumentFunction(Fn);
+
+  linkRuntime();
 
   return Changed;
 }
@@ -886,7 +957,7 @@ static Value *createValuePack(const Range &R, InstrumentationConfig &IConf,
                             IConf.getRTName("", "value_pack"));
 
   auto *AI = IIRB.getAlloca(Fn, STy);
-  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, MaybeAlign(GV->getAlignment()),
+  IIRB.IRB.CreateMemCpy(AI, AI->getAlign(), GV, GV->getAlign(),
                         IIRB.DL.getTypeAllocSize(STy));
   for (auto [Param, Idx] : Values) {
     auto *Ptr = IIRB.IRB.CreateStructGEP(STy, AI, Idx);
@@ -1650,7 +1721,8 @@ Value *GlobalVarIO::getAlignment(Value &V, Type &Ty,
                                  InstrumentationConfig &IConf,
                                  InstrumentorIRBuilderTy &IIRB) {
   GlobalVariable &GV = cast<GlobalVariable>(V);
-  return getCI(&Ty, GV.getAlignment());
+  MaybeAlign Alignment = GV.getAlign();
+  return getCI(&Ty, Alignment ? Alignment->value() : 0);
 }
 Value *GlobalVarIO::getDeclaredSize(Value &V, Type &Ty,
                                     InstrumentationConfig &IConf,

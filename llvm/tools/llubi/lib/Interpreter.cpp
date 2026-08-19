@@ -2674,11 +2674,12 @@ public:
   }
 
   void visitPtrToInt(PtrToIntInst &I) {
-    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [this, BitWidth](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
       Ctx.exposeProvenance(V.asPointer().provenance());
-      return V.asPointer().address();
+      return V.asPointer().address().zextOrTrunc(BitWidth);
     });
   }
 

@@ -50,6 +50,14 @@ public:
                   const mlir::abi::FunctionClassification &fc,
                   mlir::OpBuilder &builder) override;
 
+  /// Retype \p addrOp, which holds the address of \p funcOp, to the signature
+  /// funcOp was rewritten to, and cast it back so existing uses keep the type
+  /// they were built for.  A no-op when the ABI left funcOp's type alone.
+  /// Call after funcOp has been rewritten.  Not an override, since taking a
+  /// function's address has no counterpart in the generic contract.
+  void rewriteFunctionAddress(cir::GetGlobalOp addrOp, cir::FuncOp funcOp,
+                              mlir::OpBuilder &builder);
+
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 
 private:

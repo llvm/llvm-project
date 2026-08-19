@@ -428,7 +428,7 @@ bool nullTestDataUnspecified(int Unspecified::*mp) {
 
 // Pass this large type indirectly.
 // X64-LABEL: define dso_local noundef zeroext i1 @"?nullTestDataUnspecified@@
-// X64:             (ptr noundef align 4 dead_on_return %0)
+// X64:             (ptr nofree noundef align 4 dead_on_return dereferenceable(12) %0)
 }
 
 bool nullTestFunctionUnspecified(void (Unspecified::*mp)()) {
@@ -590,7 +590,7 @@ bool unspecFuncMemptrEq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
 // CHECK: }
 
 // X64-LABEL: define dso_local noundef zeroext i1 @"?unspecFuncMemptrEq@@
-// X64:             (ptr noundef align 8 dead_on_return %0, ptr noundef align 8 dead_on_return %1)
+// X64:             (ptr nofree noundef align 8 dead_on_return dereferenceable(24) %0, ptr nofree noundef align 8 dead_on_return dereferenceable(24) %1)
 }
 
 bool unspecFuncMemptrNeq(void (Unspecified::*l)(), void (Unspecified::*r)()) {
@@ -635,7 +635,7 @@ bool unspecDataMemptrEq(int Unspecified::*l, int Unspecified::*r) {
 // CHECK: }
 
 // X64-LABEL: define dso_local noundef zeroext i1 @"?unspecDataMemptrEq@@
-// X64:             (ptr noundef align 4 dead_on_return %0, ptr noundef align 4 dead_on_return %1)
+// X64:             (ptr nofree noundef align 4 dead_on_return dereferenceable(12) %0, ptr nofree noundef align 4 dead_on_return dereferenceable(12) %1)
 }
 
 void (Multiple::*convertB2FuncToMultiple(void (B2::*mp)()))() {
