@@ -2671,6 +2671,12 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   assert(false && "not implemented yet");
 }
 
+void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
+  OS << Node->getNameInfo();
+  printTemplateArgumentList(OS, Node->template_arguments(), Policy,
+                            Node->getParameter()->getTemplateParameters());
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {

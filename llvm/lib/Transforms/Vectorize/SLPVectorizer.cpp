@@ -7802,6 +7802,7 @@ bool BoUpSLP::isProfitableToReorder() const {
        getRootNode().getOpcode() == Instruction::PHI ||
        (getRootNode().getVectorFactor() <= TinyVF &&
         (getRootNode().getOpcode() == Instruction::PtrToInt ||
+         getRootNode().getOpcode() == Instruction::PtrToAddr ||
          getRootNode().getOpcode() == Instruction::ICmp))) &&
       getRootNode().ReorderIndices.empty()) {
     // Check if the tree has only single store and single (unordered) load node,
@@ -10316,6 +10317,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
@@ -11378,6 +11380,7 @@ class InstructionsCompatibilityAnalysis {
     case Instruction::FPToSI:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::SIToFP:
     case Instruction::UIToFP:
@@ -13090,6 +13093,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     case Instruction::FPToSI:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::SIToFP:
     case Instruction::UIToFP:
@@ -17197,6 +17201,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::FPToSI:
   case Instruction::FPExt:
   case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
   case Instruction::IntToPtr:
   case Instruction::SIToFP:
   case Instruction::UIToFP:
@@ -23696,6 +23701,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::FPToSI:
     case Instruction::FPExt:
     case Instruction::PtrToInt:
+    case Instruction::PtrToAddr:
     case Instruction::IntToPtr:
     case Instruction::SIToFP:
     case Instruction::UIToFP:

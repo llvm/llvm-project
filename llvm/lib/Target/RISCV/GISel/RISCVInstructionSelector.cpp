@@ -357,12 +357,11 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
   if (!Root.isReg())
     return std::nullopt;
   Register RootReg = Root.getReg();
-  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
 
-  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
-      RootDef->getOperand(2).getImm() == Bits) {
-    return {
-        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  Register SrcReg;
+  if (mi_match(RootReg, *MRI,
+               m_GSExtInReg(m_Reg(SrcReg), m_SpecificImm(Bits)))) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SrcReg); }}};
   }
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();

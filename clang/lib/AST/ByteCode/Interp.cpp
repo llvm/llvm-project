@@ -575,7 +575,7 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                    uint32_t Offset) {
-  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t MinOffset = Ptr.block()->getMetadataSize();
   uint32_t PtrOffset = Ptr.getByteOffset();
 
   // We subtract Offset from PtrOffset. The result must be at least
