@@ -1013,6 +1013,14 @@ std::optional<HoverInfo> getHoverContents(const SelectionTree::Node *N,
 // Generates hover info for attributes.
 std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
   HoverInfo HI;
+  if (const auto *SA = llvm::dyn_cast<HLSLUnparsedSemanticAttr>(A)) {
+    std::string Name = A->getAttrName()->getName().str();
+    if (SA->getExplicitIndex())
+      Name += std::to_string(SA->getIndex());
+    HI.Name = Name;
+    HI.Definition = "[" + Name + "]";
+    return HI;
+  }
   HI.Name = A->getSpelling();
   if (A->hasScope())
     HI.LocalScope = A->getScopeName()->getName().str();
