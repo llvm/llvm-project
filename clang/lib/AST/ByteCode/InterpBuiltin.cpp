@@ -4697,33 +4697,33 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
   unsigned NumSrcElems = SrcVecPtr.getNumElems();
   unsigned NumDstElems = Dst.getNumElems();
 
+  if (NumSrcElems > NumDstElems)
+    return false;
+
   QualType ElemType = Dst.getFieldDesc()->getElemQualType();
   unsigned BitWidth = S.getASTContext().getIntWidth(ElemType);
   bool IsUnsigned = ElemType->isUnsignedIntegerType();
 
   PrimType ElemT = *S.getContext().classify(ElemType);
-  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-    for (unsigned I = 0; I != NumSrcElems; ++I) {
-      const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
-      llvm::APSInt IntResult(BitWidth, IsUnsigned);
+  for (unsigned I = 0; I != NumSrcElems; ++I) {
+    const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
+    llvm::APSInt IntResult(BitWidth, IsUnsigned);
 
-      bool IsExact = false;
-      // We only allow exact conversions so rounding mode does not matter for
-      // cvt* and cvtt* builtins
-      FloatElem.getAPFloat().convertToInteger(
-          IntResult, llvm::APFloat::rmTowardZero, &IsExact);
-      if (!IsExact)
-        return false;
-      Dst.elem<T>(I) = T::from(IntResult.getZExtValue());
-    }
+    bool IsExact = false;
+    // We only allow exact conversions so rounding mode does not matter for
+    // cvt* and cvtt* builtins
+    FloatElem.getAPFloat().convertToInteger(
+        IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+    if (!IsExact)
+      return false;
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { Dst.elem<T>(I) = T::from(IntResult.getZExtValue()); });
+  }
 
-    // Zero out remaining elements if the destination has more elements
-    // (e.g., cvtpd2dq converting 2 doubles(_m128d) to 2 ints stored in _m128i).
-    if (NumDstElems > NumSrcElems) {
-      for (unsigned I = NumSrcElems; I != NumDstElems; ++I)
-        Dst.elem<T>(I) = T::from(0);
-    }
-  });
+  // Zero out remaining elements if the destination has more elements
+  // (e.g., cvtpd2dq converting 2 doubles(_m128d) to 2 ints stored in _m128i).
+  for (unsigned I = NumSrcElems; I != NumDstElems; ++I)
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(I) = T::from(0); });
 
   Dst.initializeAllElements();
   return true;
