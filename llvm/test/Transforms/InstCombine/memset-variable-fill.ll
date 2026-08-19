@@ -4,6 +4,7 @@
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.memset.element.unordered.atomic.p0.i64(ptr nocapture writeonly, i8, i64, i32 immarg)
+declare void @llvm.experimental.memset.pattern.p0.i32.i64(ptr nocapture writeonly, i32, i64, i1 immarg)
 
 define void @variable_fill_len1(ptr %dst, i8 %value) {
 ; CHECK-LABEL: define void @variable_fill_len1(
@@ -12,16 +13,6 @@ define void @variable_fill_len1(ptr %dst, i8 %value) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 1, i1 false)
-  ret void
-}
-
-define void @variable_fill_len1_volatile(ptr %dst, i8 %value) {
-; CHECK-LABEL: define void @variable_fill_len1_volatile(
-; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[DST]], i8 [[VALUE]], i64 1, i1 true)
-; CHECK-NEXT:    ret void
-;
-  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 1, i1 true)
   ret void
 }
 
@@ -62,5 +53,15 @@ define void @variable_fill_len2(ptr %dst, i8 %value) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 2, i1 false)
+  ret void
+}
+
+define void @variable_pattern_fill_len1(ptr %dst, i32 %value) {
+; CHECK-LABEL: define void @variable_pattern_fill_len1(
+; CHECK-SAME: ptr [[DST:%.*]], i32 [[VALUE:%.*]]) {
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[DST]], i32 [[VALUE]], i64 1, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 %dst, i32 %value, i64 1, i1 false)
   ret void
 }

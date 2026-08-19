@@ -221,12 +221,6 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 }
 
 Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
-  ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
-  Value *Fill = MI->getValue();
-
-  if (MI->isVolatile())
-    return nullptr;
-
   const Align KnownAlignment =
       getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
   MaybeAlign MemSetAlign = MI->getDestAlign();
@@ -254,6 +248,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   }
 
   // Extract the length and validate the fill type.
+  ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
+  Value *Fill = MI->getValue();
   if (!LenC || !Fill->getType()->isIntegerTy(8))
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
@@ -2041,9 +2037,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // Apart from memset-to-store scalarization below no other transformations
-    // apply to volatile transfers.
-    if (MI->isVolatile() && !isa<AnyMemSetInst>(MI))
+    // No other transformations apply to volatile transfers.
+    if (MI->isVolatile())
       return nullptr;
 
     if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
@@ -2068,8 +2063,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     } else if (auto *MSI = dyn_cast<AnyMemSetInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemSet(MSI))
         return I;
-      if (MI->isVolatile())
-        return nullptr;
     }
 
     // If src/dest is null, this memory intrinsic must be a noop.
