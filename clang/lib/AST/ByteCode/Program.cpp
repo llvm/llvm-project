@@ -396,7 +396,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       HasPtrField =
           HasPtrField ||
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
-          (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
+          (Desc->isRecord() && Desc->getElemRecord()->hasPtrField());
     } else {
       Desc = allocateDescriptor(FD);
     }
