@@ -36,15 +36,13 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-UF2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 1024, [[TMP1]]
+; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-UF2:       [[VECTOR_PH]]:
 ; CHECK-UF2-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-UF2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP4]]
-; CHECK-UF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-UF2-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[TMP4]], i64 [[N_MOD_VF]]
-; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[TMP6]]
+; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-UF2-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-UF2:       [[VECTOR_BODY]]:
@@ -63,7 +61,8 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-UF2-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UF2-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK-UF2:       [[MIDDLE_BLOCK]]:
-; CHECK-UF2-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
+; CHECK-UF2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-UF2:       [[SCALAR_PH]]:
 ; CHECK-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-UF2-NEXT:    br label %[[LOOP:.*]]
@@ -76,7 +75,7 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-UF2-NEXT:    store i32 [[Y0]], ptr [[Q0]], align 4
 ; CHECK-UF2-NEXT:    [[NEXTI]] = add i64 [[I]], 1
 ; CHECK-UF2-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXTI]], 1024
-; CHECK-UF2-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
+; CHECK-UF2-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP]], {{!llvm.loop ![0-9]+}}
 ; CHECK-UF2:       [[EXIT]]:
 ; CHECK-UF2-NEXT:    ret void
 ;
@@ -1555,15 +1554,13 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-UF2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-UF2-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 2
-; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], [[TMP4]]
+; CHECK-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], [[TMP4]]
 ; CHECK-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-UF2:       [[VECTOR_PH]]:
 ; CHECK-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP3]], 1
 ; CHECK-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i32 [[TMP3]], 2
 ; CHECK-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], [[TMP6]]
-; CHECK-UF2-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
-; CHECK-UF2-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP6]], i32 [[N_MOD_VF]]
-; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP8]]
+; CHECK-UF2-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[C0]], i64 0
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-UF2-NEXT:    [[TMP9:%.*]] = shl i32 [[N_VEC]], 2
@@ -1601,7 +1598,8 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    [[TMP28:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-UF2-NEXT:    br i1 [[TMP28]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK-UF2:       [[MIDDLE_BLOCK]]:
-; CHECK-UF2-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-UF2-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
+; CHECK-UF2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-UF2:       [[SCALAR_PH]]:
 ; CHECK-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-UF2-NEXT:    br label %[[LOOP:.*]]
@@ -1624,7 +1622,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    store double [[RESULT]], ptr [[C]], align 8
 ; CHECK-UF2-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 4
 ; CHECK-UF2-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
-; CHECK-UF2-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]], {{!llvm.loop ![0-9]+}}
+; CHECK-UF2-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
 ; CHECK-UF2:       [[EXIT]]:
 ; CHECK-UF2-NEXT:    ret void
 ;

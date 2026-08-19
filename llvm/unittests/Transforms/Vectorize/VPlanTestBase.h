@@ -97,8 +97,8 @@ protected:
           /*AllowReordering=*/false);
     }
 
-    VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
     VPlanTransforms::addMiddleCheck(*Plan);
+    VPlanTransforms::handleEarlyExits(*Plan, Style, L, PSE, *DT, AC.get());
 
     if (CreateLoopRegions)
       VPlanTransforms::createLoopRegions(*Plan, {});

@@ -1266,9 +1266,23 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
                                        TheLoop, PSE, DT, AC, Style);
   }
 
+  auto EarlyExits = vputils::getEarlyExits(Plan, MiddleVPBB);
+  // There are no countable early exits.
+  if (EarlyExits.empty())
+    return true;
+
+  // A countable early exit requires a scalar epilogue. If the middle block
+  // still has a branch to the scalar preheader, force it to always be taken.
+  if (MiddleVPBB->getNumSuccessors() == 2) {
+    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+    assert(MiddleVPBB->getSuccessors()[1] == Plan.getScalarPreheader() &&
+           "second successor must be scalar preheader");
+    BranchOnCond->setOperand(0, Plan.getFalse());
+  }
+
   // Disconnect countable early exits from the loop, leaving it with a single
   // exit from the latch. Countable early exits are left for a scalar epilog.
-  for (auto [EarlyExitingVPBB, EB] : vputils::getEarlyExits(Plan, MiddleVPBB)) {
+  for (auto [EarlyExitingVPBB, EB] : EarlyExits) {
     // Remove phi operands for the early exiting block.
     for (VPRecipeBase &R : EB->phis())
       cast<VPIRPhi>(&R)->removeIncomingValueFor(EarlyExitingVPBB);
