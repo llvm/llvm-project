@@ -1019,14 +1019,12 @@ struct FunctionObjectSelector {
   std::string format() const;
 };
 
-inline bool operator==(const FunctionObjectSelector &LHS,
-                       const FunctionObjectSelector &RHS) {
+inline bool operator==(FunctionObjectSelector LHS, FunctionObjectSelector RHS) {
   return LHS.Const == RHS.Const && LHS.Volatile == RHS.Volatile &&
          LHS.Ref == RHS.Ref;
 }
 
-inline bool operator!=(const FunctionObjectSelector &LHS,
-                       const FunctionObjectSelector &RHS) {
+inline bool operator!=(FunctionObjectSelector LHS, FunctionObjectSelector RHS) {
   return !(LHS == RHS);
 }
 
@@ -1108,7 +1106,7 @@ inline std::string FunctionSelector::format() const {
 }
 
 struct FunctionTableSelectorKey {
-  std::optional<llvm::SmallVector<IdentifierID, 2>> Parameters;
+  std::optional<llvm::SmallVector<IdentifierID, 4>> Parameters;
   std::optional<FunctionObjectSelector> Object;
 };
 
@@ -1119,7 +1117,7 @@ struct FunctionTableSelectorKey {
 struct FunctionTableKey {
   uint32_t parentContextID;
   uint32_t nameID;
-  std::optional<llvm::SmallVector<IdentifierID, 2>> parameterTypeIDs;
+  std::optional<llvm::SmallVector<IdentifierID, 4>> parameterTypeIDs;
   std::optional<FunctionObjectSelector> objectSelector;
 
   FunctionTableKey() : parentContextID(-1), nameID(-1) {}
