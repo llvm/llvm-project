@@ -225,8 +225,9 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 /// Defs is a map of definitions at specific blocks. Returns the
 /// reconstructed value at VPBB. Use if the CFG has been modified such that a
 /// def no longer dominates all its uses.
-VPValue *reconstructSSA(DenseMap<VPBasicBlock *, VPValue *> Defs,
-                        VPBasicBlock *VPBB);
+LLVM_ABI_FOR_TEST VPValue *
+reconstructSSA(DenseMap<VPBasicBlock *, VPValue *> Defs, VPBasicBlock *VPBB);
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
