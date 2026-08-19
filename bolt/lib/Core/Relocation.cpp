@@ -896,7 +896,7 @@ bool Relocation::isTLS(uint32_t Type) {
 }
 
 bool Relocation::isInstructionReference(uint32_t Type) {
-  if (Arch != Triple::riscv64)
+  if (Arch != Triple::riscv64 && Arch != Triple::riscv32)
     return false;
 
   switch (Type) {

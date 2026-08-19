@@ -403,6 +403,34 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeSImm12Operand(MCInst &Inst, uint32_t Imm,
+                                        int64_t Address,
+                                        const MCDisassembler *Decoder) {
+  assert(isUInt<12>(Imm) && "Invalid immediate");
+  const int64_t Value = SignExtend64<12>(Imm);
+  // A register-relative immediate is not itself a branch target. Use a
+  // one-byte operand size to prevent MCExternalSymbolizer from guessing that
+  // an unsymbolized immediate is an absolute address; target symbolizers use
+  // the instruction relocation and do not depend on this operand size.
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Value, Address,
+                                         /*IsBranch=*/false,
+                                         /*Offset=*/0, /*OpSize=*/1,
+                                         /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(Value));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeUImm20Operand(MCInst &Inst, uint32_t Imm,
+                                        int64_t Address,
+                                        const MCDisassembler *Decoder) {
+  assert(isUInt<20>(Imm) && "Invalid immediate");
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Imm, Address, /*IsBranch=*/false,
+                                         /*Offset=*/0,
+                                         /*OpSize=*/1, /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N>
 static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
