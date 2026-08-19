@@ -434,6 +434,13 @@ public:
   /// ControllerAccessT is constructed with a reference to this Session as its
   /// first argument, followed by the given args, as required by the
   /// ControllerAccess base constructor.
+  ///
+  /// A Session may be attached at most once, and attach must not be called
+  /// after -- or concurrently with -- detach or shutdown: by the time a detach
+  /// has been requested it may be arbitrarily far along, so there is no point
+  /// at which a newly attached controller could be connected, or its
+  /// disconnection coherently reported. Violating this is a programming error,
+  /// checked by assertion.
   template <typename ControllerAccessT, typename... ArgTs>
   void attach(BootstrapInfo BI, ArgTs &&...Args) {
     doAttach(std::make_shared<ControllerAccessT>(*this,
@@ -455,6 +462,9 @@ public:
   ///
   /// ControllerAccessT::Create is passed a reference to this Session as its
   /// first argument, followed by the given args.
+  ///
+  /// The attach itself is subject to the same restrictions as
+  /// attach<ControllerAccessT>; the returned Error reports Create failure only.
   template <typename ControllerAccessT, typename... ArgTs>
   Error tryAttach(BootstrapInfo BI, ArgTs &&...Args) {
     auto CA = ControllerAccessT::Create(*this, std::forward<ArgTs>(Args)...);

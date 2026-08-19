@@ -76,10 +76,17 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    // Controller can only be attached from the start state if no
-    // other operation has been requested.
-    if (CurrentState != State::Start || TargetState != State::None)
-      return;
+    // A controller can only be attached from the start state, with no other
+    // operation requested: a Session is attached at most once, and attach must
+    // not be called after -- or concurrently with -- detach or shutdown. See
+    // the Session::attach contract.
+    //
+    // TODO: Settle on a policy for contract violations in release builds
+    // (probably abort) and apply it here. Without the assertions below a
+    // violating attach proceeds, clobbering TargetState and potentially
+    // regressing CurrentState from Detached back to Attached.
+    assert(CurrentState == State::Start && TargetState == State::None &&
+           "attach raced detach / shutdown, or Session already attached");
     assert(std::atomic_load(&this->CA) == nullptr &&
            "ControllerAccess object already attached?");
     std::atomic_store(&this->CA, CA);
@@ -160,9 +167,13 @@ void Session::detach(OnDetachFn OnDetach) {
       TmpCA = std::atomic_load(&this->CA);
     } else {
       assert(CurrentState == State::Start);
+      // A CA is only ever stored with TargetState raised to Attached, and
+      // TargetState is not lowered back to None until CurrentState reaches
+      // Attached, so reaching the Start state here implies no CA was attached.
+      assert(std::atomic_load(&this->CA) == nullptr &&
+             "Start state, but a ControllerAccess is attached?");
       // No controller was ever attached, so the disconnect trivially succeeds.
-      proceedToDetach(Lock, std::atomic_exchange(&this->CA, {}),
-                      Error::success());
+      proceedToDetach(Lock, nullptr, Error::success());
       return;
     }
   }
