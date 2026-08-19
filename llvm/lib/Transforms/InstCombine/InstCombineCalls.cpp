@@ -1853,22 +1853,19 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
       return nullptr;
   }
 
-  Value *NewBinop;
   if (A == C &&
       leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
-    NewBinop = Builder.CreateNoWrapBinOp(InnerOpcode, A, NewIntrinsic, HasNUW,
-                                         HasNSW);
-  } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
-                                                 TopLevelOpcode)) {
-    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
-    NewBinop = Builder.CreateNoWrapBinOp(InnerOpcode, NewIntrinsic, B, HasNUW,
-                                         HasNSW);
-  } else {
-    return nullptr;
+    return Builder.CreateNoWrapBinOp(InnerOpcode, A, NewIntrinsic, HasNUW,
+                                     HasNSW);
   }
-
-  return NewBinop;
+  if (B == D &&
+      rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
+    Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
+    return Builder.CreateNoWrapBinOp(InnerOpcode, NewIntrinsic, B, HasNUW,
+                                     HasNSW);
+  }
+  return nullptr;
 }
 
 static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
