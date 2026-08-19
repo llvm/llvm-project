@@ -313,6 +313,32 @@ define i32 @load_tls_agnostic_za() nounwind "aarch64_za_state_agnostic" {
 ; CHECK-NEXT:    mov sp, x29
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: load_tls_agnostic_za:
+; CHECK-DARWIN:       ; %bb.0: ; %entry
+; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:    mov x29, sp
+; CHECK-DARWIN-NEXT:    bl ___arm_sme_state_size
+; CHECK-DARWIN-NEXT:    sub sp, sp, x0
+; CHECK-DARWIN-NEXT:  Lloh8:
+; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
+; CHECK-DARWIN-NEXT:    mov x8, sp
+; CHECK-DARWIN-NEXT:  Lloh9:
+; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
+; CHECK-DARWIN-NEXT:    mov x9, x0
+; CHECK-DARWIN-NEXT:    ldr x10, [x0]
+; CHECK-DARWIN-NEXT:    mov x0, x8
+; CHECK-DARWIN-NEXT:    bl ___arm_sme_save
+; CHECK-DARWIN-NEXT:    mov x0, x9
+; CHECK-DARWIN-NEXT:    blr x10
+; CHECK-DARWIN-NEXT:    ldr w9, [x0]
+; CHECK-DARWIN-NEXT:    mov x0, x8
+; CHECK-DARWIN-NEXT:    bl ___arm_sme_restore
+; CHECK-DARWIN-NEXT:    mov w0, w9
+; CHECK-DARWIN-NEXT:    mov sp, x29
+; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    ret
+; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh8, Lloh9
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
   %1 = load i32, ptr %0, align 4
@@ -339,6 +365,27 @@ define i32 @load_tls_shared_zt0() nounwind "aarch64_inout_zt0" {
 ; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
+;
+; CHECK-DARWIN-LABEL: load_tls_shared_zt0:
+; CHECK-DARWIN:       ; %bb.0: ; %entry
+; CHECK-DARWIN-NEXT:    sub sp, sp, #80
+; CHECK-DARWIN-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
+; CHECK-DARWIN-NEXT:  Lloh10:
+; CHECK-DARWIN-NEXT:    adrp x0, _x@TLVPPAGE
+; CHECK-DARWIN-NEXT:    mov x9, sp
+; CHECK-DARWIN-NEXT:  Lloh11:
+; CHECK-DARWIN-NEXT:    ldr x0, [x0, _x@TLVPPAGEOFF]
+; CHECK-DARWIN-NEXT:    str zt0, [x9]
+; CHECK-DARWIN-NEXT:    ldr x8, [x0]
+; CHECK-DARWIN-NEXT:    smstop za
+; CHECK-DARWIN-NEXT:    blr x8
+; CHECK-DARWIN-NEXT:    ldr w0, [x0]
+; CHECK-DARWIN-NEXT:    smstart za
+; CHECK-DARWIN-NEXT:    ldr zt0, [x9]
+; CHECK-DARWIN-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
+; CHECK-DARWIN-NEXT:    add sp, sp, #80
+; CHECK-DARWIN-NEXT:    ret
+; CHECK-DARWIN-NEXT:    .loh AdrpLdr Lloh10, Lloh11
 entry:
   %0 = tail call align 4 ptr @llvm.threadlocal.address.p0(ptr align 4 @x)
   %1 = load i32, ptr %0, align 4

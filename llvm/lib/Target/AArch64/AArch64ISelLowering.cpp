@@ -11521,9 +11521,8 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   Ops.push_back(Chain.getValue(1));
   Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
 
-  if (TLSCallAttrs.requiresLazySave())
-    Chain = DAG.getNode(AArch64ISD::REQUIRES_ZA_SAVE, DL,
-                        DAG.getVTList(MVT::Other, MVT::Glue),
+  if (std::optional<unsigned> ZAMarkerNode = getZAMarkerForCall(TLSCallAttrs))
+    Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other, MVT::Glue),
                         {Chain, Chain.getValue(1)});
 
   if (RequiresSMChange)
