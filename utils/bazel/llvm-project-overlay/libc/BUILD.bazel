@@ -1475,8 +1475,10 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_os",
         ":__support_osutil_exit_hdrs",
-        ":__support_osutil_io",
-    ],
+    ] + select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": [":__support_osutil_io"],
+    }),
 )
 
 libc_support_library(
