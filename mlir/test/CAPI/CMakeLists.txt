@@ -110,6 +110,7 @@ _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
+    MLIRCAPIInterfaces
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
 )

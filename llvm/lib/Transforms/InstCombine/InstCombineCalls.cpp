@@ -2482,6 +2482,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::scmp: {
     Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
+
+    // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
+    if (match(I1, m_Zero())) {
+      ConstantRange Range = computeConstantRange(I0, /*ForSigned=*/true,
+                                                 SQ.getWithInstruction(II));
+      if (Range.getSignedMin().sge(-1) && Range.getSignedMax().sle(1))
+        return replaceInstUsesWith(
+            CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
+    }
     Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(

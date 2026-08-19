@@ -144,7 +144,7 @@ bool M68kPassConfig::addInstSelector() {
 }
 
 bool M68kPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslatorLegacy());
   return false;
 }
 

@@ -82,6 +82,9 @@ protected:
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
+
+  /// Apply rules for classifying return types that are common to all targets.
+  LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);

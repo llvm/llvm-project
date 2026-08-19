@@ -53,7 +53,7 @@ protected:
                         llvm::ArrayRef<mlir::Type> members,
                         llvm::ArrayRef<RecordMemberKind> kinds) {
     auto ty = StructType::get(&context, getName(name), /*is_class=*/false);
-    ty.complete(members, /*packed=*/false, /*isPadded=*/false, kinds);
+    ty.complete(members, /*packed=*/false, kinds);
     return ty;
   }
 };
@@ -75,6 +75,42 @@ TEST_F(RecordMemberKindTest, EmptyForTheABIWhenNoMemberHoldsData) {
                    .isEmptyForABI());
 }
 
+TEST_F(RecordMemberKindTest, PaddedFollowsThePadKinds) {
+  IntType u8 = getU8();
+  EXPECT_FALSE(makeStruct("d", {u8}, {RecordMemberKind::Data}).getPadded());
+  EXPECT_FALSE(makeStruct("e", {u8}, {RecordMemberKind::Empty}).getPadded());
+  EXPECT_TRUE(makeStruct("p", {u8}, {RecordMemberKind::Pad}).getPadded());
+  // Interior padding counts too, not just a trailing run.
+  EXPECT_TRUE(makeStruct("dpd", {u8, u8, u8},
+                         {RecordMemberKind::Data, RecordMemberKind::Pad,
+                          RecordMemberKind::Data})
+                  .getPadded());
+  // An incomplete struct has no members to read a kind from.
+  EXPECT_FALSE(StructType::get(&context, getName("inc"), /*is_class=*/false)
+                   .getPadded());
+}
+
+TEST_F(RecordMemberKindTest, AUnionsPaddingComesFromItsPaddingSlot) {
+  IntType u8 = getU8();
+  llvm::SmallVector<mlir::Type> members{u8};
+  llvm::SmallVector<RecordMemberKind> empty{RecordMemberKind::Empty};
+  llvm::ArrayRef<mlir::Type> membersRef(members);
+
+  EXPECT_FALSE(UnionType::get(&context, membersRef, getName("ub"),
+                              /*packed=*/false, /*padding=*/mlir::Type{},
+                              RecordType::getAllDataKinds(membersRef))
+                   .getPadded());
+  EXPECT_TRUE(UnionType::get(&context, membersRef, getName("up"),
+                             /*packed=*/false, /*padding=*/u8,
+                             RecordType::getAllDataKinds(membersRef))
+                  .getPadded());
+  // An empty kind on a member is not padding.
+  EXPECT_FALSE(UnionType::get(&context, membersRef, getName("ue"),
+                              /*packed=*/false, /*padding=*/mlir::Type{},
+                              llvm::ArrayRef<RecordMemberKind>(empty))
+                   .getPadded());
+}
+
 TEST_F(RecordMemberKindTest, RejectsAKindListThatDoesNotNameEveryMember) {
   // The assembly syntax cannot express either of these, since it builds one
   // kind per member, but a C++ caller can.
@@ -85,15 +121,14 @@ TEST_F(RecordMemberKindTest, RejectsAKindListThatDoesNotNameEveryMember) {
   llvm::ArrayRef<mlir::Type> membersRef(members);
   llvm::ArrayRef<RecordMemberKind> kindsRef(tooFew);
   EXPECT_FALSE(StructType::getChecked(getLoc(), &context, membersRef,
-                                      /*packed=*/false, /*padded=*/false,
-                                      /*is_class=*/false, kindsRef));
+                                      /*packed=*/false, /*is_class=*/false,
+                                      kindsRef));
   EXPECT_EQ(diags.count, 1u);
   EXPECT_EQ(diags.lastMessage, "expected 2 member kinds, got 1");
 
   // An omitted list is not shorthand for all-data.
   EXPECT_FALSE(StructType::getChecked(getLoc(), &context, membersRef,
-                                      /*packed=*/false, /*padded=*/false,
-                                      /*is_class=*/false,
+                                      /*packed=*/false, /*is_class=*/false,
                                       llvm::ArrayRef<RecordMemberKind>{}));
   EXPECT_EQ(diags.count, 2u);
   EXPECT_EQ(diags.lastMessage, "expected 2 member kinds, got 0");
@@ -146,12 +181,12 @@ TEST_F(RecordMemberKindTest, AUnionsTailPaddingSlotIsNotAMember) {
 
 TEST_F(RecordMemberKindTest, KindsTakePartInAnonymousTypeIdentity) {
   IntType u8 = getU8();
-  auto kindsPad = StructType::get(
-      &context, {u8, u8}, /*packed=*/false, /*padded=*/false,
-      /*is_class=*/false, {RecordMemberKind::Data, RecordMemberKind::Pad});
-  auto kindsEmpty = StructType::get(
-      &context, {u8, u8}, /*packed=*/false, /*padded=*/false,
-      /*is_class=*/false, {RecordMemberKind::Data, RecordMemberKind::Empty});
+  auto kindsPad =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::Data, RecordMemberKind::Pad});
+  auto kindsEmpty =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::Data, RecordMemberKind::Empty});
   EXPECT_NE(kindsPad, kindsEmpty);
 
   // Kinds are provenance rather than layout.

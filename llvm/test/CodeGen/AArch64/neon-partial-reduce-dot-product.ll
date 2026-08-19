@@ -1592,22 +1592,15 @@ entry:
 define <4 x i32> @partial_reduce_zext_cmp_i8tov4i32(<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NODOT-LABEL: partial_reduce_zext_cmp_i8tov4i32:
 ; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    movi v3.16b, #1
 ; CHECK-NODOT-NEXT:    cmeq v1.16b, v1.16b, v2.16b
-; CHECK-NODOT-NEXT:    movi v3.4s, #1
-; CHECK-NODOT-NEXT:    ushll2 v2.8h, v1.16b, #0
-; CHECK-NODOT-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    ushll v4.4s, v2.4h, #0
-; CHECK-NODOT-NEXT:    ushll2 v5.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NODOT-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-NODOT-NEXT:    and v4.16b, v4.16b, v3.16b
-; CHECK-NODOT-NEXT:    and v5.16b, v5.16b, v3.16b
 ; CHECK-NODOT-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-NODOT-NEXT:    and v2.16b, v2.16b, v3.16b
-; CHECK-NODOT-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NODOT-NEXT:    add v1.4s, v5.4s, v4.4s
-; CHECK-NODOT-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NODOT-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v2.4h
+; CHECK-NODOT-NEXT:    uaddw2 v0.4s, v0.4s, v2.8h
+; CHECK-NODOT-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NODOT-NEXT:    uaddw2 v0.4s, v0.4s, v1.8h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: partial_reduce_zext_cmp_i8tov4i32:
@@ -1665,39 +1658,23 @@ define <4 x i32> @partial_reduce_sext_cmp_i8tov4i32(<4 x i32> %acc, <16 x i8> %a
 define <2 x i64> @partial_reduce_zext_cmp_i8tov2i64(<2 x i64> %acc, <16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NODOT-LABEL: partial_reduce_zext_cmp_i8tov2i64:
 ; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    movi v3.16b, #1
 ; CHECK-NODOT-NEXT:    cmeq v1.16b, v1.16b, v2.16b
-; CHECK-NODOT-NEXT:    mov w8, #1 // =0x1
-; CHECK-NODOT-NEXT:    dup v5.2d, x8
-; CHECK-NODOT-NEXT:    ushll2 v2.8h, v1.16b, #0
-; CHECK-NODOT-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
 ; CHECK-NODOT-NEXT:    ushll v3.4s, v2.4h, #0
-; CHECK-NODOT-NEXT:    ushll2 v4.4s, v1.8h, #0
-; CHECK-NODOT-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-NODOT-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-NODOT-NEXT:    ushll v6.2d, v3.2s, #0
-; CHECK-NODOT-NEXT:    ushll2 v7.2d, v4.4s, #0
-; CHECK-NODOT-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-NODOT-NEXT:    ushll2 v16.2d, v1.4s, #0
-; CHECK-NODOT-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NODOT-NEXT:    ushll2 v3.2d, v3.4s, #0
-; CHECK-NODOT-NEXT:    ushll2 v17.2d, v2.4s, #0
-; CHECK-NODOT-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-NODOT-NEXT:    and v6.16b, v6.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v7.16b, v7.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v4.16b, v4.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v16.16b, v16.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v1.16b, v1.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v3.16b, v3.16b, v5.16b
-; CHECK-NODOT-NEXT:    and v2.16b, v2.16b, v5.16b
-; CHECK-NODOT-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-NODOT-NEXT:    add v1.2d, v16.2d, v4.2d
-; CHECK-NODOT-NEXT:    add v4.2d, v7.2d, v6.2d
-; CHECK-NODOT-NEXT:    and v6.16b, v17.16b, v5.16b
-; CHECK-NODOT-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-NODOT-NEXT:    add v1.2d, v4.2d, v3.2d
-; CHECK-NODOT-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-NODOT-NEXT:    add v1.2d, v2.2d, v6.2d
-; CHECK-NODOT-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v3.2s
+; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NODOT-NEXT:    ushll v3.4s, v1.4h, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v2.2s
+; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v2.4s
+; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v3.2s
+; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v3.4s
+; CHECK-NODOT-NEXT:    uaddw v0.2d, v0.2d, v1.2s
+; CHECK-NODOT-NEXT:    uaddw2 v0.2d, v0.2d, v1.4s
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: partial_reduce_zext_cmp_i8tov2i64:
@@ -1771,15 +1748,10 @@ define <2 x i64> @partial_reduce_sext_cmp_i8tov2i64(<2 x i64> %acc, <16 x i8> %a
 define <2 x i64> @partial_reduce_zext_cmp_i32tov2i64(<2 x i64> %acc, <4 x i32> %a, <4 x i32> %b) {
 ; CHECK-COMMON-LABEL: partial_reduce_zext_cmp_i32tov2i64:
 ; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v3.4s, #1
 ; CHECK-COMMON-NEXT:    cmeq v1.4s, v1.4s, v2.4s
-; CHECK-COMMON-NEXT:    mov w8, #1 // =0x1
-; CHECK-COMMON-NEXT:    dup v2.2d, x8
-; CHECK-COMMON-NEXT:    ushll v3.2d, v1.2s, #0
-; CHECK-COMMON-NEXT:    ushll2 v1.2d, v1.4s, #0
-; CHECK-COMMON-NEXT:    and v3.16b, v3.16b, v2.16b
-; CHECK-COMMON-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-COMMON-NEXT:    add v0.2d, v0.2d, v3.2d
-; CHECK-COMMON-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-COMMON-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-COMMON-NEXT:    uadalp v0.2d, v1.4s
 ; CHECK-COMMON-NEXT:    ret
   %cmp = icmp eq <4 x i32> %a, %b
   %ext = zext <4 x i1> %cmp to <4 x i64>
