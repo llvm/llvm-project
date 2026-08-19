@@ -435,8 +435,8 @@ constexpr void test_ctr_choice_order() {
 
     case_4.operator()<InserterChoice::Insert, false>();
     case_4.operator()<InserterChoice::Insert, true>();
-    case_4.operator()<InserterChoice::Emplace, false>();
-    case_4.operator()<InserterChoice::Emplace, true>();
+    case_4.operator()<InserterChoice::EmplaceHint, false>();
+    case_4.operator()<InserterChoice::EmplaceHint, true>();
     case_4.operator()<InserterChoice::PushBack, false>();
     case_4.operator()<InserterChoice::PushBack, true>();
     case_4.operator()<InserterChoice::EmplaceBack, false>();
@@ -494,6 +494,57 @@ constexpr void test_lwg_3785() {
     using C = NotARange<CtrChoice::DefaultCtrAndInsert>;
     [[maybe_unused]] std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
   }
+}
+
+// A container that spells the hinted insert as the unhinted `emplace`. Before LWG 4121,
+// `ranges::to` probed for `c.emplace(c.end(), *it)` and would call this, passing the end iterator
+// as the first constructor argument. Associative containers spell the hinted form `emplace_hint`,
+// so this overload must no longer be selected and appending has to fall through to `insert`.
+struct EmplaceOrInsert {
+  using value_type = int;
+
+  static constexpr int Capacity = 8;
+  int buffer_[Capacity]         = {};
+  int size_                     = 0;
+  bool called_emplace           = false;
+  bool called_insert            = false;
+
+  constexpr int* begin() { return buffer_; }
+  constexpr int* end() { return buffer_ + size_; }
+  constexpr int size() const { return size_; }
+
+  constexpr int* emplace(int* where, int val) {
+    called_emplace = true;
+    return __insert_impl(where, val);
+  }
+
+  constexpr int* insert(int* where, int val) {
+    called_insert = true;
+    return __insert_impl(where, val);
+  }
+
+  constexpr int* __insert_impl(int* where, int val) {
+    assert(size() + 1 <= Capacity);
+    std::shift_right(where, end(), 1);
+    *where = val;
+    ++size_;
+    return where;
+  }
+};
+
+constexpr void test_lwg_4121() {
+  // Test LWG 4121 ("`ranges::to` constructs associative containers via `c.emplace(c.end(), *it)`").
+  // `emplace` on an associative container forwards every argument to the element constructor rather
+  // than treating the first as a position hint, so the hinted form must be spelled `emplace_hint`.
+  // A container offering only the unhinted `emplace` has to be appended to via `insert`.
+  std::array in = {1, 2, 3};
+
+  std::same_as<EmplaceOrInsert> decltype(auto) result = std::ranges::to<EmplaceOrInsert>(in);
+
+  assert(!result.called_emplace);
+  assert(result.called_insert);
+  assert(result.size() == 3);
+  assert(std::ranges::equal(result, in));
 }
 
 constexpr void test_recursive() {
@@ -554,6 +605,7 @@ constexpr bool test() {
   test_constraints();
   test_ctr_choice_order();
   test_lwg_3785();
+  test_lwg_4121();
   test_recursive();
 
   return true;
