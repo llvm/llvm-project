@@ -25,6 +25,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/SmallBitVector.h"
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect Helpers
@@ -133,6 +134,16 @@ OpFoldResult getMixedSize(OpBuilder &builder, Location loc, Value value,
 /// Return the dimensions of the given tensor value.
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
                                         Value value);
+
+/// Infer a slice type with an exact rank-reduction pattern. The source tensor
+/// type provides the element type and encoding; its rank may differ from the
+/// number of sizes when dimensions are dropped.
+RankedTensorType inferSliceType(RankedTensorType sourceTensorType,
+                                ArrayRef<int64_t> staticSizes,
+                                const llvm::SmallBitVector &droppedDims);
+RankedTensorType inferSliceType(RankedTensorType sourceTensorType,
+                                ArrayRef<OpFoldResult> sizes,
+                                const llvm::SmallBitVector &droppedDims);
 
 /// Create a rank-reducing ExtractSliceOp @[0 .. 0] with strides [1 .. 1] and
 /// appropriate sizes (i.e. `tensor.getSizes()`) to reduce the rank of `tensor`
