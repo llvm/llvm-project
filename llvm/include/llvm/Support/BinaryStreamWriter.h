@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMWRITER_H
 #define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
