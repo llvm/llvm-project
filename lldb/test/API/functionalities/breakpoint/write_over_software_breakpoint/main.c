@@ -16,10 +16,15 @@ int foo() {
   // assuming that this function will have no prologue instructions or breaking
   // in the very first instruction of foo and hoping whatever comes before is
   // not important.
-  asm volatile(".globl place_break_here\n"
-               "place_break_here:\n"
-               // The test will repeatedly add and remove a breakpoint here.
-               "nop");
+  asm volatile(
+#ifdef _WIN32
+      ".def place_break_here; .scl 2; .type 32; .endef;\n"
+#else
+      ".globl place_break_here\n"
+#endif
+      "place_break_here:\n"
+      // The test will repeatedly add and remove a breakpoint here.
+      "nop");
 
   return 0;
 }
