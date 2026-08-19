@@ -1254,6 +1254,31 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
   return Intrinsic::not_intrinsic;
 }
 
+static Intrinsic::ID
+shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
+  if (!Name.consume_front("tcgen05.commit."))
+    return Intrinsic::not_intrinsic;
+
+  if (Name.consume_front("shared."))
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_cg2)
+        .Default(Intrinsic::not_intrinsic);
+
+  if (Name.consume_front("mc.shared.")) {
+    // Only upgrade older i16 mc variants.
+    if (!F->getArg(1)->getType()->isIntegerTy(16))
+      return Intrinsic::not_intrinsic;
+
+    return StringSwitch<Intrinsic::ID>(Name)
+        .Case("cg1", Intrinsic::nvvm_tcgen05_commit_mc_cg1)
+        .Case("cg2", Intrinsic::nvvm_tcgen05_commit_mc_cg2)
+        .Default(Intrinsic::not_intrinsic);
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1318,6 +1343,18 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
         .Default(Intrinsic::not_intrinsic);
 
   return Intrinsic::not_intrinsic;
+}
+
+static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
+                                                           StringRef Name) {
+  if (!Name.consume_front("tcgen05.mma."))
+    return Intrinsic::not_intrinsic;
+
+  // tcgen05.mma.ws.* variants do not need collector-b appended.
+  if (Name.starts_with("ws"))
+    return Intrinsic::not_intrinsic;
+
+  return F->getIntrinsicID();
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -1764,12 +1801,29 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      // Upgrade tcgen05.commit shared variants to anyptr intrinsics.
+      IID = shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), IID, F->getReturnType(),
+            F->getFunctionType()->params());
+        return true;
+      }
+
       // Upgrade TMA copy G2S Intrinsics
       IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
+      }
+
+      // Upgrade tcgen05.mma intrinsics missing collector_usage_b.
+      IID = shouldUpgradeNVPTXTcgen05MMAIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return NewFn != F;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -5680,6 +5734,75 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
+  case Intrinsic::nvvm_tcgen05_mma_shared:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_shared_scale_d_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_disable_output_lane_cg2_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block16:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf4nvf4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg1_ashift:
+  case Intrinsic::nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_scale_d_disable_output_lane_cg2_ashift: {
+    SmallVector<Value *, 12> Args(CI->args());
+    Args.push_back(Builder.getInt32(0)); // collector_usage_b = discard(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
@@ -7074,37 +7197,22 @@ void llvm::copyModuleAttrToFunctions(Module &M) {
   }
 }
 
-// Old two-operand form: !{!"llvm.loop.distribute.enable", i1 X}. The new
-// single-operand form uses "llvm.loop.distribute.enable" for X = true and
-// "llvm.loop.distribute.disable" for X = false.
-static bool isOldDistributeEnable(const MDTuple *T) {
-  if (T->getNumOperands() != 2)
-    return false;
+/// Return the replacement tags if \p T still uses a removed two-operand form.
+static const BooleanLoopTags *getOldBooleanLoopTags(const MDTuple *T) {
+  if (T->getNumOperands() != 2 || !mdconst::hasa<ConstantInt>(T->getOperand(1)))
+    return nullptr;
   auto *Tag = dyn_cast_or_null<MDString>(T->getOperand(0));
-  if (!Tag || Tag->getString() != "llvm.loop.distribute.enable")
-    return false;
-  return mdconst::hasa<ConstantInt>(T->getOperand(1));
+  return Tag ? findBooleanLoopTags(Tag->getString()) : nullptr;
 }
 
-/// Old two-operand form: !{!"llvm.loop.vectorize.enable", i1 X}. The new
-/// single-operand form uses "llvm.loop.vectorize.enable" for X = true and
-/// "llvm.loop.vectorize.disable" for X = false.
-static bool isOldVectorizeEnable(const MDTuple *T) {
-  if (T->getNumOperands() != 2)
-    return false;
-  auto *Tag = dyn_cast_or_null<MDString>(T->getOperand(0));
-  if (!Tag || Tag->getString() != "llvm.loop.vectorize.enable")
-    return false;
-  return mdconst::hasa<ConstantInt>(T->getOperand(1));
-}
-
-/// Build the single-operand vectorize enable/disable node that replaces a
-/// boolean operand: nonzero -> enable, zero -> disable.
-static Metadata *makeVectorizeEnableNode(LLVMContext &C, const MDOperand &Op) {
+/// Build the single-operand node that replaces a boolean operand: nonzero
+/// selects the enable tag, zero the disable tag.
+static Metadata *makeBooleanLoopNode(LLVMContext &C,
+                                     const BooleanLoopTags &Tags,
+                                     const MDOperand &Op) {
   bool Enable = !mdconst::extract<ConstantInt>(Op)->isZero();
-  return MDTuple::get(
-      C, {MDString::get(C, Enable ? "llvm.loop.vectorize.enable"
-                                  : "llvm.loop.vectorize.disable")});
+  return MDTuple::get(C,
+                      {MDString::get(C, Enable ? Tags.Enable : Tags.Disable)});
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
@@ -7118,7 +7226,7 @@ static bool isOldLoopArgument(Metadata *MD) {
     return false;
   if (S->getString().starts_with("llvm.vectorizer."))
     return true;
-  return isOldDistributeEnable(T) || isOldVectorizeEnable(T);
+  return getOldBooleanLoopTags(T) != nullptr;
 }
 
 static MDString *upgradeLoopTag(LLVMContext &C, StringRef OldTag) {
@@ -7145,18 +7253,9 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
 
   LLVMContext &C = T->getContext();
 
-  // Rewrite the old two-operand distribute form to the single-operand pair.
-  if (isOldDistributeEnable(T)) {
-    bool Enable = !mdconst::extract<ConstantInt>(T->getOperand(1))->isZero();
-    return MDTuple::get(
-        C, {MDString::get(C, Enable ? "llvm.loop.distribute.enable"
-                                    : "llvm.loop.distribute.disable")});
-  }
-
-  // Rewrite the modern two-operand vectorize.enable form to the single-operand
-  // enable/disable pair.
-  if (isOldVectorizeEnable(T))
-    return makeVectorizeEnableNode(C, T->getOperand(1));
+  /// Rewrite a removed two-operand boolean form to the single-operand pair.
+  if (const BooleanLoopTags *Tags = getOldBooleanLoopTags(T))
+    return makeBooleanLoopNode(C, *Tags, T->getOperand(1));
 
   if (!OldTag->getString().starts_with("llvm.vectorizer."))
     return MD;
@@ -7166,9 +7265,9 @@ static Metadata *upgradeLoopArgument(Metadata *MD) {
 
   // The legacy !{!"llvm.vectorizer.enable", i1 X} maps onto the single-operand
   // vectorize.enable/disable pair, not a two-operand enable node.
-  if (NewTag->getString() == "llvm.loop.vectorize.enable" &&
-      T->getNumOperands() == 2 && mdconst::hasa<ConstantInt>(T->getOperand(1)))
-    return makeVectorizeEnableNode(C, T->getOperand(1));
+  if (T->getNumOperands() == 2 && mdconst::hasa<ConstantInt>(T->getOperand(1)))
+    if (const BooleanLoopTags *Tags = findBooleanLoopTags(NewTag->getString()))
+      return makeBooleanLoopNode(C, *Tags, T->getOperand(1));
 
   SmallVector<Metadata *, 8> Ops;
   Ops.reserve(T->getNumOperands());
@@ -7187,14 +7286,14 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
   if (none_of(T->operands(), isOldLoopArgument))
     return &N;
 
-  // Fix the old two-operand distribute/vectorize.enable nodes in place: the
-  // Verifier rejects any MDNode carrying those tags with more than one operand,
-  // so a leftover reference (from the distinct loop-ID) would still trigger a
-  // diagnostic. In-place mutation is safe on distinct MDNodes.
+  // Fix the removed two-operand boolean nodes in place: the Verifier rejects
+  // any MDNode carrying those tags with more than one operand, so a leftover
+  // reference (from the distinct loop-ID) would still trigger a diagnostic.
+  // In-place mutation is safe on distinct MDNodes.
   if (T->isDistinct()) {
     for (unsigned I = 0, E = T->getNumOperands(); I < E; ++I) {
       auto *OpT = dyn_cast_or_null<MDTuple>(T->getOperand(I));
-      if (OpT && (isOldDistributeEnable(OpT) || isOldVectorizeEnable(OpT)))
+      if (OpT && getOldBooleanLoopTags(OpT))
         T->replaceOperandWith(I, upgradeLoopArgument(OpT));
     }
     if (none_of(T->operands(), isOldLoopArgument))

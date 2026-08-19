@@ -150,6 +150,10 @@
 // RUN: FileCheck %s -check-prefix=NVPTX64
 // NVPTX64: target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
 
+// RUN: %clang_cc1 -triple nvptx64-unknown -target-abi shortptr -o - \
+// RUN: -emit-llvm %s | FileCheck %s -check-prefix=NVPTX64-SHORTPTR
+// NVPTX64-SHORTPTR: target datalayout = "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-p101:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
+
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600
 // R600: target datalayout = "e-m:e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"

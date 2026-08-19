@@ -424,7 +424,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   ceilf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -434,6 +434,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ceilf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -524,6 +525,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.floorl
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf128_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1781,7 +1798,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   sqrtf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -1790,6 +1807,8 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -2756,7 +2775,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   scalbnf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -2866,7 +2885,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   atan2f128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3421,7 +3440,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16addf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3477,7 +3496,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16divf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3539,7 +3558,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16fmaf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3603,7 +3622,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16mulf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS
@@ -3661,7 +3680,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16subf128_test
-  NEED_MPFR
+  NEED_MPFR_F128
   SUITE
     libc-math-unittests
   SRCS

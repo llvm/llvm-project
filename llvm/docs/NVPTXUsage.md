@@ -2254,6 +2254,188 @@ functionality as described in the `tile` mode intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
 
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+; override.addr
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; override.addr.dim (1D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i1 %flag_ch)
+
+; override.addr.dim.stride (2D and higher)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; scatter4 + override.addr (2D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.override.addr.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override*.[1-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.[1-5]d.*` set of PTX instructions qualified with the `.override::*` qualifiers.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
+
+The `.override::*` qualifiers allow certain tensor-map properties to be ignored and instead supplied as explicit operands.
+The supported override variants are:
+
+- `override.addr` (`.override::global_address`): The global base address from the tensor-map is ignored and the explicit `ptr addrspace(1) %override_addr` operand is used instead.
+  The address must be 16B aligned; otherwise a runtime error is raised.
+  The memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
+
+- `override.addr.dim` (`.override::global_address` + `.override::global_dim`, 1D only): Overrides the base address and the tensor global dimension.
+  The `i16 %ts0` operand specifies the new tensor size.
+  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
+  The tensor start coordinates must be zero; otherwise the behavior is undefined.
+
+- `override.addr.dim.stride` (`.override::global_address` + `.override::global_dim_stride`, 2D and higher): Overrides the base address, the tensor global dimensions, and the global strides.
+  The `i16 %ts0 ... i16 %ts{dim-1}` operands specify the new tensor sizes, the `i32 %stride0 ... i32 %stride{dim-2}` operands specify the lower strides, and the `i16 %upper_stride` operand specifies the upper stride.
+  The effective global stride is computed as `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
+  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
+  The tensor start coordinates must be zero; otherwise the behavior is undefined.
+
+The `scatter4.override.addr` variant combines the `tile.scatter4` mode (2D only) with the base address override.
+In `tile.scatter4` mode, a single 2D source tensor is divided into four rows in the 2D destination tensor.
+The first coordinate `i32 %x0` denotes the column index followed by four coordinates indicating the four row-indices.
+For more information on `scatter4` mode, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes).
+
+- The last argument to these intrinsics is a boolean flag indicating support for cache_hint.
+  This flag argument must be a compile-time constant.
+  When set, it indicates a valid cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX instruction.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The address must be 16B aligned and the memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
+The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+; override.addr
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+; override.addr.dim (1D only)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.1d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i32 %red_op, i1 %flag_ch)
+
+; override.addr.dim.stride (2D and higher)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.2d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override*.[1-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.[1-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::*` qualifiers.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
+The three override variants (`override.addr`, `override.addr.dim`, and `override.addr.dim.stride`) have the same semantics as described in the `s2g.tile` override intrinsics above.
+
+The `i32 %red_op` argument selects the reduction operation to perform.
+It must be a compile-time constant in the half-open range `[0, 8)`, with the following encoding:
+
+| `red_op` | Reduction Operation |
+|:--------:|:--------------------|
+|    0     |   `add`             |
+|    1     |   `min`             |
+|    2     |   `max`             |
+|    3     |   `inc`             |
+|    4     |   `dec`             |
+|    5     |   `and`             |
+|    6     |   `or`              |
+|    7     |   `xor`             |
+
+The symbolic LLVM IR annotation for `red_op` and the PTX reduction suffix use the same canonical operator spelling.
+
+- The last argument to these intrinsics is a boolean flag indicating support for cache_hint.
+  This flag argument must be a compile-time constant.
+  When set, it indicates a valid cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX instruction.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.3d(ptr addrspace(3) %src, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i32 %red_op, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs::w.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
+These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
+The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
+
 ### Warp Group Intrinsics
 
 #### '`llvm.nvvm.wgmma.fence.sync.aligned`'
@@ -2684,10 +2866,21 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.commit.{cg1,cg2}(ptr %mbar)
-declare void @llvm.nvvm.tcgen05.commit.shared.{cg1,cg2}(ptr addrspace(3) %mbar)
-declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}(ptr %mbar, i16 %mc)
-declare void @llvm.nvvm.tcgen05.commit.mc.shared.{cg1,cg2}(ptr addrspace(3) %mbar, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.{cg1,cg2}.p0(ptr %mbar)
+declare void @llvm.nvvm.tcgen05.commit.{cg1,cg2}.p3(ptr addrspace(3) %mbar)
+
+declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p0.i16(ptr %mbar, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p0.i32(ptr %mbar, i32 %mc)
+declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %mbar, i16 %mc)
+declare void @llvm.nvvm.tcgen05.commit.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %mbar, i32 %mc)
+
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p0(ptr %bar_addr)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.{cg1,cg2}.p3(ptr addrspace(3) %bar_addr)
+
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i16(ptr %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p0.i32(ptr %bar_addr, i32 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i16(ptr addrspace(3) %bar_addr, i16 %cta_mask)
+declare void @llvm.nvvm.tcgen05.commit.smem.a.read.mc.{cg1,cg2}.p3.i32(ptr addrspace(3) %bar_addr, i32 %cta_mask)
 ```
 
 ##### Overview:
@@ -2699,7 +2892,8 @@ object (`%mbar`) track the completion of all prior asynchronous tcgen05
 operations. The `.mc` variants allow signaling on the mbarrier objects of
 multiple CTAs (specified by `%mc`) in the cluster. The `.cg1` and `.cg2`
 variants generate `cta_group::1` and `cta_group::2` flavors of the
-instruction respectively.
+instruction, respectively. The `smem.a.read` variants track the completion
+of reads of A-matrix from shared memory for all prior `tcgen05.mma` operations.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit).
 
@@ -2967,6 +3161,7 @@ that are supported:
 | tf32     | TF32                                                                   |
 | f8f6f4   | All combinations of F8, F6, and F4                                     |
 | i8       | Signed and Unsigned 8-bit Integers                                     |
+| ti16     | 16-bit integer types for non-block-scale operations                    |
 | mxf8f6f4 | MX-floating point formats                                              |
 | mxf4     | MX-floating point formats (FP4)                                        |
 | mxf4nvf4 | MXF4 + custom NVIDIA 4-bit floating point (with common scaling factor) |
@@ -2988,10 +3183,14 @@ The sparsity metadata (`%spmetadata`) as well as the block-scale inputs for
 `A / B` matrices (`%scale_a` and `%scale_b`) reside in Tensor Memory.
 
 To facilitate opportunistic re-use of `A / B` matrix data across a sequence of
-MMA operations, the `A/B` matrices are loaded into a collector buffer
-(`%collector_usage_a_op_flag`, `%collector_usage_b_buffer_flag`, and
-`%collector_usage_b_op_flag`). The flag value of the collector_usage flag in the
-intrinsic specifies the nature of the re-use
+MMA operations, the `A/B` matrices are loaded into collector buffers. The
+`tcgen05.mma`, `tcgen05.mma.disable_output_lane`, and
+`tcgen05.mma.block_scale` intrinsics use `%collector_usage_a_op_flag` and
+`%collector_usage_b_op_flag` to describe the usage of matrix `A` and matrix `B`
+collector buffers. The `tcgen05.mma.ws` intrinsics use
+`%collector_usage_b_buffer_flag` and `%collector_usage_b_op_flag` to describe
+the matrix `B` collector buffer. The flag value of the collector usage flag in
+the intrinsic specifies the nature of the re-use.
 
 There are three kinds of matrix descriptors used by the tcgen05 family of
 instructions:
@@ -3033,7 +3232,8 @@ reuse a previously loaded `A` or `B` matrix; however reuse is opportunistic in
 that the TensorCore may reload a matrix even when it has permission to reuse
 that matrix. Thus, the source memory of an A or B matrix must not be modified
 while the MMA instruction using those matrices has not completed - regardless of
-collector qualifier permissions.
+collector qualifier permissions. Values other than `DISCARD` for the matrix `B`
+collector usage require support for the `.collector::b::...` PTX qualifier.
 
 The `cta_group::1` specifies that the operation is performed on the Tensor
 Memory of the executing thread’s CTA only. The `cta_group::2` specifies that the
@@ -3051,48 +3251,31 @@ Memory for the resultant matrix D will not be updated
 #### Intrinsic Design:
 
 Given the broad feature set of `tcgen05.mma` instruction modeling these
-through intrinsics is highly complex, and the following table outlines the large
-number of intrinsics required to fully support the `tcgen05.mma` instruction
-set.
-
-| variant                            | Configuration                                                                                     | Total Variants |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------- | -------------- |
-| tcgen05.mma.shared                 | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
-| tcgen05.mma.tensor.ashift          | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
-| tcgen05.mma.scale_d                | 2 (space) x 2 (sp) x 2 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
-| tcgen05.mma.scale_d.tensor.ashift  | 2 (sp) x 2 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 16             |
-| tcgen05.mma.disable_output_lane    | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
-| tcgen05.mma.disable_output_lane... | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4nvf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)                   | 32             |
-| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf8f6f4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
-| tcgen05.mma.ws                     | 2 (space) x 2 (sp) x 4 (kind) x 2 (zero_col_mask) x 4 (collector_usage_op) x 4 (collector_buffer) | 256            |
-| Total                              |                                                                                                   | 816            |
-
-To reduce the number of possible intrinsic variations, we've modeled the
-`tcgen05.mma` instructions using flag operands. We've added range checks to
-these flags to prevent invalid values. We also expanded some flags back into
-intrinsic modifiers to avoid supporting invalid combinations of features.
+through intrinsics is highly complex, we've modeled the `tcgen05.mma`
+instructions using flag operands. We've added range checks to these flags to
+prevent invalid values. We also expanded some flags back into intrinsic
+modifiers to avoid supporting invalid combinations of features. These intrinsics
+capture ~2000+ individual PTX instruction combinations of this family.
 
 #### '`llvm.nvvm.tcgen05.mma.*`'
 
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; .sp variants
-declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; .scale_d variants
-declare void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; sp.scale_d variants
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 ```
 
 ##### Overview:
@@ -3119,9 +3302,10 @@ specifying an additional `%spmetadata` argument
 `.ashift` shifts the rows of the A matrix down by one row, except for the last
 row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
-for matrix `A`. It is illegal to specify either of `USE` or `FILL` for
-`%collector_usage_a_op_flag` along with `.ashift`
+The `%collector_usage_a_op_flag` and `%collector_usage_b_op_flag` flags specify
+the usage of collector buffers for matrix `A` and matrix `B`, respectively. It
+is illegal to specify either of `USE` or `FILL` for
+`%collector_usage_a_op_flag` along with `.ashift`.
 
 For more information, refer to the
 [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
@@ -3136,6 +3320,7 @@ The following tables describe the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
 `%cta_group_flag` flag:
 
@@ -3144,14 +3329,14 @@ The following tables describe the possible values of the flag arguments
 | CG1              | 1     |
 | CG2              | 2     |
 
-`%collector_usage_a_op_flag` flag:
+`%collector_usage_a_op_flag` and `%collector_usage_b_op_flag` flags:
 
-| `collector_usage_a_op_flag` | value |
-| --------------------------- | ----- |
-| DISCARD                     | 0     |
-| LASTUSE                     | 1     |
-| USE                         | 2     |
-| FILL                        | 3     |
+| collector usage flag | value |
+| -------------------- | ----- |
+| DISCARD              | 0     |
+| LASTUSE              | 1     |
+| FILL                 | 2     |
+| USE                  | 3     |
 
 #### '`llvm.nvvm.tcgen05.mma.block_scale*`'
 
@@ -3159,34 +3344,34 @@ The following tables describe the possible values of the flag arguments
 
 ```llvm
 ; mxf8f6f4
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; mxf4
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; mxf4nvf4
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 %cta_group_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 ```
 
 ##### Overview:
@@ -3209,57 +3394,57 @@ result in the initiation of the whole matrix multiply and accumulate operation.
 When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires
 specifying an additional `%spmetadata` argument
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
-for matrix `A`
+The `%collector_usage_a_op_flag` and `%collector_usage_b_op_flag` flags specify
+the usage of collector buffers for matrix `A` and matrix `B`, respectively.
 
 For more information, refer to the
 [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
 
 The following tables describe the possible values of the flag arguments
 
-`%cta_group`:
+`%cta_group_flag`:
 
-| `cta_group` | value |
-| ----------- | ----- |
-| CG1         | 1     |
-| CG2         | 2     |
+| `cta_group_flag` | value |
+| ---------------- | ----- |
+| CG1              | 1     |
+| CG2              | 2     |
 
-`%collector_usage_a_op_flag`:
+`%collector_usage_a_op_flag` and `%collector_usage_b_op_flag`:
 
-| `collector_usage_a_op_flag` | value |
-| --------------------------- | ----- |
-| DISCARD                     | 0     |
-| LASTUSE                     | 1     |
-| USE                         | 2     |
-| FILL                        | 3     |
+| collector usage flag | value |
+| -------------------- | ----- |
+| DISCARD              | 0     |
+| LASTUSE              | 1     |
+| FILL                 | 2     |
+| USE                  | 3     |
 
 #### '`llvm.nvvm.tcgen05.mma.disable_output_lane*`'
 
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; .sp variants
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; .scale_d variants
-declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 
 ; .sp.scale_d variants
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
-declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
+declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag, i32 %collector_usage_b_op_flag)
 ```
 
 ##### Overview:
@@ -3295,9 +3480,10 @@ specifiying an additional `%spmetadata` argument.
 > `.ashift` shifts the rows of the A matrix down by one row, except for the last
 > row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
-for matrix `A`. It is illegal to specify either of `USE` or `FILL` for
-`%collector_usage_a_op_flag` along with `.ashift`
+The `%collector_usage_a_op_flag` and `%collector_usage_b_op_flag` flags specify
+the usage of collector buffers for matrix `A` and matrix `B`, respectively. It
+is illegal to specify either of `USE` or `FILL` for
+`%collector_usage_a_op_flag` along with `.ashift`.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
 
@@ -3311,22 +3497,18 @@ The following tables describes the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
-`%cta_group_flag`:
+The `cg1` and `cg2` suffixes select CTA group 1 and CTA group 2, respectively.
 
-| `cta_group_flag` | value |
-| ---------------- | ----- |
-| CG1              | 1     |
-| CG2              | 2     |
+`%collector_usage_a_op_flag` and `%collector_usage_b_op_flag`:
 
-`%collector_usage_a_op_flag`:
-
-| `collector_usage_a_op_flag` | value |
-| --------------------------- | ----- |
-| DISCARD                     | 0     |
-| LASTUSE                     | 1     |
-| USE                         | 2     |
-| FILL                        | 3     |
+| collector usage flag | value |
+| -------------------- | ----- |
+| DISCARD              | 0     |
+| LASTUSE              | 1     |
+| FILL                 | 2     |
+| USE                  | 3     |
 
 #### '`llvm.nvvm.tcgen05.mma.ws*`'
 
@@ -3390,6 +3572,7 @@ The following tables describes the possible values of the flag arguments
 | TF32        | 1     |
 | F8F6F4      | 2     |
 | I8          | 3     |
+| TI16        | 4     |
 
 `%collector_usage_b_buffer_flag`:
 
@@ -3406,8 +3589,8 @@ The following tables describes the possible values of the flag arguments
 | --------------------------- | ----- |
 | DISCARD                     | 0     |
 | LASTUSE                     | 1     |
-| USE                         | 2     |
-| FILL                        | 3     |
+| FILL                        | 2     |
+| USE                         | 3     |
 
 ### Store Intrinsics
 

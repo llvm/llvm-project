@@ -217,6 +217,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
+    libc.src.stdlib.realpath
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
@@ -254,6 +255,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
+    libc.src.stdio.tmpfile
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
@@ -364,6 +366,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/auxv.h entrypoints
     libc.src.sys.auxv.getauxval
 
+    # sys/sysmacros.h entrypoints
+    libc.src.sys.sysmacros.makedev
+    libc.src.sys.sysmacros.major
+    libc.src.sys.sysmacros.minor
+
     # termios.h entrypoints
     libc.src.termios.cfgetispeed
     libc.src.termios.cfgetospeed
@@ -381,6 +388,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
+    libc.src.unistd.chown
     libc.src.unistd.close
     libc.src.unistd.dup
     libc.src.unistd.dup2
@@ -401,6 +409,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.getppid
     libc.src.unistd.getsid
     libc.src.unistd.gettid
+    libc.src.unistd.getgid
     libc.src.unistd.getuid
     libc.src.unistd.isatty
     libc.src.unistd.link
@@ -525,6 +534,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -561,6 +571,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fdiml
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmabf16
@@ -717,6 +728,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
+    libc.src.math.sqrtf128
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
@@ -848,7 +860,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpxf16
   )
 
-  # if(LIBC_TYPES_HAS_FLOAT128)
+  # if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   #   list(APPEND TARGET_LIBM_ENTRYPOINTS
   #     # math.h C23 mixed _Float16 and _Float128 entrypoints
   #     libc.src.math.f16addf128
@@ -871,12 +883,11 @@ if(LIBC_TYPES_HAS_CFLOAT128)
   )
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.atan2f128
     libc.src.math.canonicalizef128
-    libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -889,7 +900,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
@@ -934,7 +944,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
-    libc.src.math.sqrtf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
     libc.src.math.truncf128
@@ -1022,7 +1031,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpxbf16
 )
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C++23 mixed bfloat16 and _Float128 entrypoints
     libc.src.math.bf16addf128
@@ -1161,6 +1170,19 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_xorcpuset
 
+    # semaphore.h entrypoints
+    libc.src.semaphore.sem_clockwait
+    libc.src.semaphore.sem_close
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
+    libc.src.semaphore.sem_open
+    libc.src.semaphore.sem_post
+    libc.src.semaphore.sem_timedwait
+    libc.src.semaphore.sem_trywait
+    libc.src.semaphore.sem_unlink
+    libc.src.semaphore.sem_wait
+
     # strings.h entrypoints
     libc.src.strings.strcasecmp_l
     libc.src.strings.strncasecmp_l
@@ -1187,6 +1209,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
+    libc.src.stdio.freopen
     libc.src.stdio.fopencookie
     libc.src.stdio.fputc
     libc.src.stdio.fputs
@@ -1224,6 +1247,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.getenv
     libc.src.stdlib.putenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.system
     libc.src.stdlib.unsetenv
     libc.src.stdlib.quick_exit
 
@@ -1323,6 +1347,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # link.h entrypoints
+    libc.src.link._r_debug
     libc.src.link.dl_iterate_phdr
 
     # wchar.h entrypoints

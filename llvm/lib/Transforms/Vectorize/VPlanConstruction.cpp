@@ -595,23 +595,6 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   }
 }
 
-/// Check \p Plan's live-in and replace them with constants, if they can be
-/// simplified via SCEV.
-static void simplifyLiveInsWithSCEV(VPlan &Plan,
-                                    PredicatedScalarEvolution &PSE) {
-  auto GetSimplifiedLiveInViaSCEV = [&](VPValue *VPV) -> VPValue * {
-    const SCEV *Expr = vputils::getSCEVExprForVPValue(VPV, PSE);
-    if (auto *C = dyn_cast<SCEVConstant>(Expr))
-      return Plan.getOrAddLiveIn(C->getValue());
-    return nullptr;
-  };
-
-  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
-    if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
-      LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
-  }
-}
-
 /// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 
@@ -792,13 +775,14 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
     if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
       HoistPoint = R;
   }
-  assert(all_of(FOR->users(),
-                [&VPDT, HoistPoint](VPUser *U) {
-                  auto *R = cast<VPRecipeBase>(U);
-                  return HoistPoint == R ||
-                         VPDT.properlyDominates(HoistPoint, R);
-                }) &&
-         "HoistPoint must dominate all users of FOR");
+  // Dominance is only a partial order, so the users of FOR may not have a
+  // single user dominating all others. Bail out in that case.
+  if (!HoistPoint || HoistPoint->isPhi() ||
+      any_of(FOR->users(), [&VPDT, HoistPoint](VPUser *U) {
+        auto *R = cast<VPRecipeBase>(U);
+        return HoistPoint != R && !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   auto NeedsHoisting = [HoistPoint, &VPDT,
                         &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
@@ -846,6 +830,13 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       }
     }
   }
+
+  // Moving a candidate to HoistPoint keeps it dominating its other users only
+  // if HoistPoint dominates the candidate's current position.
+  if (any_of(HoistCandidates, [&VPDT, HoistPoint](VPRecipeBase *R) {
+        return !VPDT.properlyDominates(HoistPoint, R);
+      }))
+    return false;
 
   // Order recipes to hoist by dominance so earlier instructions are processed
   // first.
