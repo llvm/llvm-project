@@ -127,7 +127,7 @@ def TypeCompatible : BinaryTrait {
 }
 
 def TypeOrder : BinaryTrait {
-  let Spelling = "__builtin_type_order2";
+  let Spelling = "__builtin_type_order";
   let KeyFlags = [KEYCXX];
 }
 
