@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -75,11 +76,24 @@ LLVM_ABI bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
 
 using namespace GISelAddressing;
 
-class LLVM_ABI LoadStoreOpt : public MachineFunctionPass {
+class LLVM_ABI LoadStoreOptLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-private:
+  LoadStoreOptLegacy();
+
+  StringRef getPassName() const override { return "LoadStoreOpt"; }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class LoadStoreOptImpl {
   MachineRegisterInfo *MRI = nullptr;
   const TargetLowering *TLI = nullptr;
   MachineFunction *MF = nullptr;
@@ -89,7 +103,7 @@ private:
   MachineIRBuilder Builder;
 
   /// Initialize the field members using \p MF.
-  void init(MachineFunction &MF);
+  void init(MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA);
 
   class StoreMergeCandidate {
   public:
@@ -161,17 +175,14 @@ private:
   SmallPtrSet<MachineInstr *, 16> InstsToErase;
 
 public:
-  LoadStoreOpt();
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<AliasAnalysis *()> GetAA);
+};
 
-  StringRef getPassName() const override { return "LoadStoreOpt"; }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setIsSSA();
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+class LoadStoreOptPass : public RequiredPassInfoMixin<LoadStoreOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 } // End namespace llvm.
