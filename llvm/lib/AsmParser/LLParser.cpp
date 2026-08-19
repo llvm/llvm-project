@@ -6035,7 +6035,8 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(stringLocationExpression, MDField, );                               \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(encoding, DwarfAttEncodingField, );
+  OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(charType, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6043,7 +6044,7 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
       DIStringType,
       (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
        stringLocationExpression.Val, size.getValueAsMetadata(Context),
-       align.Val, encoding.Val));
+       align.Val, encoding.Val, charType.Val));
   return false;
 }
 

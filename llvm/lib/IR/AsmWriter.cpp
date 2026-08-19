@@ -2278,6 +2278,7 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
                          dwarf::AttributeEncodingString);
+  Printer.printMetadata("charType", N->getRawCharType());
   Out << ")";
 }
 
