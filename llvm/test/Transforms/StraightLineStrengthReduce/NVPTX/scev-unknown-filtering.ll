@@ -3,11 +3,13 @@
 ; RUN: opt -passes=slsr -stats -S < %s 2> %t.stats | FileCheck %s
 ; RUN: FileCheck %s --check-prefix=STATS < %t.stats
 
-; TODO: Avoid computing the candidate-basis difference between %candidate and
-; %other.basis after finding a reusable variable delta. Their different
-; symbolic leaves mean their difference cannot be constant.
+; For %candidate, %var.delta.basis first provides the variable delta %idx.
+; %other.basis cannot provide a constant delta because it has different
+; SCEVUnknown leaves. Skip it, then continue to %const.delta.basis and use its
+; constant delta. Without the leaf check, SLSR computes four candidate-basis
+; differences instead of three.
 ;
-; STATS: 4 slsr - Number of candidate-basis SCEV differences computed by SLSR
+; STATS: 3 slsr - Number of candidate-basis SCEV differences computed by SLSR
 
 target triple = "nvptx64-nvidia-cuda"
 

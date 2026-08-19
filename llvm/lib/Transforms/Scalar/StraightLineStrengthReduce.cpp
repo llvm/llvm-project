@@ -731,6 +731,18 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   if (!isSimilar(C, *Basis, K))
     return false;
 
+  // Once a reusable delta is found, only a constant delta can improve it.
+  // Different symbolic leaves cannot cancel to a constant, so such a basis
+  // cannot improve C. Skip it and continue searching older candidates.
+  if (C.Delta && K != Candidate::IndexDelta) {
+    const SCEV *CandidateSCEV =
+        K == Candidate::BaseDelta ? C.Base : C.StrideSCEV;
+    const SCEV *BasisSCEV =
+        K == Candidate::BaseDelta ? Basis->Base : Basis->StrideSCEV;
+    if (!SE->hasSameSCEVUnknowns(CandidateSCEV, BasisSCEV))
+      return false;
+  }
+
   assert(DT->dominates(Basis->Ins, C.Ins));
   Value *Delta = getDelta(C, *Basis, K);
   if (!Delta)

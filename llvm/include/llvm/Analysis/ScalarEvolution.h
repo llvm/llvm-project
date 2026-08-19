@@ -704,6 +704,10 @@ public:
   /// scAddRecExpr. The result will be cached in HasRecMap.
   LLVM_ABI bool containsAddRecurrence(const SCEV *S);
 
+  /// Return whether \p A and \p B contain the same set of SCEVUnknowns.
+  /// Results are cached in SCEVUnknownsCache.
+  LLVM_ABI bool hasSameSCEVUnknowns(const SCEV *A, const SCEV *B);
+
   /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
   /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
   /// no-overflow fact should be true in the context of this instruction.
@@ -1706,6 +1710,10 @@ private:
 
   /// This is a cache to record whether a SCEV contains any scAddRecExpr.
   HasRecMapType HasRecMap;
+
+  using SCEVUnknownSet = SmallPtrSet<const SCEVUnknown *, 4>;
+
+  DenseMap<const SCEV *, SCEVUnknownSet> SCEVUnknownsCache;
 
   /// The type for ExprValueMap.
   using ValueSetVector = SmallSetVector<Value *, 4>;
