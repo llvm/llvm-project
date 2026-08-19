@@ -26,6 +26,7 @@
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
 
+#include "../../lib/IR/SymbolRefContainmentCache.h"
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
@@ -331,6 +332,75 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
     EXPECT_EQ(attrResults[i], attrTruth) << "thread " << i;
     EXPECT_EQ(typeResults[i], typeTruth) << "thread " << i;
   }
+}
+
+// Growth preserves every earlier fact. The cache's internal table starts
+// minimal and doubles as it fills, so inserting far past the growth trigger
+// forces several rehashes; open addressing must re-home every live slot on each
+// grow. Synthetic 8-aligned pointers in a regular stride stand in for the
+// bump-allocated storage addresses the cache keys on; the keys are opaque and
+// never dereferenced. Because a probe runs to the empty slot, preservation
+// holds for any home function, so this exercises the rehash, not the mix -- the
+// mix instead keeps the table's capacity bounded when storage addresses arrive
+// in a stride, which this test does not measure.
+TEST_F(SymbolReferenceContainmentTest, TableGrowthPreservesEntries) {
+  detail::SymbolRefContainmentCache cache;
+  const int n = 5000; // many doublings past the minimal table
+  std::vector<Type> keys;
+  keys.reserve(n);
+  for (int i = 0; i < n; ++i) {
+    auto *p = reinterpret_cast<const void *>(
+        static_cast<uintptr_t>(0x100000 + i * 8));
+    Type key = Type::getFromOpaquePointer(p);
+    bool value = (i % 3 == 0); // a deterministic mix of true/false facts
+    // The first insert of a key returns the value it records.
+    EXPECT_EQ(cache.insert(key, value, /*lock=*/false), value);
+    keys.push_back(key);
+  }
+  // After all the growth, every earlier fact is still found with its value.
+  for (int i = 0; i < n; ++i) {
+    std::optional<bool> got = cache.lookup(keys[i], /*lock=*/false);
+    ASSERT_TRUE(got.has_value()) << "lost entry " << i;
+    EXPECT_EQ(*got, (i % 3 == 0)) << "entry " << i;
+  }
+  // A key never inserted is a miss, not a stray cluster hit.
+  Type absent = Type::getFromOpaquePointer(
+      reinterpret_cast<const void *>(static_cast<uintptr_t>(0x100000 + n * 8)));
+  EXPECT_FALSE(cache.lookup(absent, /*lock=*/false).has_value());
+}
+
+// A DistinctAttr is keyed by the address of its own storage, which comes from a
+// separate always-allocating allocator rather than the attribute uniquer; the
+// cache must tag and recover that pointer just like a uniqued one. Its
+// 8-alignment, which frees bit 0 for the answer tag, is asserted at compile
+// time beside the table; this exercises the runtime path.
+TEST_F(SymbolReferenceContainmentTest, DistinctAttrIsHandled) {
+  DistinctAttr d1 = DistinctAttr::create(UnitAttr::get(&context));
+  DistinctAttr d2 = DistinctAttr::create(UnitAttr::get(&context));
+  ASSERT_NE(d1, d2); // always-allocating: distinct instances, distinct pointers
+
+  // The separate allocator must still hand back 8-aligned storage, so bit 0 of
+  // the opaque pointer is free for the answer tag.
+  EXPECT_EQ(
+      reinterpret_cast<uintptr_t>(Attribute(d1).getAsOpaquePointer()) & 1u, 0u);
+
+  // Through the public query a DistinctAttr exposes no SymbolRefAttr
+  // sub-element, so it answers false, stably across the cold fill and the warm
+  // cache hit.
+  bool cold = SymbolTable::mayContainSymbolRefs(d1);
+  EXPECT_FALSE(cold);
+  EXPECT_EQ(SymbolTable::mayContainSymbolRefs(d1), cold);
+  EXPECT_FALSE(SymbolTable::mayContainSymbolRefs(d2));
+
+  // Drive the tag round-trip with bit 0 set on a distinct-allocator pointer: a
+  // forced true must survive the insert and be returned by the warm lookup,
+  // while an uninserted distinct pointer stays a miss.
+  detail::SymbolRefContainmentCache cache;
+  EXPECT_TRUE(cache.insert(d1, /*value=*/true, /*lock=*/false));
+  std::optional<bool> warm = cache.lookup(d1, /*lock=*/false);
+  ASSERT_TRUE(warm.has_value());
+  EXPECT_TRUE(*warm);
+  EXPECT_FALSE(cache.lookup(d2, /*lock=*/false).has_value());
 }
 
 } // namespace
