@@ -75,16 +75,16 @@ Here is an example usage ::
 There are several key properties that an implementation of `rcu` must satisfy:
 
 - On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread
-  is performing updates.
+  is performing updates, or the collector thread is reclaiming the objects.
 
 - On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `rcu_retire`).
 
-- On the writer side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
+- On the collector side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
   via `rcu_domain::unlock` . Note that this is a key difference between `rcu` and read-write locks:
-  In case a late reader enters the critical section after the writer thread has called `rcu_synchronize` and started waiting, the
-  writer thread does not need to wait for the late reader to exit the critical section. In contrast, a writer thread trying to acquire a read-write lock would have to wait until the late reader releases the lock before it can acquire it.
+  In case a late reader enters the critical section after the collector thread has called `rcu_synchronize` and started waiting, the
+  collector thread does not need to wait for the late reader to exit the critical section. In contrast, a collector thread trying to acquire a read-write lock would have to wait until the late reader releases the lock before it can acquire it.
 
-- On the writer side, `rcu_barrier` should block until all the objects `retired` before the `rcu_barrier` call have been reclaimed.
+- On the collector side, `rcu_barrier` should block until all the objects `retired` before the `rcu_barrier` call have been reclaimed.
 
 - The threads that are using `rcu` must be known by the `rcu` implementation states.
 
@@ -96,10 +96,10 @@ The core idea of `rcu` can be described by this image from lwn.net
 
 .. image:: https://static.lwn.net/images/ns/kernel/rcu/GracePeriodGood.png
 
-- Each row is a thread. The last row is the writer thread and the rows above are the reader threads.
+- Each row is a thread. The last row is the collector thread and the rows above are the reader threads.
 - Each "Reader" block represents a critical section, which starts with `rcu_domain::lock` and ends with `rcu_domain::unlock` .
 - When `rcu_retire` is called from the writer thread, it starts the "Removal" block.
-- When `rcu_synchronize` is called from the writer thread, it starts the "Grace Period" block. We need to wait until all the 
+- When `rcu_synchronize` is called from the collector thread, it starts the "Grace Period" block. We need to wait until all the 
   "Reader" blocks that started before the "Grace Period" started, to exit via `rcu_domain::unlock`, then we can end the "Grace Period".
   Note that the "Grace Period" ends after the 4th row's "Reader" block ends. Also note that the "Grace Period" does not need to wait
   for the late "Reader" blocks.
@@ -172,12 +172,12 @@ For the derived class of `rcu_obj_base`, the `retire` is `noexcept`, which means
 
 This is the main class that implements the `rcu` logic. It contains
 
-- `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the writer will flip the global state when it calls `rcu_synchronize` to start a new grace period.
+- `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the collector will flip the global state when it calls `rcu_synchronize` to start a new grace period.
 
-- `std::mutex grace_period_mutex_` : If we have multiple writer threads calling `rcu_synchronize` concurrenly, we need to make sure only one of them is performing the phase flipping and deleter queue draining.
+- `std::mutex grace_period_mutex_` : If we have multiple collector threads calling `rcu_synchronize` concurrenly, we need to make sure only one of them is performing the phase flipping and deleter queue draining.
   TODO: `mutex` can throw, we need to consider how to replace it.
 
-- `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the writer thread that is waiting for the grace period to end.
+- `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the collector thread that is waiting for the grace period to end.
 
 - `std::mutex retire_queue_mutex_` and  `rcu_singly_list_view __retired_callback_queue_` : This queue stores all the retired callbacks that are waiting for the grace period to end.
   TODO: `mutex` can throw, we need to consider how to replace it.
@@ -261,16 +261,16 @@ inline, we have to decide when to run them.
 
 There are few places we can run the deleters:
 
-- Inside `rcu_synchronize` after the writer thread is unblocked. This approach has the advantage that the writer thread
-  can reclaim the retired objects as soon as possible. However, it has the disadvantage that the writer thread may be
+- Inside `rcu_synchronize` after the collector thread is unblocked. This approach has the advantage that the collector thread
+  can reclaim the retired objects as soon as possible. However, it has the disadvantage that the collector thread may be
   blocked for a long time if there are many retired objects to reclaim.
 
-- Inside `rcu_barrier` after the writer thread is unblocked. Since `rcu_barrier` is designed to block until all the retired
+- Inside `rcu_barrier` after the collector thread is unblocked. Since `rcu_barrier` is designed to block until all the retired
   objects that happen before the `rcu_barrier` call are reclaimed, it is natural to run the deleters here.
 
 - Inside `rcu_retire` after the deleter is put into the queue. `rcu_retire` is designed not to block. However, if there are
   objects that are safe to reclaim due to readers have exited their critical sections, and at the same time, there is no other
-  writer threads that are currently draining the deleter queue, we can take the opportunity to run the deleters.
+  collector/writer threads that are currently draining the deleter queue, we can take the opportunity to run the deleters.
 
 Folly currently takes the inline approach and runs the deleters at all three places mentioned above.
 
