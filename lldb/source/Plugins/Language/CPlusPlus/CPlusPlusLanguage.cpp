@@ -1947,6 +1947,27 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::strong_ordering summary provider",
                 "std::strong_ordering",
                 eTypeOptionHideChildren | eTypeOptionHideValue, false);
+
+  // Container adaptors store the underlying container in a member named `c`
+  // in both MSVC STL and libstdc++.
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::queue synthetic children", "^std::queue<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::stack synthetic children", "^std::stack<.+>(( )?&)?$",
+                  stl_synth_flags, true);
+  AddCXXSynthetic(cpp_category_sp, LibcxxQueueFrontEndCreator,
+                  "std::priority_queue synthetic children",
+                  "^std::priority_queue<.+>(( )?&)?$", stl_synth_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::queue summary provider", "^std::queue<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::stack summary provider", "^std::stack<.+>(( )?&)?$",
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "std::priority_queue summary provider",
+                "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
