@@ -624,6 +624,8 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
         Diag(PrevForDefaultArgs->getLocation(),
              diag::note_template_prev_declaration)
             << false;
+        // Recover by discarding the default argument.
+        NewParam->setDefaultArg(nullptr);
       } else if (New->getTemplateSpecializationKind()
                    != TSK_ImplicitInstantiation &&
                  New->getTemplateSpecializationKind() != TSK_Undeclared) {
@@ -665,6 +667,8 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
              diag::err_param_default_argument_member_template_redecl)
           << WhichKind
           << NewParam->getDefaultArgRange();
+        // Recover by discarding the default argument.
+        NewParam->setDefaultArg(nullptr);
       }
     }
   }

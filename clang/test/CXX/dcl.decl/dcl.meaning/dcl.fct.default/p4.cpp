@@ -106,3 +106,13 @@ void main() {
 }
 
 } // namespace pr12724
+
+namespace GH216211 {
+
+struct S {
+  template <typename... T> S(T..., int); // expected-note{{previous template declaration is here}}
+};
+template <typename... T>
+S::S(T..., int = 10) {} // expected-error{{default arguments cannot be added to a function template that has already been declared}}
+
+} // namespace GH216211
