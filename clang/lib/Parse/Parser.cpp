@@ -62,20 +62,19 @@ public:
     if (P.PP.LexTokensInString(Tokens, Code, InjectionLoc))
       return ExprError();
 
-    for (Token &Tok : Tokens) {
-      if (Tok.is(tok::identifier)) {
-        auto It = Replacements.find(Tok.getIdentifierInfo()->getName());
+    // Apply replacements.
+    for (Token &T : Tokens) {
+      if (T.is(tok::identifier)) {
+        auto It = Replacements.find(T.getIdentifierInfo()->getName());
         if (It != Replacements.end())
-          Tok = It->getValue();
+          T = It->getValue();
       }
     }
 
-    // Add an EOF token so we know when to stop.
+    // The lexer should have added an EOF marker to the token list.
+    assert(Tokens.back().is(tok::eof));
     char EofMarker{};
-    Token &EofToken = Tokens.emplace_back();
-    EofToken.startToken();
-    EofToken.setKind(tok::eof);
-    EofToken.setEofData(&EofMarker);
+    Tokens.back().setEofData(&EofMarker);
 
     // Start parsing the tokens; we need to save the current token so we
     // don't lose it, and consume it since EnterTokenStream() doesn't change

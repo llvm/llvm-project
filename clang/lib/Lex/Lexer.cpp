@@ -3258,8 +3258,9 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   }
 
   // If we are in raw mode, return this event as an EOF token.  Let the caller
-  // that put us in raw mode handle the event.
-  if (isLexingRawMode()) {
+  // that put us in raw mode handle the event. Likewise if we're lexing from
+  // an injected string.
+  if (isLexingRawMode() || LexingInjectedString) {
     Result.startToken();
     BufferPtr = BufferEnd;
     FormTokenWithChars(Result, BufferEnd, tok::eof);

@@ -645,7 +645,11 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
     EnterExpressionEvaluationContext ExprEvalCtx(
         *this, ExpressionEvaluationContext::ConstantEvaluated);
 
-    // Annotation token that instructs the parser to declare begin/end.
+    // Annotation token that instructs the parser to declare begin/end, i.e.
+    //
+    //   auto __begin = begin-expr;
+    //   auto __end = end-expr;
+    //
     Token DeclareBeginEnd;
     DeclareBeginEnd.startToken();
     DeclareBeginEnd.setKind(tok::annot_expansion_stmt_declare_begin_end);
@@ -658,9 +662,6 @@ Sema::ComputeExpansionSize(CXXExpansionStmtPattern *Expansion) {
         R"c++(
         [&] consteval {
            __PTRDIFF_TYPE__ __result = 0;
-           // Note: The next line is equivalent to:
-           // auto __begin = begin-expr;
-           // auto __end = end-expr;
            __expansion_stmt_declare_begin_end __begin __end
            for (; __begin != __end; ++__begin) ++__result;
            return __result;
