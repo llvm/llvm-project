@@ -1771,3 +1771,82 @@ define <2 x i64> @partial_reduce_sext_cmp_i32tov2i64(<2 x i64> %acc, <4 x i32> %
   ret <2 x i64> %partial.reduce
 }
 
+
+define <4 x i16> @partial_reduce_zext_zeroacc_v8i8tov4i16(<8 x i8> %a) {
+; CHECK-COMMON-LABEL: partial_reduce_zext_zeroacc_v8i8tov4i16:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-COMMON-NEXT:    uadalp v1.4h, v0.8b
+; CHECK-COMMON-NEXT:    fmov d0, d1
+; CHECK-COMMON-NEXT:    ret
+  %a.wide = zext <8 x i8> %a to <8 x i16>
+  %partial.reduce = tail call <4 x i16> @llvm.vector.partial.reduce.add(<4 x i16> zeroinitializer, <8 x i16> %a.wide)
+  ret <4 x i16> %partial.reduce
+}
+
+define <4 x i16> @partial_reduce_sext_zeroacc_v8i8tov4i16(<8 x i8> %a) {
+; CHECK-COMMON-LABEL: partial_reduce_sext_zeroacc_v8i8tov4i16:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-COMMON-NEXT:    sadalp v1.4h, v0.8b
+; CHECK-COMMON-NEXT:    fmov d0, d1
+; CHECK-COMMON-NEXT:    ret
+  %a.wide = sext <8 x i8> %a to <8 x i16>
+  %partial.reduce = tail call <4 x i16> @llvm.vector.partial.reduce.add(<4 x i16> zeroinitializer, <8 x i16> %a.wide)
+  ret <4 x i16> %partial.reduce
+}
+
+define <8 x i16> @partial_reduce_zext_zeroacc_v16i8tov8i16(<16 x i8> %a) {
+; CHECK-COMMON-LABEL: partial_reduce_zext_zeroacc_v16i8tov8i16:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-COMMON-NEXT:    uadalp v1.8h, v0.16b
+; CHECK-COMMON-NEXT:    mov v0.16b, v1.16b
+; CHECK-COMMON-NEXT:    ret
+  %a.wide = zext <16 x i8> %a to <16 x i16>
+  %partial.reduce = tail call <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16> zeroinitializer, <16 x i16> %a.wide)
+  ret <8 x i16> %partial.reduce
+}
+
+define <8 x i16> @partial_reduce_sext_zeroacc_v16i8tov8i16(<16 x i8> %a) {
+; CHECK-COMMON-LABEL: partial_reduce_sext_zeroacc_v16i8tov8i16:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-COMMON-NEXT:    sadalp v1.8h, v0.16b
+; CHECK-COMMON-NEXT:    mov v0.16b, v1.16b
+; CHECK-COMMON-NEXT:    ret
+  %a.wide = sext <16 x i8> %a to <16 x i16>
+  %partial.reduce = tail call <8 x i16> @llvm.vector.partial.reduce.add(<8 x i16> zeroinitializer, <16 x i16> %a.wide)
+  ret <8 x i16> %partial.reduce
+}
+
+define <4 x i32> @partial_reduce_umull_zeroacc_v16i8tov4i32(<16 x i8> %u, <16 x i8> %s) {
+; CHECK-NODOT-LABEL: partial_reduce_umull_zeroacc_v16i8tov4i32:
+; CHECK-NODOT:       // %bb.0:
+; CHECK-NODOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NODOT-NEXT:    umull v3.8h, v1.8b, v0.8b
+; CHECK-NODOT-NEXT:    umull2 v0.8h, v1.16b, v0.16b
+; CHECK-NODOT-NEXT:    uadalp v2.4s, v3.8h
+; CHECK-NODOT-NEXT:    uadalp v2.4s, v0.8h
+; CHECK-NODOT-NEXT:    mov v0.16b, v2.16b
+; CHECK-NODOT-NEXT:    ret
+;
+; CHECK-DOT-LABEL: partial_reduce_umull_zeroacc_v16i8tov4i32:
+; CHECK-DOT:       // %bb.0:
+; CHECK-DOT-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-NEXT:    udot v2.4s, v1.16b, v0.16b
+; CHECK-DOT-NEXT:    mov v0.16b, v2.16b
+; CHECK-DOT-NEXT:    ret
+;
+; CHECK-DOT-I8MM-LABEL: partial_reduce_umull_zeroacc_v16i8tov4i32:
+; CHECK-DOT-I8MM:       // %bb.0:
+; CHECK-DOT-I8MM-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-DOT-I8MM-NEXT:    udot v2.4s, v1.16b, v0.16b
+; CHECK-DOT-I8MM-NEXT:    mov v0.16b, v2.16b
+; CHECK-DOT-I8MM-NEXT:    ret
+  %u.wide = zext <16 x i8> %u to <16 x i32>
+  %s.wide = zext <16 x i8> %s to <16 x i32>
+  %mult = mul nuw nsw <16 x i32> %s.wide, %u.wide
+  %partial.reduce = tail call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %mult)
+  ret <4 x i32> %partial.reduce
+}
