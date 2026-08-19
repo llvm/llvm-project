@@ -781,7 +781,7 @@ void AArch64PassConfig::addPreLegalizeMachineIR() {
     addPass(createAArch64PreLegalizerCombiner());
     addPass(new Localizer());
     if (EnableGISelLoadStoreOptPreLegal)
-      addPass(new LoadStoreOpt());
+      addPass(new LoadStoreOptLegacy());
   }
 }
 
@@ -796,7 +796,7 @@ void AArch64PassConfig::addPreRegBankSelect() {
   if (!IsGlobalISelOptNone) {
     addPass(createAArch64PostLegalizerCombinerLegacy(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
-      addPass(new LoadStoreOpt());
+      addPass(new LoadStoreOptLegacy());
   }
   addPass(createAArch64PostLegalizerLowering());
 }
