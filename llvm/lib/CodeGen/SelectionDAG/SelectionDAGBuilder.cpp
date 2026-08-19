@@ -10384,8 +10384,9 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
   return false;
 }
 
-/// Compute which constraint option to use for each operand.
-static void
+/// Compute which constraint option to use for each operand. Returns true if an
+/// error was encountered, in which case Info.ErrorMsg describes it.
+static bool
 computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
                        TargetLowering::AsmOperandInfoVector &TargetConstraints,
                        SelectionDAGBuilder &Builder, const TargetLowering &TLI,
@@ -10411,6 +10412,16 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
 
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
+
+    // An address operand is an input: an address for the asm to read from or
+    // jump to. There is no such thing as an address output, indirect or not
+    // (prepareDAGLevelOperands asserts as much), so diagnose it here.
+    if (OpInfo.ConstraintType == TargetLowering::C_Address &&
+        OpInfo.Type == InlineAsm::isOutput) {
+      Info.ErrorMsg << "address constraint '" << OpInfo.ConstraintCode
+                    << "' is only valid as an input";
+      return true;
+    }
 
     if ((OpInfo.ConstraintType == TargetLowering::C_Memory &&
          OpInfo.Type == InlineAsm::isClobber) ||
@@ -10447,9 +10458,16 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      assert((OpInfo.isMultipleAlternative ||
-              (OpInfo.Type == InlineAsm::isInput)) &&
-             "Can only indirectify direct input operands!");
+      // Only an input can be indirectified: it has a value whose address we can
+      // take. A direct output becomes the result of the asm and has no operand
+      // naming memory to write through. Constraint selection already avoids
+      // memory for a direct output when a register alternative exists (e.g.
+      // "=rm"), so getting here means memory was the only choice (e.g. "=m").
+      if (OpInfo.Type != InlineAsm::isInput) {
+        Info.ErrorMsg << "memory output constraint '" << OpInfo.ConstraintCode
+                      << "' must be indirect";
+        return true;
+      }
 
       // Memory operands really want the address of the value.
       Info.Chain = getAddressForMemoryInput(Info.Chain, Builder.getCurSDLoc(),
@@ -10462,6 +10480,8 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.isIndirect = true;
     }
   }
+
+  return false;
 }
 
 /// Prepare DAG-level operands. As part of this, assign virtual and physical
@@ -10755,7 +10775,9 @@ determineConstraints(ConstraintDecisionInfo &Info,
     Info.Chain = Builder.lowerStartEH(Info.Chain, EHPadBB, Info.BeginLabel);
 
   // Second pass: Compute which constraint option to use.
-  computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
+  if (computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM,
+                             DAG))
+    return true;
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   Info.AsmNodeOperands.push_back(SDValue()); // reserve space for input chain
