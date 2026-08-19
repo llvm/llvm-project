@@ -15,7 +15,7 @@ program main
 
    contains
    ! DEVICE-LABEL: llvm.func{{.*}} @_QFPimplicit_capture()
-   ! DEVICE-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}}
+   ! DEVICE-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), implicit = true>{{.*}}}
    function implicit_capture() result(i)
       implicit none
       integer :: i
@@ -32,35 +32,35 @@ program main
    !! -----
 
    ! CHECK-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_nest_twice()
-   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to), automap = false>{{.*}}}
+   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to), implicit = true>{{.*}}}
    function implicitly_captured_nest_twice() result(i)
       integer :: i
       i = 10
    end function implicitly_captured_nest_twice
 
    ! CHECK-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_one_twice()
-   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to), automap = false>{{.*}}}
+   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>{{.*}}}
    function implicitly_captured_one_twice() result(k)
    !$omp declare target to(implicitly_captured_one_twice) device_type(host)
       k = implicitly_captured_nest_twice()
    end function implicitly_captured_one_twice
 
    ! CHECK-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_nest_twice_enter()
-   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to), automap = false>{{.*}}}
+   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to), implicit = true>{{.*}}}
    function implicitly_captured_nest_twice_enter() result(i)
       integer :: i
       i = 10
    end function implicitly_captured_nest_twice_enter
 
    ! CHECK-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_one_twice_enter()
-   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>{{.*}}}
+   ! CHECK-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter)>{{.*}}}
    function implicitly_captured_one_twice_enter() result(k)
    !$omp declare target enter(implicitly_captured_one_twice_enter) device_type(host)
       k = implicitly_captured_nest_twice_enter()
    end function implicitly_captured_one_twice_enter
 
    ! DEVICE-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_two_twice()
-   ! DEVICE-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}}
+   ! DEVICE-SAME: {{.*}}attributes {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), implicit = true>{{.*}}}
    function implicitly_captured_two_twice() result(y)
       integer :: y
       y = 5
@@ -78,7 +78,7 @@ program main
    !! -----
 
    ! DEVICE-LABEL: llvm.func{{.*}} @_QFPimplicitly_captured_recursive(
-   ! DEVICE-SAME: {{.*}}attributes {{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}}
+   ! DEVICE-SAME: {{.*}}attributes {{.*}}omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), implicit = true>{{.*}}}
    recursive function implicitly_captured_recursive(increment) result(k)
       integer :: increment, k
       if (increment == 10) then

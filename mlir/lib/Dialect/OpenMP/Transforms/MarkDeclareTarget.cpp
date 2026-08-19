@@ -154,17 +154,6 @@ static void gatherNestedSymbolUses(Operation &op,
 
 namespace {
 
-// If this pass runs more than once, something like this can happen:
-// - 1st run: The pass marks an external function as declare_target with
-//   device_type(nohost) based on there being a single call from an omp.target.
-// - Somewhere in between: New calls to that external function are added to the
-//   host part of the application (e.g. it is part of a standard library).
-// - 2nd run: The pass doesn't update the function after seeing it's reachable
-//   by the host because it's unable to tell that the declare_target information
-//   wasn't explicitly added by the user.
-// TODO: This can be fixed by adding a discardable attribute only used by this
-// pass or by extending the DeclareTargetInterface to also store whether it is
-// implicit or explicit.
 class MarkDeclareTargetPass
     : public omp::impl::MarkDeclareTargetPassBase<MarkDeclareTargetPass> {
 
@@ -245,10 +234,9 @@ class MarkDeclareTargetPass
       worklist.push_back(
           {callee.getKey(), omp::DeclareTargetDeviceType::nohost});
 
-    // Process the work list storing intermediate declare target information
-    // separately to avoid mixing up explicit declare_target functions with
-    // implicitly propagated information.
-    llvm::StringMap<omp::DeclareTargetDeviceType> intermediateInfos;
+    // Process the work list by propagating changes to other non-explicit
+    // declare_target functions based on the call graph, until no updates are
+    // left.
     while (!worklist.empty()) {
       std::pair<StringRef, omp::DeclareTargetDeviceType> workItem =
           worklist.pop_back_val();
@@ -259,27 +247,16 @@ class MarkDeclareTargetPass
       // doesn't support the interface. We only want to propagate implicit
       // declare_target information to functions for which the user hasn't
       // specified an explicit behavior.
-      if (auto declareTargetOp =
-              dyn_cast<omp::DeclareTargetInterface>(*funcOp)) {
-        if (declareTargetOp.isDeclareTarget())
-          continue;
-      } else {
+      auto declareTargetOp = dyn_cast<omp::DeclareTargetInterface>(*funcOp);
+      if (!declareTargetOp || (declareTargetOp.isDeclareTarget() &&
+                               !declareTargetOp.isImplicitDeclareTarget()))
         continue;
-      }
 
       omp::DeclareTargetDeviceType changedDeviceType;
-      if (!intermediateInfos.contains(workItem.first)) {
-        // Prevent public and external functions from being restricted to a
-        // device. We don't have visibility over all their uses.
-        if (funcOp.isPublic() || funcOp.isExternal())
-          changedDeviceType = omp::DeclareTargetDeviceType::any;
-        else
-          changedDeviceType = workItem.second;
-
-        intermediateInfos.try_emplace(workItem.first, changedDeviceType);
-      } else {
-        omp::DeclareTargetDeviceType &currentDeviceType =
-            intermediateInfos[workItem.first];
+      if (declareTargetOp.isDeclareTarget()) {
+        // Implicit declare_target update.
+        omp::DeclareTargetDeviceType currentDeviceType =
+            declareTargetOp.getDeclareTargetDeviceType();
 
         // Skip the update (and adding callees to the worklist) if the added
         // info doesn't change anything.
@@ -290,24 +267,25 @@ class MarkDeclareTargetPass
 
         // Update intermediate information about this function. By the previous
         // check, we know it's host + nohost = any.
-        changedDeviceType = currentDeviceType =
-            omp::DeclareTargetDeviceType::any;
+        changedDeviceType = omp::DeclareTargetDeviceType::any;
+      } else {
+        // No declare_target information present.
+
+        // Prevent public and external functions from being restricted to a
+        // device. We don't have visibility over all their uses.
+        if (funcOp.isPublic() || funcOp.isExternal())
+          changedDeviceType = omp::DeclareTargetDeviceType::any;
+        else
+          changedDeviceType = workItem.second;
       }
 
-      // Add callees to the worklist to propagate the update.
+      // Update the operation and add callees to the worklist to propagate it.
+      declareTargetOp.setDeclareTarget(changedDeviceType,
+                                       omp::DeclareTargetCaptureClause::to,
+                                       /*automap=*/false, /*implicit=*/true);
+
       for (auto &callee : calls[workItem.first])
         worklist.push_back({callee.getKey(), changedDeviceType});
-    }
-
-    // Apply the final intermediate results to the corresponding operations.
-    for (auto &[funcName, deviceType] : intermediateInfos) {
-      auto declareTargetOp =
-          modOp.lookupSymbol<omp::DeclareTargetInterface>(funcName);
-      assert(declareTargetOp &&
-             "declare_target info attached to incompatible operation");
-      declareTargetOp.setDeclareTarget(deviceType,
-                                       omp::DeclareTargetCaptureClause::to,
-                                       /*automap=*/false);
     }
   }
 };
