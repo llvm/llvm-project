@@ -18,6 +18,7 @@
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
@@ -1190,6 +1191,21 @@ protected:
         Status error(process->Signal(signo));
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else if (StateIsStoppedState(process->GetState(), true)) {
+          // Signal() only works when the process is running (it interrupts
+          // the process and replaces the continue packet with a
+          // continue-with-signal packet). When the process is stopped, we
+          // queue the signal via kill() and resume the process. ptrace will
+          // intercept the pending signal, giving the debugger a chance to
+          // handle it according to the current 'process handle' settings.
+          Host::Kill(process->GetID(), signo);
+          error = process->Resume();
+          if (error.Success()) {
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+            return;
+          }
+          result.AppendErrorWithFormat("Failed to send signal %i: %s\n", signo,
+                                       error.AsCString());
         } else {
           result.AppendErrorWithFormat("Failed to send signal %i: %s", signo,
                                        error.AsCString());
