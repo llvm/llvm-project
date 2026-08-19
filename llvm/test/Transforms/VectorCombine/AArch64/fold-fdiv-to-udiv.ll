@@ -32,8 +32,8 @@ define <4 x i32> @fold_v4i32_constant(<4 x i32> %x) {
 }
 
 ; ValueTracking proves %nz is non-zero via bitwise OR. Should fold.
-define <4 x i32> @fold_value_tracking(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: define <4 x i32> @fold_value_tracking(
+define <4 x i32> @fold_vector_value_tracking(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i32> @fold_vector_value_tracking(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NZ:%.*]] = or <4 x i32> [[Y]], splat (i32 1)
 ; CHECK-NEXT:    [[RES:%.*]] = udiv <4 x i32> [[X]], [[NZ]]
@@ -48,8 +48,8 @@ define <4 x i32> @fold_value_tracking(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; IntWidth(32) > Precision(24). Should not fold.
-define <4 x i32> @no_fold_precision(<4 x i32> %x) {
-; CHECK-LABEL: define <4 x i32> @no_fold_precision(
+define <4 x i32> @no_fold_vector_precision(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i32> @no_fold_vector_precision(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x float>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x float>
@@ -63,8 +63,8 @@ define <4 x i32> @no_fold_precision(<4 x i32> %x) {
   %res = fptoui <4 x float> %r to <4 x i32>
   ret <4 x i32> %res
 }
-define <4 x i32> @no_fold_constant_zero(<4 x i32> %x) {
-; CHECK-LABEL: define <4 x i32> @no_fold_constant_zero(
+define <4 x i32> @no_fold_vector_constant_zero(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i32> @no_fold_vector_constant_zero(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 0, i32 3, i32 4> to <4 x double>
@@ -79,8 +79,8 @@ define <4 x i32> @no_fold_constant_zero(<4 x i32> %x) {
   ret <4 x i32> %res
 }
 
-define <4 x i32> @no_fold_multiuse(<4 x i32> %x, ptr %p) {
-; CHECK-LABEL: define <4 x i32> @no_fold_multiuse(
+define <4 x i32> @no_fold_vector_multiuse(<4 x i32> %x, ptr %p) {
+; CHECK-LABEL: define <4 x i32> @no_fold_vector_multiuse(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
@@ -124,4 +124,65 @@ define <vscale x 4 x i32> @fold_vscale_constant(<vscale x 4 x i32> %x) {
   %r = fdiv <vscale x 4 x double> %a, %b
   %res = fptoui <vscale x 4 x double> %r to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %res
+}
+
+define i32 @fold_scalar_constant(i32 %x) {
+; CHECK-LABEL: define i32 @fold_scalar_constant(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RES:%.*]] = udiv i32 [[X]], 3
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = uitofp i32 %x to double
+  %b = uitofp i32 3 to double
+  %r = fdiv double %a, %b
+  %res = fptoui double %r to i32
+  ret i32 %res
+}
+
+define i32 @no_fold_scalar_unknown(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @no_fold_scalar_unknown(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = uitofp i32 [[X]] to double
+; CHECK-NEXT:    [[B:%.*]] = uitofp i32 [[Y]] to double
+; CHECK-NEXT:    [[R:%.*]] = fdiv double [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fptoui double [[R]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = uitofp i32 %x to double
+  %b = uitofp i32 %y to double
+  %r = fdiv double %a, %b
+  %res = fptoui double %r to i32
+  ret i32 %res
+}
+
+define i32 @no_fold_scalar_precision(i32 %x) {
+; CHECK-LABEL: define i32 @no_fold_scalar_precision(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = uitofp i32 [[X]] to float
+; CHECK-NEXT:    [[B:%.*]] = uitofp i32 2 to float
+; CHECK-NEXT:    [[R:%.*]] = fdiv float [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fptoui float [[R]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = uitofp i32 %x to float
+  %b = uitofp i32 2 to float
+  %r = fdiv float %a, %b
+  %res = fptoui float %r to i32
+  ret i32 %res
+}
+
+define i32 @no_fold_scalar_constant_zero(i32 %x) {
+; CHECK-LABEL: define i32 @no_fold_scalar_constant_zero(
+; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = uitofp i32 [[X]] to double
+; CHECK-NEXT:    [[B:%.*]] = uitofp i32 0 to double
+; CHECK-NEXT:    [[R:%.*]] = fdiv double [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fptoui double [[R]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %a = uitofp i32 %x to double
+  %b = uitofp i32 0 to double
+  %r = fdiv double %a, %b
+  %res = fptoui double %r to i32
+  ret i32 %res
 }
