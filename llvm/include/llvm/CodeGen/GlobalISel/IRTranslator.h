@@ -18,11 +18,8 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H
 #define LLVM_CODEGEN_GLOBALISEL_IRTRANSLATOR_H
 
-#include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
