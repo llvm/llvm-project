@@ -1,4 +1,4 @@
-// RUN: fir-opt --memory-allocation-opt %s | FileCheck %s --check-prefix=HEAP
+// RUN: fir-opt --cuda-heap-alloc-promotion %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
 
 // Same routing as cuda-heap-alloc-unified.fir, with the managed entry points.

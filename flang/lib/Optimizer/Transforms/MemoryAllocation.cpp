@@ -9,7 +9,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -59,17 +58,7 @@ keepStackAllocation(fir::AllocaOp alloca,
 
 static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
                                bool deallocPointsDominateAlloc) {
-  mlir::Type varTy = alloca.getInType();
-  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-    if (opt)
-      return *opt;
-    return {};
-  };
-  llvm::StringRef uniqName = unpackName(alloca.getUniqName());
-  llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
-                                      bindcName, alloca.getTypeparams(),
-                                      alloca.getShape());
+  fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;
@@ -132,9 +121,6 @@ public:
     // If func is a declaration, skip it.
     if (func.empty())
       return;
-    mlir::IRRewriter cudaHeapRewriter(context);
-    fir::promoteDynamicVariableAllocasToCudaHeap(cudaHeapRewriter,
-                                                 func.getOperation());
     auto tryReplacing = [&](fir::AllocaOp alloca) {
       bool res = !keepStackAllocation(alloca, options);
       if (res) {

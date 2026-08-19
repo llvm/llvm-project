@@ -315,6 +315,19 @@ bool fir::replaceAllocas(mlir::RewriterBase &rewriter,
   return replacedAllRequestedAlloca;
 }
 
+fir::AllocMemOp fir::createAllocMemFromAlloca(mlir::OpBuilder &builder,
+                                              fir::AllocaOp alloca) {
+  auto unpackName = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
+    if (opt)
+      return *opt;
+    return {};
+  };
+  return fir::AllocMemOp::create(builder, alloca.getLoc(), alloca.getInType(),
+                                 unpackName(alloca.getUniqName()),
+                                 unpackName(alloca.getBindcName()),
+                                 alloca.getTypeparams(), alloca.getShape());
+}
+
 /// Device code keeps its stack allocations: the unified/managed entry points
 /// are host-only, and a kernel-side heap allocation would be a large
 /// regression over a device stack array.
@@ -323,7 +336,11 @@ static bool isDeviceCode(mlir::Operation *func, mlir::ModuleOp mod) {
     return true;
   if (auto procAttr =
           func->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName()))
-    return procAttr.getValue() != cuf::ProcAttribute::Host;
+    // As in the inDeviceContext helpers of the CUF passes, attributes(host,
+    // device) is not device code here: this is the host copy of the routine,
+    // and its device copy is in the gpu.module handled above.
+    return procAttr.getValue() != cuf::ProcAttribute::Host &&
+           procAttr.getValue() != cuf::ProcAttribute::HostDevice;
   if (mlir::acc::isAccRoutine(func))
     return true;
   if (auto offloadMod =
@@ -361,13 +378,7 @@ bool fir::promoteDynamicVariableAllocasToCudaHeap(mlir::RewriterBase &rewriter,
   };
   auto genAllocmem = [&](mlir::OpBuilder &builder, fir::AllocaOp alloca,
                          bool) -> mlir::Value {
-    auto name = [](std::optional<llvm::StringRef> opt) -> llvm::StringRef {
-      return opt ? *opt : llvm::StringRef{};
-    };
-    auto heap = fir::AllocMemOp::create(
-        builder, alloca.getLoc(), alloca.getInType(),
-        name(alloca.getUniqName()), name(alloca.getBindcName()),
-        alloca.getTypeparams(), alloca.getShape());
+    fir::AllocMemOp heap = fir::createAllocMemFromAlloca(builder, alloca);
     fir::setCudaHeapAllocMode(heap.getOperation(), mode);
     // Keep the placement passes from sinking it back to the stack: the
     // allocator is chosen here and the matching free is emitted below.

@@ -15,7 +15,6 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "flang/Optimizer/Transforms/MemoryUtils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
@@ -746,13 +745,6 @@ llvm::StringRef StackArraysPass::getDescription() const {
 
 void StackArraysPass::runOnOperation() {
   mlir::func::FuncOp func = getOperation();
-
-  // -fstack-arrays does not apply to the automatic arrays that
-  // -gpu=mem:unified|managed must place in unified/managed memory. Done before
-  // the analysis below, which skips the fir.must_be_heap pairs it creates.
-  mlir::IRRewriter cudaHeapRewriter(&getContext());
-  fir::promoteDynamicVariableAllocasToCudaHeap(cudaHeapRewriter,
-                                               func.getOperation());
 
   auto &analysis = getAnalysis<fir::StackArraysAnalysisWrapper>();
   const fir::StackArraysAnalysisWrapper::AllocMemMap *candidateOps =

@@ -1,7 +1,13 @@
-// RUN: fir-opt --memory-allocation-opt %s | FileCheck %s --check-prefix=HEAP
-// RUN: fir-opt --stack-arrays %s | FileCheck %s --check-prefix=HEAP
+// RUN: fir-opt --cuda-heap-alloc-promotion %s | FileCheck %s --check-prefix=HEAP
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
 // RUN: fir-opt --fir-to-llvm-ir=unified-heap-alloc-suffix=_pool %s | FileCheck %s --check-prefix=SUFFIX
+
+// The promotion is a correctness requirement of the mode, so it does not depend
+// on the array placement pass that follows it: what it produces is marked
+// fir.must_be_heap, which both of them leave alone.
+// RUN: fir-opt --cuda-heap-alloc-promotion --memory-allocation-opt %s | FileCheck %s --check-prefix=HEAP
+// RUN: fir-opt --cuda-heap-alloc-promotion --stack-arrays %s | FileCheck %s --check-prefix=HEAP
+// RUN: fir-opt --cuda-heap-alloc-promotion --allocation-placement %s | FileCheck %s --check-prefix=HEAP
 
 // Under fir.cuda_heap_alloc = "unified", named automatic arrays move to the
 // heap and are marked. Only marked allocations use malloc_unified: memory the
@@ -58,6 +64,16 @@ func.func @anon_temp(%arg0: index) {
 // HEAP-NOT: fir.allocmem
 func.func @device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
   %0 = fir.alloca !fir.array<?xf32>, %arg0 {bindc_name = "a", uniq_name = "_QFdevice_vlaEa"}
+  return
+}
+
+// attributes(host,device) is the host copy of the routine here, so it needs the
+// unified memory just like any other host code. The device copy of it lives in
+// the gpu.module.
+// HEAP-LABEL: func.func @host_device_vla(
+// HEAP: fir.allocmem !fir.array<?xf32>, %{{.*}} {{{.*}}fir.cuda_heap_alloc = "unified"
+func.func @host_device_vla(%arg0: index) attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>} {
+  %0 = fir.alloca !fir.array<?xf32>, %arg0 {bindc_name = "a", uniq_name = "_QFhost_device_vlaEa"}
   return
 }
 
