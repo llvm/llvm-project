@@ -13570,6 +13570,7 @@ libc_math_function(
     name = "sqrtf128",
     additional_deps = [
         ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_sqrtf128",
     ],
 )

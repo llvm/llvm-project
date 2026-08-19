@@ -299,6 +299,7 @@ math_test(
     hdrs = ["SqrtTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+        "//libc:__support_integer_literals",
     ],
 )
 
