@@ -8,7 +8,7 @@ jobs:
       - shell: bash
         run: |
           dotnet tool install --global wix
-          cmake -G Ninja -S . -B build
+          cmake -G Ninja -S .github/workflows -B build
           ninja -C build package
 
 
