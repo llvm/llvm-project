@@ -313,11 +313,15 @@ double test_fma_f64(double a, double b, double c) {
   // OGCG: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
   return __builtin_fma(a, b, c);
 }
-void test_vfmadd(double a, double b, double c){
-  //CIR-LABEL:test_vfmadd
-  __builtin_ia32_vfmaddpd(a,b,c);
-  __builtin_ia32_vfmaddps(a,b,C);
-  __builtin_ia32_vfmaddsubpd(a,b,C);
-  __builtin_ia32_vfmaddsubps(a,b,c);
-}
+// CHECK-LABEL: cir.func @test_vfmadd
+// CHECK: cir.call @__builtin_ia32_vfmaddpd
+// CHECK: cir.call @__builtin_ia32_vfmaddps
+// CHECK: cir.call @__builtin_ia32_vfmaddsubpd
+// CHECK: cir.call @__builtin_ia32_vfmaddsubps
+void test_vfmadd(double a, double b, double c) {
+  __builtin_ia32_vfmaddpd(a, b, c);
+    __builtin_ia32_vfmaddps(a, b, c);
+      __builtin_ia32_vfmaddsubpd(a, b, c);
+        __builtin_ia32_vfmaddsubps(a, b, c);
+        }
 
