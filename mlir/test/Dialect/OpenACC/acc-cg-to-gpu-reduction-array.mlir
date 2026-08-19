@@ -276,11 +276,16 @@ func.func @partial_thread_x_reduction() {
   return
 }
 
-// CHECK-LABEL: func.func @thread_y_reduction_still_aligned
-// CHECK: %[[C32:.*]] = arith.constant 32 : index
+// A worker-only launch keeps its (1, N, 1) shape: every worker owns one thread,
+// so the workers are already the subgroup lanes. Padding ThreadX would fold the
+// workers into lanes and serialize them.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_single_thread_rows
+// CHECK: %[[C16_ROWS:.*]] = arith.constant 16 : index
+// CHECK-NOT: arith.constant 32 : index
 // CHECK: gpu.launch
-// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32]],
-func.func @thread_y_reduction_still_aligned() {
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %[[C16_ROWS]],
+func.func @thread_y_reduction_single_thread_rows() {
   %c1 = arith.constant 1 : index
   %c16 = arith.constant 16 : index
   %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
@@ -290,6 +295,30 @@ func.func @thread_y_reduction_still_aligned() {
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
         par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// More workers than a subgroup still get aligned: the worker-indexed shared
+// reduction buffer only holds subgroupSize entries.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_more_workers_than_subgroup
+// CHECK: %[[C32_WIDE:.*]] = arith.constant 32 : index
+// CHECK: %[[C2_WIDE:.*]] = arith.constant 2 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_WIDE]], %{{.*}} = %[[C2_WIDE]],
+func.func @thread_y_reduction_more_workers_than_subgroup() {
+  %c1 = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %ty = acc.par_width %c64 {par_dim = #acc.par_dim<thread_y>}
+  acc.compute_region launch(%kbx = %bx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_y]>}
     acc.yield
   } {origin = "acc.parallel"}
   return
