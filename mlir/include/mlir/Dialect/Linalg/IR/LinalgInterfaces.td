@@ -816,6 +816,15 @@ def ElementwiseOpInterface : OpInterface<"ElementwiseOpInterface"> {
       /*retType=*/"::mlir::linalg::ElementwiseKind",
       /*methodName=*/"getElementwiseKind",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the arity group of this elementwise operation
+        (unary, binary, or ternary).
+      }],
+      /*retType=*/"::mlir::linalg::ElementwiseArityGroup",
+      /*methodName=*/"getArityGroup",
+      /*args=*/(ins)
     >
   ];
 }
