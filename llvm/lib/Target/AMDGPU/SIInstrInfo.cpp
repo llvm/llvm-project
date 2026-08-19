@@ -4001,6 +4001,10 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       if (pseudoToMCOpcode(NewOpc) == -1)
         return false;
 
+      if ((Src0->isImm() && !isInlineConstant(*Src0)) ||
+          (Src1->isImm() && !isInlineConstant(*Src1)))
+        return false;
+
       // FIXME: This would be a lot easier if we could return a new instruction
       // instead of having to modify in place.
 
