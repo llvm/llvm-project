@@ -173,7 +173,7 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
 static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
-                                                  "bitfield", "empty_bitfield"};
+                                                  "bitfield"};
 
 static std::optional<RecordMemberKind>
 parseMemberKind(mlir::AsmParser &parser) {

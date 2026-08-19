@@ -155,11 +155,10 @@ struct CIRRecordLowering final {
   /// of the bit-fields it holds.
   static cir::RecordMemberKind makeMemberKind(bool holdsData,
                                               bool isBitFieldAccessUnit) {
-    if (isBitFieldAccessUnit)
-      return holdsData ? cir::RecordMemberKind::BitField
-                       : cir::RecordMemberKind::EmptyBitField;
-    return holdsData ? cir::RecordMemberKind::Data
-                     : cir::RecordMemberKind::Empty;
+    if (!holdsData)
+      return cir::RecordMemberKind::Empty;
+    return isBitFieldAccessUnit ? cir::RecordMemberKind::BitField
+                                : cir::RecordMemberKind::Data;
   }
 
   /// The mark for a field.
@@ -430,9 +429,8 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // field at a time here, so the unit starts out holding no data and is
         // promoted below when a named occupant lands in it.
         storageIdx = members.size();
-        members.push_back(
-            makeStorageInfo(bitsToCharUnits(startBitOffset), type,
-                            cir::RecordMemberKind::EmptyBitField));
+        members.push_back(makeStorageInfo(bitsToCharUnits(startBitOffset), type,
+                                          cir::RecordMemberKind::Empty));
       }
       assert(members[storageIdx].offset == bitsToCharUnits(startBitOffset) &&
              "storageIdx must name the current run's storage");
@@ -618,8 +616,8 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
         // starts out holding no data and is promoted below when a named
         // occupant lands in it.
         const size_t storageIdx = members.size();
-        members.push_back(makeStorageInfo(
-            beginOffset, type, cir::RecordMemberKind::EmptyBitField));
+        members.push_back(
+            makeStorageInfo(beginOffset, type, cir::RecordMemberKind::Empty));
         for (; begin != bestEnd; ++begin) {
           if (!begin->isUnnamedBitField())
             members[storageIdx].memberKind = cir::RecordMemberKind::BitField;

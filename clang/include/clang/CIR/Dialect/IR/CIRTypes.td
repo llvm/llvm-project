@@ -632,8 +632,7 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
   I32EnumAttrCase<"Data", 0, "data">,
   I32EnumAttrCase<"Pad", 1, "pad">,
   I32EnumAttrCase<"Empty", 2, "empty">,
-  I32EnumAttrCase<"BitField", 3, "bitfield">,
-  I32EnumAttrCase<"EmptyBitField", 4, "empty_bitfield">
+  I32EnumAttrCase<"BitField", 3, "bitfield">
 ]> {
   let description = [{
     `pad` is storage the compiler inserted to place a later member at its
@@ -643,13 +642,17 @@ def CIR_RecordMemberKind : CIR_I32EnumAttr<
     field, a vtable pointer, or a base subobject.  They differ only on whether
     it holds data for argument passing.
 
-    `bitfield` and `empty_bitfield` are bit-field access units, the first
-    holding at least one named bit-field and the second only unnamed ones.  A
-    unit can be narrower than the declared type of the bit-fields it holds, so
-    its extent does not answer what the source declared.  Without these two, a
-    unit holding a 32-bit bit-field of `long long` would be indistinguishable
-    from an `unsigned` field, and clang's x86-64 lowering coerces two records
-    that differ only in that to `i64` and `i32`.
+    `bitfield` is a bit-field access unit holding at least one named
+    bit-field.  A unit can be narrower than the declared type of the bit-fields
+    it holds, so its extent does not answer what the source declared.  Without
+    it, a unit holding a 32-bit bit-field of `long long` would be
+    indistinguishable from an `unsigned` field, and clang's x86-64 lowering
+    coerces two records that differ only in that to `i64` and `i32`.
+
+    An access unit holding only unnamed bit-fields is `empty`, since it carries
+    no data for argument passing.  A consumer that has to recognize one can:
+    among `empty` members only an access unit occupies bytes, everything else
+    the source declared as empty for the ABI occupies none.
 
     A union's base subobject is the one exception to all of this: a single
     member stands in for every variant, and it takes a unit mark as soon as any
@@ -713,7 +716,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
         !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
         !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
         !rec_empty    = !cir.struct<"e" {empty !u8i}>
-        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty_bitfield !u8i}>
+        !rec_bits     = !cir.struct<"b" {bitfield !u8i, empty !u8i}>
         !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
@@ -869,7 +872,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
         !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
         !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
         !u_empty      = !cir.union<"U" {empty !u8i}>
-        !u_bits       = !cir.union<"U" {bitfield !u8i, empty_bitfield !u8i}>
+        !u_bits       = !cir.union<"U" {bitfield !u8i, empty !u8i}>
     ```
   }];
 
