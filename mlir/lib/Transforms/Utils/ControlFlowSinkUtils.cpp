@@ -80,11 +80,8 @@ bool Sinker::allUsersDominatedBy(Operation *op, Region *region) {
          "expected op to be defined outside the region");
   return llvm::all_of(op->getUsers(), [&](Operation *user) {
     // The user is dominated by the region if its containing block is dominated
-    // by the region's entry block. Additionally, allow users that are in
-    // descendant regions of the region (e.g., nested loops) since those
-    // should still permit sinking into the outer region.
-    return domInfo.dominates(&region->front(), user->getBlock()) ||
-           region->isAncestor(user->getParentRegion());
+    // by the region's entry block
+    return domInfo.dominates(&region->front(), user->getBlock());
   });
 }
 
