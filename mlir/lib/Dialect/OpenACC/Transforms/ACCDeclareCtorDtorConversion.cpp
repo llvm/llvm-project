@@ -1,4 +1,4 @@
-//===- ACCDeclareCtorDtorConversion.cpp - Declare ctor/dtor to LLVM -*- C++ -*-===//
+//===- ACCDeclareCtorDtorConversion.cpp - Declare ctor/dtor to LLVM -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -66,9 +66,9 @@ static void replaceGlobalCtors(ModuleOp mod, OpBuilder &builder,
     return;
 
   builder.setInsertionPointToEnd(mod.getBody());
-  LLVM::GlobalCtorsOp::create(builder, mod.getLoc(), builder.getArrayAttr(ctors),
-                              builder.getI32ArrayAttr(priorities),
-                              builder.getArrayAttr(data));
+  LLVM::GlobalCtorsOp::create(
+      builder, mod.getLoc(), builder.getArrayAttr(ctors),
+      builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
 }
 
 static void replaceGlobalDtors(ModuleOp mod, OpBuilder &builder,
@@ -82,9 +82,9 @@ static void replaceGlobalDtors(ModuleOp mod, OpBuilder &builder,
     return;
 
   builder.setInsertionPointToEnd(mod.getBody());
-  LLVM::GlobalDtorsOp::create(builder, mod.getLoc(), builder.getArrayAttr(dtors),
-                              builder.getI32ArrayAttr(priorities),
-                              builder.getArrayAttr(data));
+  LLVM::GlobalDtorsOp::create(
+      builder, mod.getLoc(), builder.getArrayAttr(dtors),
+      builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
 }
 
 /// Create an llvm.func from an acc.global_ctor / acc.global_dtor region.
@@ -94,11 +94,10 @@ static LLVM::LLVMFuncOp createLLVMFunctionFromRegion(StringRef symName,
                                                      ModuleOp mod,
                                                      OpBuilder &builder) {
   auto llvmVoidTy = LLVM::LLVMVoidType::get(mod.getContext());
-  auto funcTy =
-      LLVM::LLVMFunctionType::get(llvmVoidTy, {}, /*isVarArg=*/false);
+  auto funcTy = LLVM::LLVMFunctionType::get(llvmVoidTy, {}, /*isVarArg=*/false);
   builder.setInsertionPointToEnd(mod.getBody());
-  auto newFunc = LLVM::LLVMFuncOp::create(builder, mod.getLoc(), symName, funcTy,
-                                          LLVM::Linkage::Internal);
+  auto newFunc = LLVM::LLVMFuncOp::create(builder, mod.getLoc(), symName,
+                                          funcTy, LLVM::Linkage::Internal);
 
   Block *entry = newFunc.addEntryBlock(builder);
   builder.setInsertionPointToStart(entry);
