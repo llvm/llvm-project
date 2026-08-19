@@ -106,3 +106,40 @@ TEST(LlvmLibcFixedVectorTest, ConstForwardIteration) {
     ASSERT_EQ(*it, arr[idx]);
   }
 }
+
+TEST(LlvmLibcFixedVectorTest, Front) {
+  LIBC_NAMESPACE::FixedVector<int, 20> fixed_vector;
+  for (int i = 0; i < 5; i++)
+    ASSERT_TRUE(fixed_vector.push_back(i));
+  ASSERT_EQ(fixed_vector.front(), 0);
+  fixed_vector.front() = 10;
+  ASSERT_EQ(fixed_vector.front(), 10);
+  fixed_vector.front() = 0;
+
+  const auto &const_vector = fixed_vector;
+  ASSERT_EQ(const_vector.front(), 0);
+}
+
+TEST(LlvmLibcFixedVectorTest, Erase) {
+  LIBC_NAMESPACE::FixedVector<int, 20> fixed_vector;
+  for (int i = 0; i < 5; i++)
+    ASSERT_TRUE(fixed_vector.push_back(i));
+
+  auto it = fixed_vector.erase(fixed_vector.begin());
+  ASSERT_EQ(it, fixed_vector.begin());
+  ASSERT_EQ(fixed_vector.size(), size_t(4));
+  ASSERT_EQ(fixed_vector.front(), 1);
+  ASSERT_EQ(fixed_vector.back(), 4);
+
+  it = fixed_vector.erase(fixed_vector.begin() + 1);
+  ASSERT_EQ(it, fixed_vector.begin() + 1);
+  ASSERT_EQ(fixed_vector.size(), size_t(3));
+  ASSERT_EQ(fixed_vector[0], 1);
+  ASSERT_EQ(fixed_vector[1], 3);
+  ASSERT_EQ(fixed_vector[2], 4);
+
+  it = fixed_vector.erase(fixed_vector.end() - 1);
+  ASSERT_EQ(it, fixed_vector.end());
+  ASSERT_EQ(fixed_vector.size(), size_t(2));
+  ASSERT_EQ(fixed_vector.back(), 3);
+}
