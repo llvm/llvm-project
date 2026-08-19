@@ -197,8 +197,7 @@ struct State {
 
   /// Returns the senses, {unsigned, signed}, in which stepping the induction
   /// phi \p PN, starting at \p Start, to \p Step cannot decrease it.
-  std::pair<bool, bool> getNonDecreasingInfo(PHINode &PN, Value *Start,
-                                             Value *Step);
+  std::pair<bool, bool> getNonDecreasingInfo(PHINode &PN, Value *Step);
 
   /// Returns true if we can add a known condition from BB to its successor
   /// block Succ.
@@ -987,8 +986,7 @@ static std::pair<Value *, Value *> getStartAndStep(const PHINode &PN,
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
-std::pair<bool, bool> State::getNonDecreasingInfo(PHINode &PN, Value *Start,
-                                                  Value *Step) {
+std::pair<bool, bool> State::getNonDecreasingInfo(PHINode &PN, Value *Step) {
   bool Unsigned = false, Signed = false;
   const APInt *StepOffset = nullptr;
   if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
@@ -1038,7 +1036,7 @@ void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
     if (!Start)
       continue;
 
-    auto [Unsigned, Signed] = getNonDecreasingInfo(PN, Start, Step);
+    auto [Unsigned, Signed] = getNonDecreasingInfo(PN, Step);
     // Every variable in the unsigned system already has a `V >= 0` row, so a
     // zero start value would just duplicate it.
     if (match(Start, m_Zero()))
@@ -1151,7 +1149,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   }
 
   auto [MonotonicallyIncreasingUnsigned, MonotonicallyIncreasingSigned] =
-      getNonDecreasingInfo(*PN, StartValue, Backedge);
+      getNonDecreasingInfo(*PN, Backedge);
 
   // Make sure AR either steps by 1 or that the value we compare against is a
   // GEP based on the same start value and all offsets are a multiple of the
