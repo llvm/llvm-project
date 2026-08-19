@@ -318,6 +318,7 @@ static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
       .addArraySubscriptOperators(Dim, IsArray)
       // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);
       // the generic addGetDimensionsMethods is mip-based and unsuitable here.
+      // https://github.com/llvm/wg-hlsl/issues/347
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
