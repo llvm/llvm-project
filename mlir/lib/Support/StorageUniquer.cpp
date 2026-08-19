@@ -11,7 +11,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/ThreadLocalCache.h"
 #include "mlir/Support/TypeID.h"
-#include "llvm/ADT/Bitfields.h"
 #include "llvm/Support/RWMutex.h"
 
 using namespace mlir;
@@ -67,9 +66,6 @@ private:
   };
   using StorageTypeSet = DenseSet<HashedStorage, StorageKeyInfo>;
 
-  using InTransientScope = llvm::Bitfield::Element<bool, 0, 1>;
-  using NumShards = llvm::Bitfield::Element<unsigned, 1, 31>;
-
   /// This class represents a single shard of the uniquer. The uniquer uses a
   /// set of shards to allow for multiple threads to create instances with less
   /// lock contention.
@@ -92,6 +88,13 @@ private:
   BaseStorage *getOrCreateUnsafe(Shard &shard, LookupKey &key,
                                  function_ref<BaseStorage *()> ctorFn) {
     if (isInTransientScope()) {
+      // If we are in a transient scope, then it means we had a base context
+      // which was frozen at some point and are busy mutating in a transient
+      // overlay state. Check to see if the instance is in either of these
+      // first before creating. The expectation is that the base state is
+      // rather minimal and most of the entries are in the transient, so
+      // search in transient instances first before base, and if neither
+      // create a transient instance.
       if (shard.transientInstances) {
         auto transientIt = shard.transientInstances->find_as(key);
         if (transientIt != shard.transientInstances->end())
@@ -139,13 +142,13 @@ public:
         destructorFn(destructorFn) {
     assert(llvm::isPowerOf2_64(numShards) &&
            "the number of shards is required to be a power of 2");
-    llvm::Bitfield::set<NumShards>(numShardsAndScope, numShards);
+    this->numShards = numShards;
+    this->inTransientScope = false;
     for (size_t i = 0; i < numShards; i++)
       shards[i].store(nullptr, std::memory_order_relaxed);
   }
   ~ParametricStorageUniquer() {
     // Free all of the allocated shards.
-    size_t numShards = getNumShards();
     for (size_t i = 0; i != numShards; ++i) {
       if (Shard *shard = shards[i].load()) {
         destroyShardInstances(*shard);
@@ -205,7 +208,7 @@ public:
   void beginTransientScope() {
     assert(!isInTransientScope() &&
            "parametric storage uniquer is already in a transient scope");
-    llvm::Bitfield::set<InTransientScope>(numShardsAndScope, true);
+    inTransientScope = true;
   }
 
   void endTransientScope() {
@@ -214,7 +217,6 @@ public:
     if (!isInTransientScope())
       return;
 
-    size_t numShards = getNumShards();
     for (size_t i = 0; i != numShards; ++i) {
       if (Shard *shard = shards[i].load()) {
         llvm::sys::SmartScopedWriter<true> typeLock(shard->mutex);
@@ -228,22 +230,18 @@ public:
       }
     }
     localCache.clear();
-    llvm::Bitfield::set<InTransientScope>(numShardsAndScope, false);
+    inTransientScope = false;
   }
 
-  bool isInTransientScope() const {
-    return llvm::Bitfield::get<InTransientScope>(numShardsAndScope);
-  }
+  bool isInTransientScope() const { return inTransientScope; }
 
-  size_t getNumShards() const {
-    return llvm::Bitfield::get<NumShards>(numShardsAndScope);
-  }
+  size_t getNumShards() const { return numShards; }
 
 private:
   /// Return the shard used for the given hash value.
   Shard &getShard(unsigned hashValue) {
     // Get a shard number from the provided hashvalue.
-    unsigned shardNum = hashValue & (getNumShards() - 1);
+    unsigned shardNum = hashValue & (numShards - 1);
 
     // Try to acquire an already initialized shard.
     Shard *shard = shards[shardNum].load(std::memory_order_acquire);
@@ -269,9 +267,11 @@ private:
   /// the overhead when only a small amount of shards are in use.
   std::unique_ptr<std::atomic<Shard *>[]> shards;
 
-  /// Packed field storing numShards in bits 1..31 and inTransientScope in bit
-  /// 0.
-  uint32_t numShardsAndScope = 0;
+  /// The number of available shards.
+  unsigned numShards : 31;
+
+  /// Whether the uniquer is currently in a transient scope.
+  unsigned inTransientScope : 1;
 
   /// Function to used to destruct any allocated storage instances.
   function_ref<void(BaseStorage *)> destructorFn;

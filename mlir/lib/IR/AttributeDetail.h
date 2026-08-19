@@ -330,19 +330,16 @@ public:
   }
 
   void beginTransientScope() {
-    llvm::sys::SmartScopedWriter<true> guard(allocatorMutex);
     assert(!transientAllocator &&
            "distinct attribute allocator is already in a transient scope");
     transientAllocator = std::make_unique<llvm::BumpPtrAllocator>();
   }
 
   void endTransientScope() {
-    llvm::sys::SmartScopedWriter<true> guard(allocatorMutex);
     transientAllocator.reset();
   }
 
   bool isInTransientScope() const {
-    llvm::sys::SmartScopedReader<true> guard(allocatorMutex);
     return transientAllocator != nullptr;
   }
 
