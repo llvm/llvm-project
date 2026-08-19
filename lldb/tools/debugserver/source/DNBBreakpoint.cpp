@@ -135,7 +135,7 @@ size_t DNBBreakpointList::FindBreakpointsThatOverlapRange(
       iterator prev_pos = pos;
       --prev_pos;
       if (prev_pos->second.IntersectsRange(addr, size, NULL, NULL, NULL))
-        bps.push_back(&prev_pos->second);
+        bps.push_back(&pos->second);
     }
 
     while (pos != end) {
