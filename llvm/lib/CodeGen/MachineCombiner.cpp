@@ -602,12 +602,12 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
         dbgs() << "\tFor the Pattern (" << (int)P
                << ") these instructions could be removed\n";
         for (auto const *InstrPtr : DelInstrs)
-          InstrPtr->print(dbgs(), /*IsStandalone*/ false, /*SkipOpers*/ false,
-                          /*SkipDebugLoc*/ false, /*AddNewLine*/ true, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
         dbgs() << "\tThese instructions could replace the removed ones\n";
         for (auto const *InstrPtr : InsInstrs)
-          InstrPtr->print(dbgs(), /*IsStandalone*/ false, /*SkipOpers*/ false,
-                          /*SkipDebugLoc*/ false, /*AddNewLine*/ true, TII);
+          InstrPtr->print(dbgs(), /*IsStandalone*/false, /*SkipOpers*/false,
+                          /*SkipDebugLoc*/false, /*AddNewLine*/true, TII);
       });
 
       // Check that the difference between original and new latency is
@@ -771,7 +771,6 @@ MachineCombinerPass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserve<MachineTraceMetricsAnalysis>();
   return PA;
 }
