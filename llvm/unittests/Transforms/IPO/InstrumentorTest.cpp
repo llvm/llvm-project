@@ -33,7 +33,7 @@ public:
       : RuntimePath(RuntimePath) {}
 
   void populate(InstrumentorIRBuilderTy &) override {
-    RuntimeBitcode->setString(RuntimePath);
+    RuntimeBitcodes->setStringList({StringRef(RuntimePath)});
   }
 
   bool instrumentBeforeRuntimeLink(Module &M,
