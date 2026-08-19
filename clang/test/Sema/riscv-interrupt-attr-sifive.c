@@ -67,13 +67,13 @@ void foo_preemptible_stack_swap_machine(void) {}
 #else
 
 __attribute__((interrupt("SiFive-CLIC-stack-swap"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
-__attribute__((interrupt("SiFive-CLIC-stack-swap", "SiFive-CLIC-stack-swap"))) void foo15(void); // both-warning {{RISC-V 'interrupt' attribute type 'SiFive-CLIC-stack-swap' cannot be specified more than once}} \
+__attribute__((interrupt("SiFive-CLIC-stack-swap", "SiFive-CLIC-stack-swap"))) void foo15(void); // both-warning {{RISC-V 'interrupt' attribute type 'SiFive-CLIC-stack-swap' specified more than once}} \
   // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
 __attribute__((interrupt("SiFive-CLIC-stack-swap", "machine"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
 __attribute__((interrupt("machine", "SiFive-CLIC-stack-swap"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
 
 __attribute__((interrupt("SiFive-CLIC-preemptible"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-preemptible' requires extension 'XSfmclic'}}
-__attribute__((interrupt("SiFive-CLIC-preemptible", "SiFive-CLIC-preemptible"))) void foo15(void); // both-warning {{RISC-V 'interrupt' attribute type 'SiFive-CLIC-preemptible' cannot be specified more than once}} \
+__attribute__((interrupt("SiFive-CLIC-preemptible", "SiFive-CLIC-preemptible"))) void foo15(void); // both-warning {{RISC-V 'interrupt' attribute type 'SiFive-CLIC-preemptible' specified more than once}} \
   // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-preemptible' requires extension 'XSfmclic'}}
 __attribute__((interrupt("SiFive-CLIC-preemptible", "machine"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-preemptible' requires extension 'XSfmclic'}}
 __attribute__((interrupt("machine", "SiFive-CLIC-preemptible"))) void foo15(void); // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-preemptible' requires extension 'XSfmclic'}}
@@ -82,7 +82,7 @@ __attribute__((interrupt("SiFive-CLIC-preemptible", "SiFive-CLIC-stack-swap"))) 
 __attribute__((interrupt("SiFive-CLIC-stack-swap", "SiFive-CLIC-preemptible"))) void foo17(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
 __attribute__((interrupt("machine", "SiFive-CLIC-stack-swap", "SiFive-CLIC-preemptible"))) void foo18(void) {} // disabled-error {{requires extension 'XSfmclic'}}
 
-__attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible"))) void foo24(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'machine' cannot be specified more than once}} \
+__attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible"))) void foo24(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'machine' specified more than once}} \
   // disabled-error {{requires extension 'XSfmclic'}}
 __attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible", "SiFive-CLIC-stack-swap"))) void foo25(void) {} // both-error {{'interrupt' attribute takes no more than 3 arguments}}
 

@@ -14,9 +14,9 @@ void foo_rnmi_interrupt(void) {}
 #else
 
 __attribute__((interrupt("rnmi"))) void test_rnmi(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'rnmi' requires extension 'Smrnmi'}}
-__attribute__((interrupt("rnmi", "rnmi"))) void test_rnmi_rnmi(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'rnmi' cannot be specified more than once}} \
+__attribute__((interrupt("rnmi", "rnmi"))) void test_rnmi_rnmi(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'rnmi' specified more than once}} \
   // disabled-error {{RISC-V 'interrupt' attribute 'rnmi' requires extension 'Smrnmi'}}
-__attribute__((interrupt("rnmi", "rnmi", "rnmi"))) void test_rnmi_rnmi_rnmi(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'rnmi' cannot be specified more than once}} \
+__attribute__((interrupt("rnmi", "rnmi", "rnmi"))) void test_rnmi_rnmi_rnmi(void) {} // both-warning {{RISC-V 'interrupt' attribute type 'rnmi' specified more than once}} \
   // disabled-error {{RISC-V 'interrupt' attribute 'rnmi' requires extension 'Smrnmi'}}
 
 __attribute__((interrupt("rnmi", "supervisor"))) void foo_rnmi_supervisor(void) {}  // both-error {{RISC-V 'interrupt' attribute contains invalid combination of interrupt types}}

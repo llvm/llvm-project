@@ -13680,7 +13680,7 @@ def err_riscv_type_requires_extension : Error<
 def err_riscv_attribute_interrupt_requires_extension : Error<
   "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
 def warn_riscv_attribute_interrupt_duplicate_type : Warning<
-  "RISC-V 'interrupt' attribute type '%0' cannot be specified more than once">,
+  "RISC-V 'interrupt' attribute type '%0' specified more than once">,
   InGroup<DiagGroup<"duplicate-interrupt-type">>;
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
