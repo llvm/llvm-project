@@ -8,6 +8,7 @@
 
 #include <detail/program_manager.hpp>
 
+#include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/exception.hpp>
 
 #include <detail/device_impl.hpp>
