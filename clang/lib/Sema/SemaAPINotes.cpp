@@ -1447,68 +1447,54 @@ void Sema::ProcessAPINotes(Decl *D) {
               DiagnosticState.noteSeenDeclaration(*NameOnlyKey, MethodName,
                                                   CXXMethod->getLocation());
 
-            if (ParameterSelectorCandidates) {
-              processExactAPINotes<api_notes::CXXMethodInfo>(
-                  *this, CXXMethod, *ParameterSelectorCandidates,
-                  [&](ArrayRef<std::string> Parameters) {
-                    api_notes::FunctionSelector Selector;
-                    Selector.setParameters(Parameters);
-                    return Reader->lookupCXXMethod(Context->id, MethodName,
-                                                   Selector);
-                  });
-              DiagnosticState.markCandidatesUsed(
-                  [&](ArrayRef<std::string> Parameters) {
-                    api_notes::FunctionSelector Selector;
-                    Selector.setParameters(Parameters);
-                    return Reader->getCXXMethodSelectorKey(
-                        Context->id, MethodName, Selector);
-                  },
-                  *ParameterSelectorCandidates);
-            }
-
+            SmallVector<api_notes::FunctionSelector, 8> BaseSelectors;
+            BaseSelectors.emplace_back();
             if (CXXMethod->isImplicitObjectMemberFunction()) {
               SmallVector<api_notes::FunctionObjectSelector, 7> ObjectSelectors;
               getAPINotesObjectSelectorSubsets(
                   getAPINotesObjectSelector(CXXMethod), ObjectSelectors);
-              // Apply broad object-selector matches before more specific ones.
-              // For example, Object:{Const:true} can provide defaults for all
-              // const methods. Object:{Const:true, Ref:lvalue} is more
-              // specific for a const lvalue-ref-qualified method, so if both
-              // notes set the same field, the more specific selector wins.
               for (api_notes::FunctionObjectSelector ObjectSelector :
                    ObjectSelectors) {
                 api_notes::FunctionSelector Selector;
                 Selector.Object = ObjectSelector;
-                auto ObjectInfo =
-                    Reader->lookupCXXMethod(Context->id, MethodName, Selector);
+                BaseSelectors.push_back(std::move(Selector));
+              }
+            }
+
+            // Apply less constrained object selectors first, then more
+            // constrained ones. This gives specific selectors refinement
+            // precedence over broad defaults. For example,
+            // Object:{Const:true} can provide defaults for all const methods,
+            // while Object:{Const:true, Ref:lvalue} can override them for
+            // const lvalue methods.
+            for (const api_notes::FunctionSelector &BaseSelector :
+                 BaseSelectors) {
+              if (BaseSelector.Object) {
+                auto ObjectInfo = Reader->lookupCXXMethod(
+                    Context->id, MethodName, BaseSelector);
                 ProcessVersionedAPINotes(*this, CXXMethod, ObjectInfo);
                 if (auto ObjectKey = Reader->getCXXMethodSelectorKey(
-                        Context->id, MethodName, Selector))
+                        Context->id, MethodName, BaseSelector))
                   DiagnosticState.markUsed(*ObjectKey);
               }
 
               if (ParameterSelectorCandidates) {
-                for (api_notes::FunctionObjectSelector ObjectSelector :
-                     ObjectSelectors) {
-                  processExactAPINotes<api_notes::CXXMethodInfo>(
-                      *this, CXXMethod, *ParameterSelectorCandidates,
-                      [&](ArrayRef<std::string> Parameters) {
-                        api_notes::FunctionSelector Selector;
-                        Selector.setParameters(Parameters);
-                        Selector.Object = ObjectSelector;
-                        return Reader->lookupCXXMethod(Context->id, MethodName,
-                                                       Selector);
-                      });
-                  DiagnosticState.markCandidatesUsed(
-                      [&](ArrayRef<std::string> Parameters) {
-                        api_notes::FunctionSelector Selector;
-                        Selector.setParameters(Parameters);
-                        Selector.Object = ObjectSelector;
-                        return Reader->getCXXMethodSelectorKey(
-                            Context->id, MethodName, Selector);
-                      },
-                      *ParameterSelectorCandidates);
-                }
+                processExactAPINotes<api_notes::CXXMethodInfo>(
+                    *this, CXXMethod, *ParameterSelectorCandidates,
+                    [&](ArrayRef<std::string> Parameters) {
+                      api_notes::FunctionSelector Selector = BaseSelector;
+                      Selector.setParameters(Parameters);
+                      return Reader->lookupCXXMethod(Context->id, MethodName,
+                                                     Selector);
+                    });
+                DiagnosticState.markCandidatesUsed(
+                    [&](ArrayRef<std::string> Parameters) {
+                      api_notes::FunctionSelector Selector = BaseSelector;
+                      Selector.setParameters(Parameters);
+                      return Reader->getCXXMethodSelectorKey(
+                          Context->id, MethodName, Selector);
+                    },
+                    *ParameterSelectorCandidates);
               }
             }
           }

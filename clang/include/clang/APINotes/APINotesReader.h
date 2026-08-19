@@ -153,15 +153,15 @@ public:
   /// \returns information about the field, if known.
   VersionedInfo<FieldInfo> lookupField(ContextID CtxID, llvm::StringRef Name);
 
-  /// Look for information regarding the given C++ method in the given C++ tag
-  /// context.
+  /// Look for information regarding the given C++ method with a composed
+  /// selector in the given C++ tag context.
   ///
   /// \param CtxID The ID that references the parent context, i.e. a C++ tag.
   /// \param Name The name of the C++ method we're looking for.
   ///
+  /// Omitted selector components use the broad name-based key.
+  ///
   /// \returns Information about the method, if known.
-  /// Look for information regarding the given C++ method with a composed
-  /// selector. Omitted selector components use the broad name-based key.
   VersionedInfo<CXXMethodInfo>
   lookupCXXMethod(ContextID CtxID, llvm::StringRef Name,
                   const FunctionSelector &Selector = FunctionSelector());
