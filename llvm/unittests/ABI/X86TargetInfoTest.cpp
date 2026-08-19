@@ -55,11 +55,13 @@ protected:
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         Void(TB.getVoidType()),
         Empty(TB.getRecordType({}, llvm::TypeSize::getFixed(8), llvm::Align(1),
+                               /*UnadjustedAlign=*/llvm::Align(1),
                                StructPacking::Default, {}, {},
                                RecordFlags::CanPassInRegisters)),
-        EmptyOver(TB.getRecordType({}, llvm::TypeSize::getFixed(128),
-                                   llvm::Align(16), StructPacking::Default, {},
-                                   {}, RecordFlags::CanPassInRegisters)) {}
+        EmptyOver(TB.getRecordType(
+            {}, llvm::TypeSize::getFixed(128), llvm::Align(16),
+            /*UnadjustedAlign=*/llvm::Align(16), StructPacking::Default, {}, {},
+            RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo> target() const {
     return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB),
@@ -71,7 +73,7 @@ protected:
                          llvm::Align Alignment,
                          RecordFlags Flags = RecordFlags::None) {
     return TB.getUnionType(Fields, llvm::TypeSize::getFixed(SizeInBits),
-                           Alignment, StructPacking::Default,
+                           Alignment, Alignment, StructPacking::Default,
                            Flags | RecordFlags::CanPassInRegisters);
   }
 
@@ -141,7 +143,8 @@ TEST_F(X86TargetInfoTest, AtomicRecordIsIndirect) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Value = TB.getRecordType(
       {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      StructPacking::Default, {}, {}, RecordFlags::CanPassInRegisters);
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters);
   const ABIType *Atomic = TB.getAtomicType(Value, 32, llvm::Align(4));
   const ArgInfo &Info = classifyArg(Atomic, FI, TI);
 
@@ -158,8 +161,9 @@ TEST_F(X86TargetInfoTest, RecordOfAtomicFloatsIsIndirect) {
   const ABIType *AtomicF32 = TB.getAtomicType(F32, 32, llvm::Align(4));
   const ABIType *Record = TB.getRecordType(
       {FieldInfo(AtomicF32, 0), FieldInfo(AtomicF32, 32)},
-      llvm::TypeSize::getFixed(64), llvm::Align(4), StructPacking::Default, {},
-      {}, RecordFlags::CanPassInRegisters);
+      llvm::TypeSize::getFixed(64), llvm::Align(4),
+      /*UnadjustedAlign=*/llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters);
   const ArgInfo &Info = classifyArg(Record, FI, TI);
 
   ASSERT_TRUE(Info.isIndirect());
@@ -173,8 +177,8 @@ TEST_F(X86TargetInfoTest, RecordOfFloatsIsDirectSSE) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Record = TB.getRecordType(
       {FieldInfo(F32, 0), FieldInfo(F32, 32)}, llvm::TypeSize::getFixed(64),
-      llvm::Align(4), StructPacking::Default, {}, {},
-      RecordFlags::CanPassInRegisters);
+      llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4),
+      StructPacking::Default, {}, {}, RecordFlags::CanPassInRegisters);
   const ArgInfo &Info = classifyArg(Record, FI, TI);
 
   ASSERT_TRUE(Info.isDirect());
@@ -255,7 +259,7 @@ TEST_F(X86TargetInfoTest, UnionWithEmptyMemberKeepsFloatPair) {
   std::unique_ptr<TargetInfo> TI;
   const ABIType *Floats = TB.getRecordType(
       {FieldInfo(F32, 0), FieldInfo(F32, 32)}, llvm::TypeSize::getFixed(64),
-      llvm::Align(4), StructPacking::Default, {}, {},
+      llvm::Align(4), llvm::Align(4), StructPacking::Default, {}, {},
       RecordFlags::CanPassInRegisters);
   const ABIType *U =
       unionOf({FieldInfo(Empty), FieldInfo(Floats)}, 64, llvm::Align(4));

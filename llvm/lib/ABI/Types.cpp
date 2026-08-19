@@ -12,6 +12,19 @@
 using namespace llvm;
 using namespace llvm::abi;
 
+bool llvm::abi::Type::isSVESizelessType() const {
+  if (getKind() == TypeKind::Vector) {
+    const VectorType *VT = static_cast<const VectorType *>(this);
+    return VT->isSVEType() && VT->isScalable();
+  }
+  if (getKind() == TypeKind::Tuple) {
+    const VectorType *VT =
+        static_cast<const TupleType *>(this)->getVectorType();
+    return VT->isSVEType() && VT->isScalable();
+  }
+  return false;
+}
+
 bool RecordType::isEmpty() const {
   if (hasFlexibleArrayMember())
     return false;

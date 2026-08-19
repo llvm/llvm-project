@@ -112,7 +112,8 @@ TEST_F(IRTypeMapperTest, PaddedAtomicMapsToValueAndTailPadding) {
   const llvm::abi::RecordType *ThreeBytes = TB.getRecordType(
       {llvm::abi::FieldInfo(I8, 0), llvm::abi::FieldInfo(I8, 8),
        llvm::abi::FieldInfo(I8, 16)},
-      llvm::TypeSize::getFixed(24), llvm::Align(1));
+      llvm::TypeSize::getFixed(24), llvm::Align(1),
+      /*UnadjustedAlign=*/llvm::Align(1));
   const llvm::abi::AtomicType *Atomic =
       TB.getAtomicType(ThreeBytes, 32, llvm::Align(4));
 

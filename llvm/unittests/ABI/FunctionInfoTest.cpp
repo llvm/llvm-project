@@ -39,6 +39,7 @@ protected:
         I64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/true)),
         TwoI64(TB.getRecordType({FieldInfo(I64, 0), FieldInfo(I64, 64)},
                                 llvm::TypeSize::getFixed(128), llvm::Align(8),
+                                /*UnadjustedAlign=*/llvm::Align(8),
                                 StructPacking::Default)) {}
 };
 

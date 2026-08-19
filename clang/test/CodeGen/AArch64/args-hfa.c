@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
+// RUN: %clang_cc1 -triple aarch64 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DARWIN
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-DARWIN --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - -x c %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fexperimental-abi-lowering -emit-llvm -o - -x c %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS --implicit-check-not="not yet implemented"
 
 typedef struct {
   float v[2];
@@ -69,4 +72,14 @@ double f3(S3 h) {
 double f3_call(void) {
   S3 h = {1.0, 2.0};
   return f3(h);
+}
+
+void sink(int n, ...);
+
+// CHECK: define{{.*}} void @f4_call()
+// CHECK-AAPCS:  call void (i32, ...) @sink(i32 noundef 1, [2 x double] alignstack(8) %0)
+// CHECK-DARWIN: call void (i32, ...) @sink(i32 noundef 1, [2 x double] %0)
+void f4_call(void) {
+  S1 h = {1.0, 2.0};
+  sink(1, h);
 }
