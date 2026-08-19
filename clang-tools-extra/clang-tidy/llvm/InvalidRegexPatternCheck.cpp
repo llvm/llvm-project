@@ -29,19 +29,16 @@ void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
       hasUnqualifiedDesugaredType(arrayType(hasElementType(builtinType()))));
   auto IsStdStringView = qualType(hasUnqualifiedDesugaredType(recordType(
       hasDeclaration(cxxRecordDecl(hasName("::std::basic_string_view"))))));
-  auto AnyCastedToStringRef = ignoringImplicit(anyOf(
-      stringLiteral().bind("stringLiteral"),
-      declRefExpr(to(varDecl(
-          hasType(
-              qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
-                             IsStdStringView, IsConstCharPtr, IsCharArray))),
-          hasInitializer(anyOf(GetStringLiteralFromObject, GetStringLit))))),
-      memberExpr(member(
-          fieldDecl(hasType(qualType(
-                        anyOf(IsConstStdString, IsConstllvmStringRef,
-                              IsStdStringView, IsConstCharPtr, IsCharArray))),
-                    hasInClassInitializer(
-                        anyOf(GetStringLiteralFromObject, GetStringLit)))))));
+  auto hasStringContainerType =
+      hasType(qualType(anyOf(IsConstStdString, IsConstllvmStringRef,
+                             IsStdStringView, IsConstCharPtr, IsCharArray)));
+  auto getString = anyOf(GetStringLiteralFromObject, GetStringLit);
+  auto AnyCastedToStringRef = ignoringImplicit(
+      anyOf(stringLiteral().bind("stringLiteral"),
+            declRefExpr(
+                to(varDecl(hasStringContainerType, hasInitializer(getString)))),
+            memberExpr(member(fieldDecl(hasStringContainerType,
+                                        hasInClassInitializer(getString))))));
 
   auto IsRegexFlagsType = ignoringParenImpCasts(
       anyOf(integerLiteral().bind("regexFlagsInt"),
