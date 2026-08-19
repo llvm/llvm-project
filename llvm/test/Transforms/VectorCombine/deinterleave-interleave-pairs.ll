@@ -679,12 +679,12 @@ define <vscale x 16 x i16> @non_speculatable_uses_mixed_blocks(<vscale x 16 x i1
 ; CHECK-NEXT:    [[F3:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 3
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[SPLAT_VALUE]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[INSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[A0:%.*]] = sdiv <vscale x 4 x i16> [[F0]], [[SPLAT]]
+; CHECK-NEXT:    [[A0:%.*]] = sdiv <vscale x 4 x i16> [[SPLAT]], [[F0]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[A1:%.*]] = sdiv <vscale x 4 x i16> [[F1]], [[SPLAT]]
-; CHECK-NEXT:    [[A2:%.*]] = sdiv <vscale x 4 x i16> [[F2]], [[SPLAT]]
-; CHECK-NEXT:    [[A3:%.*]] = sdiv <vscale x 4 x i16> [[F3]], [[SPLAT]]
+; CHECK-NEXT:    [[A1:%.*]] = sdiv <vscale x 4 x i16> [[SPLAT]], [[F1]]
+; CHECK-NEXT:    [[A2:%.*]] = sdiv <vscale x 4 x i16> [[SPLAT]], [[F2]]
+; CHECK-NEXT:    [[A3:%.*]] = sdiv <vscale x 4 x i16> [[SPLAT]], [[F3]]
 ; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i16> @llvm.vector.interleave4.nxv16i16(<vscale x 4 x i16> [[A0]], <vscale x 4 x i16> [[A1]], <vscale x 4 x i16> [[A2]], <vscale x 4 x i16> [[A3]])
 ; CHECK-NEXT:    ret <vscale x 16 x i16> [[R]]
 ; CHECK:       [[ELSE]]:
@@ -698,13 +698,13 @@ entry:
   %f3 = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } %d, 3
   %insert = insertelement <vscale x 4 x i16> poison, i16 %splat_value, i64 0
   %splat = shufflevector <vscale x 4 x i16> %insert, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  %a0 = sdiv <vscale x 4 x i16> %f0, %splat
+  %a0 = sdiv <vscale x 4 x i16> %splat, %f0
   br i1 %cond, label %then, label %else
 
 then:
-  %a1 = sdiv <vscale x 4 x i16> %f1, %splat
-  %a2 = sdiv <vscale x 4 x i16> %f2, %splat
-  %a3 = sdiv <vscale x 4 x i16> %f3, %splat
+  %a1 = sdiv <vscale x 4 x i16> %splat, %f1
+  %a2 = sdiv <vscale x 4 x i16> %splat, %f2
+  %a3 = sdiv <vscale x 4 x i16> %splat, %f3
   %r = call <vscale x 16 x i16> @llvm.vector.interleave4.nxv16i16(<vscale x 4 x i16> %a0, <vscale x 4 x i16> %a1, <vscale x 4 x i16> %a2, <vscale x 4 x i16> %a3)
   ret <vscale x 16 x i16> %r
 
