@@ -803,13 +803,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned NumElts = CoordLODVecTy->getNumElements();
       assert(NumElts >= 2 && "CoordLOD must have at least 2 elements");
 
-      // Split CoordLOD into Coord and LOD
-      SmallVector<int, 4> Mask;
-      for (unsigned I = 0; I < NumElts - 1; ++I)
-        Mask.push_back(I);
-
-      CoordOp =
-          Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
+      // Split CoordLOD into Coord and LOD. 1D resources use a scalar
+      // coordinate rather than a 1-element vector.
+      if (NumElts == 2) {
+        CoordOp = Builder.CreateExtractElement(CoordLODOp, uint64_t(0),
+                                               "hlsl.load.coord");
+      } else {
+        SmallVector<int, 4> Mask;
+        for (unsigned I = 0; I < NumElts - 1; ++I)
+          Mask.push_back(I);
+        CoordOp =
+            Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
+      }
       LODOp = Builder.CreateExtractElement(CoordLODOp, NumElts - 1,
                                            "hlsl.load.lod");
     }
