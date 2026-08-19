@@ -2089,19 +2089,50 @@ TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessor) {
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
+
+  //     VPBB1 VPPB2
+  //     / \    /
+  //     \ /   /
+  //      VPBB3
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB2, VPBB3);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+  auto *Def2 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB2->appendRecipe(Def2);
+
+  auto *Phi = cast<VPPhi>(
+      vputils::reconstructSSA(VPBB3, {{VPBB1, Def1}, {VPBB2, Def2}}));
+  EXPECT_EQ(Phi->getIncomingValue(0), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(1), Def1);
+  EXPECT_EQ(Phi->getIncomingValue(2), Def2);
+}
+
+TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessorAllEqual) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+  VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
 
   //     VPBB1
-  //     /   \
-  //     \   /
-  //     VPBB2
+  //    /   \ \
+  //   /     \ \
+  //  VPBB2  VPBB3
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
-  VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
+  VPBlockUtils::connectBlocks(VPBB1, VPBB3);
 
   VPValue *C = Plan.getConstantInt(32, 1);
   VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
   auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
   VPBB1->appendRecipe(Def1);
 
+  EXPECT_EQ(vputils::reconstructSSA(VPBB3, {{VPBB1, Def1}}), Def1);
   EXPECT_EQ(vputils::reconstructSSA(VPBB2, {{VPBB1, Def1}}), Def1);
 }
 
