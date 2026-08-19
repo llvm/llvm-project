@@ -224,20 +224,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
   Value *Fill = MI->getValue();
 
-  // Keep volatile memset scalarization limited to the single-byte case
-  // where the replacement is exactly one volatile byte store.
-  if (MI->isVolatile()) {
-    if (!LenC || !LenC->isOne() || !Fill->getType()->isIntegerTy(8))
-      return nullptr;
-
-    StoreInst *S = Builder.CreateStore(Fill, MI->getDest(), true);
-    S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
-    S->setAlignment(MI->getDestAlign().valueOrOne());
-
-    // Set the size of the copy to 0 and will be deleted on the next iteration.
-    MI->setLength((uint64_t)0);
-    return MI;
-  }
+  if (MI->isVolatile())
+    return nullptr;
 
   const Align KnownAlignment =
       getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
