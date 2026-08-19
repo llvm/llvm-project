@@ -26,14 +26,15 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                ArrayRef<int> Mask, TTI::TargetCostKind CostKind,
                                int Index, VectorType *SubTp,
-                               ArrayRef<const Value *> Args) {
+                               ArrayRef<const Value *> Args,
+                               TTI::VectorInstrContext VIC) {
   VectorType *DstTy = Tp;
   if (!Mask.empty())
     DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
 
   if (Kind != TTI::SK_PermuteTwoSrc)
     return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
-                              Args);
+                              Args, /*CxtI=*/nullptr, VIC);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
@@ -43,8 +44,8 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
       return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
                                 TTI::TCK_RecipThroughput, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
-                            Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp, Args,
+                            /*CxtI=*/nullptr, VIC);
 }
 
 std::pair<InstructionCost, InstructionCost>

@@ -676,12 +676,18 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost
-RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
-                             VectorType *SrcTy, ArrayRef<int> Mask,
-                             TTI::TargetCostKind CostKind, int Index,
-                             VectorType *SubTp, ArrayRef<const Value *> Args,
-                             const Instruction *CxtI) const {
+InstructionCost RISCVTTIImpl::getShuffleCost(
+    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+    VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
+    TTI::VectorInstrContext VIC) const {
+  assert((improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp) ==
+              TTI::SK_Broadcast ||
+          VIC != TTI::VectorInstrContext::SplatOpFolded) &&
+         "Must be SK_Broadcast if a splat operation");
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded && ST->sinkSplatOperands())
+    return TTI::TCC_Free;
+
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -2587,6 +2593,15 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
     return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
                                      VIC);
 
+  // Scalar splat operand can be folded for vector ops that support splatting
+  // the scalar operand, so the explicit insertelement is free in this context.
+  if (Opcode == Instruction::InsertElement &&
+      VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands()) {
+    assert(Index == 0 && "SplatOpFolded sequence must insert into lane 0");
+    return TTI::TCC_Free;
+  }
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
@@ -3586,6 +3601,31 @@ bool RISCVTTIImpl::canSplatOperand(Instruction *I, int Operand) const {
   default:
     return false;
   }
+}
+
+TargetTransformInfo::VectorInstrContext RISCVTTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  Value *SplatVal = Scalars.front();
+  if (isa<VectorType>(SplatVal->getType()) || isa<ExtractElementInst>(SplatVal))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty())
+    return VectorInstrContext::None;
+
+  if (all_of(UserOps,
+             [this](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+               return canSplatOperand(UserOp.Opcode, UserOp.OperandIndex);
+             }))
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
 }
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because

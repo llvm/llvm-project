@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
@@ -190,7 +191,8 @@ enum class VectorInstrContext : uint8_t {
   None,  ///< The instruction is not folded.
   Load,  ///< The value being inserted comes from a load (InsertElement only).
   Store, ///< The extracted value is stored (ExtractElement only).
-  BinaryOp, ///< One of the operands is a binary op.
+  BinaryOp,      ///< One of the operands is a binary op.
+  SplatOpFolded, ///< All of the value's users support splatting the value.
 };
 
 class IntrinsicCostAttributes {
@@ -1074,9 +1076,33 @@ public:
 
   using VectorInstrContext = llvm::VectorInstrContext;
 
+  /// Combines 2 context hints into a single value. If both are equal, keep the
+  /// shared context, otherwise fall back to no specific context.
+  LLVM_ABI static TargetTransformInfo::VectorInstrContext
+  combineVectorInstrContexts(TargetTransformInfo::VectorInstrContext Ctx1,
+                             TargetTransformInfo::VectorInstrContext Ctx2);
+
+  /// Stores information about the uses of a build vector
+  struct BuildVectorUseOp {
+    unsigned Opcode;
+    int OperandIndex;
+    BuildVectorUseOp(unsigned Opcode, int OperandIndex)
+        : Opcode(Opcode), OperandIndex(OperandIndex) {}
+  };
+
   /// Calculates a VectorInstrContext from \p I.
   LLVM_ABI static VectorInstrContext
   getVectorInstrContextHint(const Instruction *I);
+
+  /// Calculates a VectorInstrContext for buildvector-like gather sequences.
+  ///
+  /// \p GatherUserOps must collect all users of \p Scalars relevant for
+  /// determining whether a splat can be folded as a scalar operand. It returns
+  /// false if those users cannot be gathered in the required form.
+  LLVM_ABI VectorInstrContext getBuildVectorContextHint(
+      ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+      function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+      const;
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1568,7 +1594,8 @@ public:
       ArrayRef<int> Mask = {},
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const;
+      const Instruction *CxtI = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///

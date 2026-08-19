@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
 
 #include <optional>
@@ -30,7 +31,6 @@ class Constant;
 class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
