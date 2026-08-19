@@ -1249,9 +1249,11 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
     break;
   }
   case coro::ABI::Async:
+    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
+    break;
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    CoroBegin->replaceAllUsesWith(PoisonValue::get(CoroBegin->getType()));
+    CoroBegin->replaceAllUsesWith(Shape.getRetconCoroId()->getStorage());
     break;
   }
 
