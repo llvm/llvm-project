@@ -9,6 +9,7 @@
 #include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "gtest/gtest.h"
 
 namespace {
@@ -666,6 +667,26 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   )";
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+TEST_F(AMDGPUGISelMITest, TestReplaceRegWithUpdatesCSE) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S64 = LLT::scalar(64);
+  auto ZExt = B.buildZExt(S64, Copies[0]);
+  Register FromReg = MRI->createGenericVirtualRegister(S64);
+  MRI->setRegClass(FromReg, MRI->getTargetRegisterInfo()->getPointerRegClass());
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigFull>());
+  CSEInfo.analyze(*MF);
+
+  CombinerHelper Helper(CSEInfo, B, /*IsPreLegalize=*/false);
+  Helper.replaceRegWith(*MRI, FromReg, ZExt.getReg(0));
+
+  EXPECT_FALSE(errorToBool(CSEInfo.verify()));
 }
 
 } // namespace

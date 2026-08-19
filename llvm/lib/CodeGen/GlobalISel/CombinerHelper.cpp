@@ -189,6 +189,13 @@ bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
                                     Register ToReg) const {
+  // constrainRegAttrs may change attributes that are part of the CSE profile
+  // for every instruction that references ToReg.
+  SmallVector<MachineInstr *, 4> ToRegInstrs;
+  for (MachineInstr &MI : MRI.reg_instructions(ToReg)) {
+    Observer.changingInstr(MI);
+    ToRegInstrs.push_back(&MI);
+  }
   Observer.changingAllUsesOfReg(MRI, FromReg);
 
   if (MRI.constrainRegAttrs(ToReg, FromReg))
@@ -197,6 +204,8 @@ void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
     Builder.buildCopy(FromReg, ToReg);
 
   Observer.finishedChangingAllUsesOfReg();
+  for (MachineInstr *MI : ToRegInstrs)
+    Observer.changedInstr(*MI);
 }
 
 void CombinerHelper::replaceRegOpWith(MachineRegisterInfo &MRI,

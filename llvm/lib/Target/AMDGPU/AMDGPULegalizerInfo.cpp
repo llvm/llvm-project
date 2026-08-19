@@ -24,6 +24,8 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -54,6 +56,26 @@ static cl::opt<bool> EnableNewLegality(
   cl::ReallyHidden);
 
 static constexpr unsigned MaxRegisterSize = 1024;
+
+// Register class is part of the CSE profile for every instruction that
+// references a register, so notify observers before changing it.
+static void setRegClassWithObserver(MachineIRBuilder &B,
+                                    MachineRegisterInfo &MRI, Register Reg,
+                                    const TargetRegisterClass *RC) {
+  GISelChangeObserver *Observer = B.getMF().getObserver();
+  if (!Observer) {
+    MRI.setRegClass(Reg, RC);
+    return;
+  }
+  SmallVector<MachineInstr *, 4> RegInstrs;
+  for (MachineInstr &MI : MRI.reg_instructions(Reg)) {
+    Observer->changingInstr(MI);
+    RegInstrs.push_back(&MI);
+  }
+  MRI.setRegClass(Reg, RC);
+  for (MachineInstr *MI : RegInstrs)
+    Observer->changedInstr(*MI);
+}
 
 // Round the number of elements to the next power of two elements
 static LLT getPow2VectorType(LLT Ty) {
@@ -3009,8 +3031,11 @@ bool AMDGPULegalizerInfo::legalizeExtract(LegalizerHelper &Helper,
   if (DstCount == 1) {
     if (DstTy.isPointer())
       B.buildIntToPtr(DstReg, Unmerge.getReg(StartIdx));
-    else
+    else {
+      Helper.Observer.changingAllUsesOfReg(MRI, DstReg);
       MRI.replaceRegWith(DstReg, Unmerge.getReg(StartIdx));
+      Helper.Observer.finishedChangingAllUsesOfReg();
+    }
   } else {
     SmallVector<Register, 8> MergeVec;
     for (unsigned I = 0; I < DstCount; ++I)
@@ -3266,7 +3291,7 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   }
 
   if (!B.getMRI()->getRegClassOrNull(PCReg))
-    B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
+    setRegClassWithObserver(B, *B.getMRI(), PCReg, &AMDGPU::SReg_64RegClass);
 
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
@@ -3281,7 +3306,7 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
 
   if (RequiresHighHalf && ST.has64BitLiterals()) {
     if (!MRI.getRegClassOrNull(DstReg))
-      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+      setRegClassWithObserver(B, MRI, DstReg, &AMDGPU::SReg_64RegClass);
     B.buildInstr(AMDGPU::S_MOV_B64)
         .addDef(DstReg)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
@@ -3297,7 +3322,7 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
                         : MRI.createGenericVirtualRegister(I32);
 
   if (!MRI.getRegClassOrNull(AddrLo))
-    MRI.setRegClass(AddrLo, &AMDGPU::SReg_32RegClass);
+    setRegClassWithObserver(B, MRI, AddrLo, &AMDGPU::SReg_32RegClass);
 
   // Write the lower half.
   B.buildInstr(AMDGPU::S_MOV_B32)
@@ -3323,7 +3348,7 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
                            : MRI.createGenericVirtualRegister(LLT::integer(64));
 
     if (!MRI.getRegClassOrNull(AddrDst))
-      MRI.setRegClass(AddrDst, &AMDGPU::SReg_64RegClass);
+      setRegClassWithObserver(B, MRI, AddrDst, &AMDGPU::SReg_64RegClass);
 
     B.buildMergeValues(AddrDst, {AddrLo, AddrHi});
 
@@ -7773,7 +7798,23 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
   // We need a block split to make the real endpgm a terminator. We also don't
   // want to break phis in successor blocks, so we can't just delete to the
   // end of the block.
+  // An instruction's parent block is part of its CSE profile, so notify
+  // observers about the instructions moved by the split.
+  GISelChangeObserver *Observer = MF->getObserver();
+  SmallVector<MachineInstr *, 8> MovedInstrs;
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+  if (Observer && SplitPoint != BB.end()) {
+    for (MachineInstr &MovedMI : make_range(SplitPoint, BB.end())) {
+      Observer->changingInstr(MovedMI);
+      MovedInstrs.push_back(&MovedMI);
+    }
+  }
   BB.splitAt(MI, false /*UpdateLiveIns*/);
+  if (Observer) {
+    for (MachineInstr *MovedMI : MovedInstrs)
+      Observer->changedInstr(*MovedMI);
+  }
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
   MF->push_back(TrapBB);
   BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
@@ -8119,7 +8160,7 @@ bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
   MachineRegisterInfo &MRI = *B.getMRI();
   Register DstReg = MI.getOperand(0).getReg();
   if (!MRI.getRegClassOrNull(DstReg))
-    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+    setRegClassWithObserver(B, MRI, DstReg, &AMDGPU::SReg_32RegClass);
   B.buildInstr(AMDGPU::S_GETREG_B32_const)
       .addDef(DstReg)
       .addImm(AMDGPU::Hwreg::HwregEncoding::encode(HwReg, LowBit, Width));
@@ -8268,8 +8309,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildBr(*CondBrTarget);
       }
 
-      MRI.setRegClass(Def, TRI->getWaveMaskRegClass());
-      MRI.setRegClass(Use, TRI->getWaveMaskRegClass());
+      setRegClassWithObserver(B, MRI, Def, TRI->getWaveMaskRegClass());
+      setRegClassWithObserver(B, MRI, Use, TRI->getWaveMaskRegClass());
       MI.eraseFromParent();
       BrCond->eraseFromParent();
       return true;
@@ -8304,7 +8345,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MI.eraseFromParent();
       BrCond->eraseFromParent();
-      MRI.setRegClass(Reg, TRI->getWaveMaskRegClass());
+      setRegClassWithObserver(B, MRI, Reg, TRI->getWaveMaskRegClass());
       return true;
     }
 
