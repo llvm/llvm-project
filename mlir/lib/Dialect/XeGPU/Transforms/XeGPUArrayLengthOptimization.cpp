@@ -109,7 +109,19 @@ public:
       return failure();
     int64_t subgroupSize = getSubgroupSize(op);
     auto tdescType = op.getType();
-    if (!needsOptimization(tdescType, subgroupSize))
+    // Narrowing the FCD has to leave a whole distribution unit there: each lane
+    // of the subgroup takes lane_data elements along the FCD, so the smallest
+    // legal FCD is lane_layout * lane_data rather than the subgroup size alone.
+    // Ignoring lane_data would produce a descriptor its own layout can no
+    // longer distribute.
+    int64_t fcdUnit = subgroupSize;
+    if (auto layout = tdescType.getLayoutAttr()) {
+      SmallVector<int64_t> laneLayout = layout.getEffectiveLaneLayoutAsInt();
+      SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+      if (laneLayout.size() == 2 && laneData.size() == 2)
+        fcdUnit = laneLayout[1] * laneData[1];
+    }
+    if (!needsOptimization(tdescType, fcdUnit))
       return failure();
 
     // A transpose lane layout marks this descriptor as a candidate for the
@@ -129,7 +141,7 @@ public:
     }
 
     auto shape = tdescType.getShape();
-    int64_t arrayLength = computeArrayLength(shape[1], subgroupSize);
+    int64_t arrayLength = computeArrayLength(shape[1], fcdUnit);
     SmallVector<int64_t> newShape = {shape[0], shape[1] / arrayLength};
 
     auto newTdescType = xegpu::TensorDescType::get(

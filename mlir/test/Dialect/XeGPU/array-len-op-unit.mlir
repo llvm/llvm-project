@@ -217,3 +217,26 @@ func.func @test_dynamic_memref_source(%arg0: memref<?x?xf16>, %h: index, %w: ind
   return %e : vector<16x16xf16>
 }
 }
+
+// -----
+
+// Narrowing the FCD must leave a whole distribution unit there. With
+// lane_data = [1, 2] each lane takes two elements along the FCD, so the
+// smallest legal FCD is lane_layout * lane_data = 32 and this descriptor
+// cannot be narrowed further -- doing so would leave a shape its own layout
+// can no longer distribute.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @test_fcd_lane_data
+// CHECK: xegpu.create_nd_tdesc
+// CHECK-SAME: -> !xegpu.tensor_desc<8x32xf8E5M2, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>>
+// CHECK-NOT: array_length
+gpu.func @test_fcd_lane_data(%arg0: memref<256x4096xf8E5M2>) -> vector<8x32xf8E5M2> {
+  %c0 = arith.constant 0 : index
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<256x4096xf8E5M2>
+    -> !xegpu.tensor_desc<8x32xf8E5M2, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>>
+  %load = xegpu.load_nd %tdesc[%c0, %c0]
+    : !xegpu.tensor_desc<8x32xf8E5M2, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>>
+    -> vector<8x32xf8E5M2>
+  gpu.return %load : vector<8x32xf8E5M2>
+}
+}
