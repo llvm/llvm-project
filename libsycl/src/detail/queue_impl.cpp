@@ -153,7 +153,6 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-// Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
 static ol_device_handle_t getAllocDevice(const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
