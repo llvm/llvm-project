@@ -2,19 +2,11 @@
 
 ! REQUIRES: x86-registered-target
 
-! RUN: %flang_fc1 -S -fsplit-machine-functions %s \
-! RUN:   -triple x86_64-unknown-linux-gnu \
-! RUN:   -mllvm -debug-pass=Structure -o %t 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=ENABLED
+! RUN: %flang_fc1 -S -fsplit-machine-functions %s -triple x86_64-unknown-linux-gnu -mllvm -debug-pass=Structure -o /dev/null 2>&1 | FileCheck %s --check-prefix=SPLIT
+! RUN: %flang_fc1 -S %s -triple x86_64-unknown-linux-gnu -mllvm -debug-pass=Structure -o /dev/null 2>&1 | FileCheck %s --check-prefix=NO-SPLIT
 
-! RUN: %flang_fc1 -S %s \
-! RUN:   -triple x86_64-unknown-linux-gnu \
-! RUN:   -mllvm -debug-pass=Structure -o %t 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=DISABLED
+! SPLIT: Machine Function Splitter Transformation
+! NO-SPLIT-NOT: Machine Function Splitter Transformation
 
-! ENABLED: Machine Function Splitter Transformation
-! DISABLED-NOT: Machine Function Splitter Transformation
-
-subroutine test(x)
-    integer, intent(in) :: x
-  end subroutine test
+subroutine test
+end subroutine test
