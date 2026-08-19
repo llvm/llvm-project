@@ -6863,6 +6863,13 @@ static lower::pft::Evaluation *spliceAssociatedDoEval(
     return nullptr;
   }
 
+  // A delimited metadirective owns only its nested evaluations. An empty body
+  // must not capture a following sibling loop as its associated DO.
+  if (const auto *omp = eval.getIf<parser::OpenMPConstruct>();
+      omp && std::holds_alternative<
+                 parser::OmpDelimitedMetadirectiveDirective>(omp->u))
+    return nullptr;
+
   // A metadirective in a specification part (e.g. at module scope) has no
   // parent construct and no owning procedure, so there is no sibling list.
   lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();

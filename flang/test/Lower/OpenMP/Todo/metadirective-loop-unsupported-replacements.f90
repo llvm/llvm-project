@@ -12,6 +12,9 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -o - %t/target-loop.f90 2>&1 \
 ! RUN:   | FileCheck --check-prefix=TARGET %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -o - %t/empty-delimited-body.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=EMPTY %s
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 \
 ! RUN:   -cpp -o - %t/trailing-static.f90 2>&1 \
 ! RUN:   | FileCheck --check-prefix=TRAILING %s
@@ -64,6 +67,8 @@
 ! MIXED: not yet implemented: METADIRECTIVE with both block- and loop-associated variants
 ! DIRECTIVE: not yet implemented: loop-associated METADIRECTIVE variant other than DO, SIMD, or DO SIMD
 ! TARGET: not yet implemented: TARGET construct selected by METADIRECTIVE (host-eval)
+! EMPTY: not yet implemented: loop-associated METADIRECTIVE without associated
+! EMPTY-SAME: DO
 ! TRAILING: not yet implemented: loop-associated METADIRECTIVE with content following the associated DO
 ! NESTING: not yet implemented: BARRIER closely nested in loop-associated METADIRECTIVE variant
 
@@ -98,6 +103,18 @@ subroutine test_target_loop()
   !$omp & when(implementation={vendor(llvm)}: target teams distribute parallel do) &
   !$omp & otherwise(nothing)
   do i = 1, 100
+  end do
+end subroutine
+
+!--- empty-delimited-body.f90
+subroutine test_empty_delimited_body(n, a)
+  integer :: n, a(n), i
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: do) &
+  !$omp & otherwise(nothing)
+  !$omp end metadirective
+  do i = 1, n
+    a(i) = i
   end do
 end subroutine
 
