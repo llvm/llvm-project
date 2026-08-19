@@ -1521,6 +1521,27 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
                        ExpectScalar(Scalar(4)));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_address_size) {
+  MockMemory::Map memory = {
+      {{0x4, 4}, {0x2a, 0x00, 0x00, 0x00}},
+      {{0x8, 1}, {0xff}},
+  };
+  TestContext test_ctx;
+  ASSERT_TRUE(
+      CreateTestContext(&test_ctx, "i386-pc-linux", {}, std::move(memory)));
+  ExecutionContext exe_ctx(test_ctx.process_sp);
+
+  auto deref_result =
+      Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(deref_result, ExpectScalar(32, 0x2a, false));
+  EXPECT_EQ(deref_result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+
+  auto deref_size_result = Evaluate(
+      {DW_OP_lit8, DW_OP_deref_size, 1, DW_OP_stack_value}, {}, {}, &exe_ctx);
+  ASSERT_THAT_EXPECTED(deref_size_result, ExpectScalar(32, 0xff, false));
+  EXPECT_EQ(deref_size_result->GetScalar().GetAPSInt().getBitWidth(), 32u);
+}
+
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   // Set up a wasm target
   TestContext test_ctx;

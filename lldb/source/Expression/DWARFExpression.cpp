@@ -1095,6 +1095,13 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
     return llvm::createStringError("invalid value for %s", op_name);
   }
 
+  // Both operations push a generic, address-sized result. The truncation to
+  // `size` bytes is unnecessary here because the branches above already limit
+  // the value to `size` bytes; it is only done for consistency with the
+  // Register/Implicit path above.
+  eval_ctx.stack.back().GetScalar().TruncOrExtendTo(size * 8, /*sign=*/false);
+  eval_ctx.stack.back().GetScalar().TruncOrExtendTo(size_addr_bytes * 8,
+                                                    /*sign=*/false);
   return llvm::Error::success();
 }
 
