@@ -706,6 +706,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
+    libc.src.math.fminimumf128
     libc.src.math.fminimuml
     libc.src.math.fminl
     libc.src.math.fmod
@@ -1035,7 +1036,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.fminimum_mag_numf128
     libc.src.math.fminimum_magf128
     libc.src.math.fminimum_numf128
-    libc.src.math.fminimumf128
     libc.src.math.fmodf128
     libc.src.math.fmulf128
     libc.src.math.frexpf128
