@@ -16,7 +16,7 @@ function(add_stdio_entrypoint_object name)
         .generic.${name}
     )
   endif()
-endfunction(add_stdio_entrypoint_object)
+endfunction()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
@@ -256,6 +256,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.fdopen
 )
 
+add_entrypoint_object(
+  tmpfile
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tmpfile
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
@@ -271,6 +278,7 @@ add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
+add_stdio_entrypoint_object(freopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)

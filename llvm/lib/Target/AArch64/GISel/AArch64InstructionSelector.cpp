@@ -488,11 +488,12 @@ private:
   ComplexRendererFns
   selectCVTFixedPointVecBase(const MachineOperand &Root,
                              bool isReciprocal = false) const;
+  void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
+                                   const MachineInstr &MI, int OpIdx) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
-
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -2949,7 +2950,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // The code below doesn't support truncating stores, so we need to split it
     // again.
-    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits &&
+        RB.getID() == AArch64::FPRRegBankID) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
@@ -4475,8 +4477,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
-  const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
-  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  bool ShouldUseImm = mi_match(RHS, MRI, m_PosZeroFP());
 
   auto IsEqualityPred = [](CmpInst::Predicate P) {
     return P == CmpInst::FCMP_OEQ || P == CmpInst::FCMP_ONE ||
@@ -4484,8 +4485,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   };
   if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
     // Try commuting the operands.
-    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
-    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+    if (mi_match(LHS, MRI, m_PosZeroFP())) {
       ShouldUseImm = true;
       std::swap(LHS, RHS);
     }
@@ -7962,6 +7962,13 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
   return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+}
+
+void AArch64InstructionSelector::renderFixedPointScalarXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx == 3 && MI.getOperand(OpIdx).isImm() &&
+         "Expected vecshift immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,

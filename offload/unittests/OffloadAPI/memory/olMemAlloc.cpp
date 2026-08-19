@@ -6,47 +6,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/Fixtures.hpp"
+#include "../common/Properties.hpp"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
 using olMemAllocTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocTest);
 
-TEST_P(olMemAllocTest, SuccessAllocManaged) {
-  void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 1024, &Alloc));
-  ASSERT_NE(Alloc, nullptr);
-  olMemFree(Alloc);
-}
+struct olMemAllocAllocTypesTest : OffloadDeviceTestWithParam<ol_alloc_type_t> {
+  ol_result_t allocateDeviceOrHost(size_t Size, void **Alloc) {
+    ol_alloc_type_t AllocType = getTestParam();
+    if (AllocType == OL_ALLOC_TYPE_HOST) {
+      return olMemAllocHost(this->Device, Size, Alloc);
+    }
 
-TEST_P(olMemAllocTest, SuccessAllocHost) {
-  void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAllocHost(Device, 1024, &Alloc));
-  ASSERT_NE(Alloc, nullptr);
-  olMemFree(Alloc);
-}
+    return olMemAlloc(this->Device, AllocType, Size, Alloc);
+  }
+};
 
-TEST_P(olMemAllocTest, SuccessAllocDevice) {
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olMemAllocAllocTypesTest, AllocTypes,
+    defaultPrinterWithParam<ol_alloc_type_t>); // printerMine);
+
+TEST_P(olMemAllocAllocTypesTest, Success) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
+  ASSERT_SUCCESS(allocateDeviceOrHost(DefaultAllocSize, &Alloc));
   ASSERT_NE(Alloc, nullptr);
   olMemFree(Alloc);
 }
 
 TEST_P(olMemAllocTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
-  Allocs.reserve(1000);
+  Allocs.reserve(TestAllocsNum);
 
-  constexpr ol_alloc_type_t TYPES[2] = {OL_ALLOC_TYPE_DEVICE,
-                                        OL_ALLOC_TYPE_MANAGED};
-
-  for (size_t I = 1; I < 1000; I++) {
+  for (size_t I = 1; I < TestAllocsNum; I++) {
     void *Alloc = nullptr;
-    if (I % 3 == 2)
-      ASSERT_SUCCESS(olMemAllocHost(Device, 1024 * I, &Alloc));
-    else
-      ASSERT_SUCCESS(olMemAlloc(Device, TYPES[I % 2], 1024 * I, &Alloc));
+    ol_alloc_type_t AllocType = AllocTypes[I % 3];
+    if (AllocType == OL_ALLOC_TYPE_HOST) {
+      ASSERT_SUCCESS(olMemAllocHost(Device, DefaultAllocSize * I, &Alloc));
+    } else {
+      ASSERT_SUCCESS(
+          olMemAlloc(Device, AllocType, DefaultAllocSize * I, &Alloc));
+    }
     ASSERT_NE(Alloc, nullptr);
 
     Allocs.push_back(Alloc);

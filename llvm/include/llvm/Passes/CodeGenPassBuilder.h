@@ -40,6 +40,7 @@
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
+#include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InlineAsmPrepare.h"
@@ -194,10 +195,15 @@ public:
     if (Opt.EnableGlobalISelAbort)
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
-    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None
-                                 ? cl::boolOrDefault::BOU_TRUE
-                                 : cl::boolOrDefault::BOU_FALSE;
+    // An explicit RegAlloc choice implies its pipeline: only the fast
+    // allocator uses the unoptimized one.
+    if (Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_UNSET) {
+      bool Optimized = Opt.RegAlloc > RegAllocType::Default
+                           ? Opt.RegAlloc != RegAllocType::Fast
+                           : getOptLevel() != CodeGenOptLevel::None;
+      Opt.OptimizeRegAlloc = Optimized ? cl::boolOrDefault::BOU_TRUE
+                                       : cl::boolOrDefault::BOU_FALSE;
+    }
   }
 
   Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
@@ -622,8 +628,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
+  // We add AsmPrinter regardless if we are emitting MIR or Assembly as the
+  // final output so that -stop-before=<target>-asm-printer works. When printing
+  // MIR as the final output, we never end up running AsmPrinter.
+  derived().addAsmPrinter(PMW);
+
   if (PrintAsm) {
-    derived().addAsmPrinter(PMW);
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
     derived().addAsmPrinterEnd(PMW);
   } else {

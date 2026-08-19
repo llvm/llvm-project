@@ -185,29 +185,30 @@ public:
   /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
     const AccessPath &ExpiredPath = EF->getAccessPath();
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-      for (LoanID HeldLoanID : HeldLoans) {
-        const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
-          continue;
-        // HeldLoan is expired because its base or itself is expired.
-        PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
-        const Expr *MovedExpr = nullptr;
-        if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
-          MovedExpr = *ME;
-        // Skip if we already have a dominating causing fact.
-        if (CurWarning.CausingFactDominatesExpiry)
-          continue;
-        if (causingFactDominatesExpiry(LiveInfo.Kind))
-          CurWarning.CausingFactDominatesExpiry = true;
-        CurWarning.CausingFact = LiveInfo.CausingFact;
-        CurWarning.ExpiryLoc = EF->getExpiryLoc();
-        CurWarning.MovedExpr = MovedExpr;
-        CurWarning.InvalidatedByExpr = nullptr;
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(EF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
+        for (LoanID HeldLoanID : HeldLoans) {
+          const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
+          if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
+            continue;
+          // HeldLoan is expired because its base or itself is expired.
+          PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
+          const Expr *MovedExpr = nullptr;
+          if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
+            MovedExpr = *ME;
+          // Skip if we already have a dominating causing fact.
+          if (CurWarning.CausingFactDominatesExpiry)
+            continue;
+          if (causingFactDominatesExpiry(LiveInfo.Kind))
+            CurWarning.CausingFactDominatesExpiry = true;
+          CurWarning.CausingFact = LiveInfo.CausingFact;
+          CurWarning.ExpiryLoc = EF->getExpiryLoc();
+          CurWarning.MovedExpr = MovedExpr;
+          CurWarning.InvalidatedByExpr = nullptr;
+        }
       }
-    }
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
@@ -231,24 +232,25 @@ public:
       return false;
     };
     // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
-      for (LoanID LiveLoanID : HeldLoans)
-        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-          bool LastDomination =
-              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
-          if (!LastDomination) {
-            FinalWarningsMap[LiveLoanID] = {
-                /*ExpiryLoc=*/{},
-                /*CausingFact=*/LiveInfo.CausingFact,
-                /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*CausingFactDominatesExpiry=*/CurDomination};
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+        for (LoanID LiveLoanID : HeldLoans)
+          if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+            bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+            bool LastDomination =
+                FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+            if (!LastDomination) {
+              FinalWarningsMap[LiveLoanID] = {
+                  /*ExpiryLoc=*/{},
+                  /*CausingFact=*/LiveInfo.CausingFact,
+                  /*MovedExpr=*/nullptr,
+                  /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                  /*CausingFactDominatesExpiry=*/CurDomination};
+            }
           }
-        }
-    }
+      }
   }
 
   void issuePendingWarnings() {

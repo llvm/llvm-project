@@ -1388,7 +1388,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return coroBeg ? RValue::get(coroBeg.getResult())
                    : getUndefRValue(e->getType());
   }
-
+  case Builtin::BI__builtin_coro_end:
+    return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
     return getUndefRValue(e->getType());
@@ -1403,9 +1404,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_done:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_done NYI");
-    return getUndefRValue(e->getType());
-  case Builtin::BI__builtin_coro_end:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_end NYI");
     return getUndefRValue(e->getType());
   case Builtin::BI__builtin_coro_suspend:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_suspend NYI");
@@ -2049,6 +2047,25 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
     }
     return RValue::get(ptr);
+  }
+  case Builtin::BI__builtin_clear_padding: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    QualType pointeeTy = e->getArg(0)->getType()->getPointeeType();
+
+    llvm::ArrayRef<ASTContext::BitInterval> padding =
+        cgm.getASTContext().getPaddingIntervals(pointeeTy);
+
+    llvm::SmallVector<mlir::Attribute> paddingLocs;
+    for (const auto &interval : padding)
+      paddingLocs.push_back(cir::OffsetPairAttr::get(
+          &getMLIRContext(), interval.First, interval.Last));
+
+    cir::ClearPaddingOp::create(
+        builder, loc, addr.getPointer(),
+        builder.getI64IntegerAttr(addr.getAlignment().getQuantity()),
+        mlir::ArrayAttr::get(&getMLIRContext(), paddingLocs));
+    return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:

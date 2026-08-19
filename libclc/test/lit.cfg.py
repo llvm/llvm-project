@@ -3,6 +3,7 @@ Lit configuration file for libclc tests.
 """
 
 import os
+import subprocess
 
 import lit.formats
 
@@ -80,21 +81,48 @@ test_arch = getattr(config, "libclc_test_arch", "")
 offload_libdir = getattr(config, "libclc_offload_libdir", "")
 
 if test_arch and offload_libdir and os.path.isfile(path):
+    clang = os.path.join(config.llvm_tools_dir, "clang")
+    loader = os.path.join(config.llvm_tools_dir, "llvm-gpu-loader")
+    # Shared headers are included by name from any depth below conformance/.
+    conformance_dir = os.path.join(config.test_source_root, "conformance")
     compile_cmd = (
-        f"{os.path.join(config.llvm_tools_dir, 'clang')} --target={config.libclc_target} "
+        f"{clang} --target={config.libclc_target} "
         f"-march={test_arch} -cl-std=CL3.0 -nogpulib "
-        f"--libclc-lib=:{path} %s -o %t"
+        f"--libclc-lib=:{path} -I{conformance_dir} %s -o %t"
     )
-    run_cmd = f"{os.path.join(config.llvm_tools_dir, 'llvm-gpu-loader')} --kernel test"
     config.environment["LD_LIBRARY_PATH"] = os.pathsep.join(
         [offload_libdir, config.environment.get("LD_LIBRARY_PATH", "")]
     )
     config.substitutions.append(
-        ("%libclc-compile-and-run", f"{compile_cmd} && {run_cmd}")
+        ("%libclc-compile-and-run", f"{compile_cmd} && {loader}")
     )
     config.substitutions.append(("%libclc-compile", compile_cmd))
-    config.substitutions.append(("%libclc-run", run_cmd))
+    config.substitutions.append(("%libclc-run", loader))
     config.available_features.add("libclc-native-run")
+
+    # Register the OpenCL features and extensions the compiler advertises.
+    probe = subprocess.run(
+        [
+            clang,
+            f"--target={config.libclc_target}",
+            f"-march={test_arch}",
+            "-cl-std=CL3.0",
+            "-x",
+            "cl",
+            "-dM",
+            "-E",
+            "-",
+        ],
+        input="",
+        capture_output=True,
+        text=True,
+    )
+    for line in probe.stdout.splitlines():
+        tokens = line.split()
+        if len(tokens) >= 2 and tokens[0] == "#define":
+            name = tokens[1]
+            if name.startswith("__opencl_c_") or name.startswith("cl_khr_"):
+                config.available_features.add(name)
 
 # Propagate PATH from environment
 if "PATH" in os.environ:
