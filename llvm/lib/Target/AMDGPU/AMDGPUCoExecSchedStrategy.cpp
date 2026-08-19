@@ -146,8 +146,8 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   AllSUs.remove(SU);
   PrioritySUs.remove(SU);
 
-  // BufferSize of 0 or 1 implies that each SU uses the HardwareUnit for
-  // BlockingCycles
+  // BufferSize 0 is unlimited, while size 1 has no parallel buffering. In
+  // either case, each SU uses the HardwareUnit for BlockingCycles.
   if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
     TotalCycles -= std::min(TotalCycles, BlockingCycles);
 
@@ -177,14 +177,16 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 }
 
 void HardwareUnitInfo::finalizeCycles() {
-  // BufferSize of 0 or 1 implies that each SU uses the HardwareUnit for
-  // BlockingCycles
-  if (BufferSize <= 1 || AllSUs.empty())
+  if (BufferSize == 0 || AllSUs.empty())
     return;
 
   // We estimate the amount of cycles it takes to free up a slot in the buffer
   // as the average cycles per SU.
   BufferCycles = TotalCycles / AllSUs.size();
+  // A single-entry buffer does not reduce TotalCycles.
+  if (BufferSize == 1)
+    return;
+
   // The TotalCycles is normalized against the BufferSize.
   // This provides an estimate of the TotalCycles which is not always accurate
   // -- particularly in cases where we have fewer instructions than the
@@ -723,8 +725,8 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
 
-    // A BufferSize of 0 or 1 means there is no buffered scheduling cost.
-    if (HWUI->getBufferSize() <= 1)
+    // A BufferSize of 0 is unlimited, so it has no FIFO scheduling cost.
+    if (HWUI->getBufferSize() == 0)
       return 0;
 
     // getBufferAvailableCycle assumes top-down scheduling.
