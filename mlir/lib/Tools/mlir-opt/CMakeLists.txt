@@ -11,6 +11,7 @@ add_mlir_library(MLIROptLib
   MLIRPass
   MLIRParser
   MLIRPluginsLib
+  MLIRRewrite
   MLIRSupport
   MLIRIRDL
   MLIRRemarkStreamer
