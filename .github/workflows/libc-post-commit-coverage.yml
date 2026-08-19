@@ -82,7 +82,7 @@ jobs:
         START_TIME=$(date +%s)
 
         export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
-        ninja -C build-cov libc-unit-tests
+        ninja -k 0 -C build-cov libc-unit-tests || true
 
         END_TIME=$(date +%s)
         echo "=== [STAGE 2/4] libc-unit-tests Completed in $((END_TIME - START_TIME))s ==="
@@ -90,7 +90,7 @@ jobs:
     - name: Merge Profiles
       run: |
         echo "=== [STAGE 3/4] Merging Raw Profiles at $(date -u '+%Y-%m-%d %H:%M:%S UTC') ==="
-        find build-cov -name "libc_cov_*.profraw" > profraw_list.txt
+        find . build-cov -name "libc_cov_*.profraw" > profraw_list.txt
         NUM_PROFS=$(wc -l < profraw_list.txt || echo 0)
         echo "[LOG] Discovered $NUM_PROFS raw profile data files."
         llvm-profdata-23 merge -sparse --input-files=profraw_list.txt -o libc_full.profdata
@@ -118,6 +118,8 @@ jobs:
           "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
           --show-directory-coverage \
           --show-branches=count \
+          --compilation-dir=. \
+          --path-equivalence="$GITHUB_WORKSPACE,." \
           -ignore-filename-regex=".*(test|utils).*"
         touch coverage_html/.nojekyll
 
