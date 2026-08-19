@@ -85,7 +85,7 @@ Thread *cur_thread();
 void set_cur_thread(Thread *thr);
 #else
 __attribute__((tls_model("initial-exec"))) extern THREADLOCAL Thread thr_tls;
-inline Thread *cur_thread() { return thr_tls.is_inited ? &thr_tls : nullptr; }
+inline Thread *cur_thread() { return &thr_tls; }
 #endif
 
 void Initialize();

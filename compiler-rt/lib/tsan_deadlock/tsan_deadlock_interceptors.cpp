@@ -46,14 +46,14 @@ static bool InitThread() {
 #else
   if (initing)
     return false;
-  if (cur_thread())
+  if (cur_thread()->is_inited)
     return true;
   initing = true;
   if (!inited) {
     inited = true;
     Initialize();
   }
-  ThreadInit(&thr_tls);
+  ThreadInit(cur_thread());
   initing = false;
   return true;
 #endif
@@ -69,8 +69,8 @@ static void *ThreadTrampoline(void *arg) {
   void *(*fn)(void *) = targ->fn;
   void *fn_arg = targ->arg;
   InternalFree(targ);
+  InitThread();
   Thread *thr = cur_thread();
-  ThreadInit(thr);
   void *retval = fn(fn_arg);
   // Also called from the pthread_exit interceptor; guard with is_inited to
   // stay idempotent.
