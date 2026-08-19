@@ -5914,7 +5914,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       !Deinterleave->hasNUndroppableUses(Factor))
     return false;
 
-  const Intrinsic::ID InterleaveIID =
+  const Intrinsic::ID ExpectedInterleaveIID =
       Intrinsic::getInterleaveIntrinsicID(Factor);
 
   // Collect one extract for each deinterleaved field.
@@ -5940,8 +5940,8 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   unsigned NumVisited = 0;
 
   auto GetNumDataOperands = [](Instruction *Inst) {
-    if (auto *II = dyn_cast<IntrinsicInst>(Inst))
-      return II->arg_size();
+    if (auto *CB = dyn_cast<CallBase>(Inst))
+      return CB->arg_size(); // Exclude callee operand and bundles.
     return Inst->getNumOperands();
   };
 
@@ -5960,6 +5960,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     }
 
     // Reject operations that change the element-count.
+    // E.g., bitcast <vscale x 4 x i16> %v to <vscale x 8 x i8>
     for (unsigned Op = 0, E = GetNumDataOperands(Inst); Op != E; ++Op) {
       auto *OperandTy = dyn_cast<VectorType>(Inst->getOperand(Op)->getType());
       if (OperandTy &&
@@ -5989,7 +5990,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
 
     // Check whether every chain has reached the same interleave.
     if (auto *II = dyn_cast<IntrinsicInst>(CurrentUses.front()->getUser());
-        II && II->getIntrinsicID() == InterleaveIID) {
+        II && II->getIntrinsicID() == ExpectedInterleaveIID) {
       if (II->hasOperandBundles())
         return false;
 
@@ -6048,6 +6049,8 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   auto CreateWideInstruction = [&](Instruction *NarrowInst,
                                    ArrayRef<Value *> NewOperands,
                                    VectorType *WideResultTy) -> Value * {
+    assert(IsSupportedElementwise(NarrowInst) &&
+           "Expected supported elementwise");
     if (isa<BinaryOperator, UnaryOperator>(NarrowInst))
       return Builder.CreateNAryOp(NarrowInst->getOpcode(), NewOperands);
     if (auto *Cast = dyn_cast<CastInst>(NarrowInst))
@@ -6067,6 +6070,8 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     llvm_unreachable("Unsupported instruction");
   };
 
+  // The BFS has succeeded and collected multiple levels of instructions that
+  // can be SLP-widened into a chain of wider instructions.
   for (const ElementwiseStep &Step : Steps) {
     Instruction *NarrowInst = cast<Instruction>(Step.front()->getUser());
     unsigned ChainOperand = Step.front()->getOperandNo();
