@@ -224,10 +224,9 @@ static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
 bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                        SourceRange AttrRange,
                                        BoundsAttrFlags &Flags,
-                                       bool FullBoundsSafetyDiagnostics,
                                        StringRef AttrSpelling, bool AllowRedecl,
                                        bool AutoPtrAttributed, Expr *AttrArg) {
-  if (FullBoundsSafetyDiagnostics)
+  if (getLangOpts().hasBoundsSafetyAttributes())
     if (std::optional<bool> Result = checkBoundsAttrTypeConflictsAndMisc(
             *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl,
             AutoPtrAttributed, AttrArg))
@@ -253,14 +252,14 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
   }
 
   // Arrays with sized_by or _or_null variants are not allowed under the
-  // non -fbounds-safety path (!FullBoundsSafetyDiagnostics). That emits a
-  // specific "did you mean to use 'counted_by'" hint, geared toward the
-  // FieldDecl path where the user got the spelling wrong. The -fbounds-safety
-  // path treats incomplete-array + counted_by_or_null as a
+  // non -fbounds-safety path (!getLangOpts().hasBoundsSafetyAttributes()).
+  // That emits a specific "did you mean to use 'counted_by'" hint, geared
+  // toward the FieldDecl path where the user got the spelling wrong. The
+  // -fbounds-safety path treats incomplete-array + counted_by_or_null as a
   // tentative-definition/FAM-like case that other code (e.g.
   // err_bounds_safety_nullable_fam in applyPtrCountedByEndedByAttr) handles.
   // FIXME(dliew): We need to reconcile this divergence.
-  if (!FullBoundsSafetyDiagnostics && Ty->isArrayType() &&
+  if (!getLangOpts().hasBoundsSafetyAttributes() && Ty->isArrayType() &&
       (Flags.CountInBytes || Flags.OrNull)) {
     Diag(AttrLoc, diag::err_count_attr_not_on_ptr_or_flexible_array_member)
         << Kind << /*suggest counted_by*/ 1;

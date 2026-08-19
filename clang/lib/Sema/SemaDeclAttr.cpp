@@ -6552,7 +6552,6 @@ public:
     if (Level == 0 && !T->isFunctionType() &&
         !isa<AttributedType>(T.getTypePtr()) &&
         !S.ValidateBoundsAttrTypeShape(T, Loc, SourceRange(Loc), Flags,
-                                       /*FullBoundsSafetyDiagnostics=*/true,
                                        DiagName, AllowRedecl, AutoPtrAttributed,
                                        ArgExpr)) {
       return QualType();
@@ -6605,10 +6604,9 @@ public:
     // check to emit a diagnostic to reject this. Reachable when the requested
     // `Level` exceeds the type's pointer nesting, e.g. an out-of-range level
     // from API Notes.
-    bool Valid = S.ValidateBoundsAttrTypeShape(
-        QT, Loc, SourceRange(Loc), Flags,
-        /*FullBoundsSafetyDiagnostics=*/true, DiagName, AllowRedecl,
-        AutoPtrAttributed, ArgExpr);
+    bool Valid = S.ValidateBoundsAttrTypeShape(QT, Loc, SourceRange(Loc), Flags,
+                                               DiagName, AllowRedecl,
+                                               AutoPtrAttributed, ArgExpr);
     assert(!Valid &&
            "T should have been rejected because its not an array or pointer");
     (void)Valid;

@@ -2923,25 +2923,22 @@ public:
   static BoundsAttributedType::BoundsAttrKind
   getBoundsAttrKind(const BoundsAttrFlags &);
 
-  /// Validates that a type is eligible for a bounds-safety attribute
-  /// (counted_by/sized_by/ended_by). Checks type eligibility (must be pointer
-  /// or array) and pointee/element type validity. When called with
-  /// `FullBoundsSafetyDiagnostics` a larger set of diagnostics required by
-  /// -fbounds-safety is emitted.
+  /// Validates that a type is eligible for an "externally counted" bounds
+  /// attribute (counted_by/sized_by/ended_by). When building with
+  /// `getLangOpts().hasBoundsSafetyAttributes()` a larger set of
+  /// diagnostics required by the -fbounds-safety programming model are used.
   ///
-  /// Does NOT require a Decl — only the QualType and attribute metadata.
-  /// Callable from: ActOnLateParsedTypeAttr (placeholder insertion),
-  /// HandleCountedByAttrOnType, applyPtrCountedByEndedByAttr, and
-  /// CheckCountedByAttrOnFieldDecl.
   /// \returns true if the type is valid, false on error. The atomic-of-pointer
   /// case is a special exception: it emits an error diagnostic but returns true
   /// so the caller can still construct the atomic type to avoid additional
   /// diagnostics.
-  bool ValidateBoundsAttrTypeShape(
-      QualType Ty, SourceLocation AttrLoc, SourceRange AttrRange,
-      BoundsAttrFlags &Flags, bool FullBoundsSafetyDiagnostics = false,
-      StringRef AttrSpelling = {}, bool AllowRedecl = false,
-      bool AutoPtrAttributed = false, Expr *AttrArg = nullptr);
+  bool ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
+                                   SourceRange AttrRange,
+                                   BoundsAttrFlags &Flags,
+                                   StringRef AttrSpelling = {},
+                                   bool AllowRedecl = false,
+                                   bool AutoPtrAttributed = false,
+                                   Expr *AttrArg = nullptr);
 
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
