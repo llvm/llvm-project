@@ -2886,20 +2886,26 @@ TEST(APIntTest, abdu) {
 
 TEST(APIntTest, GCD) {
   using APIntOps::GreatestCommonDivisor;
+  using APIntOps::SGreatestCommonDivisor;
 
   for (unsigned Bits : {1, 2, 32, 63, 64, 65}) {
     // Test some corner cases near zero.
-    APInt Zero(Bits, 0), One(Bits, 1);
+    APInt Zero(Bits, 0), One(Bits, 1), MinusOne(Bits, -1, true);
     EXPECT_EQ(GreatestCommonDivisor(Zero, Zero), Zero);
     EXPECT_EQ(GreatestCommonDivisor(Zero, One), One);
     EXPECT_EQ(GreatestCommonDivisor(One, Zero), One);
     EXPECT_EQ(GreatestCommonDivisor(One, One), One);
 
     if (Bits > 1) {
-      APInt Two(Bits, 2);
+      APInt Two(Bits, 2), MinusTwo(Bits, -2, true);
       EXPECT_EQ(GreatestCommonDivisor(Zero, Two), Two);
       EXPECT_EQ(GreatestCommonDivisor(One, Two), One);
       EXPECT_EQ(GreatestCommonDivisor(Two, Two), Two);
+
+      EXPECT_EQ(SGreatestCommonDivisor(Zero, MinusTwo), MinusTwo);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, MinusTwo), One);
+      EXPECT_EQ(SGreatestCommonDivisor(One, MinusTwo), MinusOne);
+      EXPECT_EQ(GreatestCommonDivisor(MinusTwo, MinusTwo), MinusTwo);
 
       // Test some corner cases near the highest representable value.
       APInt Max(Bits, 0);
@@ -2908,6 +2914,11 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(GreatestCommonDivisor(One, Max), One);
       EXPECT_EQ(GreatestCommonDivisor(Two, Max), One);
       EXPECT_EQ(GreatestCommonDivisor(Max, Max), Max);
+
+      EXPECT_EQ(SGreatestCommonDivisor(Zero, Max), Max);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, Max), One);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, Max), One);
+      EXPECT_EQ(SGreatestCommonDivisor(Max, Max), One);
 
       APInt MaxOver2 = Max.udiv(Two);
       EXPECT_EQ(GreatestCommonDivisor(MaxOver2, Max), One);
@@ -2923,8 +2934,12 @@ TEST(APIntTest, GCD) {
   // 9931 and 123456 are coprime.
   APInt A = HugePrime * APInt(BitWidth, 9931);
   APInt B = HugePrime * APInt(BitWidth, 123456);
+  APInt SA = HugePrime * APInt(BitWidth, -9931, true);
+  APInt SB = HugePrime * APInt(BitWidth, -123456, true);
   APInt C = GreatestCommonDivisor(A, B);
   EXPECT_EQ(C, HugePrime);
+  APInt SC = SGreatestCommonDivisor(SA, SB);
+  EXPECT_EQ(SC, HugePrime);
 }
 
 TEST(APIntTest, LogicalRightShift) {

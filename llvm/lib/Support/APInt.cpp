@@ -865,6 +865,17 @@ APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
   return A;
 }
 
+APInt llvm::APIntOps::SGreatestCommonDivisor(APInt A, APInt B) {
+  if (A.isNegative()) {
+    if (B.isNegative())
+      return GreatestCommonDivisor(-A, -B);
+    return -GreatestCommonDivisor(-A, B);
+  }
+  if (B.isNegative())
+    return -GreatestCommonDivisor(A, -B);
+  return GreatestCommonDivisor(A, B);
+}
+
 APInt llvm::APIntOps::RoundDoubleToAPInt(double Double, unsigned width) {
   uint64_t I = bit_cast<uint64_t>(Double);
 
