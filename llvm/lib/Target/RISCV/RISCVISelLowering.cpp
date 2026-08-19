@@ -9914,21 +9914,39 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
         MVT::i32, ArgVT.getVectorElementCount().divideCoefficientBy(4));
     SDValue Dot = DAG.getNode(Op.getOpcode(), DL, DotVT,
                               {DAG.getConstant(0, DL, DotVT), A, B});
+    // The reduced i32 sums are signed for SMLA/SUMLA and unsigned for UMLA.
+    unsigned ExtOpc = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA
+                          ? ISD::ZERO_EXTEND
+                          : ISD::SIGN_EXTEND;
+
+    MVT NarrowVT = VT.changeVectorElementType(MVT::i32);
+    if (VT.isScalableVector() &&
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(NarrowVT))
+            .second) {
+      // When the accumulator is a single vector (LMUL 1), the i32 subvectors
+      // are a fractional LMUL, so extracting the high subvector would need a
+      // vslidedown. Widen the i32 sums to i64 first instead; the i64
+      // subvectors are then register-aligned and the reduction is a plain add.
+      MVT WideVT = DotVT.changeVectorElementType(MVT::i64);
+      SDValue Wide = DAG.getNode(ExtOpc, DL, WideVT, Dot);
+      unsigned Stride = VT.getVectorMinNumElements();
+      SDValue Sum = DAG.getExtractSubvector(DL, VT, Wide, 0);
+      for (unsigned I = 1, E = WideVT.getVectorMinNumElements() / Stride;
+           I != E; ++I)
+        Sum = DAG.getNode(ISD::ADD, DL, VT, Sum,
+                          DAG.getExtractSubvector(DL, VT, Wide, I * Stride));
+      return DAG.getNode(ISD::ADD, DL, VT, Accum, Sum);
+    }
+
     // Add the i32 partial sums down to the accumulator's element count by
     // extracting and summing the subvectors (still in i32 to avoid a wider
-    // extend).
-    MVT NarrowVT = VT.changeVectorElementType(MVT::i32);
+    // extend), then extend once to i64 and accumulate.
     unsigned Stride = NarrowVT.getVectorMinNumElements();
     SDValue Sum = DAG.getExtractSubvector(DL, NarrowVT, Dot, 0);
     for (unsigned I = 1, E = DotVT.getVectorMinNumElements() / Stride; I != E;
          ++I)
       Sum = DAG.getNode(ISD::ADD, DL, NarrowVT, Sum,
                         DAG.getExtractSubvector(DL, NarrowVT, Dot, I * Stride));
-    // Extend the reduced i32 sums to i64 and accumulate. They are signed for
-    // SMLA/SUMLA and unsigned for UMLA.
-    unsigned ExtOpc = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA
-                          ? ISD::ZERO_EXTEND
-                          : ISD::SIGN_EXTEND;
     return DAG.getNode(ISD::ADD, DL, VT, Accum,
                        DAG.getNode(ExtOpc, DL, VT, Sum));
   }
