@@ -1252,6 +1252,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
   }
 
   addSplitMachineFunctionsArgs(TC.getDriver(), Args, CmdArgs, TC.getTriple());
+  Args.addAllArgs(CmdArgs, {options::OPT_fprofile_use_EQ});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -1383,9 +1384,6 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Disable all warnings
   // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
   Args.AddLastArg(CmdArgs, options::OPT_w);
-
-  // recognise options: -fprofile-use=
-  Args.addAllArgs(CmdArgs, {options::OPT_fprofile_use_EQ});
 
   addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 
