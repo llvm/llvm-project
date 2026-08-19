@@ -29,16 +29,22 @@ define void @alloca_value_cross_reference() {
 }
 
 ; The full-vector store in %bb2 forwards %v (a load from the same alloca in a
-; dominating block) as bb2's live-out value. If the pass visits bb2 before
-; entry, it hands the not-yet-replaced load to the SSAUpdater; the load is
-; later deleted while the SSAUpdater still references it, causing a crash.
-; The full-vector store now always creates a fresh value so the SSAUpdater
-; never holds a pointer to a worklist instruction.
+; dominating block) as bb2's live-out value.  When the worklist visits the
+; store before the load (they are in different blocks), that operand is the
+; original load instruction, which is later replaced and deleted while the
+; SSAUpdater still references it.  TrackingSSAUpdater keeps the reference
+; up-to-date via TrackingVH so the replacement is seen automatically.
 define half @forwarded_load_across_blocks() {
-; CHECK-LABEL: define half @forwarded_load_across_blocks()
-; CHECK-NOT: alloca
-; CHECK-NOT: addrspace(5)
-; CHECK: ret half
+; CHECK-LABEL: define half @forwarded_load_across_blocks() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ARR:%.*]] = freeze <4 x half> poison
+; CHECK-NEXT:    br label %[[BB2:.*]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[BB3:.*]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 0
+; CHECK-NEXT:    ret half [[TMP0]]
+;
 entry:
   %arr = alloca [4 x half], align 8, addrspace(5)
   store <4 x half> <half 1.0, half 2.0, half 3.0, half 4.0>, ptr addrspace(5) %arr, align 8

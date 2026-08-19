@@ -44,6 +44,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
@@ -51,6 +52,60 @@
 using namespace llvm;
 
 namespace {
+
+/// Wrapper around SSAUpdater that uses TrackingVH to keep available values
+/// up-to-date when the original values are RAUW'd or deleted.  The plain
+/// SSAUpdater stores raw Value* pointers that become dangling when a value it
+/// holds is replaced and erased.
+class TrackingSSAUpdater {
+  SSAUpdater Updater;
+  DenseMap<BasicBlock *, TrackingVH<Value>> TrackedVals;
+
+public:
+  explicit TrackingSSAUpdater(
+      SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr)
+      : Updater(InsertedPHIs) {}
+
+  void Initialize(Type *Ty, StringRef Name) {
+    Updater.Initialize(Ty, Name);
+    TrackedVals.clear();
+  }
+
+  void AddAvailableValue(BasicBlock *BB, Value *V) {
+    TrackedVals[BB] = TrackingVH<Value>(V);
+    Updater.AddAvailableValue(BB, V);
+  }
+
+  Value *FindValueForBlock(BasicBlock *BB) const {
+    auto It = TrackedVals.find(BB);
+    if (It == TrackedVals.end())
+      return nullptr;
+    Value *Tracked = It->second;
+    Value *Raw = Updater.FindValueForBlock(BB);
+    if (Raw && Raw != Tracked) {
+      // The tracked value was RAUW'd; update the inner SSAUpdater.
+      const_cast<TrackingSSAUpdater *>(this)->Updater.AddAvailableValue(
+          BB, Tracked);
+    }
+    return Tracked;
+  }
+
+  Value *GetValueInMiddleOfBlock(BasicBlock *BB) {
+    syncAll();
+    return Updater.GetValueInMiddleOfBlock(BB);
+  }
+
+  Value *GetValueAtEndOfBlock(BasicBlock *BB) {
+    syncAll();
+    return Updater.GetValueAtEndOfBlock(BB);
+  }
+
+private:
+  void syncAll() {
+    for (auto &[BB, VH] : TrackedVals)
+      Updater.AddAvailableValue(BB, VH);
+  }
+};
 
 static cl::opt<bool>
     DisablePromoteAllocaToVector("disable-promote-alloca-to-vector",
@@ -724,21 +779,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isNullValue() && AccessSize == VecStoreSize) {
-        Value *Result =
-            Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
-        // If Result is an instruction in the worklist (e.g. a load from this
-        // alloca), it will later be RAUW'd and deleted. The SSAUpdater holds
-        // a raw Value* that RAUW doesn't update, leaving a dangling pointer.
-        // Wrap in a freeze to create a fresh value the SSAUpdater can safely
-        // hold; the freeze's operand is a proper IR use that RAUW does update.
-        if (auto *RI = dyn_cast<Instruction>(Result))
-          if (llvm::is_contained(AA.Vector.Worklist, RI))
-            Result = Builder.CreateFreeze(Result);
-        return Result;
-      }
-    }
+    if (Constant *CI = dyn_cast<Constant>(Index))
+      if (CI->isNullValue() && AccessSize == VecStoreSize)
+        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
@@ -1128,8 +1171,9 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   const unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
 
   // Alloca is uninitialized memory. Imitate that by making the first value
-  // undef.
-  SSAUpdater Updater;
+  // undef.  Use TrackingSSAUpdater so that values RAUW'd after being
+  // registered (e.g. a forwarded load) are automatically kept up-to-date.
+  TrackingSSAUpdater Updater;
   Updater.Initialize(AA.Vector.Ty, "promotealloca");
 
   BasicBlock *EntryBB = AA.Alloca->getParent();
