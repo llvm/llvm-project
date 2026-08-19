@@ -154,6 +154,13 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Improved {doc}`performance-inefficient-algorithm
+  <clang-tidy/checks/performance/inefficient-algorithm>` check by copying the
+  searched-for value as written rather than stripping its parentheses, which
+  could produce an invalid fix such as `s.find()` when the value came from a
+  macro. No fix is offered when the value covers only part of a macro
+  expansion.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the
