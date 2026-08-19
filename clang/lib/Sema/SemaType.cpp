@@ -6348,10 +6348,9 @@ static void fillDependentAddressSpaceTypeLoc(
     ArrayRef<const ParsedAttributesView *> AttrLists) {
   for (const ParsedAttributesView *Attrs : AttrLists) {
     for (const ParsedAttr &AL : *Attrs) {
-      if (AL.getKind() != ParsedAttr::AT_AddressSpace)
-        continue;
       // Skip invalid or malformed attributes; they did not produce a type.
-      if (AL.isInvalid() || AL.getNumArgs() != 1 || !AL.isArgExpr(0))
+      if (AL.getKind() != ParsedAttr::AT_AddressSpace || AL.isInvalid() ||
+          AL.getNumArgs() != 1 || !AL.isArgExpr(0))
         continue;
       DASTL.setAttrNameLoc(AL.getLoc());
       DASTL.setAttrExprOperand(AL.getArgAsExpr(0));
