@@ -129,3 +129,21 @@ func.func @sparse_disassemble_reinterpret_map(%sp : tensor<2x4xf64, #BSR>,
                                  -> (tensor<?xindex>, tensor<?xindex>), tensor<?xf64>, (index, index), index
   return %rd, %rp, %ri : tensor<?xf64>, tensor<?xindex>, tensor<?xindex>
 }
+
+// -----
+
+#Symbolic = #sparse_tensor.encoding<{
+  map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+}>
+
+// CHECK-LABEL: func.func @sparse_assemble_symbolic_map(
+// CHECK: %[[ASSEMBLED:.*]] = sparse_tensor.assemble {{.*}} to tensor<32x32xf32, #sparse{{[0-9]*}}>
+// CHECK-NEXT: return %[[ASSEMBLED]] : tensor<32x32xf32, #sparse{{[0-9]*}}>
+func.func @sparse_assemble_symbolic_map(
+    %val: tensor<?xf32>, %pos: tensor<?xindex>, %crd: tensor<?xindex>)
+    -> tensor<32x32xf32, #Symbolic> {
+  %0 = sparse_tensor.assemble (%pos, %crd), %val
+      : (tensor<?xindex>, tensor<?xindex>), tensor<?xf32>
+        to tensor<32x32xf32, #Symbolic>
+  return %0 : tensor<32x32xf32, #Symbolic>
+}
