@@ -66,7 +66,7 @@ static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
              FunctionTableKeyBaseLength + ParameterCount * sizeof(uint32_t) &&
          "Unexpected function table key length");
 
-  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
   ParameterTypeIDs.reserve(ParameterCount);
   for (unsigned I = 0; I != ParameterCount; ++I)
     ParameterTypeIDs.push_back(
