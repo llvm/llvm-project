@@ -149,7 +149,7 @@ bool M68kPassConfig::addIRTranslator() {
 }
 
 bool M68kPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 
