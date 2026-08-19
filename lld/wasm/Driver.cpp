@@ -981,9 +981,8 @@ static void createSyntheticSymbols() {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
         ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
-    ctx.sym.tlsBase =
-        createGlobalVariable(tls_base_name, !ctx.arg.libcallThreadContext,
-                             WASM_SYMBOL_VISIBILITY_HIDDEN);
+    ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
+                                           WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,

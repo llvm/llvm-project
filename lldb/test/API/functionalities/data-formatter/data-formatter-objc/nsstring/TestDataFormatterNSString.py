@@ -41,19 +41,19 @@ class NSStringDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
         commands()
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_nsstring_with_run_command(self):
         """Test formatters for NSString."""
         self.appkit_tester_impl(self.nsstring_data_formatter_commands)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_rdar11106605_with_run_command(self):
         """Check that Unicode characters come out of CFString summary correctly."""
         self.appkit_tester_impl(self.rdar11106605_commands)
 
-    @skipUnlessDarwin
+    @requireDarwin
     @no_debug_info_test
     def test_nsstring_withNULS_with_run_command(self):
         """Test formatters for NSString."""

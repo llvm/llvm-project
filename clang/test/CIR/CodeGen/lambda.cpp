@@ -64,7 +64,7 @@ void fn() {
 
 // FIXME: parameter attributes should be emitted
 // LLVM: define {{.*}} void @_Z2fnv()
-// LLVM:   [[A:%.*]] = alloca %[[REC_LAM_FN_A:.*]], i64 1, align 1
+// LLVM:   [[A:%.*]] = alloca %[[REC_LAM_FN_A:.*]], align 1
 // LLVM:   call void @"_ZZ2fnvENK3$_0clEv"(ptr {{.*}} [[A]])
 // LLVM:   ret void
 
@@ -172,7 +172,7 @@ auto g() {
 // CIR:   cir.return %[[RET]] : !cir.ptr<!void>
 
 // LLVM: define dso_local ptr @_Z1gv()
-// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]], i64 1
+// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]],
 // LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
@@ -218,7 +218,7 @@ auto g2() {
 // CIR:   cir.return %[[RET]] : !cir.ptr<!void>
 
 // LLVM: define dso_local ptr @_Z2g2v()
-// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]], i64 1
+// LLVM:   %[[COERCE:.*]] = alloca %[[REC_LAM_G:.*]],
 // LLVM:   %[[RETVAL:.*]] = alloca %[[REC_LAM_G]]
 // LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 12, ptr %[[I]]
