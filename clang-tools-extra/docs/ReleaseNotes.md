@@ -95,8 +95,7 @@ infrastructure are described first, followed by tool-specific sections.
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
-  Detects malformed regex patterns defined in a single string literal
-  to catch mistakes at compile time.
+  Detects malformed regex patterns defined in a single string literal.
 
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
