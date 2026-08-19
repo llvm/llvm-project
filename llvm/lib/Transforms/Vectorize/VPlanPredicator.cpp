@@ -510,21 +510,66 @@ void VPPredicator::run() {
     }
   }
 
-  // Linearize the blocks of the loop into one serial chain.
-  VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : Blocks) {
-    auto Successors = to_vector(VPBB->getSuccessors());
-    if (Successors.size() > 1)
-      VPBB->getTerminator()->eraseFromParent();
+  // The following implements "Partial Control-Flow Linearization" by Simon Moll
+  // and Sebastian Hack.
 
-    // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
-    // successors. Then connect VPBB to the previously visited VPBB.
-    for (auto *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-    if (PrevVPBB)
-      VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
+  using DeferredSuccessorsTy = SmallPtrSet<VPBlockBase *, 4>;
+  DenseMap<VPBlockBase *, DeferredSuccessorsTy> DeferredMap;
+  auto PopDeferred = [&](VPBlockBase *VPBB) -> DeferredSuccessorsTy {
+    auto It = DeferredMap.find(VPBB);
+    if (It != DeferredMap.end()) {
+      DeferredSuccessorsTy Res = std::move(It->second);
+      DeferredMap.erase(It);
+      return Res;
+    }
+    return {};
+  };
 
-    PrevVPBB = VPBB;
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(BlocksInCompactRPOTOrder)) {
+    LLVM_DEBUG(dbgs() << "Setting successors for " << VPBB->getName() << "\n");
+    bool PreserveUniform = false;
+    if (PreserveUniform) {
+      /* ... */
+    } else {
+      auto Successors = to_vector(VPBB->getSuccessors());
+      if (Successors.size() > 1)
+        VPBB->getTerminator()->eraseFromParent();
+      for (auto *Succ : Successors)
+        VPBlockUtils::disconnectBlocks(VPBB, Succ);
+
+      auto CombinedSuccessors = PopDeferred(VPBB);
+      CombinedSuccessors.insert_range(Successors);
+
+      if (CombinedSuccessors.size() == 0)
+        continue;
+
+      LLVM_DEBUG({
+        dbgs() << "Combined successors: ";
+        for (auto *B : CombinedSuccessors) {
+          dbgs() << " " << B->getName();
+        }
+        dbgs() << "\n";
+      });
+
+      VPBlockBase *Next = *std::min_element(
+          CombinedSuccessors.begin(), CombinedSuccessors.end(),
+          [&](VPBlockBase *A, VPBlockBase *B) {
+            return BlocksInCompactRPOTOrder.getIndex(A) <
+                   BlocksInCompactRPOTOrder.getIndex(B);
+          });
+
+      LLVM_DEBUG(dbgs() << "Connecting to: " << Next->getName() << "\n");
+      VPBlockUtils::connectBlocks(VPBB, Next);
+
+      CombinedSuccessors.erase(Next);
+      auto &Entry = DeferredMap[Next];
+      if (Entry.empty()) {
+        Entry = std::move(CombinedSuccessors);
+      } else {
+        Entry.insert_range(CombinedSuccessors);
+      }
+    }
   }
 
   for (VPBlockBase *VPBB : reverse(BlocksInCompactRPOTOrder))
