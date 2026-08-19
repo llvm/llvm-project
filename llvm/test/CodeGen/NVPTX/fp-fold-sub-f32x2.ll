@@ -8,8 +8,8 @@ define <2 x float> @sub_f32x2(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<11>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [sub_f32x2_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [sub_f32x2_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [sub_f32x2_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [sub_f32x2_param_1];
 ; CHECK-NEXT:    sub.rn.f32x2 %rd3, %rd1, %rd2;
 ; CHECK-NEXT:    sub.rn.ftz.f32x2 %rd4, %rd1, %rd3;
 ; CHECK-NEXT:    sub.rz.f32x2 %rd5, %rd1, %rd4;
@@ -18,7 +18,7 @@ define <2 x float> @sub_f32x2(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    sub.rm.ftz.f32x2 %rd8, %rd1, %rd7;
 ; CHECK-NEXT:    sub.rp.f32x2 %rd9, %rd1, %rd8;
 ; CHECK-NEXT:    sub.rp.ftz.f32x2 %rd10, %rd1, %rd9;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd10;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd10;
 ; CHECK-NEXT:    ret;
   %f0 = fneg <2 x float> %b
   %r1 = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %a, <2 x float> %f0, i32 1)
@@ -53,10 +53,10 @@ define <2 x float> @sub_f32x2_negated_lhs(<2 x float> %a, <2 x float> %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [sub_f32x2_negated_lhs_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [sub_f32x2_negated_lhs_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [sub_f32x2_negated_lhs_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [sub_f32x2_negated_lhs_param_1];
 ; CHECK-NEXT:    sub.rz.f32x2 %rd3, %rd2, %rd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    st.param::func.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %f = fneg <2 x float> %a
   %r = call <2 x float> @llvm.nvvm.fadd.v2f32(<2 x float> %f, <2 x float> %b, i32 0)

@@ -11,10 +11,10 @@ llvm.func @addf_vector_f16_f16(%a : vector<2xf16>, %b : vector<2xf16>) -> vector
   // CHECK-NEXT: ret <2 x half> %3
   // CHECK-NEXT: }
   %f1 = nvvm.addf %a, %b : vector<2xf16>
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>
-  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xf16>
-  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>
-  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>
+  %f2 = nvvm.addf %f1, %f1 rnd = <rn> : vector<2xf16>
+  %f3 = nvvm.addf %f2, %f2 rnd = <rn> ftz = true : vector<2xf16>
+  %f4 = nvvm.addf %f3, %f3 rnd = <rn> sat = <sat> : vector<2xf16>
+  %f5 = nvvm.addf %f4, %f4 rnd = <rn> sat = <sat> ftz = true : vector<2xf16>
   llvm.return %f1 : vector<2xf16>
 }
 

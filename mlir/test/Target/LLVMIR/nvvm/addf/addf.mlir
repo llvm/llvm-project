@@ -11,10 +11,10 @@ llvm.func @fadd_f16_f16(%a : f16, %b : f16) -> f16 {
   // CHECK-NEXT: ret half %7
   // CHECK-NEXT: }
   %f1 = nvvm.addf %a, %b : f16
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f16
-  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : f16
-  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f16
-  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f16
+  %f2 = nvvm.addf %f1, %f1 rnd = <rn> : f16
+  %f3 = nvvm.addf %f2, %f2 rnd = <rn> ftz = true : f16
+  %f4 = nvvm.addf %f3, %f3 rnd = <rn> sat = <sat> : f16
+  %f5 = nvvm.addf %f4, %f4 rnd = <rn> sat = <sat> ftz = true : f16
   llvm.return %f5 : f16
 }
 
