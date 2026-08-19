@@ -83,7 +83,7 @@ public:
   std::size_t bytesStored() const {
     return re_.bytesStored() + im_.bytesStored();
   }
-  static std::size_t bytesStored(int kind) {
+  static constexpr std::size_t bytesStored(int kind) {
     return 2 * RealValue::bytesStored(kind);
   }
 

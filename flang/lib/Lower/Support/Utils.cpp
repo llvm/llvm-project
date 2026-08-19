@@ -97,65 +97,72 @@ public:
   static unsigned getHashValue(const Fortran::evaluate::ComplexPart &x) {
     return getHashValue(x.complex()) - static_cast<unsigned>(x.part());
   }
-  template <Fortran::common::TypeCategory TC1, int KIND,
+  template <Fortran::common::TypeCategory TC1,
             Fortran::common::TypeCategory TC2>
   static unsigned getHashValue(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>, TC2>
-          &x) {
+      const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2> &x) {
+    const int kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC1) + 2u) -
-           (static_cast<unsigned>(KIND) + 5u);
+           (static_cast<unsigned>(kind) + 5u);
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::ComplexComponent<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::ComplexComponent &x) {
+    const int kind{x.kind()};
     return getHashValue(x.left()) -
-           (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u;
+           (static_cast<unsigned>(x.isImaginaryPart) + 1u) * 3u +
+           static_cast<unsigned>(kind);
   }
   template <typename T>
   static unsigned getHashValue(const Fortran::evaluate::Parentheses<T> &x) {
     return getHashValue(x.left()) * 17u;
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return getHashValue(x.left()) - (static_cast<unsigned>(TC) + 5u) -
-           (static_cast<unsigned>(KIND) + 7u);
+           (static_cast<unsigned>(kind) + 7u);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
-  static unsigned getHashValue(
-      const Fortran::evaluate::Add<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  static unsigned
+  getHashValue(const Fortran::evaluate::Add<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 23u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Subtract<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Subtract<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 19u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Multiply<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Multiply<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 29u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Divide<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Divide<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 31u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
-  static unsigned getHashValue(
-      const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  static unsigned
+  getHashValue(const Fortran::evaluate::Power<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 37u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>> &x) {
+      const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 41u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.ordering) * 7u;
   }
   template <typename T>
@@ -163,28 +170,27 @@ public:
     return getHashValue(x.condition()) * 151u -
            getHashValue(x.thenValue()) * 3u + getHashValue(x.elseValue());
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
-          &x) {
+      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 43u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND);
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::ComplexConstructor<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::ComplexConstructor &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 47u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::Concat<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::Concat &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 53u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::SetLength<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::SetLength &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) - getHashValue(x.right())) * 59u +
-           static_cast<unsigned>(KIND);
+           static_cast<unsigned>(kind);
   }
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return getHashValue(sym.get());
@@ -251,22 +257,19 @@ public:
     // FIXME: hash the contents.
     return 149u;
   }
-  template <int KIND>
-  static unsigned getHashValue(const Fortran::evaluate::Not<KIND> &x) {
-    return getHashValue(x.left()) * 61u + static_cast<unsigned>(KIND);
+  static unsigned getHashValue(const Fortran::evaluate::Not &x) {
+    return getHashValue(x.left()) * 61u;
   }
-  template <int KIND>
-  static unsigned
-  getHashValue(const Fortran::evaluate::LogicalOperation<KIND> &x) {
+  static unsigned getHashValue(const Fortran::evaluate::LogicalOperation &x) {
     unsigned result = getHashValue(x.left()) + getHashValue(x.right());
     return result * 67u + static_cast<unsigned>(x.logicalOperator) * 5u;
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   static unsigned getHashValue(
-      const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC, KIND>>
-          &x) {
+      const Fortran::evaluate::Relational<Fortran::evaluate::Type<TC>> &x) {
+    const int kind{x.kind()};
     return (getHashValue(x.left()) + getHashValue(x.right())) * 71u +
-           static_cast<unsigned>(TC) + static_cast<unsigned>(KIND) +
+           static_cast<unsigned>(TC) + static_cast<unsigned>(kind) +
            static_cast<unsigned>(x.opr) * 11u;
   }
   template <typename A>
@@ -284,10 +287,9 @@ public:
     return Fortran::common::visit(
         [&](const auto &v) { return getHashValue(v); }, x.u);
   }
-  template <int BITS>
   static unsigned
-  getHashValue(const Fortran::evaluate::value::Integer<BITS> &x) {
-    return static_cast<unsigned>(x.ToSInt());
+  getHashValue(const Fortran::evaluate::value::IntegerValue &x) {
+    return static_cast<unsigned>(x.ToInt64());
   }
   static unsigned getHashValue(const Fortran::evaluate::NullPointer &x) {
     return ~179u;
@@ -374,84 +376,81 @@ public:
   template <typename A, Fortran::common::TypeCategory TC2>
   static bool isEqual(const Fortran::evaluate::Convert<A, TC2> &x,
                       const Fortran::evaluate::Convert<A, TC2> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::ComplexComponent<KIND> &x,
-                      const Fortran::evaluate::ComplexComponent<KIND> &y) {
-    return isEqual(x.left(), y.left()) &&
+  static bool isEqual(const Fortran::evaluate::ComplexComponent &x,
+                      const Fortran::evaluate::ComplexComponent &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
            x.isImaginaryPart == y.isImaginaryPart;
   }
   template <typename T>
   static bool isEqual(const Fortran::evaluate::Parentheses<T> &x,
                       const Fortran::evaluate::Parentheses<T> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Negate<A> &x,
                       const Fortran::evaluate::Negate<A> &y) {
-    return isEqual(x.left(), y.left());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
   template <typename A>
   static bool isBinaryEqual(const A &x, const A &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Add<A> &x,
                       const Fortran::evaluate::Add<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Subtract<A> &x,
                       const Fortran::evaluate::Subtract<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Multiply<A> &x,
                       const Fortran::evaluate::Multiply<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Divide<A> &x,
                       const Fortran::evaluate::Divide<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Power<A> &x,
                       const Fortran::evaluate::Power<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Extremum<A> &x,
                       const Fortran::evaluate::Extremum<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   template <typename T>
   static bool isEqual(const Fortran::evaluate::ConditionalExpr<T> &x,
                       const Fortran::evaluate::ConditionalExpr<T> &y) {
-    return isEqual(x.condition(), y.condition()) &&
+    return x.kind() == y.kind() && isEqual(x.condition(), y.condition()) &&
            isEqual(x.thenValue(), y.thenValue()) &&
            isEqual(x.elseValue(), y.elseValue());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::RealToIntPower<A> &x,
                       const Fortran::evaluate::RealToIntPower<A> &y) {
-    return isBinaryEqual(x, y);
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::ComplexConstructor<KIND> &x,
-                      const Fortran::evaluate::ComplexConstructor<KIND> &y) {
-    return isBinaryEqual(x, y);
+  static bool isEqual(const Fortran::evaluate::ComplexConstructor &x,
+                      const Fortran::evaluate::ComplexConstructor &y) {
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::Concat<KIND> &x,
-                      const Fortran::evaluate::Concat<KIND> &y) {
-    return isBinaryEqual(x, y);
+  static bool isEqual(const Fortran::evaluate::Concat &x,
+                      const Fortran::evaluate::Concat &y) {
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::SetLength<KIND> &x,
-                      const Fortran::evaluate::SetLength<KIND> &y) {
-    return isBinaryEqual(x, y);
+  static bool isEqual(const Fortran::evaluate::SetLength &x,
+                      const Fortran::evaluate::SetLength &y) {
+    return x.kind() == y.kind() && isBinaryEqual(x, y);
   }
   static bool isEqual(const Fortran::semantics::SymbolRef &x,
                       const Fortran::semantics::SymbolRef &y) {
@@ -475,7 +474,7 @@ public:
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Constant<A> &x,
                       const Fortran::evaluate::Constant<A> &y) {
-    return x == y;
+    return x.kind() == y.kind() && x == y;
   }
   static bool isEqual(const Fortran::evaluate::ActualArgument &x,
                       const Fortran::evaluate::ActualArgument &y) {
@@ -526,11 +525,13 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
                       const Fortran::evaluate::SubscriptInteger &y) {
-    return x == y;
+    return x.kind() == y.kind() && x == y;
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
                       const Fortran::evaluate::ArrayConstructor<A> &y) {
+    if (x.kind() != y.kind())
+      return false;
     bool checkCharacterType = true;
     if constexpr (A::category == Fortran::common::TypeCategory::Character) {
       checkCharacterType = isEqual(*x.LEN(), *y.LEN());
@@ -541,16 +542,17 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {
-    return toStringRef(x.name) == toStringRef(y.name);
+    return x.kind() == y.kind() && toStringRef(x.name) == toStringRef(y.name);
   }
   static bool isEqual(const Fortran::evaluate::TypeParamInquiry &x,
                       const Fortran::evaluate::TypeParamInquiry &y) {
-    return isEqual(x.base(), y.base()) && isEqual(x.parameter(), y.parameter());
+    return x.kind() == y.kind() && isEqual(x.base(), y.base()) &&
+           isEqual(x.parameter(), y.parameter());
   }
   static bool isEqual(const Fortran::evaluate::DescriptorInquiry &x,
                       const Fortran::evaluate::DescriptorInquiry &y) {
-    return isEqual(x.base(), y.base()) && x.field() == y.field() &&
-           x.dimension() == y.dimension();
+    return x.kind() == y.kind() && isEqual(x.base(), y.base()) &&
+           x.field() == y.field() && x.dimension() == y.dimension();
   }
   static bool isEqual(const Fortran::evaluate::RankOneBoundElement &x,
                       const Fortran::evaluate::RankOneBoundElement &y) {
@@ -558,6 +560,8 @@ public:
   }
   static bool isEqual(const Fortran::evaluate::StructureConstructor &x,
                       const Fortran::evaluate::StructureConstructor &y) {
+    if (x.kind() != y.kind())
+      return false;
     const auto &xValues = x.values();
     const auto &yValues = y.values();
     if (xValues.size() != yValues.size())
@@ -575,47 +579,52 @@ public:
     }
     return true;
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::Not<KIND> &x,
-                      const Fortran::evaluate::Not<KIND> &y) {
-    return isEqual(x.left(), y.left());
+  static bool isEqual(const Fortran::evaluate::Not &x,
+                      const Fortran::evaluate::Not &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left());
   }
-  template <int KIND>
-  static bool isEqual(const Fortran::evaluate::LogicalOperation<KIND> &x,
-                      const Fortran::evaluate::LogicalOperation<KIND> &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+  static bool isEqual(const Fortran::evaluate::LogicalOperation &x,
+                      const Fortran::evaluate::LogicalOperation &y) {
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Relational<A> &x,
                       const Fortran::evaluate::Relational<A> &y) {
-    return isEqual(x.left(), y.left()) && isEqual(x.right(), y.right());
+    return x.kind() == y.kind() && isEqual(x.left(), y.left()) &&
+           isEqual(x.right(), y.right());
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Expr<A> &x,
                       const Fortran::evaluate::Expr<A> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
   static bool
   isEqual(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x,
           const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
   template <typename A>
   static bool isEqual(const Fortran::evaluate::Designator<A> &x,
                       const Fortran::evaluate::Designator<A> &y) {
-    return Fortran::common::visit(
-        [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u, y.u);
+    return x.kind() == y.kind() &&
+           Fortran::common::visit(
+               [&](const auto &v, const auto &w) { return isEqual(v, w); }, x.u,
+               y.u);
   }
-  template <int BITS>
-  static bool isEqual(const Fortran::evaluate::value::Integer<BITS> &x,
-                      const Fortran::evaluate::value::Integer<BITS> &y) {
-    return x == y;
+  static bool isEqual(const Fortran::evaluate::value::IntegerValue &x,
+                      const Fortran::evaluate::value::IntegerValue &y) {
+    return x.kind() == y.kind() && x == y;
   }
   static bool isEqual(const Fortran::evaluate::NullPointer &x,
                       const Fortran::evaluate::NullPointer &y) {
-    return true;
+    return x.kind() == y.kind() && true;
   }
   template <typename A, typename B,
             std::enable_if_t<!std::is_same_v<A, B>, bool> = true>

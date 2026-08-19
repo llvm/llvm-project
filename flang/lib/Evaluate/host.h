@@ -55,6 +55,34 @@ private:
 // Type mapping from F18 types to host types
 struct UnsupportedType {}; // There is no host type for the F18 type
 
+/// Because HostType<T> depends on the type's kind as well, KIND must be part of
+/// the template as well where Type<CAT> does not.
+template <common::TypeCategory CAT, int KIND> struct TypeKind {
+  using FortranType = Fortran::evaluate::Type<CAT>;
+  using Scalar = Fortran::evaluate::Scalar<FortranType>;
+  static constexpr common::TypeCategory category{CAT};
+  static constexpr int kind{KIND};
+
+  static constexpr DynamicType GetType() { return DynamicType{CAT, KIND}; }
+
+  // Meaningful for COMPLEX only: the real component's (category, kind) tag.
+  using Part = TypeKind<common::TypeCategory::Real, KIND>;
+};
+
+using AllHostKindTypes = std::tuple<TypeKind<TypeCategory::Integer, 1>,
+    TypeKind<TypeCategory::Integer, 2>, TypeKind<TypeCategory::Integer, 4>,
+    TypeKind<TypeCategory::Integer, 8>, TypeKind<TypeCategory::Integer, 16>,
+    TypeKind<TypeCategory::Real, 2>, TypeKind<TypeCategory::Real, 3>,
+    TypeKind<TypeCategory::Real, 4>, TypeKind<TypeCategory::Real, 8>,
+    TypeKind<TypeCategory::Real, 10>, TypeKind<TypeCategory::Real, 16>,
+    TypeKind<TypeCategory::Complex, 2>, TypeKind<TypeCategory::Complex, 3>,
+    TypeKind<TypeCategory::Complex, 4>, TypeKind<TypeCategory::Complex, 8>,
+    TypeKind<TypeCategory::Complex, 10>, TypeKind<TypeCategory::Complex, 16>,
+    TypeKind<TypeCategory::Logical, 1>, TypeKind<TypeCategory::Logical, 2>,
+    TypeKind<TypeCategory::Logical, 4>, TypeKind<TypeCategory::Logical, 8>,
+    TypeKind<TypeCategory::Character, 1>, TypeKind<TypeCategory::Character, 2>,
+    TypeKind<TypeCategory::Character, 4>>;
+
 template <typename FTN_T> struct HostTypeHelper {
   using Type = UnsupportedType;
 };
@@ -73,14 +101,15 @@ template <typename FTN_T>
 inline constexpr Scalar<FTN_T> CastHostToFortran(const HostType<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
   if constexpr (FTN_T::category == TypeCategory::Complex &&
-      Scalar<FTN_T>::bytesStored() != sizeof(HostType<FTN_T>)) {
+      Scalar<FTN_T>::bytesStored(FTN_T::kind) != sizeof(HostType<FTN_T>)) {
     // X87 is usually padded to 12 or 16bytes. Need to cast piecewise for
     // complex
     return Scalar<FTN_T>{CastHostToFortran<typename FTN_T::Part>(std::real(x)),
         CastHostToFortran<typename FTN_T::Part>(std::imag(x))};
   } else {
-    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
-    return Scalar<FTN_T>::FromRawBytes(&x, sizeof(x));
+    static_assert(
+        Scalar<FTN_T>::bytesStored(FTN_T::kind) == sizeof(HostType<FTN_T>));
+    return Scalar<FTN_T>::FromRawBytes(FTN_T::kind, &x, sizeof(x));
   }
 }
 
@@ -89,35 +118,36 @@ template <typename FTN_T>
 inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
   static_assert(HostTypeExists<FTN_T>());
   if constexpr (FTN_T::category == TypeCategory::Complex &&
-      Scalar<FTN_T>::bytesStored() != sizeof(HostType<FTN_T>)) {
+      Scalar<FTN_T>::bytesStored(FTN_T::kind) != sizeof(HostType<FTN_T>)) {
     using FortranPartType = typename FTN_T::Part;
     return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
         CastFortranToHost<FortranPartType>(x.AIMAG())};
   } else {
-    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
+    static_assert(
+        Scalar<FTN_T>::bytesStored(FTN_T::kind) == sizeof(HostType<FTN_T>));
     HostType<FTN_T> result;
     x.StoreRawBytes(&result, sizeof(result));
     return result;
   }
 }
 
-template <> struct HostTypeHelper<Type<TypeCategory::Integer, 1>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Integer, 1>> {
   using Type = std::int8_t;
 };
 
-template <> struct HostTypeHelper<Type<TypeCategory::Integer, 2>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Integer, 2>> {
   using Type = std::int16_t;
 };
 
-template <> struct HostTypeHelper<Type<TypeCategory::Integer, 4>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Integer, 4>> {
   using Type = std::int32_t;
 };
 
-template <> struct HostTypeHelper<Type<TypeCategory::Integer, 8>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Integer, 8>> {
   using Type = std::int64_t;
 };
 
-template <> struct HostTypeHelper<Type<TypeCategory::Integer, 16>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Integer, 16>> {
 #if (defined(__GNUC__) || defined(__clang__)) && defined(__SIZEOF_INT128__)
   using Type = __int128_t;
 #else
@@ -130,7 +160,7 @@ template <> struct HostTypeHelper<Type<TypeCategory::Integer, 16>> {
 
 template <>
 struct HostTypeHelper<
-    Type<TypeCategory::Real, common::RealKindForPrecision(24)>> {
+    TypeKind<TypeCategory::Real, common::RealKindForPrecision(24)>> {
   // IEEE 754 32bits
   using Type = std::conditional_t<sizeof(float) == 4 &&
           std::numeric_limits<float>::is_iec559,
@@ -139,7 +169,7 @@ struct HostTypeHelper<
 
 template <>
 struct HostTypeHelper<
-    Type<TypeCategory::Real, common::RealKindForPrecision(53)>> {
+    TypeKind<TypeCategory::Real, common::RealKindForPrecision(53)>> {
   // IEEE 754 64bits
   using Type = std::conditional_t<sizeof(double) == 8 &&
           std::numeric_limits<double>::is_iec559,
@@ -148,7 +178,7 @@ struct HostTypeHelper<
 
 template <>
 struct HostTypeHelper<
-    Type<TypeCategory::Real, common::RealKindForPrecision(64)>> {
+    TypeKind<TypeCategory::Real, common::RealKindForPrecision(64)>> {
   // X87 80bits
   using Type = std::conditional_t<sizeof(long double) >= 10 &&
           std::numeric_limits<long double>::digits == 64 &&
@@ -157,12 +187,12 @@ struct HostTypeHelper<
 };
 
 #if HAS_QUADMATHLIB
-template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = __float128;
 };
 #else
-template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
           std::numeric_limits<long double>::digits == 113 &&
@@ -171,26 +201,28 @@ template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
 };
 #endif
 
-template <int KIND> struct HostTypeHelper<Type<TypeCategory::Complex, KIND>> {
-  using RealT = Fortran::evaluate::Type<TypeCategory::Real, KIND>;
+template <int KIND>
+struct HostTypeHelper<TypeKind<TypeCategory::Complex, KIND>> {
+  using RealT = TypeKind<TypeCategory::Real, KIND>;
   using Type = std::conditional_t<HostTypeExists<RealT>(),
       std::complex<HostType<RealT>>, UnsupportedType>;
 };
 
 #if HAS_QUADMATHLIB
-template <> struct HostTypeHelper<Type<TypeCategory::Complex, 16>> {
-  using RealT = Fortran::evaluate::Type<TypeCategory::Real, 16>;
+template <> struct HostTypeHelper<TypeKind<TypeCategory::Complex, 16>> {
+  using RealT = TypeKind<TypeCategory::Real, 16>;
   using Type = __complex128;
 };
 #endif
 
-template <int KIND> struct HostTypeHelper<Type<TypeCategory::Logical, KIND>> {
+template <int KIND>
+struct HostTypeHelper<TypeKind<TypeCategory::Logical, KIND>> {
   using Type = std::conditional_t<KIND <= 8, std::uint8_t, UnsupportedType>;
 };
 
-template <int KIND> struct HostTypeHelper<Type<TypeCategory::Character, KIND>> {
-  using Type =
-      Scalar<typename Fortran::evaluate::Type<TypeCategory::Character, KIND>>;
+template <int KIND>
+struct HostTypeHelper<TypeKind<TypeCategory::Character, KIND>> {
+  using Type = typename TypeKind<TypeCategory::Character, KIND>::Scalar;
 };
 
 // Type mapping from host types to F18 types. This need to be placed after all
@@ -203,13 +235,13 @@ struct IndexInTupleHelper<T, std::tuple<TT...>> {
 struct UnknownType {}; // the host type does not match any F18 types
 template <typename HOST_T> struct FortranTypeHelper {
   using HostTypeMapping =
-      common::MapTemplate<HostType, AllIntrinsicTypes, std::tuple>;
+      common::MapTemplate<HostType, AllHostKindTypes, std::tuple>;
   static constexpr int index{
       IndexInTupleHelper<HOST_T, HostTypeMapping>::value};
   // Both conditional types are "instantiated", so a valid type must be
   // created for invalid index even if not used.
   using Type = std::conditional_t<index >= 0,
-      std::tuple_element_t<(index >= 0) ? index : 0, AllIntrinsicTypes>,
+      std::tuple_element_t<(index >= 0) ? index : 0, AllHostKindTypes>,
       UnknownType>;
 };
 

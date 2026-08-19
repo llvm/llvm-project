@@ -73,22 +73,24 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
       o << ',';
     }
     if constexpr (Result::category == TypeCategory::Integer) {
-      o << value.SignedDecimal() << '_' << Result::kind;
+      o << value.SignedDecimal() << '_' << kind_;
     } else if constexpr (Result::category == TypeCategory::Unsigned) {
-      o << value.UnsignedDecimal() << "U_" << Result::kind;
+      o << value.UnsignedDecimal() << "U_" << kind_;
     } else if constexpr (Result::category == TypeCategory::Real ||
         Result::category == TypeCategory::Complex) {
-      value.AsFortran(o, Result::kind);
+      value.AsFortran(o, kind_);
     } else if constexpr (Result::category == TypeCategory::Character) {
-      o << Result::kind << '_' << parser::QuoteCharacterLiteral(value, true);
+      o << value.kind() << '_';
+      value.withStdString(
+          [&o](const auto &s) { o << parser::QuoteCharacterLiteral(s, true); });
     } else if constexpr (Result::category == TypeCategory::Logical) {
       if (!value.IsCanonical()) {
-        o << "transfer(" << value.word().ToInt64() << "_8,.false._"
-          << Result::kind << ')';
+        o << "transfer(" << value.word().ToInt64() << "_8,.false._" << kind_
+          << ')';
       } else if (value.IsTrue()) {
-        o << ".true." << '_' << Result::kind;
+        o << ".true." << '_' << kind_;
       } else {
-        o << ".false." << '_' << Result::kind;
+        o << ".false." << '_' << kind_;
       }
     } else {
       StructureConstructor{result_.derivedTypeSpec(), value}.AsFortran(o);
@@ -109,8 +111,7 @@ std::string ConstantBase<RESULT, VALUE>::AsFortran() const {
   return result;
 }
 
-template <int KIND>
-llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
+llvm::raw_ostream &Constant<Type<TypeCategory::Character>>::AsFortran(
     llvm::raw_ostream &o) const {
   bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
   if (Rank() > 1 || hasNonDefaultLowerBound) {
@@ -125,10 +126,11 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     if (j > 0) {
       o << ',';
     }
-    if (Result::kind != 1) {
-      o << Result::kind << '_';
+    if (kind_ != 1) {
+      o << kind_ << '_';
     }
-    o << parser::QuoteCharacterLiteral(value);
+    value.withStdString(
+        [&o](const auto &s) { o << parser::QuoteCharacterLiteral(s); });
   }
   if (Rank() > 0) {
     o << ']';
@@ -137,8 +139,7 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
   return o;
 }
 
-template <int KIND>
-std::string Constant<Type<TypeCategory::Character, KIND>>::AsFortran() const {
+std::string Constant<Type<TypeCategory::Character>>::AsFortran() const {
   std::string result;
   llvm::raw_string_ostream sstream(result);
   AsFortran(sstream);
@@ -353,8 +354,7 @@ enum class Precedence { // in increasing order for sane comparisons
 template <typename A> constexpr Precedence ToPrecedence(const A &) {
   return Precedence::Top;
 }
-template <int KIND>
-static Precedence ToPrecedence(const LogicalOperation<KIND> &x) {
+static Precedence ToPrecedence(const LogicalOperation &x) {
   switch (x.logicalOperator) {
     SWITCH_COVERS_ALL_CASES
   case LogicalOperator::And:
@@ -368,9 +368,7 @@ static Precedence ToPrecedence(const LogicalOperation<KIND> &x) {
     return Precedence::Equivalence;
   }
 }
-template <int KIND> constexpr Precedence ToPrecedence(const Not<KIND> &) {
-  return Precedence::Not;
-}
+inline Precedence ToPrecedence(const Not &) { return Precedence::Not; }
 template <typename T> constexpr Precedence ToPrecedence(const Relational<T> &) {
   return Precedence::Relational;
 }
@@ -380,9 +378,7 @@ template <typename T> constexpr Precedence ToPrecedence(const Add<T> &) {
 template <typename T> constexpr Precedence ToPrecedence(const Subtract<T> &) {
   return Precedence::Additive;
 }
-template <int KIND> constexpr Precedence ToPrecedence(const Concat<KIND> &) {
-  return Precedence::Additive;
-}
+inline Precedence ToPrecedence(const Concat &) { return Precedence::Additive; }
 template <typename T> constexpr Precedence ToPrecedence(const Negate<T> &) {
   return Precedence::Negate;
 }
@@ -445,20 +441,16 @@ template <typename A>
 constexpr OperatorSpelling SpellOperator(const Parentheses<A> &) {
   return OperatorSpelling{"(", "", ")"};
 }
-template <int KIND>
-static OperatorSpelling SpellOperator(const ComplexComponent<KIND> &x) {
+static OperatorSpelling SpellOperator(const ComplexComponent &x) {
   return {x.isImaginaryPart ? "aimag(" : "real(", "", ")"};
 }
-template <int KIND>
-constexpr OperatorSpelling SpellOperator(const Not<KIND> &) {
+constexpr OperatorSpelling SpellOperator(const Not &) {
   return OperatorSpelling{".NOT.", "", ""};
 }
-template <int KIND>
-constexpr OperatorSpelling SpellOperator(const SetLength<KIND> &) {
+constexpr OperatorSpelling SpellOperator(const SetLength &) {
   return OperatorSpelling{"%SET_LENGTH(", ",", ")"};
 }
-template <int KIND>
-constexpr OperatorSpelling SpellOperator(const ComplexConstructor<KIND> &) {
+constexpr OperatorSpelling SpellOperator(const ComplexConstructor &) {
   return OperatorSpelling{"(", ",", ")"};
 }
 template <typename A> constexpr OperatorSpelling SpellOperator(const Add<A> &) {
@@ -489,12 +481,10 @@ static OperatorSpelling SpellOperator(const Extremum<A> &x) {
   return OperatorSpelling{
       x.ordering == Ordering::Less ? "min(" : "max(", ",", ")"};
 }
-template <int KIND>
-constexpr OperatorSpelling SpellOperator(const Concat<KIND> &) {
+constexpr OperatorSpelling SpellOperator(const Concat &) {
   return OperatorSpelling{"", "//", ""};
 }
-template <int KIND>
-static OperatorSpelling SpellOperator(const LogicalOperation<KIND> &x) {
+static OperatorSpelling SpellOperator(const LogicalOperation &x) {
   return OperatorSpelling{"", AsFortran(x.logicalOperator), ""};
 }
 template <typename T>
@@ -556,7 +546,7 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
   } else {
     this->left().AsFortran(o << "uint(");
   }
-  return o << ",kind=" << TO::kind << ')';
+  return o << ",kind=" << kind() << ')';
 }
 
 llvm::raw_ostream &Relational<SomeType>::AsFortran(llvm::raw_ostream &o) const {
@@ -577,7 +567,8 @@ template <typename T>
 llvm::raw_ostream &EmitArray(llvm::raw_ostream &o, const ImpliedDo<T> &implDo) {
   o << '(';
   EmitArray(o, implDo.values());
-  o << ',' << ImpliedDoIndex::Result::AsFortran()
+  o << ','
+    << DynamicType{TypeCategory::Integer, SubscriptIntegerKind}.AsFortran()
     << "::" << implDo.name().ToString() << '=';
   implDo.lower().AsFortran(o) << ',';
   implDo.upper().AsFortran(o) << ',';
@@ -604,9 +595,7 @@ llvm::raw_ostream &ArrayConstructor<T>::AsFortran(llvm::raw_ostream &o) const {
   return o << ']';
 }
 
-template <int KIND>
-llvm::raw_ostream &
-ArrayConstructor<Type<TypeCategory::Character, KIND>>::AsFortran(
+llvm::raw_ostream &ArrayConstructor<Type<TypeCategory::Character>>::AsFortran(
     llvm::raw_ostream &o) const {
   o << '[';
   if (const auto *len{LEN()}) {
@@ -891,7 +880,7 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
       o << ",dim=" << (dimension_ + 1);
     }
   }
-  return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
+  return o << ",kind=" << DescriptorInquiry::kind() << ")";
 }
 
 llvm::raw_ostream &RankOneBoundElement::AsFortran(llvm::raw_ostream &o) const {

@@ -301,6 +301,7 @@ endif()
 set(LLVM_BUILD_TOOLS ON)
 
 include_directories(BEFORE
+  ${FLANG_BINARY_DIR}/include/object-sizes/$<CONFIG>
   ${FLANG_BINARY_DIR}/include
   ${FLANG_SOURCE_DIR}/include)
 
