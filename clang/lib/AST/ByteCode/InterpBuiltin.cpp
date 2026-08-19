@@ -1381,7 +1381,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
       BaseAlignment = S.getASTContext().getDeclAlign(VD);
-    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
+    else if (const auto *E = Ptr.getRootExpr())
       BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
@@ -1608,7 +1608,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Composite arrays
   if (IsArray) {
     const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, ElemType.getTypePtr(), std::nullopt);
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr());
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1621,8 +1621,8 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   QualType AllocType = S.getASTContext().getConstantArrayType(
       ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
 
-  const Descriptor *Desc = S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
-                                                Descriptor::InlineDescMD);
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, AllocType.getTypePtr());
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
@@ -1664,7 +1664,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     if (!BlockToDelete->isDynamic()) {

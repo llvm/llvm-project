@@ -1,11 +1,5 @@
 add_custom_target(libc_time_unittests)
 
-if(LLVM_LIBC_FULL_BUILD)
-  set(libc_test LibcTest.hermetic)
-else()
-  set(libc_test LibcTest.unit)
-endif()
-
 add_header_library(
   time_test_utils
   HDRS
@@ -15,7 +9,7 @@ add_header_library(
     libc.hdr.types.struct_tm
     libc.src.__support.macros.config
     libc.src.time.time_constants
-    ${libc_test}
+    libc.test.UnitTest.LibcTest
 )
 
 add_libc_test(

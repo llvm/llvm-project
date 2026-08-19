@@ -1929,6 +1929,7 @@ enum StmtCode {
 
   EXPR_CXX_DEPENDENT_SCOPE_MEMBER,   // CXXDependentScopeMemberExpr
   EXPR_CXX_DEPENDENT_SCOPE_DECL_REF, // DependentScopeDeclRefExpr
+  EXPR_DEPENDENT_TEMPLATE_ID,        // DependentTemplateIdExpr
   EXPR_CXX_UNRESOLVED_CONSTRUCT,     // CXXUnresolvedConstructExpr
   EXPR_CXX_UNRESOLVED_MEMBER,        // UnresolvedMemberExpr
   EXPR_CXX_UNRESOLVED_LOOKUP,        // UnresolvedLookupExpr
