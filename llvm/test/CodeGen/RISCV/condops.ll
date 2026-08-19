@@ -4580,21 +4580,19 @@ define i64 @neg1(i64 %rs1, i1 zeroext %rc) {
 ; RV32XVENTANACONDOPS-NEXT:    neg a3, a1
 ; RV32XVENTANACONDOPS-NEXT:    snez a4, a0
 ; RV32XVENTANACONDOPS-NEXT:    sub a3, a3, a4
-; RV32XVENTANACONDOPS-NEXT:    neg a4, a0
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a4, a0, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a2
-; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a4, a4, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskc a1, a1, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a2, a3, a2
-; RV32XVENTANACONDOPS-NEXT:    or a0, a0, a4
+; RV32XVENTANACONDOPS-NEXT:    sub a0, a0, a4
 ; RV32XVENTANACONDOPS-NEXT:    or a1, a1, a2
 ; RV32XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XVENTANACONDOPS-LABEL: neg1:
 ; RV64XVENTANACONDOPS:       # %bb.0:
-; RV64XVENTANACONDOPS-NEXT:    neg a2, a0
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a2, a0, a1
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a0, a1
-; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a1, a2, a1
-; RV64XVENTANACONDOPS-NEXT:    or a0, a0, a1
+; RV64XVENTANACONDOPS-NEXT:    sub a0, a0, a2
 ; RV64XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XTHEADCONDMOV-LABEL: neg1:
@@ -4608,21 +4606,19 @@ define i64 @neg1(i64 %rs1, i1 zeroext %rc) {
 ; RV32ZICOND-NEXT:    neg a3, a1
 ; RV32ZICOND-NEXT:    snez a4, a0
 ; RV32ZICOND-NEXT:    sub a3, a3, a4
-; RV32ZICOND-NEXT:    neg a4, a0
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a2
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV32ZICOND-NEXT:    czero.nez a4, a4, a2
 ; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; RV32ZICOND-NEXT:    czero.nez a2, a3, a2
-; RV32ZICOND-NEXT:    or a0, a0, a4
+; RV32ZICOND-NEXT:    sub a0, a0, a4
 ; RV32ZICOND-NEXT:    or a1, a1, a2
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: neg1:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    neg a2, a0
+; RV64ZICOND-NEXT:    czero.nez a2, a0, a1
 ; RV64ZICOND-NEXT:    czero.eqz a0, a0, a1
-; RV64ZICOND-NEXT:    czero.nez a1, a2, a1
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    sub a0, a0, a2
 ; RV64ZICOND-NEXT:    ret
   %neg = sub i64 0, %rs1
   %sel = select i1 %rc, i64 %rs1, i64 %neg
@@ -4654,21 +4650,19 @@ define i64 @neg2(i64 %rs1, i1 zeroext %rc) {
 ; RV32XVENTANACONDOPS-NEXT:    neg a3, a1
 ; RV32XVENTANACONDOPS-NEXT:    snez a4, a0
 ; RV32XVENTANACONDOPS-NEXT:    sub a3, a3, a4
-; RV32XVENTANACONDOPS-NEXT:    neg a4, a0
+; RV32XVENTANACONDOPS-NEXT:    vt.maskc a4, a0, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a2
-; RV32XVENTANACONDOPS-NEXT:    vt.maskc a4, a4, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a1, a1, a2
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskc a2, a3, a2
-; RV32XVENTANACONDOPS-NEXT:    or a0, a4, a0
+; RV32XVENTANACONDOPS-NEXT:    sub a0, a0, a4
 ; RV32XVENTANACONDOPS-NEXT:    or a1, a2, a1
 ; RV32XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XVENTANACONDOPS-LABEL: neg2:
 ; RV64XVENTANACONDOPS:       # %bb.0:
-; RV64XVENTANACONDOPS-NEXT:    neg a2, a0
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc a2, a0, a1
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a0, a1
-; RV64XVENTANACONDOPS-NEXT:    vt.maskc a1, a2, a1
-; RV64XVENTANACONDOPS-NEXT:    or a0, a1, a0
+; RV64XVENTANACONDOPS-NEXT:    sub a0, a0, a2
 ; RV64XVENTANACONDOPS-NEXT:    ret
 ;
 ; RV64XTHEADCONDMOV-LABEL: neg2:
@@ -4682,21 +4676,19 @@ define i64 @neg2(i64 %rs1, i1 zeroext %rc) {
 ; RV32ZICOND-NEXT:    neg a3, a1
 ; RV32ZICOND-NEXT:    snez a4, a0
 ; RV32ZICOND-NEXT:    sub a3, a3, a4
-; RV32ZICOND-NEXT:    neg a4, a0
+; RV32ZICOND-NEXT:    czero.eqz a4, a0, a2
 ; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    czero.eqz a4, a4, a2
 ; RV32ZICOND-NEXT:    czero.nez a1, a1, a2
 ; RV32ZICOND-NEXT:    czero.eqz a2, a3, a2
-; RV32ZICOND-NEXT:    or a0, a4, a0
+; RV32ZICOND-NEXT:    sub a0, a0, a4
 ; RV32ZICOND-NEXT:    or a1, a2, a1
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: neg2:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    neg a2, a0
+; RV64ZICOND-NEXT:    czero.eqz a2, a0, a1
 ; RV64ZICOND-NEXT:    czero.nez a0, a0, a1
-; RV64ZICOND-NEXT:    czero.eqz a1, a2, a1
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    sub a0, a0, a2
 ; RV64ZICOND-NEXT:    ret
   %neg = sub i64 0, %rs1
   %sel = select i1 %rc, i64 %neg, i64 %rs1
