@@ -19,18 +19,20 @@ extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_init() { Initialize(); }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_entry(void *pc) {
-  if (UNLIKELY(!thr_tls.is_inited))
+  Thread *thr = cur_thread();
+  if (UNLIKELY(!thr->is_inited))
     return;
-  DCHECK_LT(thr_tls.shadow_stack_pos, thr_tls.shadow_stack_end);
-  thr_tls.shadow_stack_pos[0] = (uptr)pc;
-  thr_tls.shadow_stack_pos++;
+  DCHECK_LT(thr->shadow_stack_pos, thr->shadow_stack_end);
+  thr->shadow_stack_pos[0] = (uptr)pc;
+  thr->shadow_stack_pos++;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_exit() {
-  if (UNLIKELY(!thr_tls.is_inited))
+  Thread *thr = cur_thread();
+  if (UNLIKELY(!thr->is_inited))
     return;
-  if (LIKELY(thr_tls.shadow_stack_pos > thr_tls.shadow_stack))
-    thr_tls.shadow_stack_pos--;
+  if (LIKELY(thr->shadow_stack_pos > thr->shadow_stack))
+    thr->shadow_stack_pos--;
 }
 
 } // extern "C"
