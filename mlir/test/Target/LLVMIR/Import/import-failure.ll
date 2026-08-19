@@ -533,3 +533,12 @@ define i32 @metadata_ref_global_dtors() {
 }
 
 !0 = !{ptr @llvm.global_dtors}
+
+; // -----
+
+; CHECK: error: unknown value 'invalid' for 'disable-tail-calls' attribute
+define void @disable_tail_calls_invalid() #0 {
+  ret void
+}
+
+attributes #0 = { "disable-tail-calls"="invalid" }

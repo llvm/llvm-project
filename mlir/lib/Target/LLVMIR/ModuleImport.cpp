@@ -3024,8 +3024,14 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setUseSampleProfile(true);
 
   if (llvm::Attribute attr = func->getFnAttribute("disable-tail-calls");
-      attr.isStringAttribute())
-    funcOp.setDisableTailCalls(attr.getValueAsString() == "true");
+      attr.isStringAttribute()) {
+    StringRef val = attr.getValueAsString();
+    if (val == "true")
+      funcOp.setDisableTailCalls(true);
+    else if (val != "false")
+      emitError(funcOp.getLoc())
+          << "unknown value '" << val << "' for 'disable-tail-calls' attribute";
+  }
 
   if (llvm::Attribute attr = func->getFnAttribute("target-cpu");
       attr.isStringAttribute())

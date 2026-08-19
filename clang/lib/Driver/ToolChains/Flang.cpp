@@ -377,9 +377,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
        options::OPT_relaxed_c_loc});
 
-  if (Arg *A = Args.getLastArg(options::OPT_foptimize_sibling_calls,
-                               options::OPT_fno_optimize_sibling_calls))
-    A->render(Args, CmdArgs);
+  Args.addOptOutFlag(CmdArgs, options::OPT_foptimize_sibling_calls,
+                     options::OPT_fno_optimize_sibling_calls);
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   addSeparateSectionFlags(Triple, Args, CmdArgs);
