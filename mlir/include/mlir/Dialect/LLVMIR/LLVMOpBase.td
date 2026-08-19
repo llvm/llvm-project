@@ -216,6 +216,13 @@ class LLVM_MemOpPatterns {
   code setVolatileCode = [{
     inst->setVolatile($volatile_);
   }];
+  code setIgnoreDenormalModeCode = [{
+    if ($ignore_denormal_mode) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                        metadata);
+    }
+  }];
   code setSyncScopeCode = [{
     if ($syncscope.has_value()) {
       llvm::LLVMContext &llvmContext = builder.getContext();
