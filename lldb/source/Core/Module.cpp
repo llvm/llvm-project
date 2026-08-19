@@ -1260,13 +1260,8 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  bool user_interrupted = false;
-  SymbolFile *sym_file = GetSymbolFile(
-      /*can_create=*/true, /*feedback_strm=*/nullptr, &user_interrupted);
-  if (!sym_file ||
-      !(sym_file->GetAbilities() & SymbolFile::Abilities::CompileUnits))
-    if (!user_interrupted)
-      SymbolLocator::DownloadSymbolFileAsync(GetUUID());
+  if (!m_symfile_up)
+    SymbolLocator::DownloadSymbolFileAsync(GetUUID());
   return m_unwind_table;
 }
 
