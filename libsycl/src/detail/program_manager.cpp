@@ -50,9 +50,9 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
       /*Identifier=*/"");
   auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
   if (!BinOrErr) {
-    llvm::consumeError(BinOrErr.takeError());
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
-                          "Failed to parse OffloadBinary");
+                          "Failed to parse OffloadBinary: " +
+                              llvm::toString(BinOrErr.takeError()));
   }
   assert(!BinOrErr->empty() && "OffloadBinary must contain at least one entry");
 
