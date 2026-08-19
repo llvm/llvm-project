@@ -3566,6 +3566,11 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       if (!HasBody && !Def->isThisDeclarationADefinition())
         return;
 
+      // Reconstruct a prototype from the parameter declarations in the
+      // definition AST, applying C default argument promotions (e.g.,
+      // short -> int, float -> double). This ensures definition-side
+      // type metadata matches the promoted signatures computed at indirect
+      // call sites in CGCall.cpp (see CodeGenFunction::EmitCall).
       SmallVector<QualType, 8> ParamTypes;
       for (const ParmVarDecl *P : Def->parameters()) {
         QualType ParamTy = P->getType();
