@@ -21,7 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
-#include <optional>
+#include <variant>
 
 namespace llvm {
 class CallInst;
