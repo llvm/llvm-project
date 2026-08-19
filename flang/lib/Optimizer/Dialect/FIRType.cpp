@@ -1670,6 +1670,8 @@ fir::getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
           llvm::alignTo(size, compAlign) + llvm::alignTo(compSize, compAlign);
       align = std::max(align, compAlign);
     }
+    // Include tail padding so the size matches the allocation size.
+    size = llvm::alignTo(size, align);
     return std::pair{size, align};
   }
   if (auto logical = mlir::dyn_cast<fir::LogicalType>(ty)) {
