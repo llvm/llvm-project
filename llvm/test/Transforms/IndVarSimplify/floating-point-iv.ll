@@ -340,7 +340,7 @@ define void @fcmp_neg1() nounwind {
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) #[[ATTR0]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt double [[IV_FP]], 1.000000e+04
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB]], label [[RETURN]]
 ; CHECK:       return:

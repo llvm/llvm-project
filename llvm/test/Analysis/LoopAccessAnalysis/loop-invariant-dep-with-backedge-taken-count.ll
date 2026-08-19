@@ -181,21 +181,11 @@ define void @test_btc_is_unknown_value(ptr %a, i32 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (400 + %a) High: (404 + %a))
-; CHECK-NEXT:            Member: (400 + %a)
-; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %a High: (4 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %a))
-; CHECK-NEXT:            Member: {%a,+,4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
-; CHECK-NEXT:      {0,+,1}<nuw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep = getelementptr i32, ptr %a, i32 %iv:
-; CHECK-NEXT:        ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %a)
-; CHECK-NEXT:        --> {%a,+,4}<nw><%loop>
 ;
 entry:
   %gep.x = getelementptr i32, ptr %a, i32 100

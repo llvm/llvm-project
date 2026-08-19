@@ -29,7 +29,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    br i1 [[CMP212]], label [[FOR_BODY3_LVER_CHECK:%.*]], label [[FOR_INC11]]
 ; CHECK:       for.body3.lver.check:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I_015]], [[ITR]]
-; CHECK-NEXT:    [[IDXPROM6:%.*]] = zext i32 [[I_015]] to i64
+; CHECK-NEXT:    [[IDXPROM6:%.*]] = zext nneg i32 [[I_015]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[VAR3]], i64 [[IDXPROM6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[J_016]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
@@ -79,7 +79,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    br label [[FOR_INC11]]
 ; CHECK:       for.inc11:
 ; CHECK-NEXT:    [[J_1_LCSSA]] = phi i32 [ [[J_016]], [[FOR_COND1_PREHEADER]] ], [ [[ITR]], [[FOR_INC11_LOOPEXIT]] ]
-; CHECK-NEXT:    [[INC12]] = add nuw i32 [[I_015]], 1
+; CHECK-NEXT:    [[INC12]] = add nuw nsw i32 [[I_015]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC12]], [[ITR]]
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND1_PREHEADER]], label [[FOR_END13_LOOPEXIT:%.*]]

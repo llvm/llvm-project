@@ -2134,6 +2134,22 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
       return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
     }
 
+    // For a positive step, we can zero-extend the step iff doing so only
+    // traverses values in the range sext([0,SMAX]). Note that this does not
+    // imply no-self-wrap.
+    if (isKnownPositive(Step)) {
+      unsigned BitWidth = getTypeSizeInBits(AR->getType());
+      const SCEV *N =
+          getConstant(APInt::getMinValue(BitWidth) - getSignedRangeMax(Step));
+      if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
+          isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
+        Start =
+            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+        Step = getZeroExtendExpr(Step, Ty, Depth + 1);
+        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+      }
+    }
+
     // sext({C,+,Step}) --> (sext(D) + sext({C-D,+,Step}))<nuw><nsw>
     // if D + (C - D + Step * n) could be proven to not signed wrap
     // where D maximizes the number of trailing zeros of (C - D + Step * n)

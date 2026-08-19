@@ -426,7 +426,7 @@ define void @min.unsigned.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LATCH:%.*]] ], [ 5, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[IDX_INC]] = add nuw i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_INC]] = add nuw nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    br i1 true, label [[OK:%.*]], label [[LATCH]]
 ; CHECK:       ok:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[A]], i32 [[IDX]]
@@ -477,7 +477,7 @@ define void @min.unsigned.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LATCH:%.*]] ], [ 5, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[IDX_INC]] = add nuw i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_INC]] = add nuw nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    br i1 true, label [[OK:%.*]], label [[LATCH]]
 ; CHECK:       ok:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[A]], i32 [[IDX]]

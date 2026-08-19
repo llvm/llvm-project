@@ -437,21 +437,21 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testl %edx, %edx
-; X64-NEXT:    je .LBB3_2
+; X64-NEXT:    je .LBB3_3
+; X64-NEXT:  # %bb.1: # %bb26.preheader
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB3_1: # %bb26
+; X64-NEXT:  .LBB3_2: # %bb26
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movslq %ecx, %rcx
 ; X64-NEXT:    movq (%rdi,%rcx,8), %r8
 ; X64-NEXT:    addq (%rsi,%rcx,8), %r8
 ; X64-NEXT:    addq %r8, %rax
-; X64-NEXT:    incl %ecx
+; X64-NEXT:    incq %rcx
 ; X64-NEXT:    cmpl %edx, %ecx
-; X64-NEXT:    jb .LBB3_1
-; X64-NEXT:  .LBB3_2: # %bb31
+; X64-NEXT:    jb .LBB3_2
+; X64-NEXT:  .LBB3_3: # %bb31
 ; X64-NEXT:    retq
 entry:
   %tmp2942 = icmp eq i32 %count, 0

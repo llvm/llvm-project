@@ -65,7 +65,7 @@ define i32 @test_02() {
 ; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp samesign ult i64 [[STOREMERGE611_I]], 11
 ; CHECK-NEXT:    br i1 [[CMP5_I]], label [[INNER_LOOP]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 10
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 10
 ; CHECK-NEXT:    br label [[OUTER_LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i32 [ [[IV]], [[INNER_LOOP]] ]

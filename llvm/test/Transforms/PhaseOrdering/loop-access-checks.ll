@@ -354,7 +354,7 @@ define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_COND_CLEANUP3]]:
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_09]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_09]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY4_PREHEADER]], label %[[FOR_COND_CLEANUP]]
 ; CHECK:       [[FOR_BODY4]]:

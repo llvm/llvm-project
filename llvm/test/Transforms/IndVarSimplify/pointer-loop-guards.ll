@@ -92,7 +92,7 @@ define void @test_sub_cmp(ptr align 8 %start, ptr %end) {
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[EXIT_EARLY:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_LATCH:%.*]] = icmp ult i64 [[IV_NEXT]], [[PTR_DIFF]]
 ; CHECK-NEXT:    br i1 [[CMP_LATCH]], label %[[LOOP_HEADER]], label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[EXIT_EARLY]]:

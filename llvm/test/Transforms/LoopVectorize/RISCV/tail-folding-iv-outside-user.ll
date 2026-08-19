@@ -8,15 +8,12 @@ define i32 @f(ptr noalias %p, i32 %start, i32 %step, i32 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[STEP]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[START]], [[TMP2]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[EXIT]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ [[TMP0]], %[[LOOP]] ], [ [[AVL_NEXT:%.*]], %[[EXIT]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP3]])
@@ -28,23 +25,9 @@ define i32 @f(ptr noalias %p, i32 %start, i32 %step, i32 %n) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[EXIT]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i32 [[TMP5]], [[STEP]]
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
-; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ [[START]], %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[IV]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[Y:%.*]] = add i32 [[X]], 1
-; CHECK-NEXT:    store i32 [[Y]], ptr [[GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[IV2_NEXT]] = add i32 [[IV2]], [[STEP]]
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT1]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    [[IV2_LCSSA:%.*]] = phi i32 [ [[IV2]], %[[LOOP1]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[IV2_LCSSA]]
+; CHECK-NEXT:    ret i32 [[IND_ESCAPE]]
 ;
 entry:
   br label %loop

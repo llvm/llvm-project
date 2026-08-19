@@ -11,7 +11,7 @@
 ;
 ; CHECK:      Function: wrap
 ; CHECK:      Invalid Context:
-; CHECK:      [N] -> {  : N >= 126 }
+; CHECK:      [N] -> {  : false }
 ;
 ;
 ; FIXME: This is a negative test as nowrap should not need an assumed context.

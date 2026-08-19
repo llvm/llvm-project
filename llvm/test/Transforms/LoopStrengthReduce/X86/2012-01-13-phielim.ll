@@ -108,7 +108,7 @@ define void @test2(i32 %n, i1 %arg) nounwind uwtable {
 ; CHECK-NEXT:    br label [[FOR_INC498:%.*]]
 ; CHECK:       if.then477:
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 12
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i32 [[LSR_IV1]], 1
 ; CHECK-NEXT:    br label [[FOR_COND468]]
 ; CHECK:       for.inc498:
 ; CHECK-NEXT:    br label [[FOR_INC498]]

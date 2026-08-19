@@ -16,7 +16,7 @@
 ; CHECK-NEXT: [N] -> {  : -2147483648 <= N <= 2147483647 }
 ;
 ; CHECK:      Invalid Context:
-; CHECK-NEXT: [N] -> {  : N >= 2147483619 }
+; CHECK-NEXT: [N] -> {  : false }
 
 target datalayout = "e-m:e-i32:64-f80:128-n8:16:32:64-S128"
 

@@ -309,7 +309,7 @@ define void @test_infer_nsw(ptr %p) {
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i16 1, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[ADD]] = add nuw i32 [[PHI]], 2
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i32 [[PHI]], 2
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -432,7 +432,7 @@ define void @test_shl_nuw_only(ptr %p) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = shl nuw i8 [[IV]], 1
 ; CHECK-NEXT:    store i8 [[OFF]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], -128
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:

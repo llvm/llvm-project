@@ -35,26 +35,24 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], %[[FN3_EXIT:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[FN3_EXIT]] ], [ -1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br i1 [[TOBOOL_I]], label %[[FN3_EXIT]], label %[[LAND_RHS_I:.*]]
 ; CHECK:       [[LAND_RHS_I]]:
 ; CHECK-NEXT:    store i32 0, ptr @c, align 4
 ; CHECK-NEXT:    br label %[[FN3_EXIT]]
 ; CHECK:       [[FN3_EXIT]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], 2
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nuw nsw i32 [[LSR_IV1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[LSR_IV_NEXT2]] to i8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TMP3]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    [[DOTLOBIT_NOT_:%.*]] = select i1 [[CMP3]], i32 [[DOTLOBIT_NOT]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[LSR_IV_NEXT2]], -1
-; CHECK-NEXT:    store i32 [[TMP3]], ptr @g, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[LSR_IV_NEXT2]], -1
+; CHECK-NEXT:    store i32 [[TMP2]], ptr @g, align 4
 ; CHECK-NEXT:    store i32 [[DOTLOBIT_NOT_]], ptr @i, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[LSR_IV_NEXT2]] to i8
-; CHECK-NEXT:    store i8 [[TMP1]], ptr @h, align 1
 ; CHECK-NEXT:    [[TMP:%.*]] = trunc i32 [[LSR_IV_NEXT2]] to i8
-; CHECK-NEXT:    [[CONV7:%.*]] = sext i8 [[TMP]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[LSR_IV_NEXT2]], -1
-; CHECK-NEXT:    [[LSR_IV_NEXT:%.*]] = add nsw i32 [[CONV7]], [[TMP4]]
+; CHECK-NEXT:    store i8 [[TMP]], ptr @h, align 1
 ; CHECK-NEXT:    store i32 [[LSR_IV_NEXT]], ptr @e, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (ptr, ...) @printf(ptr @.str, i32 [[LSR_IV_NEXT]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret i32 0

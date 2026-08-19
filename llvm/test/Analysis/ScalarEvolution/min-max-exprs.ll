@@ -26,13 +26,13 @@ define void @f(ptr %A, i32 %N) {
 ; CHECK-NEXT:    %tmp3 = add nuw nsw i32 %i.0, 3
 ; CHECK-NEXT:    --> {3,+,1}<nuw><%bb1> U: [3,-2147483645) S: [3,-2147483645) Exits: (3 + (0 smax %N))<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp5 = sext i32 %tmp3 to i64
-; CHECK-NEXT:    --> (sext i32 {3,+,1}<nuw><%bb1> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 (3 + (0 smax %N))<nuw> to i64) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {3,+,1}<nuw><%bb1> U: [3,2147483651) S: [3,2147483651) Exits: (3 + (zext i32 (0 smax %N) to i64))<nuw><nsw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp6 = sext i32 %N to i64
 ; CHECK-NEXT:    --> (sext i32 %N to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 %N to i64) LoopDispositions: { %bb1: Invariant }
 ; CHECK-NEXT:    %tmp9 = select i1 %tmp4, i64 %tmp5, i64 %tmp6
-; CHECK-NEXT:    --> ((sext i32 {3,+,1}<nuw><%bb1> to i64) smin (sext i32 %N to i64)) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: ((sext i32 (3 + (0 smax %N))<nuw> to i64) smin (sext i32 %N to i64)) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> ((sext i32 %N to i64) smin {3,+,1}<nuw><nsw><%bb1>) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: ((sext i32 %N to i64) smin (3 + (zext i32 (0 smax %N) to i64))<nuw><nsw>) LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp11 = getelementptr inbounds i32, ptr %A, i64 %tmp9
-; CHECK-NEXT:    --> ((4 * ((sext i32 {3,+,1}<nuw><%bb1> to i64) smin (sext i32 %N to i64)))<nsw> + %A) U: full-set S: full-set Exits: ((4 * ((sext i32 (3 + (0 smax %N))<nuw> to i64) smin (sext i32 %N to i64)))<nsw> + %A) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> ((4 * ((sext i32 %N to i64) smin {3,+,1}<nuw><nsw><%bb1>))<nsw> + %A) U: full-set S: full-set Exits: ((4 * ((sext i32 %N to i64) smin (3 + (zext i32 (0 smax %N) to i64))<nuw><nsw>))<nsw> + %A) LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp12 = load i32, ptr %tmp11, align 4
 ; CHECK-NEXT:    --> %tmp12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
 ; CHECK-NEXT:    %tmp13 = shl nsw i32 %tmp12, 1

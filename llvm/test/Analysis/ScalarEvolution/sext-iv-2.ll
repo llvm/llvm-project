@@ -15,9 +15,9 @@ define i32 @main() nounwind {
 ; CHECK-NEXT:    %tmp2 = trunc i32 %j.01 to i8
 ; CHECK-NEXT:    --> {0,+,1}<%bb1> U: full-set S: full-set Exits: -1 LoopDispositions: { %bb1: Computable, %bb: Uniform }
 ; CHECK-NEXT:    %tmp3 = sext i8 %tmp2 to i32
-; CHECK-NEXT:    --> (sext i8 {0,+,1}<nuw><%bb1> to i32) U: [-128,128) S: [-128,128) Exits: -1 LoopDispositions: { %bb1: Computable, %bb: Uniform }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,256) S: [0,256) Exits: 255 LoopDispositions: { %bb1: Computable, %bb: Uniform }
 ; CHECK-NEXT:    %tmp4 = mul i32 %tmp3, %i.02
-; CHECK-NEXT:    --> ((sext i8 {0,+,1}<nuw><%bb1> to i32) * {0,+,1}<nuw><nsw><%bb>) U: [-3968,3938) S: [-3968,3938) Exits: {0,+,-1}<nsw><%bb> LoopDispositions: { %bb1: Computable, %bb: Variant }
+; CHECK-NEXT:    --> {0,+,{0,+,1}<nuw><nsw><%bb>}<%bb1> U: [0,7906) S: [0,7906) Exits: {0,+,255}<nuw><nsw><%bb> LoopDispositions: { %bb1: Computable, %bb: Variant }
 ; CHECK-NEXT:    %tmp5 = sext i32 %i.02 to i64
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb> U: [0,32) S: [0,32) Exits: {0,+,1}<nuw><nsw><%bb> LoopDispositions: { %bb1: Invariant, %bb: Computable }
 ; CHECK-NEXT:    %tmp6 = sext i32 %j.01 to i64

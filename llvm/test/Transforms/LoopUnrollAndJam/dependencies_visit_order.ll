@@ -24,13 +24,12 @@ define void @test1() {
 ; CHECK-NEXT:    [[I4017_3:%.*]] = zext i16 [[I42_2]] to i64
 ; CHECK-NEXT:    [[I13_I_3:%.*]] = add nuw nsw i64 [[I4017_3]], 1
 ; CHECK-NEXT:    [[I42_3]] = trunc i64 [[I13_I_3]] to i16
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw i16 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i16 [[NITER]], 4
 ; CHECK-NEXT:    br label [[BB10_PREHEADER:%.*]]
 ; CHECK:       bb10.preheader:
 ; CHECK-NEXT:    br i1 true, label [[BB38]], label [[BB10_PREHEADER]]
 ; CHECK:       bb38:
-; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i16 [[NITER_NEXT_3]], -28
-; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[BB1_BB43_CRIT_EDGE_UNR_LCSSA:%.*]], label [[BB5_PREHEADER]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[BB1_BB43_CRIT_EDGE_UNR_LCSSA:%.*]], label [[BB5_PREHEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb1.bb43_crit_edge.unr-lcssa:
 ; CHECK-NEXT:    [[I10_UNR:%.*]] = phi i16 [ [[I42_3]], [[BB38]] ]
 ; CHECK-NEXT:    br i1 true, label [[BB5_PREHEADER_EPIL_PREHEADER]], label [[BB1_BB43_CRIT_EDGE:%.*]]

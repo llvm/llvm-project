@@ -84,7 +84,7 @@ define void @banerjee_no_nsw(ptr %A) {
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
 ; CHECK-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - output [* *|<]!
+; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-NEXT:    da analyze - output [* *]!
 ;

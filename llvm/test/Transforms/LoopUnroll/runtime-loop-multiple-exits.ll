@@ -3166,35 +3166,35 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-NEXT:    br label %header
 ; PROLOG:       header:
 ; PROLOG-NEXT:    %i4 = phi i32 [ %i4.unr, %preheader.new ], [ %inc.7, %latch.7 ]
-; PROLOG-NEXT:    %inc = add nuw i32 %i4, 1
+; PROLOG-NEXT:    %inc = add nuw nsw i32 %i4, 1
 ; PROLOG-NEXT:    %cmp1 = icmp ult i32 %inc, %N
 ; PROLOG-NEXT:    br i1 %cmp1, label %latch, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch:
-; PROLOG-NEXT:    %inc.1 = add nuw i32 %i4, 2
+; PROLOG-NEXT:    %inc.1 = add nuw nsw i32 %i4, 2
 ; PROLOG-NEXT:    %cmp1.1 = icmp ult i32 %inc.1, %N
 ; PROLOG-NEXT:    br i1 %cmp1.1, label %latch.1, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.1:
-; PROLOG-NEXT:    %inc.2 = add nuw i32 %i4, 3
+; PROLOG-NEXT:    %inc.2 = add nuw nsw i32 %i4, 3
 ; PROLOG-NEXT:    %cmp1.2 = icmp ult i32 %inc.2, %N
 ; PROLOG-NEXT:    br i1 %cmp1.2, label %latch.2, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.2:
-; PROLOG-NEXT:    %inc.3 = add nuw i32 %i4, 4
+; PROLOG-NEXT:    %inc.3 = add nuw nsw i32 %i4, 4
 ; PROLOG-NEXT:    %cmp1.3 = icmp ult i32 %inc.3, %N
 ; PROLOG-NEXT:    br i1 %cmp1.3, label %latch.3, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.3:
-; PROLOG-NEXT:    %inc.4 = add nuw i32 %i4, 5
+; PROLOG-NEXT:    %inc.4 = add nuw nsw i32 %i4, 5
 ; PROLOG-NEXT:    %cmp1.4 = icmp ult i32 %inc.4, %N
 ; PROLOG-NEXT:    br i1 %cmp1.4, label %latch.4, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.4:
-; PROLOG-NEXT:    %inc.5 = add nuw i32 %i4, 6
+; PROLOG-NEXT:    %inc.5 = add nuw nsw i32 %i4, 6
 ; PROLOG-NEXT:    %cmp1.5 = icmp ult i32 %inc.5, %N
 ; PROLOG-NEXT:    br i1 %cmp1.5, label %latch.5, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.5:
-; PROLOG-NEXT:    %inc.6 = add nuw i32 %i4, 7
+; PROLOG-NEXT:    %inc.6 = add nuw nsw i32 %i4, 7
 ; PROLOG-NEXT:    %cmp1.6 = icmp ult i32 %inc.6, %N
 ; PROLOG-NEXT:    br i1 %cmp1.6, label %latch.6, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.6:
-; PROLOG-NEXT:    %inc.7 = add nuw i32 %i4, 8
+; PROLOG-NEXT:    %inc.7 = add nuw nsw i32 %i4, 8
 ; PROLOG-NEXT:    %cmp1.7 = icmp ult i32 %inc.7, %N
 ; PROLOG-NEXT:    br i1 %cmp1.7, label %latch.7, label %latchExit.unr-lcssa.loopexit
 ; PROLOG:       latch.7:
@@ -3238,11 +3238,11 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; PROLOG-BLOCK-NEXT:    br label %header
 ; PROLOG-BLOCK:       header:
 ; PROLOG-BLOCK-NEXT:    %i4 = phi i32 [ %i4.unr, %preheader.new ], [ %inc.1, %latch.1 ]
-; PROLOG-BLOCK-NEXT:    %inc = add nuw i32 %i4, 1
+; PROLOG-BLOCK-NEXT:    %inc = add nuw nsw i32 %i4, 1
 ; PROLOG-BLOCK-NEXT:    %cmp1 = icmp ult i32 %inc, %N
 ; PROLOG-BLOCK-NEXT:    br i1 %cmp1, label %latch, label %latchExit.unr-lcssa.loopexit
 ; PROLOG-BLOCK:       latch:
-; PROLOG-BLOCK-NEXT:    %inc.1 = add nuw i32 %i4, 2
+; PROLOG-BLOCK-NEXT:    %inc.1 = add nuw nsw i32 %i4, 2
 ; PROLOG-BLOCK-NEXT:    %cmp1.1 = icmp ult i32 %inc.1, %N
 ; PROLOG-BLOCK-NEXT:    br i1 %cmp1.1, label %latch.1, label %latchExit.unr-lcssa.loopexit
 ; PROLOG-BLOCK:       latch.1:

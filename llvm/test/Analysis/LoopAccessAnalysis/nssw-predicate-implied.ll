@@ -404,7 +404,7 @@ define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N)
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
-; CHECK-NEXT:            Member: {%dst,+,4}<nw><%loop>
+; CHECK-NEXT:            Member: {%dst,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,8}<nw><%loop>
@@ -414,9 +414,6 @@ define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N)
 ; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:
-; CHECK-NEXT:        ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %dst)
-; CHECK-NEXT:        --> {%dst,+,4}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
 ; CHECK-NEXT:        ((4 * (sext i8 {0,+,2}<%loop> to i64))<nsw> + %src)
 ; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>

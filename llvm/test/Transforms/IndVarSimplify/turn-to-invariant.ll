@@ -932,7 +932,7 @@ define i32 @test_predicated_backedge_no_side_exit(i32 %len) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BACKEDGE]], label [[FAILED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
@@ -973,7 +973,7 @@ define i32 @test_predicated_backedge_with_side_exit(i32 %len) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[CHECK]], label [[INNER_BLOCK:%.*]], label [[FAILED:%.*]]
 ; CHECK:       inner_block:
@@ -1067,7 +1067,7 @@ define i32 @not_invariant_samesign(i32 %unknown_limit, ptr %length_ptr) {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[RANGE_CHECK1_FIRST_ITER:%.*]] = icmp samesign ult i32 [[IV_NEXT]], [[UNKNOWN_LIMIT:%.*]]
 ; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[UNKNOWN_LIMIT]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[RANGE_CHECK1_FIRST_ITER]], [[IS_POSITIVE]]
