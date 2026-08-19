@@ -104,3 +104,24 @@ func.func @test_scf_if_sink_through_loop(
   }
   return
 }
+
+// CHECK-LABEL: @test_scf_if_sink_through_loop_with_external_use
+// CHECK: %[[V0:.*]] = arith.muli %{{.*}}, %{{.*}}
+// CHECK: scf.if
+// CHECK:   scf.for
+// CHECK:     call @sink_i32(%[[V0]])
+// CHECK: call @sink_i32(%[[V0]])
+
+func.func @test_scf_if_sink_through_loop_with_external_use(
+    %arg0: i1, %arg1: index, %arg2: i32, %arg3: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = arith.muli %arg2, %arg3 : i32
+  scf.if %arg0 {
+    scf.for %arg4 = %c0 to %arg1 step %c1 {
+      func.call @sink_i32(%0) : (i32) -> ()
+    }
+  }
+  func.call @sink_i32(%0) : (i32) -> ()
+  return
+}
