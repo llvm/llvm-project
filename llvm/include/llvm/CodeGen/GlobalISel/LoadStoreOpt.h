@@ -183,6 +183,10 @@ class LoadStoreOptPass : public RequiredPassInfoMixin<LoadStoreOptPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 
 } // End namespace llvm.
