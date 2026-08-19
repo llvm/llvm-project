@@ -70,7 +70,7 @@
 ;   RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} MULT3
 ;   RUN: %{ur-bf} -unroll-count=3 | %{fc} MULT3
 ;
-;   Sums to approximately the original loop body frequency, 10.
+;   Sums to get approximately the original loop body frequency, 10.
 ;   MULT3: - do.body: float = 3.69,
 ;   MULT3: - do.body.1: float = 3.321,
 ;   MULT3: - do.body.2: float = 2.9889,
@@ -176,7 +176,7 @@
 ;     MUNIF6 is like applying -unroll-count=3 to MULT2 without converting any
 ;     additional conditional latches to unconditional, so (approximately)
 ;     MULT2's branch weights make sense.
-;     MUNIF6: !0 = !{!"branch_weights", i32 1717986944, i32 429496704}
+;     MUNIF6: !0 = !{!"branch_weights", i32 1717987328, i32 429496320}
 ;     MUNIF6: !1 = distinct !{!1, !2, !3}
 ;     MUNIF6: !2 = !{!"llvm.loop.estimated_trip_count", i32 2}
 ;     MUNIF6: !3 = !{!"llvm.loop.unroll.disable"}
@@ -193,11 +193,13 @@
 ; Check case when the original loop's number of iterations is a run-time
 ; determined multiple of 10, the unroll count is even so that odd-numbered
 ; unrolled iterations become unconditional, and the original loop body frequency
-; is 1, which is impossibly low.  This case is important to ensure the
-; implementation does not malfunction by trying to use negative and possibly
-; infinite probabilities to reach the original loop body frequency.
+; is 1, which is impossibly low.
 ;
 ;   RUN: sed -e s/@N@/%mul10/ -e s/@W@/0/ %s > %t.ll
+;
+; This case is important to ensure the implementation does not malfunction by
+; trying to use negative and possibly infinite probabilities to reach the
+; original loop body frequency.
 ;
 ; Check the original loop body frequency.
 ;
@@ -347,11 +349,155 @@
 ;   CONST4: !1 = distinct !{!1, !2}
 ;   CONST4: !2 = !{!"llvm.loop.unroll.disable"}
 
+; ------------------------------------------------------------------------------
+; Check cases when the original loop's number of iterations matches the original
+; loop body frequency specified by the branch weights but is very large.
+;
+; At this scale, the probabilities and frequencies actually computed from those
+; branch weights are highly inaccurate because, for example, BranchProbability
+; has only 32 bits.  But LoopUnroll uses double for its computations after it
+; receives the inaccurate original probability, so LoopUnroll should produce
+; results consistent with that inaccurate original probability.  TODO: We should
+; consider whether greater BranchProbability and BFI accuracy is desirable.
+;
+; While this test is impacted by the above inaccuracies, its purpose is actually
+; independent.  It's simply to make sure LoopUnroll does not malfunction at this
+; scale.  In particular, when computing frequency accuracy for assertions or
+; for terminating a search, LoopUnroll must compute relative differences from
+; the desired frequency because absolute differences can be very large.
+;
+; First, try a case that produces only one conditional latch, whose branch
+; weights can thus be computed by solving a linear equation, for which an assert
+; about its accuracy would fail if we computed it as an absolute difference:
+;
+;   Original number of iterations and thus loop body frequency is a large, odd
+;   constant value.
+;   RUN: sed -e s/@N@/1000000001/ -e s/@W@/1000000000/ %s > %t.ll
+;
+;   Highly inaccurate calculated original loop body frequency.
+;   RUN: %{bf-fc} LARGE1-ORIG
+;   LARGE1-ORIG: - do.body: float = 1073741823.9,
+;
+;   -unroll-count=2 so only first unrolled iteration can possibly exit.
+;   RUN: %{ur-bf} -unroll-count=2 | %{fc} LARGE1
+;
+;   Sum to get approximately the highly inaccurately calculated original loop
+;   body frequency.  That is, LoopUnroll's results are consistent with that.
+;   LARGE1: - do.body: float = 536870912.0,
+;   LARGE1: - do.body.1: float = 536870911.0,
+;
+;   LARGE1: call void @f
+;   LARGE1: br i1 %{{.*}}, label %do.body.1, label %do.end, !prof !0
+;   LARGE1: call void @f
+;   LARGE1: br label %do.body, !llvm.loop !1
+;
+;   There is no llvm.loop.estimated_trip_count because the unrolled loop's latch
+;   in do.body.1 unconditionally continues.  The branch weights on do.body's
+;   branch imply do.body continues 2147483644/4 times and then exits once, thus
+;   executing the original loop body 1073741823 times.
+;   LARGE1: !0 = !{!"branch_weights", i32 2147483644, i32 4}
+;   LARGE1: !1 = distinct !{!1, !2}
+;   LARGE1: !2 = !{!"llvm.loop.unroll.disable"}
+;
+; Second, try a case that produces two conditional latches, whose branch
+; weights can thus be computed by solving a quadratic equation, for which an
+; assert about its accuracy would fail if we computed it as an absolute
+; difference:
+;
+;   Original number of iterations and thus loop body frequency is a run-time
+;   determined multiple of a large, even value not evenly divisible by 4.
+;   RUN: sed -e s/@N@/%mul.big/ -e s/@W@/1000000001/ %s > %t.ll
+;
+;   Highly inaccurate calculated original loop body frequency.
+;   RUN: %{bf-fc} LARGE2-ORIG
+;   LARGE2-ORIG: - do.body: float = 1073741823.9,
+;
+;   -unroll-count=4 so only two unrolled iterations can possibly exit.
+;   RUN: %{ur-bf} -unroll-count=4 | %{fc} LARGE2
+;
+;   Multiply by 2 and sum to get approximately the highly inaccurately
+;   calculated original loop body frequency.  That is, LoopUnroll's results are
+;   consistent with that.
+;   LARGE2: - do.body: float = 268435456.2,
+;   LARGE2: - do.body.2: float = 268435455.7,
+;
+;   LARGE2:     call void @f
+;   LARGE2-NOT: br
+;   LARGE2:     call void @f
+;   LARGE2:     br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
+;   LARGE2:     call void @f
+;   LARGE2-NOT: br
+;   LARGE2:     call void @f
+;   LARGE2:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1
+;
+;   The branch weights on do.body's and do.body.2's branches imply each
+;   continues 2147483644/4 times and then exits once, thus executing the
+;   original loop body 1073741824 times.
+;   LARGE2: !0 = !{!"branch_weights", i32 2147483644, i32 4}
+;   LARGE2: !1 = distinct !{!1, !2, !3}
+;
+;   llvm.loop.estimated_trip_count is how many times the unrolled loop must
+;   iterate (but exit from %do.body on the last iteration) to execute exactly
+;   the original accurate trip count.  It is not forced through, for example,
+;   BranchProbability, so it is not impacted by the aforementioned inaccuracies.
+;   LARGE2: !2 = !{!"llvm.loop.estimated_trip_count", i32 250000001}
+;   LARGE2: !3 = !{!"llvm.loop.unroll.disable"}
+;
+; Third, try a case that produces three conditional latches, whose branch
+; weights thus cannot be computed by solving a simple equation:
+;
+;   Original number of iterations and thus loop body frequency is a run-time
+;   determined multiple of a large, even value.
+;   RUN: sed -e s/@N@/%mul.big/ -e s/@W@/1000000001/ %s > %t.ll
+;
+;   Highly inaccurate calculated original loop body frequency.
+;   RUN: %{bf-fc} LARGE3-ORIG
+;   LARGE3-ORIG: - do.body: float = 1073741823.9,
+;
+;   -unroll-count=6 so three unrolled iterations can exit.
+;   RUN: %{ur-bf} -unroll-count=6 | %{fc} LARGE3
+;
+;   Multiply by 2 and sum to get approximately the highly inaccurately
+;   calculated original loop body frequency.  That is, LoopUnroll's results are
+;   consistent with that.
+;   LARGE3: - do.body: float = 178956970.9,
+;   LARGE3: - do.body.2: float = 178956970.2,
+;   LARGE3: - do.body.4: float = 178956970.1,
+;
+;   LARGE3:           call void @f
+;   LARGE3-NOT:       br
+;   LARGE3:           call void @f
+;   LARGE3:           br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
+;   LARGE3:           call void @f
+;   LARGE3-NOT:       br
+;   LARGE3:           call void @f
+;   LARGE3:           br i1 %{{.*}}, label %do.body.4, label %do.end, !prof !1
+;   LARGE3:           call void @f
+;   LARGE3-NOT:       br
+;   LARGE3:           call void @f
+;   LARGE3:           br i1 %{{.*}}, label %do.body, label %do.end, !prof !1, !llvm.loop !2
+;
+;   There are three conditional latches remaining.  Adjusting only the first is
+;   sufficient to achieve the desired accuracy, and the latter two are copied
+;   from the original loop.  More would be adjusted if we computed frequency
+;   accuracy as an absolute difference.
+;   LARGE3: !0 = !{!"branch_weights", i32 2147483640, i32 8}
+;   LARGE3: !1 = !{!"branch_weights", i32 1000000001, i32 1}
+;   LARGE3: !2 = distinct !{!2, !3, !4}
+;
+;   llvm.loop.estimated_trip_count is how many times the unrolled loop must
+;   execute to execute exactly the original accurate trip count.  It is not
+;   forced through, for example, BranchProbability, so it is not impacted by the
+;   aforementioned inaccuracies.
+;   LARGE3: !3 = !{!"llvm.loop.estimated_trip_count", i32 166666667}
+;   LARGE3: !4 = !{!"llvm.loop.unroll.disable"}
+
 declare void @f(i32)
 
 define void @test(i32 %n) {
 entry:
   %mul10 = mul i32 %n, 10
+  %mul.big = mul i32 %n, 1000000002
   br label %do.body
 
 do.body:

@@ -622,6 +622,37 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 }
 
 //===----------------------------------------------------------------------===//
+// RecordMemberKind
+//
+// What a record member holds, for members that do not hold source data.
+//===----------------------------------------------------------------------===//
+
+def CIR_RecordMemberKind : CIR_I32EnumAttr<
+    "RecordMemberKind", "what a record member holds", [
+  I32EnumAttrCase<"Data", 0, "data">,
+  I32EnumAttrCase<"Pad", 1, "pad">,
+  I32EnumAttrCase<"Empty", 2, "empty">
+]> {
+  let description = [{
+    Distinguishes a record member that holds source data from one that does
+    not.  `pad` is storage the compiler inserted to place a later member at its
+    required offset, and is reusable tail padding when it trails the record.
+    `empty` is storage the source declared that carries no data for argument
+    passing: an unnamed bit-field unit, or a field of a record that is empty for
+    the ABI.  Everything else, including a vtable pointer, a base subobject, and
+    a bit-field unit with a named occupant, is `data`.
+
+    A record is empty for the ABI when no member is `data`, which is vacuously
+    true for a record with no members.  The distinction between `pad` and
+    `empty` is load-bearing beyond that: only `pad` is reusable, so a record
+    whose trailing member is an unnamed bit-field unit keeps that unit in its
+    data size.
+  }];
+
+  let genSpecializedAttr = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // StructType
 //
 // The CIR type for C/C++ struct and class declarations.
@@ -656,16 +687,20 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     plain struct declarations.  Both are semantically identical; the keyword
     preserves the original source spelling.
 
+    Every member has a kind, described by `CIR_RecordMemberKind`, saying what
+    it holds, and every member is spelled with its mark.
+
     Examples:
 
     ```
-        !rec_complete = !cir.struct<"complete" {!u8i}>
-        !rec_class    = !cir.struct<class "MyClass" {!s32i}>
+        !rec_complete = !cir.struct<"complete" {data !u8i}>
+        !rec_class    = !cir.struct<class "MyClass" {data !s32i}>
         !rec_incomplete = !cir.struct<"incomplete" incomplete>
-        !anonymous    = !cir.struct<{!u8i}>
-        !rec_packed   = !cir.struct<"p1" packed {!u8i, !u8i}>
-        !rec_padded   = !cir.struct<"p2" padded {!u8i, !u8i}>
-        !recursive    = !cir.struct<"Node" {!cir.ptr<!cir.struct<"Node">>}>
+        !anonymous    = !cir.struct<{data !u8i}>
+        !rec_packed   = !cir.struct<"p1" packed {data !u8i, data !u8i}>
+        !rec_pad      = !cir.struct<"p3" {data !u8i, pad !cir.array<!u8i x 3>}>
+        !rec_empty    = !cir.struct<"e" {empty !u8i}>
+        !recursive    = !cir.struct<"Node" {data !cir.ptr<!cir.struct<"Node">>}>
     ```
   }];
 
@@ -674,7 +709,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    "bool":$padded,
+    ArrayRefParameter<"cir::RecordMemberKind">:$member_kinds,
     "bool":$is_class
   );
 
@@ -691,11 +726,11 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      "bool":$padded,
-      "bool":$is_class
+      "bool":$is_class,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
-      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   is_class);
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
+                   member_kinds, is_class);
     }]>,
 
     // Create an identified and incomplete struct/class type.
@@ -705,18 +740,19 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
                    /*incomplete=*/true, /*packed=*/false,
-                   /*padded=*/false, is_class);
+                   /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{},
+                   is_class);
     }]>,
 
     // Create an anonymous struct/class type (always complete).
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      "bool":$padded,
-      "bool":$is_class
+      "bool":$is_class,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded, is_class);
+                   packed, member_kinds, is_class);
     }]>
   ];
 
@@ -740,11 +776,16 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     }
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  bool isPadded);
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds);
+
+    /// Whether any member is marked pad.
+    bool getPadded() const;
 
     uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                               unsigned idx) const;
 
+    /// Marks are provenance rather than layout, so two records that differ
+    /// only in how their members were produced are layout-identical.
     bool isLayoutIdentical(const StructType &other);
 
     // Checks the name of this record to check if it is a 'after' (or during)
@@ -763,7 +804,9 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
 
     bool isSized() const { return isComplete(); }
 
-    /// Returns the data size (excluding tail padding) for this struct type.
+    /// Returns the data size for this struct type.  Tail padding is the
+    /// trailing run of pad members, so interior padding and a trailing empty
+    /// member stay inside the data size.
     unsigned computeStructDataSize(const mlir::DataLayout &dataLayout) const;
 
   private:
@@ -800,15 +843,18 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
      - Anonymous: no name and a known body.
 
     Padded unions carry an explicit tail-padding type to ensure the LLVM struct
-    that models the union has the correct byte size.
+    that models the union has the correct byte size.  That slot is separate
+    from the per-member kinds described by `CIR_RecordMemberKind`, which say
+    what each variant holds.  The parser rejects a mark on that slot.
 
     Examples:
 
     ```
-        !u_complete   = !cir.union<"U" {!s32i, !u8i}>
+        !u_complete   = !cir.union<"U" {data !s32i, data !u8i}>
         !u_incomplete = !cir.union<"U" incomplete>
-        !u_anonymous  = !cir.union<{!s32i, !u8i}>
-        !u_padded     = !cir.union<"U" {!s32i, !u8i}, padding = {!u8i}>
+        !u_anonymous  = !cir.union<{data !s32i, data !u8i}>
+        !u_padded     = !cir.union<"U" {data !s32i, data !u8i}, padding = {!u8i}>
+        !u_empty      = !cir.union<"U" {empty !u8i}>
     ```
   }];
 
@@ -817,7 +863,8 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     OptionalParameter<"mlir::StringAttr">:$name,
     "bool":$incomplete,
     "bool":$packed,
-    OptionalParameter<"mlir::Type">:$padding
+    OptionalParameter<"mlir::Type">:$padding,
+    ArrayRefParameter<"cir::RecordMemberKind">:$member_kinds
   );
 
   // StorageClass is defined in C++ for mutability.
@@ -833,27 +880,30 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       "llvm::ArrayRef<mlir::Type>":$members,
       "mlir::StringAttr":$name,
       "bool":$packed,
-      CArg<"mlir::Type", "{}">:$padding
+      "mlir::Type":$padding,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
-                   padding);
+                   padding, member_kinds);
     }]>,
 
     // Create an identified and incomplete union type.
     TypeBuilder<(ins "mlir::StringAttr":$name), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
                    /*incomplete=*/true, /*packed=*/false,
-                   /*padding=*/mlir::Type{});
+                   /*padding=*/mlir::Type{},
+                   /*member_kinds=*/llvm::ArrayRef<cir::RecordMemberKind>{});
     }]>,
 
     // Create an anonymous union type (always complete).
     TypeBuilder<(ins
       "llvm::ArrayRef<mlir::Type>":$members,
       "bool":$packed,
-      CArg<"mlir::Type", "{}">:$padding
+      "mlir::Type":$padding,
+      "llvm::ArrayRef<cir::RecordMemberKind>":$member_kinds
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padding);
+                   packed, padding, member_kinds);
     }]>
   ];
 
@@ -864,9 +914,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
     bool isComplete() const { return !isIncomplete(); }
     bool isIncomplete() const;
 
-    /// Returns true when this union carries a tail-padding type.
-    /// Derived from getPadding(): a union is padded iff it has a non-null
-    /// padding type.
+    /// Whether this union carries a tail-padding type.
     bool getPadded() const;
 
     size_t getNumElements() const { return getMembers().size(); }
@@ -886,12 +934,15 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
                                           llvm::ArrayRef<mlir::Type> members);
 
     void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
-                  mlir::Type padding = {});
+                  mlir::Type padding,
+                  llvm::ArrayRef<cir::RecordMemberKind> memberKinds);
 
     uint64_t getElementOffset(const mlir::DataLayout &, unsigned) const {
       return 0;
     }
 
+    /// Marks are provenance rather than layout, so two unions that differ only
+    /// in how their members were produced are layout-identical.
     bool isLayoutIdentical(const UnionType &other);
 
     // Checks the name of this record to check if it is a 'after' (or during)

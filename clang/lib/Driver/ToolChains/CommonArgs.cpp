@@ -382,8 +382,8 @@ static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
   if (!T.isAMDGCN())
     return false;
   llvm::AMDGPU::GPUKind GPUKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-  if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
+  if (llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+          llvm::AMDGPU::FEAT_SUPPORTS_WGP))
     return false;
   return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
 }
@@ -679,6 +679,38 @@ void tools::addLinkerCompressDebugSectionsOption(
     else
       TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << V;
+  }
+}
+
+void tools::renderDebugInfoCompressionArgs(const ArgList &Args,
+                                           ArgStringList &CmdArgs,
+                                           const Driver &D,
+                                           const ToolChain &TC) {
+  const Arg *A = Args.getLastArg(options::OPT_gz_EQ);
+  if (!A)
+    return;
+  if (checkDebugInfoOption(A, Args, D, TC)) {
+    StringRef Value = A->getValue();
+    if (Value == "none") {
+      CmdArgs.push_back("--compress-debug-sections=none");
+    } else if (Value == "zlib") {
+      if (llvm::compression::zlib::isAvailable()) {
+        CmdArgs.push_back(
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
+      } else {
+        D.Diag(diag::warn_debug_compression_unavailable) << "zlib";
+      }
+    } else if (Value == "zstd") {
+      if (llvm::compression::zstd::isAvailable()) {
+        CmdArgs.push_back(
+            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
+      } else {
+        D.Diag(diag::warn_debug_compression_unavailable) << "zstd";
+      }
+    } else {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+    }
   }
 }
 
@@ -1459,18 +1491,25 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
   }
 }
 
+bool tools::addLLVMOffloadingRuntime(const Compilation &C,
+                                     ArgStringList &CmdArgs,
+                                     const ToolChain &TC, const ArgList &Args) {
+
+  if (!Args.hasFlag(options::OPT_foffload_via_llvm,
+                    options::OPT_fno_offload_via_llvm, false))
+    return false;
+
+  CmdArgs.push_back("-lLLVMOffloadKernel");
+  return true;
+}
+
 bool tools::addOpenMPRuntime(const Compilation &C, ArgStringList &CmdArgs,
                              const ToolChain &TC, const ArgList &Args,
                              bool ForceStaticHostRuntime, bool IsOffloadingHost,
                              bool GompNeedsRT) {
   if (!Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                    options::OPT_fno_openmp, false)) {
-    // We need libomptarget (liboffload) if it's the choosen offloading runtime.
-    if (Args.hasFlag(options::OPT_foffload_via_llvm,
-                     options::OPT_fno_offload_via_llvm, false))
-      CmdArgs.push_back("-lomptarget");
+                    options::OPT_fno_openmp, false))
     return false;
-  }
 
   Driver::OpenMPRuntimeKind RTKind = TC.getDriver().getOpenMPRuntime(Args);
 

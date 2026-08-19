@@ -9,7 +9,7 @@
 function(add_header target_name)
   cmake_parse_arguments(
     "ADD_HEADER"
-    ""             # No optional arguments
+    "" # No optional arguments
     "HDR;DEST_HDR" # Single value arguments
     "DEPENDS"
     ${ARGN}
@@ -70,14 +70,14 @@ function(add_header target_name)
       HEADER_FILE_PATH ${dest_file}
       DEPS "${fq_deps_list}"
   )
-endfunction(add_header)
+endfunction()
 
 function(add_gen_header target_name)
   cmake_parse_arguments(
     "ADD_GEN_HDR"
     "PROXY;PUBLIC" # No optional arguments
     "YAML_FILE;GEN_HDR" # Single value arguments
-    "DEPENDS"     # Multi value arguments
+    "DEPENDS" # Multi value arguments
     ${ARGN}
   )
   get_fq_target_name(${target_name} fq_target_name)
@@ -94,15 +94,13 @@ function(add_gen_header target_name)
 
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
   file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
-  if (ADD_GEN_HDR_PROXY)
-    set(out_file ${LIBC_BUILD_DIR}/hdr/${relative_path})
+  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  if(ADD_GEN_HDR_PROXY)
     set(proxy_arg "--proxy")
-  else()
-    set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   endif()
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
-  
+
   if(LLVM_LIBC_ALL_HEADERS)
     set(entry_points "")
   else()
@@ -118,12 +116,12 @@ function(add_gen_header target_name)
     OUTPUT ${out_file}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMAND ${Python3_EXECUTABLE} "${LIBC_SOURCE_DIR}/utils/hdrgen/main.py"
-            --output ${out_file}
-            --depfile ${dep_file}
-            --write-if-changed
-            ${proxy_arg}
-            ${yaml_file}
-            "@${rsp_file}"
+      --output ${out_file}
+      --depfile ${dep_file}
+      --write-if-changed
+      ${proxy_arg}
+      ${yaml_file}
+      "@${rsp_file}"
     DEPENDS ${yaml_file} ${rsp_file}
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
@@ -164,4 +162,4 @@ function(add_gen_header target_name)
   )
 
 
-endfunction(add_gen_header)
+endfunction()

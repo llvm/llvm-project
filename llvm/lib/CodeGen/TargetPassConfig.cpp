@@ -83,9 +83,6 @@ static cl::opt<bool> DisableMachineLICM("disable-machine-licm", cl::Hidden,
     cl::desc("Disable Machine LICM"));
 static cl::opt<bool> DisableMachineCSE("disable-machine-cse", cl::Hidden,
     cl::desc("Disable Machine Common Subexpression Elimination"));
-static cl::opt<cl::boolOrDefault> OptimizeRegAlloc(
-    "optimize-regalloc", cl::Hidden,
-    cl::desc("Enable optimized register allocation compilation path."));
 static cl::opt<bool> DisablePostRAMachineLICM("disable-postra-machine-licm",
     cl::Hidden,
     cl::desc("Disable Machine LICM"));
@@ -508,7 +505,6 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
 
 #define SET_OPTION(Option) Opt.Option = Option;
 
-  SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(EnableFastISelOption)
   SET_OPTION(EnableGlobalISelOption)
   SET_OPTION(VerifyMachineCode)
@@ -543,7 +539,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, Any) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \
@@ -1366,18 +1362,6 @@ void TargetPassConfig::addMachineSSAOptimization() {
 /// Register Allocation Pass Configuration
 //===---------------------------------------------------------------------===//
 
-bool TargetPassConfig::getOptimizeRegAlloc() const {
-  switch (OptimizeRegAlloc) {
-  case cl::boolOrDefault::BOU_UNSET:
-    return getOptLevel() != CodeGenOptLevel::None;
-  case cl::boolOrDefault::BOU_TRUE:
-    return true;
-  case cl::boolOrDefault::BOU_FALSE:
-    return false;
-  }
-  llvm_unreachable("Invalid optimize-regalloc state");
-}
-
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
 static llvm::once_flag InitializeDefaultRegisterAllocatorFlag;
@@ -1390,6 +1374,18 @@ defaultRegAlloc("default",
 static void initializeDefaultRegisterAllocatorOnce() {
   if (!RegisterRegAlloc::getDefault())
     RegisterRegAlloc::setDefault(RegAlloc);
+}
+
+bool TargetPassConfig::getOptimizeRegAlloc() const {
+  // An explicit -regalloc choice implies its pipeline: only the fast
+  // allocator uses the unoptimized one.
+  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
+                  initializeDefaultRegisterAllocatorOnce);
+  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
+  if (Ctor != (RegisterRegAlloc::FunctionPassCtor)&useDefaultRegisterAllocator)
+    return Ctor !=
+           (RegisterRegAlloc::FunctionPassCtor)&createFastRegisterAllocator;
+  return getOptLevel() != CodeGenOptLevel::None;
 }
 
 /// Instantiate the default register allocator pass for this target for either
@@ -1417,10 +1413,8 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
-  // Initialize the global default.
-  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
-                  initializeDefaultRegisterAllocatorOnce);
-
+  // getOptimizeRegAlloc, called before the pipeline branches, has initialized
+  // the global default.
   RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
@@ -1596,10 +1590,6 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
-}
-
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {

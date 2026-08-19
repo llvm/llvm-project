@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 %s 2>&1 | FileCheck %s --implicit-check-not="note:"
 
 # Out of range immediates
 ## fencearg
@@ -74,6 +74,15 @@ add a1, a2, (a3)
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK: :[[@LINE-2]]:13: note: register must be a GPR
 # CHECK: :[[@LINE-3]]:13: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+lw a0, -2049(a3)
+# CHECK: :[[@LINE-1]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+lw a0, -2049(f0)
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:8: note: operand must be a bare symbol name
+# CHECK: :[[@LINE-3]]:8: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+# CHECK: :[[@LINE-4]]:8: note: immediate must be an integer in the range [-2048, 2047]
+ld a0, (a3)
+# CHECK: :[[@LINE-1]]:1: error: instruction requires the following: 'Zilsd' (Load/Store pair instructions)
 
 add a1, a2, foo
 # CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
@@ -174,6 +183,10 @@ nandi t0, zero, 0 # CHECK: :[[@LINE]]:1: error: unrecognized instruction mnemoni
 addi foo, sp, 10 # CHECK: :[[@LINE]]:6: error: register must be a GPR
 slti a10, a2, 0x20 # CHECK: :[[@LINE]]:6: error: register must be a GPR
 slt x32, s0, s0 # CHECK: :[[@LINE]]:5: error: register must be a GPR
+lw a0, 0(f0)
+# CHECK: :[[@LINE-1]]:10: error: register must be a GPR
+lw a0, (f0)
+# CHECK: :[[@LINE-1]]:9: error: register must be a GPR
 
 # RV64I mnemonics
 addiw a0, sp, 100 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}

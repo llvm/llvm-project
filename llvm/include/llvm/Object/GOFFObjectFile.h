@@ -44,7 +44,27 @@ class LLVM_ABI GOFFObjectFile : public ObjectFile {
   SmallVector<SectionEntryImpl, 256> SectionList;
   mutable DenseMap<uint32_t, SmallVector<uint8_t>> SectionDataCache;
 
+  // Flattened data for all logical records (record type + continuous data
+  // without headers).
+  SmallVector<std::pair<GOFF::RecordType, SmallVector<uint8_t>>> FlattenedData;
+
+  // Populate FlattenedData with all logical records.
+  Error createFlattenedData();
+
+  // Helper to get continuous data from a logical record (includes prefix +
+  // continuations) Returns the number of physical records consumed (including
+  // the initial record)
+  Expected<unsigned> getContinuousData(SmallVectorImpl<uint8_t> &CompleteData,
+                                       int DataIndex, uint16_t DataLength,
+                                       const uint8_t *Record) const;
+
 public:
+  // Get the flattened data structure
+  const SmallVector<std::pair<GOFF::RecordType, SmallVector<uint8_t>>> &
+  getFlattenedData() const {
+    return FlattenedData;
+  }
+
   Expected<StringRef> getSymbolName(SymbolRef Symbol) const;
 
   GOFFObjectFile(MemoryBufferRef Object, Error &Err);

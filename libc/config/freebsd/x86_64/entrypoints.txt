@@ -125,6 +125,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinhf
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2f128
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt
@@ -134,6 +135,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.cos
     libc.src.math.cosf
@@ -165,6 +167,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmaf
@@ -280,6 +283,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf
+    libc.src.math.sqrtf128
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
@@ -474,7 +478,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ufromfpxf16
   )
 
-  if(LIBC_TYPES_HAS_FLOAT128)
+  if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     list(APPEND TARGET_LIBM_ENTRYPOINTS
       libc.src.math.f16addf128
       libc.src.math.f16divf128
@@ -486,12 +490,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
   endif()
 endif()
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
-    libc.src.math.atan2f128
     libc.src.math.atan2l
     libc.src.math.canonicalizef128
-    libc.src.math.ceilf128
     libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
@@ -504,7 +506,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.fdimf128
     libc.src.math.fdivf128
     libc.src.math.ffmaf128
-    libc.src.math.floorf128
     libc.src.math.fmaxf128
     libc.src.math.fmaximum_mag_numf128
     libc.src.math.fmaximum_magf128
@@ -548,7 +549,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
     libc.src.math.setpayloadsigf128
-    libc.src.math.sqrtf128
     libc.src.math.totalorderf128
     libc.src.math.totalordermagf128
     libc.src.math.truncf128
@@ -636,7 +636,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpxbf16
 )
 
-if(LIBC_TYPES_HAS_FLOAT128)
+if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     libc.src.math.bf16addf128
     libc.src.math.bf16divf128

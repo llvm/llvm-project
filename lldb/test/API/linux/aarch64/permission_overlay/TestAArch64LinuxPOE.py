@@ -35,7 +35,7 @@ class AArch64LinuxPOE(TestBase):
     )
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_poe_live(self):
         if not self.isAArch64POE():
             self.skipTest("POE must be present.")

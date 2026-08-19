@@ -20,7 +20,7 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -86,16 +86,15 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 16
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 7
+; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP3]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -151,7 +150,7 @@ attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 8}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = !{!"llvm.loop.vectorize.enable"}
 !5 = !{!"llvm.loop.interleave.count", i32 2}
 

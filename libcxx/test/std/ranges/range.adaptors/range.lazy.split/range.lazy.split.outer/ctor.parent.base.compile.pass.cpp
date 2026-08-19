@@ -19,4 +19,5 @@
 #include "../types.h"
 
 static_assert(std::ranges::forward_range<SplitViewForward>);
+
 static_assert(!std::is_constructible_v<OuterIterForward, SplitViewForward&, std::ranges::iterator_t<ForwardView>>);

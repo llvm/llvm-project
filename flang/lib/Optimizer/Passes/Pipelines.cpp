@@ -29,27 +29,6 @@ static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
 
 namespace fir {
 
-template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
-                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
-                     fir::GlobalOp>(pm, ctor);
-}
-
-template <typename F>
-void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
-  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
-  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
-  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
-}
-
-template <typename F>
-void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
-  if (!disabled)
-    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
-}
-
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
@@ -284,6 +263,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
+
+  config.invokeHLFIROptEarlyEPCallbacks(pm, optLevel);
+
   if (optLevel != llvm::OptimizationLevel::O0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
@@ -331,6 +313,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
       {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
+
+  config.invokeHLFIROptLastEPCallbacks(pm, optLevel);
+
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;

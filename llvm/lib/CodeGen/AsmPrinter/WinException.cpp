@@ -86,9 +86,13 @@ void WinException::beginFunction(const MachineFunction *MF) {
                               !isNoOpWithoutInvoke(Per) &&
                               F.needsUnwindTableEntry();
 
+  // A personality that is not a function, such as a null pointer, leaves PerFn
+  // empty. Nothing downstream can emit a symbol for it, so gate both cases on
+  // it, the same way DwarfCFIException does.
   shouldEmitPersonality =
-      forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
-                               PerEncoding != dwarf::DW_EH_PE_omit && PerFn);
+      (forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
+                                PerEncoding != dwarf::DW_EH_PE_omit)) &&
+      PerFn;
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
   shouldEmitLSDA = shouldEmitPersonality &&

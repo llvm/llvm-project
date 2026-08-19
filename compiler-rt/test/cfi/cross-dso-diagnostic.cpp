@@ -35,13 +35,13 @@ int main() {
   // CHECK: runtime error: control flow integrity check for type 'void *()' failed during indirect function call
   // CHECK: cross-dso-diagnostic.cpp:[[@LINE-13]]: note: dso_symbol defined here
   // CHECK: check failed in {{.*}}_exe_suffix, destination function located in {{.*}}[[DSONAME]]
-  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-icall
   void *S = fp(); // trigger cfi-icall failure
 
   // CHECK: runtime error: control flow integrity check for type 'S1' failed during cast to unrelated type
   // CHECK: invalid vtable
   // CHECK: check failed in {{.*}}_exe_suffix, vtable located in {{.*}}[[DSONAME]]
-  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
   S1 *Scast = reinterpret_cast<S1*>(S); // trigger cfi-unrelated-cast failure
 
   return 0;

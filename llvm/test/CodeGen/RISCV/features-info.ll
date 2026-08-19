@@ -24,7 +24,13 @@
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
 ; CHECK-NEXT:   experimental-p                   - 'P' ('Base P' (Packed SIMD)).
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
+; CHECK-NEXT:   experimental-smcsps              - 'Smcsps' (Conditional Stack Pointer Swap at Machine Level).
+; CHECK-NEXT:   experimental-smehv               - 'Smehv' (Synchronous Exception Hardware Vectoring at Machine Level).
+; CHECK-NEXT:   experimental-smijt               - 'Smijt' (Interrupt Jump Table at Machine Level).
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
+; CHECK-NEXT:   experimental-sscsps              - 'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level).
+; CHECK-NEXT:   experimental-ssehv               - 'Ssehv' (Synchronous Exception Hardware Vectoring at Supervisor Level).
+; CHECK-NEXT:   experimental-ssijt               - 'Ssijt' (Interrupt Jump Table at Supervisor Level).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
 ; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
@@ -155,7 +161,6 @@
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.
 ; CHECK-NEXT:   short-forward-branch-iload       - Enable short forward branch optimization for load instructions.
 ; CHECK-NEXT:   short-forward-branch-iminmax     - Enable short forward branch optimization for MIN,MAX instructions in Zbb.
-; CHECK-NEXT:   short-forward-branch-imm         - Enable short forward branch optimization for branches with immediates.
 ; CHECK-NEXT:   short-forward-branch-imul        - Enable short forward branch optimization for MUL instruction.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).

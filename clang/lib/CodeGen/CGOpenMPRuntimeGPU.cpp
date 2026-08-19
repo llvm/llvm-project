@@ -14,6 +14,7 @@
 #include "CGOpenMPRuntimeGPU.h"
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/OpenMPClause.h"
@@ -22,6 +23,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
 
 using namespace clang;
@@ -559,7 +562,8 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_parallel_for_simd:
     case OMPD_cancel:
     case OMPD_cancellation_point:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_task:
@@ -647,7 +651,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_parallel_for_simd:
   case OMPD_cancel:
   case OMPD_cancellation_point:
-  case OMPD_ordered:
+  case OMPD_ordered_standalone:
+  case OMPD_ordered_blockassoc:
   case OMPD_threadprivate:
   case OMPD_allocate:
   case OMPD_task:
@@ -1445,6 +1450,59 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
                               TBAAAccessInfo());
 }
 
+/// Extracts the built-in reduction operator from a combiner of the form `x = x
+/// <op> rhs` (or the min/max conditional), or nullopt if the shape is not
+/// recognized (e.g. user-defined reductions).
+static std::optional<BinaryOperatorKind>
+getReductionBinOpKind(const Expr *ReductionOp) {
+  const auto *Assign = dyn_cast<BinaryOperator>(ReductionOp);
+  if (!Assign || Assign->getOpcode() != BO_Assign)
+    return std::nullopt;
+  const Expr *RHS = Assign->getRHS();
+  // min/max are lowered as `x <cmp> rhs ? x : rhs`; the comparison identifies
+  // it.
+  if (const auto *ACO =
+          dyn_cast<AbstractConditionalOperator>(RHS->IgnoreParenImpCasts()))
+    RHS = ACO->getCond();
+  if (const auto *BO = dyn_cast<BinaryOperator>(RHS->IgnoreParenImpCasts()))
+    return BO->getOpcode();
+  return std::nullopt;
+}
+
+/// Maps a built-in reduction operator to an atomicrmw opcode for the atomic
+/// cross-team reduction fast path, or nullopt if there is no direct atomicrmw
+/// (e.g. user-defined, complex, fp min/max) so the buffer path is used instead.
+static std::optional<llvm::AtomicRMWInst::BinOp>
+getReductionAtomicRMWOp(BinaryOperatorKind BOK, QualType Ty) {
+  bool IsInt = Ty->isIntegerType();
+  bool IsSigned = Ty->hasSignedIntegerRepresentation();
+  switch (BOK) {
+  case BO_Add:
+  case BO_Sub: // A `-` reduction sums the partials, so it accumulates with add.
+    if (IsInt)
+      return llvm::AtomicRMWInst::Add;
+    if (Ty->isFloatingType())
+      return llvm::AtomicRMWInst::FAdd;
+    return std::nullopt;
+  case BO_And:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::And) : std::nullopt;
+  case BO_Or:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::Or) : std::nullopt;
+  case BO_Xor:
+    return IsInt ? std::optional(llvm::AtomicRMWInst::Xor) : std::nullopt;
+  case BO_LT: // min
+    if (IsInt)
+      return IsSigned ? llvm::AtomicRMWInst::Min : llvm::AtomicRMWInst::UMin;
+    return std::nullopt;
+  case BO_GT: // max
+    if (IsInt)
+      return IsSigned ? llvm::AtomicRMWInst::Max : llvm::AtomicRMWInst::UMax;
+    return std::nullopt;
+  default:
+    return std::nullopt;
+  }
+}
+
 ///
 /// Design of OpenMP reductions on the GPU
 ///
@@ -1716,8 +1774,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
   const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
       CGM.getContext(), PrivatesReductions, {}, VarFieldMap, 1);
 
-  if (TeamsReduction)
-    TeamsReductions.push_back(ReductionRec);
+  // The atomic cross-team reduction fast path is opt-in. Hand each eligible
+  // scalar reduction an atomic combiner; createReductionsGPU uses the atomic
+  // path only if every reduction in the set has one. Track whether that holds
+  // so we can skip the (then unused) per-team buffer registration.
+  bool UseAtomicReduction =
+      TeamsReduction && CGM.getLangOpts().OpenMPTargetAtomicReduction;
+  bool AllAtomicable = UseAtomicReduction;
 
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -1764,6 +1827,13 @@ void CGOpenMPRuntimeGPU::emitReduction(
       auto *CurFn = CGF.CurFn;
       CGF.CurFn = NewFunc;
 
+      // The helper has no DISubprogram of its own, so a debug location here
+      // would name the enclosing function's scope, which is invalid IR.
+      // Suppress them, as the other OpenMPIRBuilder-generated helpers do.
+      llvm::DebugLoc SavedDebugLoc = CGF.Builder.getCurrentDebugLocation();
+      CGF.Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      CGF.disableDebugInfo();
+
       *LHSPtr = CGF.GetAddrOfLocalVar(
                        cast<VarDecl>(cast<DeclRefExpr>(LHSExprs[I])->getDecl()))
                     .emitRawPointer(CGF);
@@ -1775,17 +1845,63 @@ void CGOpenMPRuntimeGPU::emitReduction(
                                   cast<DeclRefExpr>(LHSExprs[I]),
                                   cast<DeclRefExpr>(RHSExprs[I]));
 
+      CGF.enableDebugInfo();
+      CGF.Builder.SetCurrentDebugLocation(SavedDebugLoc);
       CGF.CurFn = CurFn;
 
       return InsertPointTy(CGF.Builder.GetInsertBlock(),
                            CGF.Builder.GetInsertPoint());
     };
+
+    // For the atomic fast path, hand this reduction an atomic combiner if it is
+    // a scalar with a direct atomicrmw; otherwise the set is not fully
+    // atomicable and falls back to the buffer path.
+    if (UseAtomicReduction) {
+      std::optional<llvm::AtomicRMWInst::BinOp> AtomicOp;
+      if (EvalKind == llvm::OpenMPIRBuilder::EvalKind::Scalar) {
+        if (std::optional<BinaryOperatorKind> BOK =
+                getReductionBinOpKind(ReductionOps[Idx]))
+          AtomicOp = getReductionAtomicRMWOp(*BOK, Private->getType());
+      }
+      if (!AtomicOp) {
+        AllAtomicable = false;
+      } else {
+        llvm::AtomicRMWInst::BinOp Op = *AtomicOp;
+        llvm::Align Alignment =
+            CGM.getModule().getDataLayout().getPrefTypeAlign(ElementType);
+        // Device (agent) scope suffices: all teams accumulate on-device and the
+        // host reads the result only after the kernel (via map-back), so the
+        // far costlier system scope is unnecessary. The
+        // no.fine.grained/no.remote memory metadata is omitted so the atomic
+        // stays correct under USM.
+        llvm::SyncScope::ID SSID = CGF.getTargetHooks().getLLVMSyncScopeID(
+            CGF.getLangOpts(), SyncScope::DeviceScope,
+            llvm::AtomicOrdering::Monotonic, CGF.getLLVMContext());
+        AtomicReductionGen = [Op, Alignment,
+                              SSID](InsertPointTy IP, llvm::Type *EltTy,
+                                    llvm::Value *LHS, llvm::Value *RHS)
+            -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+          llvm::IRBuilder<> Builder(IP.getBlock(), IP.getPoint());
+          llvm::Value *Val = Builder.CreateLoad(EltTy, RHS);
+          Builder.CreateAtomicRMW(Op, LHS, Val, Alignment,
+                                  llvm::AtomicOrdering::Monotonic, SSID);
+          return InsertPointTy(Builder.GetInsertBlock(),
+                               Builder.GetInsertPoint());
+        };
+      }
+    }
+
     ReductionInfos.emplace_back(llvm::OpenMPIRBuilder::ReductionInfo(
         ElementType, Variable, PrivateVariable, EvalKind,
         /*ReductionGen=*/nullptr, ReductionGen, AtomicReductionGen,
         /*DataPtrPtrGen=*/nullptr));
     Idx++;
   }
+
+  // The atomic path folds directly into the mapped variable and needs no
+  // per-team buffer; register the record for buffer allocation otherwise.
+  if (TeamsReduction && !AllAtomicable)
+    TeamsReductions.push_back(ReductionRec);
 
   bool IsSPMD = getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD;
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
