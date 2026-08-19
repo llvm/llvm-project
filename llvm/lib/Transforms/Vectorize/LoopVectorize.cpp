@@ -5848,6 +5848,9 @@ bool LoopVectorizationPlanner::isProfitableOneScalarTail(
 
   // VectorCost reflects the cost of the requried vector iteration(s) and the
   // one remaining scalar iteration cost
+  unsigned VF = CurrentFactor.Width.getFixedValue();
+  if (TC != (VF * UserIC) + 1 && TC != (VF * UserIC))
+    return false;
   InstructionCost VectorCost =
       getCostForKnownTripCount(CurrentFactor, TC, /*HasTail=*/true);
   InstructionCost ScalarCostForTC = CurrentFactor.ScalarCost * TC;
@@ -5988,10 +5991,16 @@ LoopVectorizationPlanner::computeBestVF() {
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
       unsigned int UserIC =
-          Hints.getInterleave() != 0 ? Hints.getInterleave() : 1;
+          Config.getHints().getInterleave() != 0 ? Config.getHints().getInterleave() : 1;
       if (!ForceVectorization && P->hasScalarTail() &&
-          !isProfitableOneScalarTail(CurrentFactor, ExactTC, UserIC))
-        continue;
+          isProfitableOneScalarTail(CurrentFactor, ExactTC, UserIC)) {
+        // If we have identified a case where a small trip count loop can
+        // be Vectorized as one Vector Iteration and, if needed, one scalar
+        // iteration, use this VF and break.
+        BestFactor = CurrentFactor;
+        PlanForBestVF = P.get();
+        break;
+      }
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
         BestFactor = CurrentFactor;
