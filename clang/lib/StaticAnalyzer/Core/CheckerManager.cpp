@@ -560,7 +560,7 @@ void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
   // By default, continue from 'Pred' -- this will be removed from 'Dst' if any
   // checker generates a transition from it.
   Dst.insert(Pred);
- 
+
   for (const auto &checkFn : EndFunctionCheckers) {
     const ProgramPoint &L =
         FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);

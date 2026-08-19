@@ -46,8 +46,8 @@ public:
 
   CheckerContext(ExprEngine &Eng, ExplodedNode *Pred, ExplodedNodeSet &Dst,
                  const ProgramPoint &Loc, bool WasInlined = false)
-      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc),
-        Frontier(Dst), wasInlined(WasInlined) {
+      : Eng(Eng), Pred(Pred), Changed(false), Location(Loc), Frontier(Dst),
+        wasInlined(WasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
     assert(Loc.getTag() && "The ProgramPoint associated with CheckerContext "
@@ -454,7 +454,8 @@ private:
       P = Pred;
 
     Frontier.erase(P);
-    ExplodedNode *N = Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+    ExplodedNode *N =
+        Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
 
     Frontier.insert(N);
 
