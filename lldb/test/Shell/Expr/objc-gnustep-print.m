@@ -105,11 +105,9 @@ int main() {
   return 0;
 }
 
-// `po` sends -description and then -UTF8String to the result, which is what
-// gnustep-base's _NSPrintForDebugger does (Source/NSDebug.m), reached
-// through libobjc2's exported runtime API rather than through that symbol.
-// Nothing below needs Foundation, so this also covers `po` against a bare
-// runtime - a configuration where gnustep-base's hook does not exist at all.
+// `po` sends -description then -UTF8String, built from libobjc2's exported
+// API rather than resolving gnustep-base's _NSPrintForDebugger. Nothing here
+// needs Foundation, so this covers `po` against a bare runtime too.
 @interface Str : NSObject {
   const char *_bytes;
 }
@@ -163,8 +161,6 @@ int main() {
 // PO: <TestObj: described>
 // PO-NOT: warning: `po` was unsuccessful
 
-// Stepping at a message send goes through the objc_msgSend trampoline into
-// the method implementation.
 //
 // RUN: %lldb %inferior_abi -b -o "b objc-gnustep-print.m:103" -o "run" -o "step" \
 // RUN:     -- %t | FileCheck %s --check-prefix=STEP

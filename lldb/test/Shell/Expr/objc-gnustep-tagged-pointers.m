@@ -49,8 +49,6 @@ int main() {
   return tagged == ordinary;
 }
 //
-// The tagged value's class comes from the runtime's small object table, while
-// an ordinary pointer is still resolved by reading its class structure.
 //
 // CHECK: (lldb) frame variable -d run-target tagged
 // CHECK: (TinyNumber *) tagged = 0x{{0*}}19

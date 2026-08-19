@@ -7,12 +7,10 @@
 @protocol NSCoding
 @end
 
-// A root class may declare its `isa` as `id` rather than `Class` (the GNUstep
-// tests and many libobjc2 programs do). Because `id` can carry a dynamic
-// type, the value of such a field - a class object - is offered to the
-// runtime for dynamic typing. libobjc2 names a metaclass after its class, so
-// a naive runtime would then report the class object as an instance of the
-// class, and expanding it would recurse forever through the same `isa`.
+// A root class may declare its `isa` as `id` rather than `Class`, and `id`
+// carries a dynamic type - so a class object gets offered to the runtime for
+// typing. libobjc2 names a metaclass after its class, which is what makes
+// reporting a class object as an instance of that class possible.
 #ifdef __has_attribute
 #if __has_attribute(objc_root_class)
 __attribute__((objc_root_class))
@@ -29,9 +27,6 @@ __attribute__((objc_root_class))
 }
 @end
 
-// (No ivars beyond the root class's: clang trips an assertion compiling
-// some GNUstep classes with ivars in +assertions builds, see
-// objc-gnustep-print.m.)
 @interface Base : NSObject
 @end
 @implementation Base
@@ -42,24 +37,21 @@ __attribute__((objc_root_class))
 @implementation Derived
 @end
 
-// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-class-objects.m:53" -o "run" \
+// RUN: %lldb %inferior_abi -b -o "b objc-gnustep-class-objects.m:68" -o "run" \
 // RUN:          -o "frame variable -d run-target -T object" \
 // RUN:          -o "frame variable -d run-target -T *object" \
 // RUN:          -o "frame variable -d run-target -T object->isa" \
 // RUN:          -- %t | FileCheck %s
 //
-int main() {
-  Base *object = [Derived new];
-  (void)object;
-  return object == 0;
-}
+// The checks sit above the code: lldb echoes the source lines around the
+// breakpoint, so a CHECK within three lines of it matches its own text in
+// that echo rather than the command output.
 //
-// The object itself gets its dynamic type...
 // CHECK: (lldb) frame variable -d run-target -T object
 // CHECK: (Derived *) object = 0x
 //
-// ...and its `isa` stays a plain `id`: it points at the class object, which
-// must not be presented as an instance.
+// The `isa` must stay a plain `id`: it points at the class object, which is
+// not an instance of the class.
 // CHECK: (lldb) frame variable -d run-target -T *object
 // CHECK: (Derived) *object = {
 // CHECK: (id) isa = 0x
@@ -69,3 +61,9 @@ int main() {
 //
 // CHECK: (lldb) frame variable -d run-target -T object->isa
 // CHECK: (id) object->isa = 0x
+//
+int main() {
+  Base *object = [Derived new];
+  (void)object;
+  return object == 0;
+}

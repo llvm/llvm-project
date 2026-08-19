@@ -65,8 +65,6 @@ int main() {
   return g_caught_name == 0;
 }
 
-// An Objective-C exception breakpoint stops where the exception is raised,
-// and the frame recognizer presents the thrown object as `exception`.
 //
 // RUN: %lldb %inferior_abi -b -o "breakpoint set -E objc" -o "run" -o "frame variable" \
 // RUN:     -o "thread exception" \
@@ -78,17 +76,15 @@ int main() {
 // THROW: (lldb) run
 // THROW: stop reason = hit Objective-C exception
 //
-// The recognizer synthesizes the argument, so the thrown object shows up in
-// `frame variable` even though objc_exception_throw has no debug info - and
-// it carries the dynamic type, not the `id` the runtime declares.
+// The recognizer synthesizes the argument, so this works even though
+// objc_exception_throw has no debug info, and it carries the dynamic type
+// rather than the `id` the runtime declares.
 // THROW: (lldb) frame variable
 // THROW: (Boom *) exception = 0x
 //
 // THROW: (lldb) thread exception
 // THROW: (Boom *) exception = 0x
 
-// The object is reachable as a real local inside the handler, where `po`
-// works on it normally.
 //
 // RUN: %lldb %inferior_abi -b -o "b objc-gnustep-exceptions.m:63" -o "run" -o "po caught" \
 // RUN:     -- %t | FileCheck %s --check-prefix=CAUGHT
