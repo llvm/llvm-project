@@ -46,10 +46,9 @@ define amdgpu_ps float @v_test_cvt_bf16_f32_s(bfloat inreg %v) {
 define amdgpu_ps void @strict_fpext_bf16_to_f32(bfloat %a, ptr %out) #0 {
 ; GCN-LABEL: strict_fpext_bf16_to_f32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    v_add_f32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    flat_store_dword v[2:3], v0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -58,9 +57,8 @@ define amdgpu_ps void @strict_fpext_bf16_to_f32(bfloat %a, ptr %out) #0 {
 ; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_brev_b32 s0, 1
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, v0, 1.0, s0 op_sel:[0,1,0] op_sel_hi:[1,1,0]
+; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    flat_store_b32 v[2:3], v0
 ; GFX1250-NEXT:    s_endpgm
   %cvt = call float @llvm.experimental.constrained.fpext.f32.bf16(bfloat %a, metadata !"fpexcept.strict")
@@ -75,9 +73,6 @@ define amdgpu_ps void @strict_fpext_bf16_to_f64(bfloat %a, ptr %out) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
-; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    s_brev_b32 s1, 1
-; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], s[0:1]
 ; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GCN-NEXT:    s_endpgm
 ;
@@ -88,9 +83,8 @@ define amdgpu_ps void @strict_fpext_bf16_to_f64(bfloat %a, ptr %out) #0 {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_lshlrev_b32 v0, 16, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
-; GFX1250-NEXT:    v_add_f64_e32 v[0:1], 0x80000000, v[0:1]
 ; GFX1250-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %cvt = call double @llvm.experimental.constrained.fpext.f64.bf16(bfloat %a, metadata !"fpexcept.strict")

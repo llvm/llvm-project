@@ -600,6 +600,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // source bf16.
   setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, MVT::f32, Custom);
   setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_BF16_TO_FP, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_BF16_TO_FP, MVT::f64, Expand);
 
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::Constant, ISD::SMIN, ISD::SMAX, ISD::UMIN,
@@ -5006,15 +5008,25 @@ SDValue SITargetLowering::lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(ISD::BITCAST, SL, SrcVT.changeTypeToInteger(), Src);
 
   EVT DstVT = Op.getValueType();
-  SDValue Result = DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
-  if (!IsStrict)
-    return Result;
+  if (IsStrict)
+    return DAG.getNode(ISD::STRICT_BF16_TO_FP, SL, Op->getVTList(),
+                       {Op.getOperand(0), BitCast});
 
-  // Route through a strict add of -0.0, exact for every input including
-  // sign of zero, so a real FP instruction quiets/traps on a signaling NaN.
-  SDValue NegZero = DAG.getConstantFP(-0.0, SL, DstVT);
-  return DAG.getNode(ISD::STRICT_FADD, SL, DAG.getVTList(DstVT, MVT::Other),
-                     {Op.getOperand(0), Result, NegZero});
+  return DAG.getNode(ISD::BF16_TO_FP, SL, DstVT, BitCast);
+}
+
+SDValue SITargetLowering::lowerSTRICT_BF16_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Op.getValueType() == MVT::f32);
+  SDLoc SL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue Src = Op.getOperand(1);
+
+  SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Src);
+  SDValue Shifted = DAG.getNode(ISD::SHL, SL, MVT::i32, Ext,
+                                DAG.getShiftAmountConstant(16, MVT::i32, SL));
+  SDValue F32 = DAG.getNode(ISD::BITCAST, SL, MVT::f32, Shifted);
+  return DAG.getMergeValues({F32, Chain}, SL);
 }
 
 SDValue SITargetLowering::lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const {
@@ -7792,6 +7804,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FP_EXTEND:
   case ISD::STRICT_FP_EXTEND:
     return lowerFP_EXTEND(Op, DAG);
+  case ISD::STRICT_BF16_TO_FP:
+    return lowerSTRICT_BF16_TO_FP(Op, DAG);
   case ISD::GET_FPENV:
     return lowerGET_FPENV(Op, DAG);
   case ISD::SET_FPENV:
