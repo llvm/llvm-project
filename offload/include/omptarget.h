@@ -542,6 +542,125 @@ void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // code for details.
 void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
 
+//===----------------------------------------------------------------------===//
+// Taskgraph transmission ABI (libomp -> libomptarget)
+//
+// When a taskgraph record contains at least one target region, libomp streams
+// the processed region tree to libomptarget via the preorder traversal
+// callbacks below.  See Shared/TaskGraph.h for the resulting data structures
+// within this library.
+//===----------------------------------------------------------------------===//
+
+/// Relocation callback (libomp-owned).  Rewrites moved host pointers in a
+/// target node's captured arguments before replay.  \p captured is the node's
+/// kernel-arguments blob or map-array bundle; \p taskgraph_args is the current
+/// invocation's outlined-entry argument pack.
+/// FIXME: This might change later in the series; come back to this.
+typedef void (*__tgt_taskgraph_relocate_ty)(void *captured,
+                                            void *taskgraph_args);
+
+/// A pointer to libomp's host-subregion executor.  Runs a maximal host-only
+/// subtree of the taskgraph synchronously on the CPU and blocks until it
+/// completes. \p host_ctx is the opaque context registered at replay time;
+/// \p region is the opaque kmp_taskgraph_region_t* emitted via
+// emit_host_region.
+typedef void (*__tgt_taskgraph_host_exec_ty)(void *host_ctx, void *region);
+
+/// Begin streaming a processed taskgraph.
+///
+/// \p NodeCount is the number of immediate children of the graph's root region
+/// (the same prefix-count every _start_* container carries; see below).
+///
+/// \p ByteSize drives the two-pass, single-block construction.  On the first
+/// (measuring) pass libomp passes 0; libomptarget only accumulates the byte
+/// size the graph will occupy and returns it from __tgt_taskgraph_end.  libomp
+/// then replays the identical stream on a second pass, passing that size back
+/// here so libomptarget can allocate the whole graph in one exactly-sized block
+/// that never moves during construction.
+void *__tgt_taskgraph_start(int64_t DeviceId, uintptr_t GraphId,
+                            __tgt_taskgraph_host_exec_ty HostCb,
+                            int32_t NumMutexes, size_t ByteSize);
+
+/// Preorder region bracketing.  \p NodeCount is the region's immediate-child
+/// count.
+void __tgt_taskgraph_start_parallel(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_parallel(void *Graph);
+void __tgt_taskgraph_start_sequential(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_sequential(void *Graph);
+void __tgt_taskgraph_start_exclusive(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_exclusive(void *Graph);
+
+/// Irreducible region bracketing.  Child nodes are transmitted first, followed
+/// by edges.
+/// \p NodeCount is the immediate-child count (as for the other containers) and
+/// \p EdgeCount is the number of edges.
+void __tgt_taskgraph_start_irreducible(void *Graph, int32_t NodeCount,
+                                       int32_t EdgeCount);
+void __tgt_taskgraph_end_irreducible(void *Graph);
+
+/// A single edge of an irreducible region.  \p SrcChild / \p DstChild are
+/// 0-based child indices within that region.
+void __tgt_taskgraph_emit_edge(void *Graph, int32_t SrcChild, int32_t DstChild);
+
+/// Emit a maximal host-only subtree as a single opaque leaf.  \p Region is the
+/// kmp_taskgraph_region_t* libomp will run when its host executor is invoked.
+/// \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_host_region(void *Graph, void *Region,
+                                      const uint64_t *MutexBits,
+                                      int32_t MutexNumBits);
+
+/// Emit a target kernel leaf.  \p KernelArgs is libomp's deep copy of the
+/// kernel-arguments blob (opaque KernelArgsTy*); \p Relocate patches it on
+/// replay; \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_target(void *Graph, int64_t DeviceId,
+                                 int32_t NumTeams, int32_t ThreadLimit,
+                                 void *HostPtr, void *KernelArgs,
+                                 __tgt_taskgraph_relocate_ty Relocate,
+                                 const uint64_t *MutexBits,
+                                 int32_t MutexNumBits);
+
+/// Emit a target enter-data / exit-data / update leaf.  The map arrays are
+/// libomp-owned deep copies; \p Relocate patches them on replay;
+/// \p MutexBits / \p MutexNumBits carry the leaf's mutex set.
+void __tgt_taskgraph_emit_target_enter_data(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+void __tgt_taskgraph_emit_target_exit_data(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+void __tgt_taskgraph_emit_target_update(
+    void *Graph, int64_t DeviceId, int32_t ArgNum, void **ArgsBase, void **Args,
+    int64_t *ArgSizes, int64_t *ArgTypes, void **ArgNames, void **ArgMappers,
+    __tgt_taskgraph_relocate_ty Relocate, const uint64_t *MutexBits,
+    int32_t MutexNumBits);
+
+/// Finish taskgraph transmission.  Returns the number of bytes the graph
+/// occupies (the single-block size): meaningful on the first (measuring) pass,
+/// where its return value is fed back to __tgt_taskgraph_start as \p ByteSize.
+size_t __tgt_taskgraph_end(void *Graph);
+
+/// Destroy a taskgraph.  Must be called before libomp frees the captured node
+/// payloads referenced by the graph.
+void __tgt_taskgraph_destroy(void *Graph);
+
+/// Duplicate kernel args at capture time.  Uses a two-pass measure/allocate
+/// strategy.  Used so libomp doesn't have to understand kernel arg layout.
+void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src, size_t *AllocSize);
+
+/// Duplicate the map arrays of a target data construct at capture time.
+///
+/// This is here mainly for symmetry with __tgt_taskgraph_dup_kernel_args, and
+/// is called in the same two-pass manner.  In this case both sides already know
+/// the data layout though.
+void __tgt_taskgraph_dup_data_args(void *Dst, int32_t ArgNum, void ***ArgsBase,
+                                   void ***Args, int64_t **ArgSizes,
+                                   int64_t **ArgTypes, void ***ArgNames,
+                                   void ***ArgMappers, size_t *AllocSize);
+
 #ifdef __cplusplus
 }
 #endif
