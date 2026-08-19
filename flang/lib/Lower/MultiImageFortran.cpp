@@ -13,10 +13,13 @@
 
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 #include "mlir/IR/IRMapping.h"

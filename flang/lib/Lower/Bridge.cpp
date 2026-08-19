@@ -50,6 +50,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -817,6 +818,57 @@ public:
     return owningProc.labelEvaluationMap.lookup(label);
   }
 
+  /// Gen coarray expression from a CoarrayRef.
+  fir::ExtendedValue
+  genCoarrayExpr(const Fortran::lower::SomeExpr &expr,
+                 const Fortran::evaluate::CoarrayRef &coarrayRef,
+                 Fortran::lower::StatementContext &context,
+                 mlir::Location loc) {
+    hlfir::Entity coarray = Fortran::lower::convertExprToHLFIR(
+        loc, *this, expr, localSymbols, context);
+    auto [dest, cleanup] = hlfir::createTempFromMold(loc, *builder, coarray);
+    if (cleanup) {
+      auto destBase = dest.getBase();
+      context.attachCleanup(
+          [&]() { fir::FreeMemOp::create(*builder, loc, destBase); });
+    }
+
+    // Image number computation
+    auto cosubscripts = Fortran::lower::getCosubscripts(*this, loc, coarrayRef);
+
+    // handle STAT from the CoarrayRef
+    mlir::Value stat = mlir::Value{}, errmsg = mlir::Value{};
+    auto statExpr = coarrayRef.stat();
+    if (statExpr.has_value()) {
+      if (auto statRef{Fortran::evaluate::ExtractDataRef(statExpr.value())}) {
+        stat = fir::getBase(
+            getSymbolExtendedValue(statRef->GetLastSymbol(), nullptr));
+      }
+    }
+
+    mif::GetCoarrayOp::create(*builder, loc, coarray, cosubscripts, dest, stat,
+                              errmsg);
+    return dest;
+  }
+
+  fir::ExtendedValue
+  genCoarrayExprValue(const Fortran::lower::SomeExpr &expr,
+                      const Fortran::evaluate::CoarrayRef &coarrayRef,
+                      Fortran::lower::StatementContext &context,
+                      mlir::Location loc) {
+    fir::ExtendedValue exv = genCoarrayExpr(expr, coarrayRef, context, loc);
+    return fir::LoadOp::create(*builder, loc, fir::getBase(exv));
+  }
+
+  fir::ExtendedValue
+  genCoarrayExprBox(const Fortran::lower::SomeExpr &expr,
+                    const Fortran::evaluate::CoarrayRef &coarrayRef,
+                    Fortran::lower::StatementContext &context,
+                    mlir::Location loc) {
+    fir::ExtendedValue exv = genCoarrayExpr(expr, coarrayRef, context, loc);
+    return fir::factory::createBoxValue(*builder, loc, exv);
+  }
+
   fir::ExtendedValue
   genExprAddr(const Fortran::lower::SomeExpr &expr,
               Fortran::lower::StatementContext &context,
@@ -824,7 +876,7 @@ public:
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
     if (coarrayRef.has_value())
-      TODO(loc, "coarray: genExprAddr of coarray reference.");
+      return genCoarrayExpr(expr, coarrayRef.value(), context, loc);
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
   }
@@ -836,7 +888,7 @@ public:
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
     if (coarrayRef.has_value())
-      TODO(loc, "coarray: genExprValue of coarray reference.");
+      return genCoarrayExprValue(expr, coarrayRef.value(), context, loc);
     return Fortran::lower::convertExprToValue(loc, *this, expr, localSymbols,
                                               context);
   }
@@ -846,7 +898,7 @@ public:
              Fortran::lower::StatementContext &stmtCtx) override final {
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
     if (coarrayRef.has_value())
-      TODO(loc, "coarray: genExprBox of coarray reference.");
+      return genCoarrayExprBox(expr, coarrayRef.value(), stmtCtx, loc);
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
   }
@@ -5380,6 +5432,68 @@ private:
     return temps;
   }
 
+  /// Generate an coarray assignment.
+  /// This is an assignment expression with corank > 0.
+  void genCoarrayAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
+                            const Fortran::evaluate::Assignment &assign) {
+    Fortran::lower::StatementContext stmtCtx;
+    auto rhsCoarrayRef = Fortran::evaluate::ExtractCoarrayRef(assign.rhs);
+    auto lhsCoarrayRef = Fortran::evaluate::ExtractCoarrayRef(assign.lhs);
+    int lhsCorank = 0;
+    if (auto lhsRef{Fortran::evaluate::ExtractDataRef(assign.lhs)})
+      lhsCorank = lhsRef->GetLastSymbol().Corank();
+
+    // handle STAT from the CoarrayRef
+    mlir::Value stat;
+    if (lhsCoarrayRef.has_value() || rhsCoarrayRef.has_value()) {
+      auto statExpr = lhsCoarrayRef.has_value() ? lhsCoarrayRef.value().stat()
+                                                : rhsCoarrayRef.value().stat();
+      if (statExpr.has_value()) {
+        if (auto statRef{Fortran::evaluate::ExtractDataRef(statExpr.value())}) {
+          stat = fir::getBase(
+              getSymbolExtendedValue(statRef->GetLastSymbol(), nullptr));
+        }
+      }
+    }
+
+    if (lhsCoarrayRef.has_value() || lhsCorank) {
+      hlfir::Entity lhsEntity = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.lhs, localSymbols, stmtCtx);
+      mlir::Value rhs = fir::getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, stmtCtx));
+      auto cosubscripts =
+          lhsCoarrayRef.has_value()
+              ? Fortran::lower::getCosubscripts(*this, loc, *lhsCoarrayRef)
+              : llvm::SmallVector<mlir::Value>{};
+      // PUT operation if lhs is a coarray.
+      // Retrieving NOTIFY variable from lhsCoarrayRef if he's passed as
+      // argument on the image selector.
+      mlir::Value notifyPtr;
+      if (lhsCoarrayRef.has_value()) {
+        if (auto notifyExpr = lhsCoarrayRef.value().notify()) {
+          notifyPtr = fir::getBase(Fortran::lower::convertExprToAddress(
+              loc, *this, notifyExpr.value(), localSymbols, stmtCtx));
+        }
+      }
+      mif::PutCoarrayOp::create(builder, loc, /*coarray*/ lhsEntity,
+                                cosubscripts, /*src*/ rhs, notifyPtr, stat,
+                                /*errmsg*/ mlir::Value{});
+    } else {
+      // GET operation because rhs is a coarray.
+      hlfir::Entity rhsEntity = Fortran::lower::convertExprToHLFIR(
+          loc, *this, assign.rhs, localSymbols, stmtCtx);
+      mlir::Value lhs = fir::getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.lhs, localSymbols, stmtCtx));
+      auto cosubscripts =
+          rhsCoarrayRef.has_value()
+              ? Fortran::lower::getCosubscripts(*this, loc, *rhsCoarrayRef)
+              : llvm::SmallVector<mlir::Value>{};
+      mif::GetCoarrayOp::create(builder, loc, /*coarray*/ rhsEntity,
+                                cosubscripts, /*dest*/ lhs, stat,
+                                /*errmsg*/ mlir::Value{});
+    }
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment,
@@ -5404,9 +5518,17 @@ private:
     if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
-    if (Fortran::evaluate::ExtractCoarrayRef(assign.lhs) ||
-        Fortran::evaluate::ExtractCoarrayRef(assign.rhs))
-      TODO(loc, "coarray: assignment");
+    // Coarray Assignment
+    bool lhsIsCoarray = false, rhsIsCoarray = false;
+    if (auto lhsRef{Fortran::evaluate::ExtractDataRef(assign.lhs)})
+      lhsIsCoarray = lhsRef->GetLastSymbol().Corank() > 0;
+    if (auto rhsRef{Fortran::evaluate::ExtractDataRef(assign.rhs)})
+      rhsIsCoarray = rhsRef->GetLastSymbol().Corank() > 0;
+
+    if (lhsIsCoarray || rhsIsCoarray) {
+      genCoarrayAssignment(builder, loc, assign);
+      return;
+    }
 
     // Gather some information about the assignment that will impact how it is
     // lowered.

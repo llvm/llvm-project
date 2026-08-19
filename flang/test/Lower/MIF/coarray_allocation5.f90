@@ -16,7 +16,7 @@ end program
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.array<1xi64>
 ! CHECK:  %[[INIT_STAT:.*]] = mif.init -> i32
-! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QMm_coarray_testEmodule_coarray) : !fir.ref<f32>
+! CHECK:  %[[VAL_2:.*]] = fir.address_of(@_QMm_coarray_testEmodule_coarray) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
 ! CHECK:  %c1_i64 = arith.constant 1 : i64
 ! CHECK:  %c1_i64_0 = arith.constant 1 : i64
 ! CHECK:  %c0 = arith.constant 0 : index
@@ -25,5 +25,5 @@ end program
 ! CHECK:  %[[VAL_4:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! CHECK:  %c1_i64_1 = arith.constant 1 : i64
 ! CHECK:  %[[VAL_5:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! CHECK:  mif.alloc_coarray %[[VAL_2]] lcobounds %[[VAL_4]] ucobounds %[[VAL_5]] {uniq_name = "_QMm_coarray_testEmodule_coarray"} : (!fir.ref<f32>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! CHECK:  mif.alloc_coarray %[[VAL_2]] lcobounds %[[VAL_4]] ucobounds %[[VAL_5]] {uniq_name = "_QMm_coarray_testEmodule_coarray"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
 ! CHECK:  return

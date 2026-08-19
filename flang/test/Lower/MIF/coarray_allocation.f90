@@ -11,20 +11,20 @@ program alloc_test
     type(my_type2) :: z
   end type
   
-  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
-  ! CHECK: mif.alloc_coarray %[[VAL_1]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:2>>
+  ! CHECK: mif.alloc_coarray %[[VAL_1]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
   
   ! CHECK: %[[VAL_4:.*]]:2 = hlfir.declare %[[ADDR_1:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:2>>)
   
   integer :: a[2, *]
-  ! CHECK: %[[VAL_2:.*]] = fir.address_of(@_QFEb) : !fir.ref<f32>
-  ! CHECK: mif.alloc_coarray %[[VAL_2]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEb"} : (!fir.ref<f32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
+  ! CHECK: %[[VAL_2:.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<f32>, corank:3>>
+  ! CHECK: mif.alloc_coarray %[[VAL_2]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
   
   ! CHECK: %[[VAL_5:.*]]:2 = hlfir.declare %[[ADDR_2:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>) -> (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.ref<!fir.box<!fir.heap<f32>, corank:3>>)
   
   real :: b[3:4, 5, *]
-  ! CHECK: %[[VAL_3:.*]] = fir.address_of(@_QFEc) : !fir.ref<!fir.char<1,10>>
-  ! CHECK: mif.alloc_coarray %[[VAL_3]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEc"} : (!fir.ref<!fir.char<1,10>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+  ! CHECK: %[[VAL_3:.*]] = fir.address_of(@_QFEc) : !fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>, corank:1>>
+  ! CHECK: mif.alloc_coarray %[[VAL_3]] lcobounds %[[LCOBOUNDS:.*]] ucobounds %[[UCOBOUNDS:.*]] {uniq_name = "_QFEc"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,10>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
   
   ! CHECK: %[[VAL_6:.*]]:2 = hlfir.declare %[[ADDR_3:.*]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>)
   character(len=10) :: c[*]

@@ -16,12 +16,12 @@ end program
 
 ! CHECK-LABEL: func.func @_QPtest_coarray_save()
 ! CHECK:   %0 = fir.dummy_scope : !fir.dscope
-! CHECK:   %1 = fir.address_of(@_QFtest_coarray_saveEm) : !fir.ref<f32>
-! CHECK:   %2:2 = hlfir.declare %1 {uniq_name = "_QFtest_coarray_saveEm"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:   %3 = fir.address_of(@_QFtest_coarray_saveEn) : !fir.ref<f32>
-! CHECK:   %4:2 = hlfir.declare %3 {uniq_name = "_QFtest_coarray_saveEn"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:   %5 = fir.address_of(@_QFtest_coarray_saveEp) : !fir.ref<f32>
-! CHECK:   %6:2 = hlfir.declare %5 {uniq_name = "_QFtest_coarray_saveEp"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:   %1 = fir.address_of(@_QFtest_coarray_saveEm) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
+! CHECK:   %2:2 = hlfir.declare %1 {uniq_name = "_QFtest_coarray_saveEm"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>)
+! CHECK:   %3 = fir.address_of(@_QFtest_coarray_saveEn) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
+! CHECK:   %4:2 = hlfir.declare %3 {uniq_name = "_QFtest_coarray_saveEn"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>)
+! CHECK:   %5 = fir.address_of(@_QFtest_coarray_saveEp) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
+! CHECK:   %6:2 = hlfir.declare %5 {uniq_name = "_QFtest_coarray_saveEp"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>)
 ! CHECK:   return
 
 ! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
@@ -29,7 +29,7 @@ end program
 ! CHECK:   fir.call @_QPtest_coarray_save() fastmath<contract> : () -> ()
 ! CHECK:   return
 
-! CHECK: fir.global internal @_QFtest_coarray_saveEm : f32
+! CHECK: fir.global internal @_QFtest_coarray_saveEm : !fir.box<!fir.heap<f32>, corank:1>
 
 ! CHECK-LABEL: func.func @__mif_save_coarrays_allocate()
 ! CHECK:   %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
@@ -39,7 +39,7 @@ end program
 ! CHECK:   %[[VAL_4:.*]] = fir.alloca !fir.array<0xi64>
 ! CHECK:   %[[VAL_5:.*]] = fir.alloca !fir.array<1xi64>
 ! CHECK:   %[[INIT_STAT:.*]] = mif.init -> i32
-! CHECK:   %[[VAL_6:.*]] = fir.address_of(@_QFtest_coarray_saveEm) : !fir.ref<f32>
+! CHECK:   %[[VAL_6:.*]] = fir.address_of(@_QFtest_coarray_saveEm) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
 ! CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C1_I64_0:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -48,8 +48,8 @@ end program
 ! CHECK:   %[[VAL_8:.*]] = fir.embox %[[VAL_5]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! CHECK:   %[[C1_I64_1:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[VAL_9:.*]] = fir.embox %[[VAL_4]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! CHECK:   mif.alloc_coarray %[[VAL_6]] lcobounds %[[VAL_8]] ucobounds %[[VAL_9]] {uniq_name = "_QFtest_coarray_saveEm"} : (!fir.ref<f32>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-! CHECK:   %[[VAL_10:.*]] = fir.address_of(@_QFtest_coarray_saveEn) : !fir.ref<f32>
+! CHECK:   mif.alloc_coarray %[[VAL_6]] lcobounds %[[VAL_8]] ucobounds %[[VAL_9]] {uniq_name = "_QFtest_coarray_saveEm"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! CHECK:   %[[VAL_10:.*]] = fir.address_of(@_QFtest_coarray_saveEn) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
 ! CHECK:   %[[C1_I64_2:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C1_I64_3:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C0_4:.*]] = arith.constant 0 : index
@@ -58,8 +58,8 @@ end program
 ! CHECK:   %[[VAL_12:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! CHECK:   %[[C1_I64_5:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[VAL_13:.*]] = fir.embox %[[VAL_2]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! CHECK:   mif.alloc_coarray %[[VAL_10]] lcobounds %[[VAL_12]] ucobounds %[[VAL_13]] {uniq_name = "_QFtest_coarray_saveEn"} : (!fir.ref<f32>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-! CHECK:   %[[VAL_14:.*]] = fir.address_of(@_QFtest_coarray_saveEp) : !fir.ref<f32>
+! CHECK:   mif.alloc_coarray %[[VAL_10]] lcobounds %[[VAL_12]] ucobounds %[[VAL_13]] {uniq_name = "_QFtest_coarray_saveEn"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! CHECK:   %[[VAL_14:.*]] = fir.address_of(@_QFtest_coarray_saveEp) : !fir.ref<!fir.box<!fir.heap<f32>, corank:1>>
 ! CHECK:   %[[C1_I64_6:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C1_I64_7:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[C0_8:.*]] = arith.constant 0 : index
@@ -68,9 +68,9 @@ end program
 ! CHECK:   %[[VAL_16:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! CHECK:   %[[VAL_C1_I64_9:.*]] = arith.constant 1 : i64
 ! CHECK:   %[[VAL_17:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! CHECK:   mif.alloc_coarray %[[VAL_14:.*]] lcobounds %[[VAL_16]] ucobounds %[[VAL_17]] {uniq_name = "_QFtest_coarray_saveEp"} : (!fir.ref<f32>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! CHECK:   mif.alloc_coarray %[[VAL_14:.*]] lcobounds %[[VAL_16]] ucobounds %[[VAL_17]] {uniq_name = "_QFtest_coarray_saveEp"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
 ! CHECK:   return
 
-! CHECK:  fir.global internal @_QFtest_coarray_saveEn : f32
-! CHECK:  fir.global internal @_QFtest_coarray_saveEp : f32
+! CHECK:  fir.global internal @_QFtest_coarray_saveEn : !fir.box<!fir.heap<f32>, corank:1>
+! CHECK:  fir.global internal @_QFtest_coarray_saveEp : !fir.box<!fir.heap<f32>, corank:1>
 

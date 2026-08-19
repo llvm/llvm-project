@@ -27,10 +27,12 @@ end program p
 !CHECK-NEXT:  fir.call @_QFPinner() fastmath<contract> : () -> ()
 
 !CHECK-LABEL: func.func private @_QFPinner() attributes {fir.host_symbol = @_QQmain, llvm.linkage = #llvm.linkage<internal>}
-!CHECK:       %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-!CHECK-NEXT:  %[[VAL_1:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
-!CHECK-NEXT:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
+!CHECK:       %[[VAL_0:.*]] = fir.alloca i32
+!CHECK-NEXT:  %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+!CHECK-NEXT:  %[[VAL_2:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
+!CHECK-NEXT:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>)
 !CHECK-NEXT:  %c1_i32 = arith.constant 1 : i32
-!CHECK-NEXT:  hlfir.assign %c1_i32 to %[[VAL_2:.*]]#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>, corank:1>>
+!CHECK-NEXT:  fir.store %c1_i32 to %[[VAL_0]] : !fir.ref<i32>
+!CHECK-NEXT:  mif.put_coarray from %[[VAL_0]] to %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.ref<i32>) -> ()
 
 !CHECK: fir.global internal @_QFEa : !fir.box<!fir.heap<i32>, corank:1>
