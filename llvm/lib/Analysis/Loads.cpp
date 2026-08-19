@@ -230,8 +230,8 @@ static bool isDereferenceableAndAlignedPointer(
     if (M && M->getTargetTriple().isValidAddrSpaceCast(
                  ASC->getSrcAddressSpace(), ASC->getDestAddressSpace()))
       return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                                Size, SQ, IgnoreFree,
-                                                Visited, MaxDepth);
+                                                Size, SQ, IgnoreFree, Visited,
+                                                MaxDepth);
     return false;
   }
 
