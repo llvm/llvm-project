@@ -22,8 +22,6 @@ TEST(LlvmLibcSignalTest, SigaddsetInvalid) {
   sigset_t sigset;
   EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, -1), Fails(EINVAL));
 
-  // This doesn't use NSIG because LIBC_NAMESPACE::sigaddset error checking is
-  // against sizeof(sigset_t) not NSIG.
   constexpr int bitsInSigsetT = 8 * sizeof(sigset_t);
 
   EXPECT_THAT(LIBC_NAMESPACE::sigaddset(&sigset, bitsInSigsetT + 1),
