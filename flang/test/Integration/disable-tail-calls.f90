@@ -1,6 +1,6 @@
 ! test -fno-optimize-sibling-calls flag disables tail call optimization
 
-! RUN: %flang_fc1 -emit-llvm -O2 -fno-optimize-sibling-calls -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -fno-optimize-sibling-calls -o - %s | FileCheck %s
 
 recursive subroutine f(n)
   integer, intent(in) :: n

@@ -4400,7 +4400,7 @@ def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
   MarshallingInfoFlag<CodeGenOpts<"DisableTailCalls">>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">,
-  Group<f_Group>, Visibility<[ClangOption, FlangOption, FC1Option]>;
+  Group<f_Group>, Visibility<[ClangOption, FlangOption]>;
 defm escaping_block_tail_calls : BoolFOption<"escaping-block-tail-calls",
   CodeGenOpts<"NoEscapingBlockTailCalls">, DefaultFalse,
   NegFlag<SetTrue, [], [ClangOption, CC1Option]>,
