@@ -1,8 +1,7 @@
 ; RUN: llc -mtriple=amdgpu13.10--amdpal < %s | FileCheck %s --check-prefixes=CHECK
 
-; GFX1310 allocates LDS at a 256-dword (1024-byte) granularity, so the reported
-; .lds_size is the requested size rounded up to the next 1024 bytes
-; (0x5808 -> 0x5c00).
+; GFX1310 allocates LDS with 256-dword (1024-byte) granularity. So .lds_size is
+; the requested size rounded up to the next 1024 bytes (0x5808 -> 0x5c00).
 
 ; CHECK: .gs:
 ; CHECK: .entry_point_symbol: gs_shader_granularity_256DW

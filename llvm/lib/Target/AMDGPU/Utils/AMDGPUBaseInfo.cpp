@@ -1176,8 +1176,8 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
   return 64;
 }
 
-// Maximum LDS a single work-group can address. This is the fixed HW addressing
-// cap and is independent of whether a work-group runs on four SIMDs or two.
+// Maximum LDS a single work-group can address. This is a fixed HW cap. It does
+// not depend on how many SIMDs a work-group runs on.
 static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
@@ -1193,9 +1193,9 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 // Total physical size of LDS on the block, in bytes. On targets with
-// FeatureHalfAddressablePhysicalLocalMemory a work-group can address only half of the
-// block (gfx10/11/12: a WGP is two CUs, 128k physical vs 64k addressable), so
-// the physical size is twice the addressable size; otherwise it is equal.
+// FeatureHalfAddressablePhysicalLocalMemory the physical block is twice the
+// addressable size (gfx10/11/12, 128k physical and 64k addressable). On other
+// targets it is equal to the addressable size.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
   unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
   if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
@@ -1210,7 +1210,7 @@ static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
 //   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block
 //   gfx12.5 (gfx1250) : 320 KiB (always runs on four SIMDs)
 //   gfx13             : 192 KiB on four SIMDs, 96 KiB on two
-// Total available in the current mode, that is the physical size halved when a
+// Total available in the current mode. The physical size is halved when a
 // work-group runs on two SIMDs.
 unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
   unsigned Size = getPhysicalLocalMemorySize(STI);
@@ -1220,8 +1220,7 @@ unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 // What one work-group can allocate in the current mode. This is the HW
-// addressable cap, but no more than is available in the current mode (two SIMDs
-// / four SIMDs).
+// addressable cap, but never more than the total available in the current mode.
 unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   return std::min(getMaxHWAddressableLocalMemorySize(STI),
                   getLocalMemorySize(STI));

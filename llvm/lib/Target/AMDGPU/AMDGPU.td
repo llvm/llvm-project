@@ -272,9 +272,9 @@ defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
   /*GenPredicate=*/0
 >;
 
-// Set on targets (gfx10/11/12) where a work-group can address only half of the
-// physical LDS block, i.e. the physical block is twice the addressable size (a
-// WGP is two CUs: 128k physical vs 64k addressable).
+// Set for gfx10/11/12 where a work-group can address only half of the physical
+// LDS block. So the physical block is twice the addressable size, for example
+// 128k physical and 64k addressable.
 defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressable-physical-local-memory",
   "A work-group can address only half of the physical LDS block",
   /*GenPredicate=*/0
