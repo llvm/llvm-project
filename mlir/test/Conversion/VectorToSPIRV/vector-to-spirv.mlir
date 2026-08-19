@@ -1114,12 +1114,9 @@ module attributes {
 //       CHECK:   %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<4xf32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>
 //       CHECK:   %[[C0:.+]] = arith.constant 0 : index
 //       CHECK:   %[[S1:.+]] = builtin.unrealized_conversion_cast %[[C0]] : index to i32
-//       CHECK:   %[[CST1:.+]] = spirv.Constant 0 : i32
-//       CHECK:   %[[CST2:.+]] = spirv.Constant 0 : i32
-//       CHECK:   %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:   %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
-//       CHECK:   %[[S5:.+]] = spirv.Bitcast %[[S4]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
-//       CHECK:   %[[R0:.+]] = spirv.Load "StorageBuffer" %[[S5]] : vector<4xf32>
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.Load "StorageBuffer" %{{.+}} : f32
+//       CHECK:   %[[R0:.+]] = spirv.CompositeConstruct %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : (f32, f32, f32, f32) -> vector<4xf32>
 //       CHECK:   return %[[R0]] : vector<4xf32>
 func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
   %idx = arith.constant 0 : index
@@ -1151,8 +1148,10 @@ func.func @vector_load_single_elem(%arg0 : memref<4xf32, #spirv.storage_class<St
 // CHECK-LABEL: @vector_load_aligned
 func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
   %idx = arith.constant 0 : index
-  // CHECK: spirv.Load
-  // CHECK-SAME: ["Aligned", 8]
+  // The alignment describes the vector access and does not carry over to the
+  // element accesses used under the Logical addressing model.
+  // CHECK-COUNT-4: spirv.Load "StorageBuffer" %{{.+}} : f32
+  //         CHECK: spirv.CompositeConstruct
   %0 = vector.load %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
 }
@@ -1171,8 +1170,9 @@ func.func @vector_load_aligned(%arg0 : memref<4xf32, #spirv.storage_class<Storag
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 1 : i32
 //       CHECK:   %[[S6:.+]] = spirv.IAdd  %[[S2]], %[[S3]] : i32
 //       CHECK:   %[[S7:.+]] = spirv.AccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
-//       CHECK:   %[[S8:.+]] = spirv.Bitcast %[[S7]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
-//       CHECK:   %[[R0:.+]] = spirv.Load "StorageBuffer" %[[S8]] : vector<4xf32>
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.Load "StorageBuffer" %{{.+}} : f32
+//       CHECK:   %[[R0:.+]] = spirv.CompositeConstruct %{{.+}}, %{{.+}}, %{{.+}}, %{{.+}} : (f32, f32, f32, f32) -> vector<4xf32>
 //       CHECK:   return %[[R0]] : vector<4xf32>
 func.func @vector_load_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBuffer>>) -> vector<4xf32> {
   %idx_0 = arith.constant 0 : index
@@ -1190,9 +1190,8 @@ func.func @vector_load_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBu
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST2:.+]] = spirv.Constant 0 : i32
 //       CHECK:   %[[CST3:.+]] = spirv.Constant 1 : i32
-//       CHECK:   %[[S4:.+]] = spirv.AccessChain %[[S0]][%[[CST1]], %[[S1]]] : !spirv.ptr<!spirv.struct<(!spirv.array<4 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
-//       CHECK:   %[[S5:.+]] = spirv.Bitcast %[[S4]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
-//       CHECK:   spirv.Store "StorageBuffer" %[[S5]], %[[ARG1]] : vector<4xf32>
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.CompositeExtract %[[ARG1]]
 func.func @vector_store(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
   %idx = arith.constant 0 : index
   vector.store %arg1, %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
@@ -1202,8 +1201,9 @@ func.func @vector_store(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer
 // CHECK-LABEL: @vector_store_aligned
 func.func @vector_store_aligned(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
   %idx = arith.constant 0 : index
-  // CHECK: spirv.Store
-  // CHECK-SAME: ["Aligned", 8]
+  // The alignment describes the vector access and does not carry over to the
+  // element accesses used under the Logical addressing model.
+  // CHECK-COUNT-4: spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} : f32
   vector.store %arg1, %arg0[%idx] { alignment = 8 } : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return
 }
@@ -1241,8 +1241,8 @@ func.func @vector_store_single_elem(%arg0 : memref<4xf32, #spirv.storage_class<S
 //       CHECK:   %[[CST1:.+]] = spirv.Constant 1 : i32
 //       CHECK:   %[[S6:.+]] = spirv.IAdd %[[S2]], %[[S3]] : i32
 //       CHECK:   %[[S7:.+]] = spirv.AccessChain %[[S0]][%[[CST0_1]], %[[S6]]] : !spirv.ptr<!spirv.struct<(!spirv.array<16 x f32, stride=4> [0])>, StorageBuffer>, i32, i32
-//       CHECK:   %[[S8:.+]] = spirv.Bitcast %[[S7]] : !spirv.ptr<f32, StorageBuffer> to !spirv.ptr<vector<4xf32>, StorageBuffer>
-//       CHECK:   spirv.Store "StorageBuffer" %[[S8]], %[[ARG1]] : vector<4xf32>
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.CompositeExtract %[[ARG1]]
 func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xf32>) {
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
@@ -1255,8 +1255,8 @@ func.func @vector_store_2d(%arg0 : memref<4x4xf32, #spirv.storage_class<StorageB
 //  CHECK-SAME:  %[[ARG1:.*]]: vector<4xindex>
 //       CHECK:   %[[S0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : memref<4xindex, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<4 x i32, stride=4> [0])>, StorageBuffer>
 //       CHECK:   %[[S1:.+]] = builtin.unrealized_conversion_cast %[[ARG1]] : vector<4xindex> to vector<4xi32>
-//       CHECK:   %[[S5:.+]] = spirv.Bitcast %{{.+}} : !spirv.ptr<i32, StorageBuffer> to !spirv.ptr<vector<4xi32>, StorageBuffer>
-//       CHECK:   spirv.Store "StorageBuffer" %[[S5]], %[[S1]] : vector<4xi32>
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.CompositeExtract %[[S1]]
 func.func @vector_store_index(%arg0 : memref<4xindex, #spirv.storage_class<StorageBuffer>>, %arg1 : vector<4xindex>) {
   %idx = arith.constant 0 : index
   vector.store %arg1, %arg0[%idx] : memref<4xindex, #spirv.storage_class<StorageBuffer>>, vector<4xindex>
@@ -1276,3 +1276,32 @@ func.func @vector_load(%arg0 : memref<4xf32, #spirv.storage_class<StorageBuffer>
   %0 = vector.load %arg0[%idx] : memref<4xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
   return %0: vector<4xf32>
 }
+
+// -----
+
+// Under the Logical addressing model a pointer cannot be bitcast, so a vector
+// access has to be split into element accesses. Emitting the bitcast produced a
+// module that spirv-val rejected.
+// See https://github.com/llvm/llvm-project/issues/213192.
+
+module attributes {
+  spirv.target_env = #spirv.target_env
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>,
+    #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @vector_load_store_logical_no_pointer_bitcast
+//   CHECK-NOT:   spirv.Bitcast
+// CHECK-COUNT-4:   spirv.Load "StorageBuffer" %{{.+}} : f32
+//       CHECK:   spirv.CompositeConstruct
+// CHECK-COUNT-4:   spirv.CompositeExtract
+func.func @vector_load_store_logical_no_pointer_bitcast(
+    %src : memref<16xf32, #spirv.storage_class<StorageBuffer>>,
+    %dst : memref<16xf32, #spirv.storage_class<StorageBuffer>>) {
+  %idx = arith.constant 0 : index
+  %0 = vector.load %src[%idx] : memref<16xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  vector.store %0, %dst[%idx] : memref<16xf32, #spirv.storage_class<StorageBuffer>>, vector<4xf32>
+  return
+}
+
+} // end module
