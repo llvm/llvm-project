@@ -270,6 +270,12 @@ m_scev_SMax(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVUMaxExpr, Op0_t, Op1_t>
+m_scev_UMax(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVUMaxExpr>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVMinMaxExpr, Op0_t, Op1_t>
 m_scev_MinMax(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVMinMaxExpr>(Op0, Op1);
