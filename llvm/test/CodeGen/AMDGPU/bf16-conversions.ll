@@ -54,9 +54,10 @@ define amdgpu_ps void @strict_fpext_bf16_to_f32(bfloat %a, ptr %out) #0 {
 ;
 ; GFX1250-LABEL: strict_fpext_bf16_to_f32:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX1250-NEXT:    flat_store_b32 v[2:3], v0
@@ -78,9 +79,10 @@ define amdgpu_ps void @strict_fpext_bf16_to_f64(bfloat %a, ptr %out) #0 {
 ;
 ; GFX1250-LABEL: strict_fpext_bf16_to_f64:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_lshlrev_b32 v0, 16, v0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
