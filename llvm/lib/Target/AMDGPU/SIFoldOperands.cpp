@@ -258,7 +258,7 @@ public:
 
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
-  bool tryFoldRedundantAnd(MachineInstr &ChildMI) const;
+  bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -1894,7 +1894,7 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
 // This also handles cases where ParentMI implicitly zeros high bits (e.g., f16
 // operations that write 16-bit results into 32-bit registers), making a
 // subsequent AND with 0xffff redundant.
-bool SIFoldOperandsImpl::tryFoldRedundantAnd(MachineInstr &ChildMI) const {
+bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
   // Ensure implicit defs (e.g., $scc) are not live.
   if (!ChildMI.allImplicitDefsAreDead())
     return false;
@@ -2960,7 +2960,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
         continue;
       }
 
-      if (tryFoldRedundantAnd(MI)) {
+      if (tryFoldRedundantAND(MI)) {
         Changed = true;
         continue;
       }
