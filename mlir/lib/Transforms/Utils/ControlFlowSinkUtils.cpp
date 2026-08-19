@@ -92,7 +92,7 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
   for (Value value : user->getOperands()) {
     Operation *op = value.getDefiningOp();
     // Ignore block arguments and ops already contained in the target region,
-    // including ops in nested regions. Only consider defs outside the target
+    // including ops in nested regions.
     // region.
     if (!op || region->isAncestor(op->getParentRegion()))
       continue;
