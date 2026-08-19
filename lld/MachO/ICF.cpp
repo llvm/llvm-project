@@ -96,10 +96,10 @@ static bool isFoldableWithAddendsRemoved(const ConcatInputSection *isec) {
          isSelRefsSection(isec) || isEhFrameSection(isec);
 }
 
-// Make a normalized copy of a section's bytes by zeroing out the embedded relocs.
-// Return it in the given &buf
+// Make a normalized copy of a section's bytes by zeroing out the embedded
+// relocs. Return it in the given &buf
 static void getNormalizedData(const ConcatInputSection *isec,
-                             SmallVectorImpl<uint8_t> &buf) {
+                              SmallVectorImpl<uint8_t> &buf) {
   buf.assign(isec->data.begin(), isec->data.end());
   for (const Relocation &r : isec->relocs) {
     size_t size = 1ULL << r.length;
@@ -647,9 +647,10 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
           foldable.push_back(d->unwindEntry());
     } else if (isEhFrameSection(isec)) {
       // __eh_frame contains two types of records: FDEs and CIEs.
-      // Functions point to FDEs, which are already collected above via unwindEntry().
-      // CIEs are shared headers and are not attached to individual functions.
-      // Collect only CIEs here so they can also be hashed and deduplicated.
+      // Functions point to FDEs, which are already collected above via
+      // unwindEntry(). CIEs are shared headers and are not attached to
+      // individual functions. Collect only CIEs here so they can also be hashed
+      // and deduplicated.
       auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
       if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
           !isec->shouldOmitFromOutput())
