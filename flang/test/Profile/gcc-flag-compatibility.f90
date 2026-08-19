@@ -9,9 +9,6 @@
 ! RUN: rm -rf %t.gendir
 ! RUN: mkdir -p %t.gendir
 ! RUN: %flang %s -c -S -o - -emit-llvm -fprofile-generate=%t.gendir | FileCheck -check-prefix=PROFILE-GEN %s
-! RUN: %flang_fc1 -emit-llvm -fprofile-generate -fno-profile-generate -o - %s | FileCheck -check-prefix=NO-PROFILE-GEN %s
-! RUN: %flang_fc1 -emit-llvm -fno-profile-generate -fprofile-generate -o - %s | FileCheck -check-prefix=PROFILE-GEN %s
-! NO-PROFILE-GEN-NOT: @__profc_
 ! PROFILE-GEN: @__profc_{{_?}}main = {{(private|internal)}} global [1 x i64] zeroinitializer, section
 ! PROFILE-GEN: @__profd_{{_?}}main =
 

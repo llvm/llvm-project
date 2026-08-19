@@ -1975,7 +1975,7 @@ def fno_profile_instr_generate : Flag<["-"], "fno-profile-instr-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_generate : Flag<["-"], "fno-profile-generate">,
-    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption, FC1Option]>,
+    Group<f_Group>, Visibility<[ClangOption, CLOption, FlangOption]>,
     HelpText<"Disable generation of profile instrumentation.">;
 def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
