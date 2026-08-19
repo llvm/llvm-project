@@ -1,7 +1,8 @@
-:orphan:
+---
+orphan: true
+---
 
-=====================
-Kaleidoscope Tutorial
-=====================
+# Kaleidoscope Tutorial
 
-The Kaleidoscope Tutorial has moved to :doc:`MyFirstLanguageFrontend/index`.
+The Kaleidoscope Tutorial has moved to {doc}`MyFirstLanguageFrontend/index`.
+
