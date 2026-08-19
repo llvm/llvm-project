@@ -13,7 +13,9 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <ranges>
+#include <tuple>
 
 #include "../../range_adaptor_types.h"
 
@@ -57,6 +59,21 @@ constexpr bool test() {
     auto it                  = v.begin();
     const auto can_subscript = [](auto&& i) { return requires { i[0]; }; };
     static_assert(!can_subscript(it));
+  }
+
+  { // non-simple bases -- it[n] on __iterator<false>; this is the expression that
+    // surfaced the hardcoded-const bug in __advance
+    std::array b{10, 20};
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
+    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
+    static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+
+    auto it = v.begin();
+    static_assert(std::is_same_v<decltype(it[2]), std::tuple<int&, int&>>);
+
+    assert(it[0] == *it);
+    assert(it[3] == std::tuple(2, 20));  // crosses one wrap boundary
+    assert(it[15] == std::tuple(8, 20)); // last element of the 8 x 2 product
   }
 
   return true;

@@ -16,7 +16,9 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <ranges>
+#include <tuple>
 
 #include "../../range_adaptor_types.h"
 
@@ -115,6 +117,36 @@ constexpr bool test() {
     std::ranges::cartesian_product_view v(InputCommonView{a}, ForwardSizedView{b});
     using Iter = decltype(v.begin());
     static_assert(!std::invocable<std::minus<>, Iter, Iter>);
+  }
+
+  { // non-simple bases -- all of +=, -=, +, -, and iter - iter on __iterator<false>
+    std::ranges::cartesian_product_view v(NonSimpleCommon{a}, NonSimpleCommon{b});
+    // Pin the specialisation: a later switch to a simple view would silently drop this coverage.
+    static_assert(!std::same_as<decltype(v.begin()), std::ranges::iterator_t<const decltype(v)>>);
+
+    auto it1   = v.begin();
+    using Iter = decltype(it1);
+    static_assert(CanPlusEqual<Iter, std::ptrdiff_t>);
+    static_assert(CanMinusEqual<Iter, std::ptrdiff_t>);
+
+    auto it2 = it1 + 5; // (a[1], b[1])
+    assert(*it2 == std::tuple(2, 20));
+    assert((5 + it1) == it2);
+
+    it1 += 5;
+    assert(it1 == it2);
+
+    it1 -= 3; // (a[0], b[2])
+    assert(*it1 == std::tuple(1, 30));
+
+    assert((it2 - it1) == 3);
+    assert((it1 - it2) == -3);
+    assert((v.end() - v.begin()) == 12);
+
+    // Negative offset from the end -- forces the `__mod < 0` correction in __advance.
+    auto it3 = v.end() - 3; // (a[2], b[1])
+    assert(*it3 == std::tuple(3, 20));
+    assert(*(it3 - 2) == std::tuple(2, 40)); // crosses back over a wrap boundary
   }
 
   return true;
