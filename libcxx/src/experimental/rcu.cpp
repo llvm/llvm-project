@@ -9,67 +9,16 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <rcu>
-#include <vector>
 
 #include "include/rcu/rcu_list.h"
+#include "include/rcu/thread_local_container.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace {
 
-template <class Tp>
-class thread_local_container {
-  struct thread_entry {
-    Tp instance_;
-
-    thread_entry() : instance_() { register_instance(instance_); }
-    thread_entry(const thread_entry&) = delete;
-    thread_entry(thread_entry&&)      = delete;
-
-    ~thread_entry() { deregister_instance(instance_); }
-  };
-
-  inline static thread_local optional<thread_entry> thread_entry_{};
-
-  // Keep track of all thread-local instances
-  // Only emplaced the first time a thread is trying to access its thread-local instance.
-  inline static vector<Tp*> instances_;
-  inline static mutex mtx_;
-
-  static void register_instance(Tp& obj) {
-    lock_guard<std::mutex> lg(mtx_);
-    instances_.emplace_back(&obj);
-  }
-
-  static void deregister_instance(Tp& obj) {
-    lock_guard<std::mutex> lg(mtx_);
-    instances_.erase(remove_if(instances_.begin(), instances_.end(), [&obj](Tp* instance) { return instance == &obj; }),
-                     instances_.end());
-  }
-
-public:
-  thread_local_container()                         = delete;
-  thread_local_container(thread_local_container&&) = delete;
-
-  static atomic_ref<Tp> get_current_thread_instance() {
-    if (!thread_entry_.has_value()) {
-      auto& entry = thread_entry_.emplace();
-      return atomic_ref(entry.instance_);
-    }
-    return atomic_ref(thread_entry_->instance_);
-  }
-
-  template <class Func>
-  static void for_each(Func&& f) {
-    unique_lock<std::mutex> lock(mtx_);
-    for (auto instance : instances_) {
-      f(atomic_ref(*instance));
-    }
-  }
-};
 
 // Adopted the 2-phase implementation in the section
 // "3) General-Purpose RCU" of the paper
@@ -115,8 +64,7 @@ class rcu_domain_impl {
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
   // todo: maybe use a lock-free queue
-  std::mutex retire_queue_mutex_; // todo this is not noexcept
-  rcu_singly_list_view __retired_callback_queue_;
+  rcu_thread_local_list_view __retired_callback_queue_;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
@@ -126,9 +74,7 @@ class rcu_domain_impl {
   friend class rcu_domain;
 
   rcu_singly_list_view update_phase_and_wait() noexcept {
-    std::unique_lock retire_lk(retire_queue_mutex_);
     callbacks_phase_1_.__splice_back(__retired_callback_queue_);
-    retire_lk.unlock();
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -200,8 +146,7 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    lock_guard<std::mutex> lk(retire_queue_mutex_);
-    __retired_callback_queue_.__push_back(node);
+    __retired_callback_queue_.__push_front(node);
   }
 
   void synchronize() noexcept {
