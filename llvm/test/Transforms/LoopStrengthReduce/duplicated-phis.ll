@@ -23,7 +23,7 @@ define i64 @test_duplicated_phis(i64 noundef %N) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER_NEW]] ], [ [[INC_3:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[INC_3]] = add i64 [[I_07]], 4
+; CHECK-NEXT:    [[INC_3]] = add nuw i64 [[I_07]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i64 [[UNROLL_ITER]], [[INC_3]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label %[[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]]:

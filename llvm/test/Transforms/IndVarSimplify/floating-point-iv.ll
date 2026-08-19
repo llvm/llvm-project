@@ -335,8 +335,7 @@ define void @fcmp_neg1() nounwind {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], -20
-; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[IV_FP]]) #[[ATTR0]]

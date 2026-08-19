@@ -43,17 +43,17 @@ define void @test_00(i1 %arg) {
 ; CHECK-NEXT:    %sum4 = add i32 %sum3, %phi6
 ; CHECK-NEXT:    --> {159,+,6}<%loop2> U: [159,1006) S: [159,1006) Exits: 1005 LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:    %s1 = add i32 %phi1, %phi4
-; CHECK-NEXT:    --> {{\{\{}}73,+,1}<nuw><nsw><%loop1>,+,1}<nw><%loop2> U: [73,379) S: [73,379) --> 378 U: [378,379) S: [378,379)
+; CHECK-NEXT:    --> {{\{\{}}73,+,1}<nuw><nsw><%loop1>,+,1}<nuw><%loop2> U: [73,379) S: [73,379) --> 378 U: [378,379) S: [378,379)
 ; CHECK-NEXT:    %s2 = add i32 %phi5, %phi2
-; CHECK-NEXT:    --> {{\{\{}}57,+,2}<nuw><nsw><%loop1>,+,2}<nw><%loop2> U: [57,668) S: [57,668) --> 667 U: [667,668) S: [667,668)
+; CHECK-NEXT:    --> {{\{\{}}57,+,2}<nuw><nsw><%loop1>,+,2}<nuw><%loop2> U: [57,668) S: [57,668) --> 667 U: [667,668) S: [667,668)
 ; CHECK-NEXT:    %s3 = add i32 %sum1, %sum3
-; CHECK-NEXT:    --> {{\{\{}}130,+,3}<nuw><nsw><%loop1>,+,3}<nw><%loop2> U: [130,1046) S: [130,1046) --> 1045 U: [1045,1046) S: [1045,1046)
+; CHECK-NEXT:    --> {{\{\{}}130,+,3}<nuw><nsw><%loop1>,+,3}<nuw><%loop2> U: [130,1046) S: [130,1046) --> 1045 U: [1045,1046) S: [1045,1046)
 ; CHECK-NEXT:    %s4 = add i32 %sum4, %sum2
-; CHECK-NEXT:    --> {{\{\{}}179,+,6}<nuw><nsw><%loop1>,+,6}<nw><%loop2> U: [179,2010) S: [179,2010) --> 2009 U: [2009,2010) S: [2009,2010)
+; CHECK-NEXT:    --> {{\{\{}}179,+,6}<nuw><nsw><%loop1>,+,6}<nuw><%loop2> U: [179,2010) S: [179,2010) --> 2009 U: [2009,2010) S: [2009,2010)
 ; CHECK-NEXT:    %s5 = add i32 %phi3, %sum3
-; CHECK-NEXT:    --> {{\{\{}}122,+,3}<nuw><nsw><%loop1>,+,3}<nw><%loop2> U: [122,1038) S: [122,1038) --> 1037 U: [1037,1038) S: [1037,1038)
+; CHECK-NEXT:    --> {{\{\{}}122,+,3}<nuw><nsw><%loop1>,+,3}<nuw><%loop2> U: [122,1038) S: [122,1038) --> 1037 U: [1037,1038) S: [1037,1038)
 ; CHECK-NEXT:    %s6 = add i32 %sum2, %phi6
-; CHECK-NEXT:    --> {{\{\{}}63,+,6}<nuw><nsw><%loop1>,+,3}<nw><%loop2> U: [63,1471) S: [63,1471) --> 1470 U: [1470,1471) S: [1470,1471)
+; CHECK-NEXT:    --> {{\{\{}}63,+,6}<nuw><nsw><%loop1>,+,3}<nuw><%loop2> U: [63,1471) S: [63,1471) --> 1470 U: [1470,1471) S: [1470,1471)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_00
 ; CHECK-NEXT:  Loop %loop2: backedge-taken count is i32 141
 ; CHECK-NEXT:  Loop %loop2: constant max backedge-taken count is i32 141
@@ -518,15 +518,15 @@ define void @test_06() {
 ; CHECK-NEXT:    %phi3.inc = add i32 %phi3, 3
 ; CHECK-NEXT:    --> {33,+,3}<nuw><nsw><%loop3> U: [33,1003) S: [33,1003) Exits: 1002 LoopDispositions: { %loop3: Computable }
 ; CHECK-NEXT:    %s1 = add i32 %phi1, %phi2
-; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2> U: [30,1998) S: [30,1998) --> 1997 U: [1997,1998) S: [1997,1998)
+; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nuw><%loop2> U: [30,1998) S: [30,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:    %s2 = add i32 %phi2, %phi1
 ; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nuw><nsw><%loop2> U: [30,1998) S: [30,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:    %s3 = add i32 %phi1, %phi3
-; CHECK-NEXT:    --> {{\{\{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nw><%loop3> U: [40,1999) S: [40,1999) --> 1998 U: [1998,1999) S: [1998,1999)
+; CHECK-NEXT:    --> {{\{\{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nuw><%loop3> U: [40,1999) S: [40,1999) --> 1998 U: [1998,1999) S: [1998,1999)
 ; CHECK-NEXT:    %s4 = add i32 %phi3, %phi1
 ; CHECK-NEXT:    --> {{\{\{}}40,+,1}<nuw><nsw><%loop1>,+,3}<nuw><nsw><%loop3> U: [40,1999) S: [40,1999) --> 1998 U: [1998,1999) S: [1998,1999)
 ; CHECK-NEXT:    %s5 = add i32 %phi2, %phi3
-; CHECK-NEXT:    --> {{\{\{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nw><%loop3> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
+; CHECK-NEXT:    --> {{\{\{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nuw><%loop3> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:    %s6 = add i32 %phi3, %phi2
 ; CHECK-NEXT:    --> {{\{\{}}50,+,2}<nuw><nsw><%loop2>,+,3}<nuw><nsw><%loop3> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_06
@@ -596,15 +596,15 @@ define void @test_07() {
 ; CHECK-NEXT:    %phi1.inc = add i32 %phi1, 1
 ; CHECK-NEXT:    --> {11,+,1}<nuw><nsw><%loop1> U: [11,12) S: [11,12) Exits: 11 LoopDispositions: { %loop1: Computable, %loop2: Invariant }
 ; CHECK-NEXT:    %s1 = add i32 %phi1, %phi2
-; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nw><%loop2> U: [30,1009) S: [30,1009) --> 1008 U: [1008,1009) S: [1008,1009)
+; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nuw><%loop2> U: [30,1009) S: [30,1009) --> 1008 U: [1008,1009) S: [1008,1009)
 ; CHECK-NEXT:    %s2 = add i32 %phi2, %phi1
 ; CHECK-NEXT:    --> {{\{\{}}30,+,1}<nuw><nsw><%loop1>,+,2}<nuw><nsw><%loop2> U: [30,1009) S: [30,1009) --> 1008 U: [1008,1009) S: [1008,1009)
 ; CHECK-NEXT:    %s3 = add i32 %phi1, %phi3
-; CHECK-NEXT:    --> {{\{\{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nw><%loop1> U: [40,1010) S: [40,1010) --> 1009 U: [1009,1010) S: [1009,1010)
+; CHECK-NEXT:    --> {{\{\{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nuw><%loop1> U: [40,1010) S: [40,1010) --> 1009 U: [1009,1010) S: [1009,1010)
 ; CHECK-NEXT:    %s4 = add i32 %phi3, %phi1
 ; CHECK-NEXT:    --> {{\{\{}}40,+,3}<nuw><nsw><%loop3>,+,1}<nuw><nsw><%loop1> U: [40,1010) S: [40,1010) --> 1009 U: [1009,1010) S: [1009,1010)
 ; CHECK-NEXT:    %s5 = add i32 %phi2, %phi3
-; CHECK-NEXT:    --> {{\{\{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nw><%loop2> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
+; CHECK-NEXT:    --> {{\{\{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nuw><%loop2> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:    %s6 = add i32 %phi3, %phi2
 ; CHECK-NEXT:    --> {{\{\{}}50,+,3}<nuw><nsw><%loop3>,+,2}<nuw><nsw><%loop2> U: [50,1998) S: [50,1998) --> 1997 U: [1997,1998) S: [1997,1998)
 ; CHECK-NEXT:  Determining loop execution counts for: @test_07

@@ -8,13 +8,13 @@ define void @test_int(i32 %start, ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[START:%.*]] to i3
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i3 0, [[TMP0]]
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i3 [[TMP1]] to i32
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I2_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I2_INC]] = add nuw nsw i32 [[I2]], 1
 ; CHECK-NEXT:    store volatile i32 [[I2_INC]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i32 [[I2_INC]] to i3
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i3 [[LFTR_WIDEIV]], [[TMP1]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[I2_INC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void

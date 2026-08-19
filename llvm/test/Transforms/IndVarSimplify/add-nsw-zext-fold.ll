@@ -19,16 +19,12 @@ define void @add_nsw_zext_fold_results_in_sext(i64 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[ADD_I]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP1]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[IV_NEXT]] to i64
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP1]], %[[LOOP_PREHEADER]] ], [ [[SH_PROM:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SH_PROM]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 1, [[SH_PROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    call void @foo(i32 [[TMP0]])
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 0
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 false, label %[[EXIT_LOOPEXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:

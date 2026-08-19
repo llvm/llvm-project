@@ -12,11 +12,11 @@ define i32 @test(i32 %n) {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[HEADER]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -50,11 +50,11 @@ define i32 @test2(i32 %n) {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[HEADER]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -88,7 +88,7 @@ define i32 @neg_wrong_loop(i32 %n) {
 ; CHECK:       wrong_loop:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV2_NEXT:%.*]], [[WRONG_LOOP]] ]
 ; CHECK-NEXT:    [[IV2_NEXT]] = add i32 [[IV2]], 1
-; CHECK-NEXT:    [[UNKNOWN:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP_UNK:%.*]] = icmp eq i32 [[UNKNOWN]], 0
 ; CHECK-NEXT:    br i1 [[CMP_UNK]], label [[HEADER_PREHEADER:%.*]], label [[WRONG_LOOP]]
 ; CHECK:       header.preheader:
@@ -97,11 +97,11 @@ define i32 @neg_wrong_loop(i32 %n) {
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[HEADER_PREHEADER]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[HEADER]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -151,11 +151,11 @@ define i32 @test3(i32 %n) {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[EXPR:%.*]] = udiv i32 [[IV]], 5
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr @G, align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[HEADER]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:
@@ -195,11 +195,11 @@ define i32 @bounded_find(i32 %n) {
 ; CHECK:       header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr @G, i32 [[IV]]
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ADDR]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT1:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[HEADER]], label [[EXIT2:%.*]]
 ; CHECK:       exit1:

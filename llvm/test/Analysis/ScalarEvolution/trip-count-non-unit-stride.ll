@@ -10,7 +10,7 @@ define void @test_preinc_ult(i64 %len) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
 ; CHECK-NEXT:    --> {0,+,2}<nuw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nuw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
@@ -45,7 +45,7 @@ define void @test_postinc_ult(i64 %len) {
 ; CHECK-NEXT:    %iv.inc = add nuw i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,2}<nuw><%loop> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nuw i64 %iv, 2
-; CHECK-NEXT:    --> {2,+,2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {2,+,2}<nuw><%loop> U: [2,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_ult
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
@@ -148,7 +148,7 @@ define void @test_preinc_sgt(i64 %lim) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %start ], [ %iv.inc2, %latch ]
 ; CHECK-NEXT:    --> {0,+,-2}<nsw><%loop> U: [0,-1) S: [-9223372036854775808,1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, -2
-; CHECK-NEXT:    --> {-2,+,-2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-2,+,-2}<nsw><%loop> U: [-9223372036854775808,-1) S: [-9223372036854775808,-1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_preinc_sgt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
@@ -183,7 +183,7 @@ define void @test_postinc_sgt(i64 %lim) {
 ; CHECK-NEXT:    %iv.inc = add nsw i64 %iv, -1
 ; CHECK-NEXT:    --> {-1,+,-2}<nsw><%loop> U: [-9223372036854775808,0) S: [-9223372036854775808,0) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc2 = add nsw i64 %iv, -2
-; CHECK-NEXT:    --> {-2,+,-2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-2,+,-2}<nsw><%loop> U: [-9223372036854775808,-1) S: [-9223372036854775808,-1) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_postinc_sgt
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***

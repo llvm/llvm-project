@@ -138,18 +138,10 @@ for.end:                                          ; preds = %for.body, %entry
 define void @rhs_mustexit_1(i16 %n.raw) mustprogress {
 ; CHECK-LABEL: 'rhs_mustexit_1'
 ; CHECK-NEXT:  Determining loop execution counts for: @rhs_mustexit_1
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (1 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>))
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<nw><%for.body> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %for.body: Predicated constant max backedge-taken count is i16 -2
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<nw><%for.body> Added Flags: <nusw>
-; CHECK-NEXT:  Loop %for.body: Predicated symbolic max backedge-taken count is (-1 + (1 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>))
-; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:      {1,+,1}<nw><%for.body> Added Flags: <nusw>
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (1 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>))
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 -2
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (1 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>))
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %n.and = and i16 %n.raw, 255
@@ -245,9 +237,10 @@ for.end:                                          ; preds = %for.body, %entry
 define void @neg_rhs_wrong_range(i16 %n.raw) mustprogress {
 ; CHECK-LABEL: 'neg_rhs_wrong_range'
 ; CHECK-NEXT:  Determining loop execution counts for: @neg_rhs_wrong_range
-; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %for.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 + (2 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>)) /u 2)
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i16 32766
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 + (2 umax (-1 + (zext i8 (trunc i16 %n.raw to i8) to i16))<nsw>)) /u 2)
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
 ;
 entry:
   %n.and = and i16 %n.raw, 255

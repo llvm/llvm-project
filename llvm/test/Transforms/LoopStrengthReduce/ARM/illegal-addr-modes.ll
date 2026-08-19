@@ -40,7 +40,7 @@ define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) 
 ; CHECK:       while.body5:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[SCEVGEP1]], align 1
 ; CHECK-NEXT:    store i8 [[TMP1]], ptr [[SCEVGEP2]], align 1
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    br label [[WHILE_COND2]]
 ; CHECK:       while.end8:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[INCDEC_PTR]], i32 [[N]]

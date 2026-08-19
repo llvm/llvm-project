@@ -2533,12 +2533,16 @@ static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
     }
   }
 
-  // <0,+,nonnegative><nw> is also nuw
-  // TODO: Add corresponding nsw case
+  // Strengthen an affine AddRec's flags provided the actual AddRec is given.
+  // <nonnegative,+,nonnegative><nw> is also nuw
+  // <negative,+,negative><nw> is also nsw
   if (Type == scAddRecExpr && ScalarEvolution::hasFlags(Flags, SCEV::FlagNW) &&
-      !ScalarEvolution::hasFlags(Flags, SCEV::FlagNUW) && Ops.size() == 2 &&
-      Ops[0]->isZero() && IsKnownNonNegative(Ops[1]))
-    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+      Ops.size() == 2) {
+    if (SE->isKnownNonNegative(Ops[0]) && SE->isKnownNonNegative(Ops[1]))
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+    if (SE->isKnownNegative(Ops[0]) && SE->isKnownNegative(Ops[1]))
+      Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
+  }
 
   // both (udiv X, Y) * Y and Y * (udiv X, Y) are always NUW
   if (Type == scMulExpr && !ScalarEvolution::hasFlags(Flags, SCEV::FlagNUW) &&

@@ -486,7 +486,7 @@ define void @truncate(i16 %n) {
 ; CHECK-NEXT:    %iv = phi i16 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,9}<nuw><%loop> U: [0,-6) S: [0,-6) Exits: (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nuw i16 %iv, 9
-; CHECK-NEXT:    --> {9,+,9}<nw><%loop> U: [9,3) S: [9,3) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {9,+,9}<nuw><%loop> U: [9,-6) S: [9,0) Exits: (9 + (9 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %t = trunc i16 %iv.inc to i8
 ; CHECK-NEXT:    --> {9,+,9}<%loop> U: full-set S: full-set Exits: (9 + (9 * (trunc i16 ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 9) + (1 umin %n)) to i8))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @truncate

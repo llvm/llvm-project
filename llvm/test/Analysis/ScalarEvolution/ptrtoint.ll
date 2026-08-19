@@ -619,7 +619,7 @@ define void @ptrtoint_of_integer(ptr %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X64-NEXT:    %i9 = phi i64 [ 1, %bb7 ], [ %i11, %bb10 ]
 ; X64-NEXT:    --> {1,+,1}<nuw><%bb8> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
 ; X64-NEXT:    %i11 = add nuw i64 %i9, 1
-; X64-NEXT:    --> {2,+,1}<nw><%bb8> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
+; X64-NEXT:    --> {2,+,1}<nuw><%bb8> U: [2,0) S: [2,0) Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_integer
 ; X64-NEXT:  Loop %bb8: <multiple exits> Unpredictable backedge-taken count.
 ; X64-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
@@ -638,7 +638,7 @@ define void @ptrtoint_of_integer(ptr %arg, i64 %arg1, i1 %arg2) local_unnamed_ad
 ; X32-NEXT:    %i9 = phi i64 [ 1, %bb7 ], [ %i11, %bb10 ]
 ; X32-NEXT:    --> {1,+,1}<nuw><%bb8> U: [1,0) S: [1,0) Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
 ; X32-NEXT:    %i11 = add nuw i64 %i9, 1
-; X32-NEXT:    --> {2,+,1}<nw><%bb8> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
+; X32-NEXT:    --> {2,+,1}<nuw><%bb8> U: [2,0) S: [2,0) Exits: <<Unknown>> LoopDispositions: { %bb8: Computable }
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_integer
 ; X32-NEXT:  Loop %bb8: <multiple exits> Unpredictable backedge-taken count.
 ; X32-NEXT:    exit count for bb8: ***COULDNOTCOMPUTE***
@@ -688,6 +688,22 @@ define i64 @ptrtoint_signbits(i1 %c) {
 ; CHECK-NEXT:    --> %a U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
 ;
+; X64-LABEL: 'ptrtoint_signbits'
+; X64-NEXT:  Classifying expressions for: @ptrtoint_signbits
+; X64-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+; X64-NEXT:    --> %p U: [-1,1) S: [-1,1)
+; X64-NEXT:    %a = ptrtoint ptr %p to i64
+; X64-NEXT:    --> %a U: full-set S: full-set
+; X64-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
+;
+; X32-LABEL: 'ptrtoint_signbits'
+; X32-NEXT:  Classifying expressions for: @ptrtoint_signbits
+; X32-NEXT:    %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
+; X32-NEXT:    --> %p U: [-1,1) S: [-1,1)
+; X32-NEXT:    %a = ptrtoint ptr %p to i64
+; X32-NEXT:    --> %a U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:  Determining loop execution counts for: @ptrtoint_signbits
+;
   %p = select i1 %c, ptr null, ptr inttoptr (i64 -1 to ptr)
   %a = ptrtoint ptr %p to i64
   ret i64 %a
@@ -714,6 +730,48 @@ define void @ptrtoint_iv_start(ptr %arg, ptr %dst) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+; X64-LABEL: 'ptrtoint_iv_start'
+; X64-NEXT:  Classifying expressions for: @ptrtoint_iv_start
+; X64-NEXT:    %start = ptrtoint ptr %arg to i64
+; X64-NEXT:    --> %start U: full-set S: full-set
+; X64-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+; X64-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+; X64-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %cur = ptrtoint ptr %p to i64
+; X64-NEXT:    --> {(ptrtoaddr ptr %arg to i64),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %off = sub i64 %cur, %pi
+; X64-NEXT:    --> ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) U: full-set S: full-set Exits: ((-1 * %start) + (ptrtoaddr ptr %arg to i64)) LoopDispositions: { %loop: Invariant }
+; X64-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
+; X64-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:    %pi.next = add i64 %pi, 8
+; X64-NEXT:    --> {(8 + %start),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X64-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start
+; X64-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; X64-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; X64-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+; X32-LABEL: 'ptrtoint_iv_start'
+; X32-NEXT:  Classifying expressions for: @ptrtoint_iv_start
+; X32-NEXT:    %start = ptrtoint ptr %arg to i64
+; X32-NEXT:    --> %start U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    %p = phi ptr [ %arg, %entry ], [ %p.next, %loop ]
+; X32-NEXT:    --> {%arg,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %pi = phi i64 [ %start, %entry ], [ %pi.next, %loop ]
+; X32-NEXT:    --> {%start,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %cur = ptrtoint ptr %p to i64
+; X32-NEXT:    --> %cur U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %off = sub i64 %cur, %pi
+; X32-NEXT:    --> ({(-1 * %start)<nsw>,+,-8}<%loop> + %cur) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; X32-NEXT:    %p.next = getelementptr i8, ptr %p, i64 8
+; X32-NEXT:    --> {(8 + %arg),+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:    %pi.next = add i64 %pi, 8
+; X32-NEXT:    --> {(8 + %start)<nuw><nsw>,+,8}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; X32-NEXT:  Determining loop execution counts for: @ptrtoint_iv_start
+; X32-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; X32-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; X32-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   %start = ptrtoint ptr %arg to i64

@@ -48,7 +48,7 @@ define void @add_nowrap_flags(i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[IV]], 123
 ; CHECK-NEXT:    call void @use(i64 [[ADD1]])
-; CHECK-NEXT:    [[IV_INC]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -82,7 +82,7 @@ define void @expander_or_disjoint(i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_INC]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[IV]], [[OR]]
 ; CHECK-NEXT:    call void @use(i64 [[ADD]])
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_INC]], [[TMP0]]

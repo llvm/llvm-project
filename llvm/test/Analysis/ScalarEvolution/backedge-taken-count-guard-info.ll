@@ -118,7 +118,7 @@ define void @test_guards_across_loops(i32 %N) {
 ; CHECK-NEXT:    %iv.2 = phi i32 [ 0, %loop.1 ], [ %iv.2.next, %loop.2 ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop.2> U: full-set S: full-set Exits: (1 + %N) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:    %iv.2.next = add i32 %iv.2, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop.2> U: full-set S: full-set Exits: (2 + %N) LoopDispositions: { %loop.2: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop.2> U: [1,0) S: [1,0) Exits: (2 + %N) LoopDispositions: { %loop.2: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guards_across_loops
 ; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
 ; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 4294967296

@@ -196,8 +196,7 @@ define void @test_zext(ptr %a) #0 {
 ; CHECK-NEXT:    [[T2:%.*]] = load i8, ptr [[DOT0]], align 1
 ; CHECK-NEXT:    [[T3]] = getelementptr inbounds i8, ptr [[P_0]], i64 1
 ; CHECK-NEXT:    store i8 [[T2]], ptr [[P_0]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne ptr [[P_0]], getelementptr inbounds nuw (i8, ptr @data, i64 239)
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -366,9 +365,8 @@ define i32 @extend_const_postinc() #0 {
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[DO_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #[[ATTR2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INDVARS_IV]], 255
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END:%.*]], label [[DO_BODY]]
+; CHECK-NEXT:    br i1 false, label [[DO_END:%.*]], label [[DO_BODY]]
 ; CHECK:       do.end:
 ; CHECK-NEXT:    ret i32 0
 ;
