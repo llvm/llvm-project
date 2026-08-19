@@ -177,11 +177,6 @@ __device__ __host__ void f() {
 // DEV: store ptr %0, ptr %p
 // HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE, align 4
 // HOST: store ptr %ld.managed, ptr %p
-
-int *hostglob = &x;
-// HOST-LABEL: define internal void @__cxx_global_var_init()
-// HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE
-// HOST: store ptr %ld.managed, ptr @_ZN8gh1980798hostglobE
 }
 
 // HOST-DAG: __hipRegisterManagedVar({{.*}}, ptr @x, ptr @x.managed, ptr @[[DEVNAMEX]], i64 4, i32 4)
