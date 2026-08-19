@@ -214,6 +214,7 @@ add_header(
 )
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
+add_header(struct_sysinfo HDR struct_sysinfo.h)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)
 add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)

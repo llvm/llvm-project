@@ -18,6 +18,7 @@
 #include "hdr/sys_auxv_macros.h"
 #include "hdr/sys_resource_macros.h"
 #include "hdr/types/struct_rlimit.h"
+#include "hdr/types/struct_sysinfo.h"
 #include "hdr/unistd_macros.h"
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/prlimit.h"
@@ -26,7 +27,6 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include <linux/limits.h>
-#include <linux/sysinfo.h>
 
 // In overlay mode, system headers (like glibc's <bits/local_lim.h>) may
 // explicitly undefine ARG_MAX to indicate it is dynamic. We define a fallback

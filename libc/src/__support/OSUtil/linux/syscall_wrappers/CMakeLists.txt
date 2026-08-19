@@ -894,6 +894,7 @@ add_header_library(
   HDRS
     sysinfo.h
   DEPENDS
+    libc.hdr.types.struct_sysinfo
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

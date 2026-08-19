@@ -206,6 +206,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
 
+    # sys/sysinfo.h entrypoints
+    libc.src.sys.sysinfo.sysinfo
+
     # sys/personality.h entrypoints
     libc.src.sys.personality.personality
 
