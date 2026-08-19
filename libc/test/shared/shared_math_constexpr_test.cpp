@@ -382,9 +382,9 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
-              LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
-              LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
+              LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
 
