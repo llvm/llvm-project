@@ -8,6 +8,8 @@
 ; CHECK: !DIStringType(name: "character(10)", size: 80, align: 8)
 ; CHECK: !DIBasicType(tag: DW_TAG_string_type
 ; CHECK: !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))
+; CHECK: !DIStringType(name: "character(10)_typed", size: 80, align: 8, charType: ![[CHARTYPE:[0-9]+]])
+; CHECK: ![[CHARTYPE]] = !DIBasicType(name: "character", size: 8, encoding: DW_ATE_unsigned_char)
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
@@ -17,7 +19,7 @@
 !2 = distinct !DICompileUnit(language: DW_LANG_Fortran90, file: !3, producer: "Flang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !4, imports: !4)
 !3 = !DIFile(filename: "fortran-string-type.f", directory: "/")
 !4 = !{}
-!5 = !{!6, !9, !12, !13, !14}
+!5 = !{!6, !9, !12, !13, !14, !15}
 !6 = !DIStringType(name: "character(*)", stringLength: !7, stringLengthExpression: !DIExpression(), size: 32)
 !7 = !DILocalVariable(arg: 2, scope: !8, file: !3, line: 256, type: !11, flags: DIFlagArtificial)
 !8 = distinct !DISubprogram(name: "subprgm", scope: !2, file: !3, line: 256, type: !9, isLocal: false, isDefinition: true, scopeLine: 256, isOptimized: false, unit: !2)
@@ -27,3 +29,5 @@
 !12 = !DIStringType(name: "character(10)", size: 80, align: 8)
 !13 = !DIBasicType(tag: DW_TAG_string_type, name: "character")
 !14 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))
+!15 = !DIStringType(name: "character(10)_typed", size: 80, align: 8, charType: !16)
+!16 = !DIBasicType(name: "character", size: 8, encoding: DW_ATE_unsigned_char)
