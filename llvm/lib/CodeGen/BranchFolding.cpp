@@ -1658,6 +1658,8 @@ ReoptimizeBlock:
           if (CanFoldFallThrough) {
             SmallVector<MachineOperand, 4> ReversedCond(PredCond);
             DebugLoc Dl = MBB->findBranchDebugLoc();
+
+            // Returns true on failure.
             if (TII->reverseBranchCondition(ReversedCond))
               continue;
 
