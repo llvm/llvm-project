@@ -1083,10 +1083,13 @@ TYPE_PARSER(sourced(construct<OmpAllocateClause::Modifier>(sourced(
 TYPE_PARSER(sourced(
     construct<OmpDefaultmapClause::Modifier>(Parser<OmpVariableCategory>{})))
 
-TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
+TYPE_PARSER(
+    sourced(construct<OmpDoacross::Modifier>(Parser<OmpDependenceType>{})))
+
+TYPE_PARSER(sourced( //
     construct<OmpDependClause::TaskDep::Modifier>(Parser<OmpIterator>{}) ||
     construct<OmpDependClause::TaskDep::Modifier>(
-        Parser<OmpTaskDependenceType>{})))))
+        Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER( //
     sourced(construct<OmpDynGroupprivateClause::Modifier>(
@@ -1428,9 +1431,10 @@ TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
 TYPE_PARSER(construct<OmpDoacross>(
-    construct<OmpDoacross>(construct<OmpDoacross::Sink>(
-        "SINK"_tok >> ":"_tok >> Parser<OmpIterationVector>{})) ||
-    construct<OmpDoacross>(construct<OmpDoacross::Source>("SOURCE"_tok))))
+    // Don't parse the modifier list as "maybe", or otherwise the parser will
+    // always succeed (never allowing TaskDep in OmpDependClause).
+    nonemptyList(Parser<OmpDoacross::Modifier>{}),
+    maybe(":"_tok >> Parser<OmpIterationVector>{})))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(
