@@ -3,13 +3,13 @@ ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
 # Flang {{version}} {{in_progress}}Release Notes
 
-````{only} PreRelease
-```{warning}
+::::{only} PreRelease
+:::{warning}
 These are in-progress notes for the upcoming LLVM {{version}} release.
 Release notes for previous releases can be found on [the Download
 Page](https://releases.llvm.org/download.html).
-```
-````
+:::
+::::
 
 ## Introduction
 
@@ -48,6 +48,11 @@ page](https://llvm.org/releases/).
   reducing debug information size in compiled binaries.
 
 ## New Compiler Flags
+- Added the gfortran-compatible `-ffpe-trap=` flag, which sets the initial
+  floating-point exception halting mode of the main program. It takes a
+  comma-separated list of `invalid`, `zero`, `overflow`, `underflow`, `inexact`,
+  and the extension `denormal`, or `none` to disable halting. See the Flang
+  command line reference for the supported targets and details.
 
 - Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
   sections. Supported formats are `zlib`, `zstd`, and `none`.

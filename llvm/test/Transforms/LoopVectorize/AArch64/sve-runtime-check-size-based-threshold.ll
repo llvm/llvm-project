@@ -44,7 +44,7 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP17:%.*]] = shl nuw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP17]], 1
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP16]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

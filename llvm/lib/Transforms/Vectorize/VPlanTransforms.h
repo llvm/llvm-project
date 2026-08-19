@@ -39,7 +39,6 @@ class VPRecipeBuilder;
 struct VFRange;
 
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
-LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
@@ -57,11 +56,26 @@ struct VPlanTransforms {
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    static DenseMap<std::pair<Function *, StringRef /* Pass */>, unsigned>
+        PassCounter;
+    Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
+    // Computing these is expensive, so only do it if any VPlan printing has
+    // been requested.
+    unsigned Instance;
+    std::string NumberedPassName;
+
+    if (VPlanPrintBeforeAll || VPlanPrintAfterAll ||
+        !VPlanPrintBeforePasses.empty() || !VPlanPrintAfterPasses.empty()) {
+      Instance = ++PassCounter[{Fn, PassName}];
+
+      NumberedPassName = Instance == 1
+                             ? PassName.str()
+                             : (PassName + "@" + Twine(Instance)).str();
+    }
+
     auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
-      dbgs()
-          << "VPlan for loop in '"
-          << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-          << "' " << BeforeOrAfterStr << " " << PassName << '\n';
+      dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
+             << BeforeOrAfterStr << " " << NumberedPassName << '\n';
       if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
         Plan.getVectorLoopRegion()->print(dbgs());
       else
@@ -70,8 +84,8 @@ struct VPlanTransforms {
 
     auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
       return (ListOpt.getNumOccurrences() > 0 &&
-              any_of(ListOpt, [PassName](StringRef Entry) {
-                return Regex(Entry).match(PassName);
+              any_of(ListOpt, [&](StringRef Entry) {
+                return Regex(Entry).match(NumberedPassName);
               }));
     };
 
@@ -304,6 +318,11 @@ struct VPlanTransforms {
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
                              const MapVector<Instruction *, uint64_t> &MinBWs);
+
+  /// Check \p Plan's live-ins and replace them with constants, if they can be
+  /// simplified via SCEV.
+  static void simplifyLiveInsWithSCEV(VPlan &Plan,
+                                      PredicatedScalarEvolution &PSE);
 
   /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
   /// possible.
@@ -564,10 +583,11 @@ struct VPlanTransforms {
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
   /// spills for \p VF at unroll factor \p UF.
-  static void replaceWideCanonicalIVWithWideIV(
-      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
-      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
-      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+  static void
+  replaceWideCanonicalIVWithWideIV(VPlan &Plan, ScalarEvolution &SE,
+                                   const TargetTransformInfo &TTI,
+                                   TargetTransformInfo::TargetCostKind CostKind,
+                                   ElementCount VF, unsigned UF);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

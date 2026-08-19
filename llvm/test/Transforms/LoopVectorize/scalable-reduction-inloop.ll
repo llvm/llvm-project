@@ -12,13 +12,13 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP30]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP30]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 256, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 256, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i32 0), [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ insertelement (<vscale x 8 x i32> zeroinitializer, i32 255, i64 0), [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP36:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = and <vscale x 8 x i32> [[VEC_PHI]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <vscale x 8 x i32> [[VEC_PHI1]], splat (i32 255)

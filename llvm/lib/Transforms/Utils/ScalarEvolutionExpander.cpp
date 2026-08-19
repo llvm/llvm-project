@@ -1762,13 +1762,14 @@ void SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(
   // See if we can re-infer from first principles any of the flags we just
   // dropped.
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
-    if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
-      auto *BO = cast<BinaryOperator>(I);
-      BO->setHasNoUnsignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
-      BO->setHasNoSignedWrap(
-          ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
-    }
+    if (SE.isSCEVable(OBO->getType()))
+      if (auto Flags = SE.getStrengthenedNoWrapFlagsFromBinOp(OBO)) {
+        auto *BO = cast<BinaryOperator>(I);
+        BO->setHasNoUnsignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) == SCEV::FlagNUW);
+        BO->setHasNoSignedWrap(
+            ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) == SCEV::FlagNSW);
+      }
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
     auto *Src = NNI->getOperand(0);
     if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,

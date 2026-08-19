@@ -462,7 +462,7 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -473,7 +473,7 @@ void X86PassConfig::addPreRegBankSelect() {
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

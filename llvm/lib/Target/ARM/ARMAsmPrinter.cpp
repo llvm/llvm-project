@@ -698,8 +698,9 @@ void ARMAsmPrinter::emitAttributes() {
   }
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
+  FloatABI::ABIType FloatABI = ATM.getFloatABI(*MMI->getModule());
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian(), ATM.Options.FloatABIType);
+                         ATM.isLittleEndian(), FloatABI);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);

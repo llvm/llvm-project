@@ -214,7 +214,7 @@ define void @gather_nxv4i32_ind64_stride2(ptr noalias nocapture %a, ptr noalias 
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = urem i64 [[N]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[N_VEC]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i64 [[TMP7]], i64 [[N_VEC]]
@@ -269,6 +269,6 @@ attributes #0 = { vscale_range(1, 16) }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
 !5 = !{!"llvm.loop.vectorize.enable"}

@@ -2811,13 +2811,15 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  InstructionListType
+  reverseBranchCondition(MCInst Inst, const MCSymbol *TBB, MCContext *Ctx,
+                         bool MustPreserveFlags = true) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
+    return {Inst};
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
