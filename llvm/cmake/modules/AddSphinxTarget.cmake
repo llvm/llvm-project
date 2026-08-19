@@ -4,6 +4,23 @@ include(GNUInstallDirs)
 if (LLVM_ENABLE_SPHINX)
   message(STATUS "Sphinx enabled.")
   find_package(Sphinx REQUIRED)
+
+  # Sphinx has internal parallelism, so give it a custom job pool. Sphinx tends
+  # not to use all available CPU, so this is not enabled by default.
+  set(LLVM_PARALLEL_SPHINX_JOBS "" CACHE STRING
+    "Define the maximum number of concurrent sphinx-build invocations (Ninja only).")
+  if (LLVM_PARALLEL_SPHINX_JOBS)
+    if (CMAKE_GENERATOR MATCHES "Ninja")
+      get_property(_sphinx_job_pools GLOBAL PROPERTY JOB_POOLS)
+      if (NOT "sphinx_job_pool=${LLVM_PARALLEL_SPHINX_JOBS}" IN_LIST _sphinx_job_pools)
+        set_property(GLOBAL APPEND PROPERTY JOB_POOLS sphinx_job_pool=${LLVM_PARALLEL_SPHINX_JOBS})
+      endif()
+      set(sphinx_job_pool JOB_POOL sphinx_job_pool)
+    else()
+      message(WARNING "Job pooling is only available with Ninja generators.")
+    endif()
+  endif()
+
   if (LLVM_BUILD_DOCS AND NOT TARGET sphinx)
     add_custom_target(sphinx ALL)
     set_target_properties(sphinx PROPERTIES FOLDER "LLVM/Docs")
@@ -136,16 +153,20 @@ function (add_sphinx_target builder project)
     set(ARG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
 
-  if (NOT DEFINED LLVM_PARALLEL_SPHINX_JOBS)
+  # Give Sphinx some internal job parallelism, since it tends to be on the
+  # critical path at the end of the build. This can speed up doc builds by
+  # ~80%. Sphinx rarely consumes all cores available, so it's safe to
+  # overallocate a bit.
+  if (NOT DEFINED LLVM_SPHINX_BUILD_JOBS)
     cmake_host_system_information(RESULT number_of_logical_cores
                                   QUERY NUMBER_OF_LOGICAL_CORES)
-    math(EXPR LLVM_PARALLEL_SPHINX_JOBS
+    math(EXPR LLVM_SPHINX_BUILD_JOBS
          "(${number_of_logical_cores} + 1) / 2")
-    set(LLVM_PARALLEL_SPHINX_JOBS "${LLVM_PARALLEL_SPHINX_JOBS}"
-        CACHE STRING "Define the number of parallel Sphinx jobs.")
   endif()
-  if (LLVM_PARALLEL_SPHINX_JOBS)
-    set(sphinx_jobs_flag -j ${LLVM_PARALLEL_SPHINX_JOBS})
+  set(LLVM_SPHINX_BUILD_JOBS "${LLVM_SPHINX_BUILD_JOBS}"
+      CACHE STRING "Define the number of parallel jobs for each Sphinx build.")
+  if (LLVM_SPHINX_BUILD_JOBS)
+    set(sphinx_jobs_flag -j ${LLVM_SPHINX_BUILD_JOBS})
   endif()
 
   if ("${LLVM_VERSION_SUFFIX}" STREQUAL "git")
@@ -167,6 +188,7 @@ function (add_sphinx_target builder project)
                             ${SPHINX_WARNINGS_AS_ERRORS_FLAG} # Treat warnings as errors if requested
                             "${ARG_SOURCE_DIR}" # Source
                             "${SPHINX_BUILD_DIR}" # Output
+                    ${sphinx_job_pool}
                     COMMENT
                     "Generating ${builder} Sphinx documentation for ${project} into \"${SPHINX_BUILD_DIR}\"")
   get_subproject_title(subproject_title)
