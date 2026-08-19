@@ -948,8 +948,8 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
   return (ompt_interface_fn_t)0;
 }
 
-/// This function is called by the libomptarget connector to assign
-/// callbacks already registered with libomp.
+/// This function is called by libomptarget to assign callbacks already
+/// registered with libomp.
 _OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
   OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Enter ompt_libomp_connect\n");
 

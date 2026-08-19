@@ -317,10 +317,10 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i64, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> poison, i64 [[TMP14]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i32 2
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP17]], i32 3
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> poison, i64 [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP17]], i64 3
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq <4 x i64> [[TMP21]], splat (i64 42)
 ; CHECK-NEXT:    [[TMP23:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 100)
 ; CHECK-NEXT:    [[TMP24]] = select <4 x i1> [[TMP22]], <4 x i64> [[TMP23]], <4 x i64> [[VEC_PHI]]
@@ -701,8 +701,8 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

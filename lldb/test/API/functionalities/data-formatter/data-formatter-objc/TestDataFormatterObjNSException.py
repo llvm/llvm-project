@@ -19,7 +19,7 @@ class ObjCDataFormatterNSException(ObjCDataFormatterTestCase):
         """Test formatters for NSException."""
         self.appkit_tester_impl(self.nsexception_data_formatter_commands, True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_nsexception_with_run_command_no_const(self):
         """Test formatters for NSException."""
         self.appkit_tester_impl(self.nsexception_data_formatter_commands, False)

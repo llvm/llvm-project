@@ -41,7 +41,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -66,6 +65,10 @@ class MapInfoFinalizationPass
     mlir::omp::MapInfoOp parent;
     size_t index;
   };
+
+  using MapperPath =
+      std::pair<mlir::Operation *, llvm::SmallVector<int64_t, 4>>;
+  using MapperPathStack = llvm::SmallVector<MapperPath, 8>;
 
   /// Tracks any intermediate function/subroutine local allocations we
   /// generate for the descriptors of box type dummy arguments, so that
@@ -138,6 +141,92 @@ class MapInfoFinalizationPass
     return findMemberByIndexPath(op, indexPath) != nullptr;
   }
 
+  static bool mapperCoversIndexPath(mlir::Operation *symbolTableAnchor,
+                                    mlir::FlatSymbolRefAttr mapperId,
+                                    llvm::ArrayRef<int64_t> indexPath,
+                                    MapperPathStack &activeMapperPaths) {
+    mlir::omp::DeclareMapperOp symbol =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::omp::DeclareMapperOp>(
+            symbolTableAnchor, mapperId);
+    if (!symbol)
+      return false;
+
+    mlir::Operation *symbolOp = symbol.getOperation();
+    if (llvm::any_of(activeMapperPaths, [&](const MapperPath &entry) {
+          return entry.first == symbolOp &&
+                 entry.second.size() == indexPath.size() &&
+                 std::equal(entry.second.begin(), entry.second.end(),
+                            indexPath.begin());
+        }))
+      return false;
+    activeMapperPaths.emplace_back(
+        symbolOp,
+        llvm::SmallVector<int64_t, 4>(indexPath.begin(), indexPath.end()));
+
+    mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
+    if (!mapperInfo) {
+      activeMapperPaths.pop_back();
+      return false;
+    }
+
+    bool covers = llvm::any_of(mapperInfo.getMapVars(), [&](mlir::Value v) {
+      mlir::omp::MapInfoOp map =
+          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(v.getDefiningOp());
+      return map && !map.getMembers().empty() && map.getMembersIndexAttr() &&
+             mapInfoCoversIndexPath(map, indexPath, activeMapperPaths);
+    });
+    activeMapperPaths.pop_back();
+    return covers;
+  }
+
+  static bool mapInfoCoversIndexPath(mlir::omp::MapInfoOp map,
+                                     llvm::ArrayRef<int64_t> indexPath,
+                                     MapperPathStack &activeMapperPaths) {
+    if (mappedIndexPathExists(map, indexPath))
+      return true;
+
+    mlir::ArrayAttr memberIndices = map.getMembersIndexAttr();
+    if (!memberIndices)
+      return false;
+
+    // Match a mapped member whose index path is a prefix of the requested
+    // path, then continue the lookup through that member with the suffix.
+    for (auto [memberIdx, memberIndexAttr] : llvm::enumerate(memberIndices)) {
+      auto memberIndexPath = mlir::cast<mlir::ArrayAttr>(memberIndexAttr);
+      if (memberIndexPath.size() >= indexPath.size())
+        continue;
+
+      bool isPrefix = true;
+      for (auto [idx, attr] : llvm::enumerate(memberIndexPath)) {
+        if (mlir::cast<mlir::IntegerAttr>(attr).getInt() != indexPath[idx]) {
+          isPrefix = false;
+          break;
+        }
+      }
+      if (!isPrefix)
+        continue;
+
+      mlir::omp::MapInfoOp memberMap =
+          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+              map.getMembers()[memberIdx].getDefiningOp());
+      if (!memberMap)
+        continue;
+
+      llvm::ArrayRef<int64_t> nestedIndexPath =
+          indexPath.drop_front(memberIndexPath.size());
+      if (!memberMap.getMembers().empty() &&
+          mapInfoCoversIndexPath(memberMap, nestedIndexPath, activeMapperPaths))
+        return true;
+
+      if (memberMap.getMapperIdAttr() &&
+          mapperCoversIndexPath(memberMap, memberMap.getMapperIdAttr(),
+                                nestedIndexPath, activeMapperPaths))
+        return true;
+    }
+
+    return false;
+  }
+
   /// Get the map type of the nearest explicitly mapped parent for a member.
   /// "Explicitly mapped" means the map type does NOT have the implicit flag.
   ///
@@ -205,20 +294,10 @@ class MapInfoFinalizationPass
       return;
 
     if (op.getMapperId()) {
-      mlir::omp::DeclareMapperOp symbol =
-          mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::omp::DeclareMapperOp>(op, op.getMapperIdAttr());
-      assert(symbol && "missing symbol for declare mapper identifier");
-      mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
-      // TODO: Probably a way to cache these keys in someway so we don't
-      // constantly go through the process of rebuilding them on every check, to
-      // save some cycles, but it can wait for a subsequent patch.
-      for (auto v : mapperInfo.getMapVars()) {
-        mlir::omp::MapInfoOp map =
-            mlir::cast<mlir::omp::MapInfoOp>(v.getDefiningOp());
-        if (!map.getMembers().empty() && mappedIndexPathExists(map, indexPath))
-          return;
-      }
+      MapperPathStack activeMapperPaths;
+      if (mapperCoversIndexPath(op, op.getMapperIdAttr(), indexPath,
+                                activeMapperPaths))
+        return;
     }
 
     builder.setInsertionPoint(op);
@@ -776,11 +855,6 @@ class MapInfoFinalizationPass
                  ? MapFlags::close
                  : MapFlags::always;
 
-    // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
-    // to ensure device-local placement where required by tests relying on USM +
-    // close semantics.
-    if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
-      flags |= MapFlags::close;
     return flags;
   }
 
