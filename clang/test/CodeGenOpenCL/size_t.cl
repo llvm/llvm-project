@@ -117,16 +117,17 @@ ptrdiff_t test_sub_private(private char* x, private char *y) {
 }
 
 //SZ32: define{{.*}} i32 @test_sub_mix(ptr noundef %x, ptr addrspace(4) noundef %y)
-//SZ32: ptrtoaddr ptr %{{.*}} to i32
+//SZ32: addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
 //SZ32: ptrtoaddr ptr addrspace(4) %{{.*}} to i32
 //SZ64ONLY: define{{.*}} i64 @test_sub_mix(ptr noundef %x, ptr addrspace(4) noundef %y)
-//SZ64ONLY: ptrtoaddr ptr %{{.*}} to i64
+//SZ64ONLY: addrspacecast ptr %{{.*}} to ptr addrspace(4)
+//SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
 //SZ64ONLY: ptrtoaddr ptr addrspace(4) %{{.*}} to i64
 //AMDGCN: define{{.*}} i64 @test_sub_mix(ptr addrspace(5) noundef %x, ptr noundef %y)
-//AMDGCN: ptrtoaddr ptr addrspace(5) %{{.*}} to i32
+//AMDGCN: addrspacecast ptr addrspace(5) %{{.*}} to ptr
 //AMDGCN: ptrtoaddr ptr %{{.*}} to i64
-//AMDGCN: zext i32 %{{.*}} to i64
+//AMDGCN: ptrtoaddr ptr %{{.*}} to i64
 ptrdiff_t test_sub_mix(private char* x, generic char *y) {
   return x - y;
 }
-
