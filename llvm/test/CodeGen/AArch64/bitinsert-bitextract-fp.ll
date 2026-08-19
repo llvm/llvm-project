@@ -85,11 +85,10 @@ define float @test_bitextract_float_b87_var(b87 %src, i32 %off) {
 define float @test_bitextract_float_b87_crossword(b87 %src) {
 ; AARCH64-LABEL: test_bitextract_float_b87_crossword:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #60
-; AARCH64-NEXT:    bfi w8, w1, #4, #23
+; AARCH64-NEXT:    extr x8, x1, x0, #55
 ; AARCH64-NEXT:    fmov s0, w8
 ; AARCH64-NEXT:    ret
-  %result = bitextract float, b87 %src, i32 60
+  %result = bitextract float, b87 %src, i32 55
   ret float %result
 }
 
