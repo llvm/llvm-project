@@ -1770,6 +1770,14 @@ static bool GenericValarraySummaryProvider(ValueObject &valobj, Stream &stream,
   return ContainerSizeSummaryProvider(valobj, stream, options);
 }
 
+static bool
+GenericSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options) {
+  if (IsMsvcStlSourceLocation(valobj))
+    return MsvcStlSourceLocationSummaryProvider(valobj, stream, options);
+  return LibStdcppSourceLocationSummaryProvider(valobj, stream, options);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -2048,6 +2056,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericValarraySummaryProvider,
                 "MSVC STL std::valarray summary provider",
                 "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
+                "MSVC STL/libstdc++ std::source_location summary provider",
+                "std::source_location", stl_summary_flags);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

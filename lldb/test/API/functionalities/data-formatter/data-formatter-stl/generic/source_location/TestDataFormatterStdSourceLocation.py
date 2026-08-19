@@ -51,3 +51,23 @@ class StdSourceLocationTestCase(TestBase):
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
+        )
+
+        frame = self.frame()
+        loc_main = frame.FindVariable("loc_main")
+        self.assertTrue(loc_main.GetError().Success())
+        self.assertRegex(loc_main.summary, r"main\.cpp\":6:\d+.*main")
+
+        loc_foo = frame.FindVariable("loc_foo")
+        self.assertTrue(loc_foo.GetError().Success())
+        self.assertRegex(loc_foo.summary, r"main\.cpp\":3:\d+.*foo")
+
+        loc_empty = frame.FindVariable("loc_empty")
+        self.assertTrue(loc_empty.GetError().Success())
+        self.assertTrue(not loc_empty.summary)

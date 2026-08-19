@@ -165,6 +165,11 @@ SyntheticChildrenFrontEnd *
 MsvcStlValarraySyntheticFrontEndCreator(CXXSyntheticChildren *,
                                         lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::source_location
+bool IsMsvcStlSourceLocation(ValueObject &valobj);
+bool MsvcStlSourceLocationSummaryProvider(ValueObject &valobj, Stream &stream,
+                                          const TypeSummaryOptions &options);
+
 } // namespace formatters
 } // namespace lldb_private
 
