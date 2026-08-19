@@ -475,7 +475,6 @@ public:
 
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerSTRICT_BF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerROTR(SDValue Op, SelectionDAG &DAG) const;
