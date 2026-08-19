@@ -499,6 +499,24 @@ protected:
                                      CodeGen::CodeGenModule &CGM) const;
 };
 
+/// Attach `!atomic.ignore.denormal.mode` to \p AtomicInst, if it is an
+/// `atomicrmw` the metadata is meaningful for, i.e. an `fadd` on a type whose
+/// native atomic has a fixed denormal behavior that may disagree with the
+/// function's denormal mode.
+///
+/// `float` always qualifies. `half` only does when \p AllowHalf is set, since
+/// whether f16 denormals are observable is target specific: NVPTX exposes no
+/// FTZ control for f16 operations, so atom.add.f16 never flushes and the
+/// per-instruction opt-in is meaningful, whereas the AMDGPU backend only
+/// consults the metadata for f32.
+///
+/// This is shared by the targets whose backends honor the metadata; it does
+/// not itself check whether the user asked for it (see
+/// AtomicOptionKind::IgnoreDenormalMode).
+void addAtomicIgnoreDenormalModeMetadata(CodeGenFunction &CGF,
+                                         llvm::Instruction &AtomicInst,
+                                         bool AllowHalf = false);
+
 std::unique_ptr<TargetCodeGenInfo>
 createDefaultTargetCodeGenInfo(CodeGenModule &CGM);
 

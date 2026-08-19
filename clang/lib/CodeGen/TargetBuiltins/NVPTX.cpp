@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGBuiltin.h"
+#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/TargetParser/AtomicScope.h"
@@ -362,8 +363,15 @@ static Value *MakeScopedAtomicRMW(CodeGenFunction &CGF, const CallExpr *E,
   Value *Val = CGF.EmitScalarExpr(E->getArg(1));
   llvm::SyncScope::ID SSID = CGF.getLLVMContext().getOrInsertSyncScopeID(
       *llvm::getAtomicScopeIRString(CGF.getTarget().getTriple(), Scope));
-  return CGF.Builder.CreateAtomicRMW(Kind, Ptr, Val,
-                                     llvm::AtomicOrdering::Monotonic, SSID);
+  llvm::AtomicRMWInst *RMW = CGF.Builder.CreateAtomicRMW(
+      Kind, Ptr, Val, llvm::AtomicOrdering::Monotonic, SSID);
+
+  // CUDA's atomicAdd_block()/atomicAdd_system() reach this through the scoped
+  // add builtins, and are defined in terms of the native atom.add just as the
+  // unscoped atomicAdd() is. The helper ignores everything that is not a
+  // floating-point add, so the other scoped operations are unaffected.
+  addAtomicIgnoreDenormalModeMetadata(CGF, *RMW, /*AllowHalf=*/true);
+  return RMW;
 }
 
 // `Scope` is AtomicScope::Workgroup for _cta builtins and AtomicScope::System
@@ -507,8 +515,15 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     Address DestAddr = EmitPointerWithAlignment(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
 
-    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
-                                   AtomicOrdering::Monotonic);
+    llvm::AtomicRMWInst *RMW = Builder.CreateAtomicRMW(
+        llvm::AtomicRMWInst::FAdd, DestAddr, Val, AtomicOrdering::Monotonic);
+
+    // CUDA's atomicAdd() is defined in terms of the native atom.add
+    // instruction, whose denormal behavior is fixed by the hardware and need
+    // not agree with the function's denormal mode. Without this the atomic is
+    // expanded into a CAS loop whenever the two disagree.
+    addAtomicIgnoreDenormalModeMetadata(*this, *RMW, /*AllowHalf=*/true);
+    return RMW;
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:

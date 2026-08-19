@@ -387,7 +387,10 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: atomicrmw fadd ptr {{.*}} monotonic, align 4
+  // CUDA's atomicAdd() lowers to this builtin. The native atom.add has a fixed
+  // denormal behavior, so the atomic is marked to keep it from being expanded
+  // into a CAS loop when the function's denormal mode disagrees.
+  // CHECK: atomicrmw fadd ptr {{.*}} monotonic, align 4, !atomic.ignore.denormal.mode
   __nvvm_atom_add_gen_f(fp, f);
 
   // CHECK: atomicrmw uinc_wrap ptr {{.*}} monotonic, align 4
