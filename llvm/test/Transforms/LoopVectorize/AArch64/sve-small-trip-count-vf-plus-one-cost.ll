@@ -124,10 +124,10 @@ exit:
 ; ensure TC == (VF * IC) + 1.
 define void @tc5_sin_f32_dont_select_smaller_vf(ptr noalias %a,
                                              ptr noalias %c) #0 {
-; IR-LABEL: define void @tc5_sin_f32_select_smaller_vf(
+; IR-LABEL: define void @tc5_sin_f32_dont_select_smaller_vf(
 ; IR: vector.body
 
-; DBG-LABEL: LV: Checking a loop in 'tc5_sin_f32_select_smaller_vf' 
+; DBG-LABEL: LV: Checking a loop in 'tc5_sin_f32_dont_select_smaller_vf' 
 ; DBG: Picking MaxVF=4 with 1 scalar iteration remaining.
 ; DBG: Accepting VF 4 for one-scalar-tail low trip count: vector cost 72 < scalar cost 80.
 ; DBG-NOT: Selecting VF: 2.
