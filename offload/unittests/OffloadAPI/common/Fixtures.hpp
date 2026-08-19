@@ -193,6 +193,14 @@ struct OffloadDeviceTestWithParam
     Device = DeviceParam.Handle;
     if (Device == nullptr)
       GTEST_SKIP() << "No available devices.";
+
+    ASSERT_SUCCESS(olCreateContext(1, &Device, &Context));
+  }
+
+  void TearDown() override {
+    if (Context)
+      olDestroyContext(Context);
+    RETURN_ON_FATAL_FAILURE(OffloadTest::TearDown());
   }
 
   ol_platform_backend_t getPlatformBackend() const {
@@ -212,6 +220,7 @@ struct OffloadDeviceTestWithParam
   const T &getTestParam() { return std::get<1>(getParamTuple()); }
 
   ol_device_handle_t Device = nullptr;
+  ol_context_handle_t Context = nullptr;
 };
 
 // In order to avoid code duplication, the unparameterized versions of fixtures
@@ -303,7 +312,7 @@ using OffloadGlobalTest = OffloadGlobalTestWithParam<int>;
 struct OffloadQueueTest : OffloadDeviceTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+    ASSERT_SUCCESS(olCreateQueue(Context, Device, &Queue));
   }
 
   void TearDown() override {

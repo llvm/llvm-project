@@ -49,6 +49,7 @@ class LoopOp;
 } // namespace mlir
 
 namespace clang {
+class OutlinedFunctionDecl;
 class SYCLKernelCallStmt;
 } // namespace clang
 
@@ -1895,8 +1896,7 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CoroEndOp emitCoroEndBuiltinCall(mlir::Location loc,
-                                        mlir::Value nullPtr);
+  cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
@@ -2315,6 +2315,13 @@ public:
 
   mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
 
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
+
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
                         ReturnValueSlot &returnValue);
@@ -2583,7 +2590,10 @@ public:
   mlir::LogicalResult emitOMPFlushDirective(const OMPFlushDirective &s);
   mlir::LogicalResult emitOMPDepobjDirective(const OMPDepobjDirective &s);
   mlir::LogicalResult emitOMPScanDirective(const OMPScanDirective &s);
-  mlir::LogicalResult emitOMPOrderedDirective(const OMPOrderedDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedStandaloneDirective(const OMPOrderedStandaloneDirective &s);
+  mlir::LogicalResult
+  emitOMPOrderedBlockAssocDirective(const OMPOrderedBlockAssocDirective &s);
   mlir::LogicalResult emitOMPAtomicDirective(const OMPAtomicDirective &s);
   mlir::LogicalResult emitOMPTargetDirective(const OMPTargetDirective &s);
   mlir::LogicalResult emitOMPTeamsDirective(const OMPTeamsDirective &s);

@@ -20,7 +20,7 @@ void test_temporary_dtor() {
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
-// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, i64 1, align 1
+// LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, align 1
 // LLVM:   call void @_ZN1AD1Ev(ptr {{.*}} %[[ALLOCA]])
 
 // OGCG: define dso_local void @_Z19test_temporary_dtorv()
@@ -255,19 +255,6 @@ struct D {
   ~D() {}
 };
 
-// CIR: cir.func {{.*}} @_ZN1DD2Ev
-// CIR:   %[[BASE:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
-// CIR:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:   %[[PTR:.*]] = cir.ptr_stride %[[BASE]], %[[OFFSET]] : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
-// CIR:   %[[C:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
-// CIR:   cir.call @_ZN1CD1Ev(%[[C]])
-
-// LLVM: define {{.*}} void @_ZN1DD2Ev
-// LLVM:   %[[C:.*]] = getelementptr i8, ptr %{{.*}}, i64 4
-// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])
-
-// This destructor is defined after the calling function in OGCG.
-
 void test_nested_dtor() {
   D d;
 }
@@ -280,6 +267,17 @@ void test_nested_dtor() {
 
 // OGCG: define {{.*}} void @_Z16test_nested_dtorv()
 // OGCG:   call void @_ZN1DD2Ev(ptr {{.*}} %{{.*}})
+
+// CIR: cir.func {{.*}} @_ZN1DD2Ev
+// CIR:   %[[BASE:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_D> -> !cir.ptr<!u8i>
+// CIR:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[PTR:.*]] = cir.ptr_stride %[[BASE]], %[[OFFSET]] : (!cir.ptr<!u8i>, !u64i) -> !cir.ptr<!u8i>
+// CIR:   %[[C:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_C>
+// CIR:   cir.call @_ZN1CD1Ev(%[[C]])
+
+// LLVM: define {{.*}} void @_ZN1DD2Ev
+// LLVM:   %[[C:.*]] = getelementptr i8, ptr %{{.*}}, i64 4
+// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[C]])
 
 // OGCG: define {{.*}} void @_ZN1DD2Ev
 // OGCG:   %[[C:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i64 4
@@ -294,17 +292,6 @@ struct F : public E {
   ~F() {}
 };
 
-// CIR: cir.func {{.*}} @_ZN1FD2Ev
-// CIR:   %[[BASE_E:.*]] = cir.base_class_addr %{{.*}} : !cir.ptr<!rec_F> nonnull [0] -> !cir.ptr<!rec_E>
-// CIR:   cir.call @_ZN1ED2Ev(%[[BASE_E]]) nothrow : (!cir.ptr<!rec_E> {{.*}}) -> ()
-
-// Because E is at offset 0 in F, there is no getelementptr needed.
-
-// LLVM: define {{.*}} void @_ZN1FD2Ev
-// LLVM:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
-
-// This destructor is defined after the calling function in OGCG.
-
 void test_base_dtor_call() {
   F f;
 }
@@ -317,6 +304,15 @@ void test_base_dtor_call() {
 
 // OGCG: define {{.*}} void @_Z19test_base_dtor_callv()
 // OGCG:   call void @_ZN1FD2Ev(ptr {{.*}} %{{.*}})
+
+// CIR: cir.func {{.*}} @_ZN1FD2Ev
+// CIR:   %[[BASE_E:.*]] = cir.base_class_addr %{{.*}} : !cir.ptr<!rec_F> nonnull [0] -> !cir.ptr<!rec_E>
+// CIR:   cir.call @_ZN1ED2Ev(%[[BASE_E]]) nothrow : (!cir.ptr<!rec_E> {{.*}}) -> ()
+
+// Because E is at offset 0 in F, there is no getelementptr needed.
+
+// LLVM: define {{.*}} void @_ZN1FD2Ev
+// LLVM:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
 
 // OGCG: define {{.*}} void @_ZN1FD2Ev
 // OGCG:   call void @_ZN1ED2Ev(ptr {{.*}} %{{.*}})
@@ -458,16 +454,6 @@ void test_base_dtor_call_virtual_base() {
   Derived d;
 }
 
-// Derived D2 (base) destructor -- does not call VirtualBase destructor
-
-// CIR:     cir.func {{.*}} @_ZN7DerivedD2Ev
-// CIR-NOT:   cir.call{{.*}} @_ZN11VirtualBaseD2Ev
-// CIR:       cir.return
-
-// LLVM:     define {{.*}} void @_ZN7DerivedD2Ev
-// LLVM-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev
-// LLVM:       ret
-
 // Derived D1 (complete) destructor -- does call VirtualBase destructor
 
 // CIR: cir.func {{.*}} @_ZN7DerivedD1Ev
@@ -481,11 +467,19 @@ void test_base_dtor_call_virtual_base() {
 // LLVM:   call void @_ZN7DerivedD2Ev(ptr {{.*}} %{{.*}}, ptr {{.*}} @_ZTT7Derived)
 // LLVM:   call void @_ZN11VirtualBaseD2Ev(ptr {{.*}} %{{.*}})
 
-// OGCG emits these destructors in reverse order
-
 // OGCG: define {{.*}} void @_ZN7DerivedD1Ev
 // OGCG:   call void @_ZN7DerivedD2Ev(ptr {{.*}} %{{.*}}, ptr {{.*}} @_ZTT7Derived)
 // OGCG:   call void @_ZN11VirtualBaseD2Ev(ptr {{.*}} %{{.*}})
+
+// Derived D2 (base) destructor -- does not call VirtualBase destructor
+
+// CIR:     cir.func {{.*}} @_ZN7DerivedD2Ev
+// CIR-NOT:   cir.call{{.*}} @_ZN11VirtualBaseD2Ev
+// CIR:       cir.return
+
+// LLVM:     define {{.*}} void @_ZN7DerivedD2Ev
+// LLVM-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev
+// LLVM:       ret
 
 // OGCG:     define {{.*}} void @_ZN7DerivedD2Ev
 // OGCG-NOT:   call{{.*}} @_ZN11VirtualBaseD2Ev

@@ -263,9 +263,7 @@ bool lldb_rpc_gen::TypeIsConstCharPtr(QualType T) {
   // platforms, but Linux platforms expect that the underlying type is an
   // unsigned integer.
   return UnderlyingType->isSpecificBuiltinType(BuiltinType::Char_S) ||
-         UnderlyingType->isSpecificBuiltinType(BuiltinType::SChar) ||
-         UnderlyingType->isSpecificBuiltinType(BuiltinType::Char_U) ||
-         UnderlyingType->isSpecificBuiltinType(BuiltinType::UChar);
+         UnderlyingType->isSpecificBuiltinType(BuiltinType::Char_U);
 }
 
 bool lldb_rpc_gen::TypeIsConstCharPtrPtr(QualType T) {

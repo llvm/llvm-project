@@ -50,8 +50,7 @@ TEST(LlvmLibcOSUtilSysinfoTest, OnlineCpuCountSmokeTest) {
 }
 
 TEST(LlvmLibcOSUtilSysinfoTest, SyntheticCpuLists) {
-  constexpr char FILENAME[] =
-      APPEND_LIBC_TEST("sysinfo.synthetic_cpu_list.test");
+  constexpr char FILENAME[] = "sysinfo.synthetic_cpu_list.test";
   CString test_file = libc_make_test_file_path(FILENAME);
 
   struct TestCase {

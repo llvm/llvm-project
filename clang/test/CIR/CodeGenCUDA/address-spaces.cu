@@ -167,7 +167,7 @@ __global__ void fn() {
 // CIR-DEVICE:   cir.return
 
 // LLVM-DEVICE: define dso_local ptx_kernel void @_Z2fnv()
-// LLVM-DEVICE:   %[[ALLOCA:.*]] = alloca i32, i64 1, align 4
+// LLVM-DEVICE:   %[[ALLOCA:.*]] = alloca i32, align 4
 // LLVM-DEVICE:   store i32 0, ptr %[[ALLOCA]], align 4
 // LLVM-DEVICE:   %[[VAL:.*]] = load i32, ptr %[[ALLOCA]], align 4
 // LLVM-DEVICE:   store i32 %[[VAL]], ptr @_ZZ2fnvE1j, align 4

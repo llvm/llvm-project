@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -495,7 +496,7 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
   auto PrintBBRef = [&](const BasicBlock *bb) {
     os << "%ir-block.";
     if (bb->hasName()) {
-      os << bb->getName();
+      printLLVMNameWithoutPrefix(os, bb->getName());
     } else {
       int slot = -1;
 
@@ -517,7 +518,9 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
   if (printNameFlags & PrintNameIr) {
     if (const auto *bb = getBasicBlock()) {
       if (bb->hasName()) {
-        os << '.' << bb->getName();
+        // Quote if not a plain identifier, or the MIR cannot be parsed back.
+        os << '.';
+        printLLVMNameWithoutPrefix(os, bb->getName());
       } else {
         hasAttributes = true;
         os << " (";
@@ -1088,7 +1091,7 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
     addLiveIns(*SplitBB, LiveRegs);
 
   if (LIS)
-    LIS->insertMBBInMaps(SplitBB);
+    LIS->splitAt(*this, *SplitBB);
 
   return SplitBB;
 }
@@ -1827,8 +1830,10 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
   MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
-    ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);
-    ExceptionSelector = TLI.getExceptionSelectorRegister(PersonalityFn);
+    ExceptionPointer = TLI.getExceptionPointerRegister(
+        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
+    ExceptionSelector = TLI.getExceptionSelectorRegister(
+        TLI.getTargetMachine().getExceptionModel(), PersonalityFn);
   }
 
   return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);

@@ -11,7 +11,8 @@
 #include "src/__support/macros/config.h"
 #include <stddef.h>
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/sys/auxv/getauxval.h"
 #endif
 
@@ -113,7 +114,8 @@ void __cxa_pure_virtual() {
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
 
-#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                    \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
