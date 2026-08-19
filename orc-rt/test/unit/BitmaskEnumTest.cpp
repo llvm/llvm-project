@@ -13,7 +13,6 @@
 #include "orc-rt/BitmaskEnum.h"
 #include "gtest/gtest.h"
 
-#include <sstream>
 #include <string>
 
 using namespace orc_rt;

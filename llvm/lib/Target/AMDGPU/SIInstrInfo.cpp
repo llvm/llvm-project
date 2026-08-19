@@ -132,32 +132,42 @@ static bool canRemat(const MachineInstr &MI) {
 static std::tuple<unsigned, unsigned, unsigned>
 splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
                              const MachineOperand &SrcOp) {
-  unsigned SrcFlags = SrcOp.getTargetFlags();
+  const unsigned BaseFlags = SrcOp.getTargetFlags() & ~SIInstrInfo::MO_MASK;
+  const unsigned Reloc = SrcOp.getTargetFlags() & SIInstrInfo::MO_MASK;
 
   // Infer the relocation type from the existing flags on the global operand.
   // The relocation type should have been determined earlier in the pipeline.
-  unsigned LoReloc = SIInstrInfo::MO_ABS32_LO;
-  unsigned HiReloc = SIInstrInfo::MO_ABS32_HI;
-
-  if (SrcFlags & SIInstrInfo::MO_REL32) {
+  unsigned LoReloc, HiReloc;
+  switch (Reloc) {
+  case SIInstrInfo::MO_REL32_LO:
+  case SIInstrInfo::MO_REL32_HI:
+  case SIInstrInfo::MO_REL64:
     LoReloc = SIInstrInfo::MO_REL32_LO;
     HiReloc = SIInstrInfo::MO_REL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL32_LO) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL32_LO:
+  case SIInstrInfo::MO_GOTPCREL32_HI:
     LoReloc = SIInstrInfo::MO_GOTPCREL32_LO;
     HiReloc = SIInstrInfo::MO_GOTPCREL32_HI;
-  } else if (SrcFlags & SIInstrInfo::MO_GOTPCREL64) {
+    break;
+  case SIInstrInfo::MO_GOTPCREL:
+  case SIInstrInfo::MO_GOTPCREL64:
     // For 64-bit GOT-relative, use the 64-bit relocation.
     LoReloc = SIInstrInfo::MO_GOTPCREL64;
     HiReloc = SIInstrInfo::MO_GOTPCREL64;
+    break;
+  case SIInstrInfo::MO_ABS32_LO:
+  case SIInstrInfo::MO_ABS32_HI:
+  case SIInstrInfo::MO_ABS64:
+    LoReloc = SIInstrInfo::MO_ABS32_LO;
+    HiReloc = SIInstrInfo::MO_ABS32_HI;
+    break;
+  default:
+    llvm_unreachable("unknown relocation type for global address");
+    break;
   }
 
-  unsigned BaseFlags =
-      SrcFlags & ~(SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI |
-                   SIInstrInfo::MO_REL32_LO | SIInstrInfo::MO_REL32_HI |
-                   SIInstrInfo::MO_GOTPCREL32_LO |
-                   SIInstrInfo::MO_GOTPCREL32_HI | SIInstrInfo::MO_GOTPCREL64);
-
-  return std::make_tuple(BaseFlags, LoReloc, HiReloc);
+  return {BaseFlags, LoReloc, HiReloc};
 }
 
 bool SIInstrInfo::isReMaterializableImpl(

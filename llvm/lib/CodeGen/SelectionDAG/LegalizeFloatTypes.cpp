@@ -2979,6 +2979,9 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
                        "operand!");
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
+  case ISD::BUILD_VECTOR:
+    Res = SoftPromoteHalfOp_BUILD_VECTOR(N);
+    break;
   case ISD::FAKE_USE:
     Res = SoftPromoteHalfOp_FAKE_USE(N, OpNo);
     break;
@@ -3040,6 +3043,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BITCAST(SDNode *N) {
   SDValue Op0 = GetSoftPromotedHalf(N->getOperand(0));
 
   return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfOp_BUILD_VECTOR(SDNode *N) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+
+  SmallVector<SDValue, 8> Ops(N->getNumOperands());
+  for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I)
+    Ops[I] = GetSoftPromotedHalf(N->getOperand(I));
+
+  EVT IVT = VT.changeVectorElementTypeToInteger();
+  SDValue Res = DAG.getBuildVector(IVT, dl, Ops);
+  return DAG.getBitcast(VT, Res);
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_FAKE_USE(SDNode *N, unsigned OpNo) {
