@@ -10,11 +10,15 @@
 #include "QueryParser.h"
 #include "QuerySession.h"
 #include "clang/AST/ASTDumper.h"
+#include "clang/AST/JSONNodeDumper.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/TextDiagnostic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::dynamic;
@@ -71,7 +75,9 @@ bool HelpQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         "  detailed-ast                      "
         "Detailed AST output for bound nodes.\n"
         "  dump                              "
-        "Detailed AST output for bound nodes (alias of detailed-ast).\n\n";
+        "Detailed AST output for bound nodes (alias of detailed-ast).\n"
+        "  json                              "
+        "JSON output for bound nodes (structured, machine-readable).\n\n";
   return true;
 }
 
@@ -107,11 +113,13 @@ struct QueryProfiler {
 } // namespace
 
 bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
-  unsigned MatchCount = 0;
-
   std::optional<QueryProfiler> Profiler;
   if (QS.EnableProfile)
     Profiler.emplace();
+
+  // Collect matches from all ASTs.
+  using ASTMatchResult = std::pair<ASTUnit *, std::vector<BoundNodes>>;
+  SmallVector<ASTMatchResult> AllMatches;
 
   for (auto &AST : QS.ASTs) {
     ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
@@ -142,6 +150,97 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     if (QS.EnableProfile)
       Profiler->Records[OrigSrcName] += (*Records)[OrigSrcName];
 
+    AllMatches.emplace_back(AST.get(), std::move(Matches));
+  }
+
+  unsigned MatchCount = 0;
+  for (const auto &[_, Matches] : AllMatches)
+    MatchCount += Matches.size();
+
+  if (QS.JSONOutput) {
+    llvm::json::OStream JOS(OS);
+
+    // RAII helpers that pair begin/end calls so JSON nesting mirrors C++ scope.
+    struct ObjectScope {
+      llvm::json::OStream &J;
+      ObjectScope(llvm::json::OStream &J) : J(J) { J.objectBegin(); }
+      ~ObjectScope() { J.objectEnd(); }
+    };
+    struct AttributeScope {
+      llvm::json::OStream &J;
+      AttributeScope(llvm::json::OStream &J, StringRef Key) : J(J) {
+        J.attributeBegin(Key);
+      }
+      ~AttributeScope() { J.attributeEnd(); }
+    };
+    struct ArrayScope {
+      llvm::json::OStream &J;
+      ArrayScope(llvm::json::OStream &J) : J(J) { J.arrayBegin(); }
+      ~ArrayScope() { J.arrayEnd(); }
+    };
+
+    {
+      ObjectScope Root(JOS);
+      JOS.attribute("matcher", Source);
+      JOS.attribute("match_count", MatchCount);
+      AttributeScope MatchesAttr(JOS, "matches");
+      ArrayScope MatchesArr(JOS);
+
+      for (auto &[AST, Matches] : AllMatches) {
+        for (const auto &Match : Matches) {
+          ObjectScope MatchObj(JOS);
+          AttributeScope BindingsAttr(JOS, "bindings");
+          ObjectScope BindingsObj(JOS);
+
+          for (const auto &[Name, Node] : Match.getMap()) {
+            AttributeScope BindingAttr(JOS, Name);
+            ObjectScope BindingObj(JOS);
+
+            JOS.attribute("kind", Node.getNodeKind().asStringRef());
+
+            SourceRange R = Node.getSourceRange();
+            if (R.isValid()) {
+              SourceManager &SM = AST->getSourceManager();
+              FullSourceLoc Begin(R.getBegin(), SM);
+              FullSourceLoc End(R.getEnd(), SM);
+              AttributeScope RangeAttr(JOS, "range");
+              ObjectScope RangeObj(JOS);
+              JOS.attribute("file", SM.getFilename(R.getBegin()));
+              {
+                AttributeScope BeginAttr(JOS, "begin");
+                ObjectScope BeginObj(JOS);
+                JOS.attribute("line", Begin.getSpellingLineNumber());
+                JOS.attribute("col", Begin.getSpellingColumnNumber());
+              }
+              {
+                AttributeScope EndAttr(JOS, "end");
+                ObjectScope EndObj(JOS);
+                JOS.attribute("line", End.getSpellingLineNumber());
+                JOS.attribute("col", End.getSpellingColumnNumber());
+              }
+            }
+
+            AttributeScope DetailAttr(JOS, "detail");
+            std::string DetailStr;
+            llvm::raw_string_ostream DetailOS(DetailStr);
+            ASTContext &Ctx = AST->getASTContext();
+            JSONDumper Dumper(DetailOS, AST->getSourceManager(), Ctx,
+                              Ctx.getPrintingPolicy(),
+                              &Ctx.getCommentCommandTraits(),
+                              /*IndentSize=*/0);
+            Dumper.SetTraversalKind(QS.TK);
+            Dumper.Visit(Node);
+            JOS.rawValue(DetailStr);
+          }
+        }
+      }
+    }
+    OS << "\n";
+    return true;
+  }
+
+  unsigned MatchIdx = 0;
+  for (const auto &[AST, Matches] : AllMatches) {
     if (QS.PrintMatcher) {
       SmallVector<StringRef, 4> Lines;
       Source.split(Lines, "\n");
@@ -164,7 +263,7 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
     }
 
     for (auto MI = Matches.begin(), ME = Matches.end(); MI != ME; ++MI) {
-      OS << "\nMatch #" << ++MatchCount << ":\n\n";
+      OS << "\nMatch #" << ++MatchIdx << ":\n\n";
 
       for (auto BI = MI->getMap().begin(), BE = MI->getMap().end(); BI != BE;
            ++BI) {
@@ -186,7 +285,8 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
         }
         if (QS.DetailedASTOutput) {
           OS << "Binding for \"" << BI->first << "\":\n";
-          ASTDumper Dumper(OS, Ctx, AST->getDiagnostics().getShowColors());
+          ASTDumper Dumper(OS, AST->getASTContext(),
+                           AST->getDiagnostics().getShowColors());
           Dumper.SetTraversalKind(QS.TK);
           Dumper.Visit(BI->second);
           OS << "\n";
