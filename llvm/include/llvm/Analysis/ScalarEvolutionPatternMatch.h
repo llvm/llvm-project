@@ -175,6 +175,17 @@ inline SCEVUnaryExpr_match<SCEVTy, Op0_t> m_scev_Unary(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVIntegralCastExpr, Op0_t>
+m_scev_IntegralCast(const Op0_t &Op0) {
+  return m_scev_Unary<SCEVIntegralCastExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline auto m_scev_IntegralCastOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_scev_IntegralCast(Op0), Op0);
+}
+
+template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVSignExtendExpr, Op0_t>
 m_scev_SExt(const Op0_t &Op0) {
   return m_scev_Unary<SCEVSignExtendExpr>(Op0);
