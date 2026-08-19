@@ -372,9 +372,6 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
 
-  // Delete unreachable target operations before FunctionFilteringPass
-  // extracts them.
-  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
 }
 
