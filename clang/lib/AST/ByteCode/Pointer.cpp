@@ -26,8 +26,8 @@ using namespace clang;
 using namespace clang::interp;
 
 Pointer::Pointer(Block *Pointee)
-    : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
-              Pointee->getDescriptor()->getMetadataSize()) {}
+    : Pointer(Pointee, Pointee->getMetadataSize(), Pointee->getMetadataSize()) {
+}
 
 Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
@@ -36,7 +36,7 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert(Pointee);
   assert(Base % alignof(void *) == 0 && "wrong base");
-  assert(Base >= Pointee->getDescriptor()->getMetadataSize());
+  assert(Base >= Pointee->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
   Pointee->addPointer(this);

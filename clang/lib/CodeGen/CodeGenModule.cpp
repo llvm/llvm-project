@@ -1177,6 +1177,15 @@ void CodeGenModule::Release() {
   else
     EmitCXXGlobalInitFunc();
   EmitCXXGlobalCleanUpFunc();
+  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
+    auto [SYCLCtorFunction, SYCLDtorFunction] = embedSYCLDeviceBinary();
+    if (SYCLCtorFunction) {
+      // A static initializer may launch a kernel, so the device binaries have
+      // to be registered before any of them run, hence a priority.
+      AddGlobalCtor(SYCLCtorFunction, /*Priority=*/1);
+      AddGlobalDtor(SYCLDtorFunction, /*Priority=*/1);
+    }
+  }
   registerGlobalDtorsWithAtExit();
   EmitCXXThreadLocalInitFunc();
   if (ObjCRuntime)
