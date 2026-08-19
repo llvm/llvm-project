@@ -40,11 +40,11 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
