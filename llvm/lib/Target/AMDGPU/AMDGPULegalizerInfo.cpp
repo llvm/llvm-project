@@ -3852,7 +3852,7 @@ bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
     auto [ScaledInput, IsScaled] = getScaledLogInput(B, Src, Flags);
     if (ScaledInput) {
       auto LogSrc = B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty})
-                        .addUse(Src)
+                        .addUse(ScaledInput)
                         .setMIFlags(Flags);
       auto ScaledResultOffset = B.buildFConstant(Ty, -32.0 * Log2BaseInverted);
       auto Zero = B.buildFConstant(Ty, 0.0);
@@ -4588,6 +4588,17 @@ void AMDGPULegalizerInfo::buildMultiply(LegalizerHelper &Helper,
           if (LocalAccum.size() > 1)
             LocalAccum[1] = Unmerge.getReg(1);
         }
+
+        // Every partial product contributing to this destination index was
+        // skipped because an operand half is known zero, so nothing has been
+        // accumulated and the result is zero.
+        if (!LocalAccum[0])
+          LocalAccum[0] = getZero32();
+
+        // A second element is only ever requested when the full 64-bit multiply
+        // block above runs, which always writes it.
+        assert((LocalAccum.size() == 1 || LocalAccum[1]) &&
+               "Uninitialized accumulator part");
 
         return CarryOut;
       };
@@ -6388,6 +6399,10 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
   auto ExtStride = B.buildAnyExt(I32, Stride);
 
   if (ST.has45BitNumRecordsBufferResource()) {
+    NumRecords = B.buildZExtOrTrunc(I64, NumRecords).getReg(0);
+    NumRecords =
+        B.buildAnd(I64, NumRecords, B.buildConstant(I64, (1ULL << 45) - 1))
+            .getReg(0);
     Register Zero = B.buildConstant(I32, 0).getReg(0);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
@@ -6411,7 +6426,7 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
         B.buildOr(I64, CombinedFields, ExtShiftedFlags).getReg(0);
     B.buildMergeValues(Result, {LowHalf, HighHalf});
   } else {
-    NumRecords = B.buildTrunc(I32, NumRecords).getReg(0);
+    NumRecords = B.buildZExtOrTrunc(I32, NumRecords).getReg(0);
     auto Unmerge = B.buildUnmerge(I32, Pointer);
     auto LowHalf = Unmerge.getReg(0);
     auto HighHalf = Unmerge.getReg(1);

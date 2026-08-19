@@ -8,7 +8,7 @@ define float @load_scalar_f32() {
   ; CHECK: [[V:%.*]] = call float @dx.op.loadInput.f32(i32 4, i32 0, i32 1, i8 2, i32 0)
   ; CHECK-NEXT: ret float [[V]]
   ; CHECK-NOT: llvm.dx.load.input
-  %v = call float @llvm.dx.load.input.f32(i32 99, i32 0, i32 1, i8 2, i32 0)
+  %v = call float @llvm.dx.load.input.f32(i32 0, i32 1, i8 2, i32 0)
   ret float %v
 }
 
@@ -24,7 +24,7 @@ define <4 x float> @load_v4f32() {
   ; CHECK: [[S3:%.*]] = call float @dx.op.loadInput.f32(i32 4, i32 1, i32 0, i8 3, i32 0)
   ; CHECK-NEXT: insertelement {{.*}}, float [[S3]], i32 3
   ; CHECK-NOT: llvm.dx.load.input
-  %v = call <4 x float> @llvm.dx.load.input.v4f32(i32 99, i32 1, i32 0, i8 0, i32 0)
+  %v = call <4 x float> @llvm.dx.load.input.v4f32(i32 1, i32 0, i8 0, i32 0)
   ret <4 x float> %v
 }
 
@@ -36,7 +36,7 @@ define <2 x float> @load_v2f32_col2() {
   ; CHECK: [[S1:%.*]] = call float @dx.op.loadInput.f32(i32 4, i32 2, i32 0, i8 3, i32 0)
   ; CHECK-NEXT: insertelement {{.*}}, float [[S1]], i32 1
   ; CHECK-NOT: llvm.dx.load.input
-  %v = call <2 x float> @llvm.dx.load.input.v2f32(i32 99, i32 2, i32 0, i8 2, i32 0)
+  %v = call <2 x float> @llvm.dx.load.input.v2f32(i32 2, i32 0, i8 2, i32 0)
   ret <2 x float> %v
 }
 
@@ -46,6 +46,6 @@ define i32 @load_scalar_i32() {
   ; CHECK: [[V:%.*]] = call i32 @dx.op.loadInput.i32(i32 4, i32 2, i32 0, i8 0, i32 0)
   ; CHECK-NEXT: ret i32 [[V]]
   ; CHECK-NOT: llvm.dx.load.input
-  %v = call i32 @llvm.dx.load.input.i32(i32 99, i32 2, i32 0, i8 0, i32 0)
+  %v = call i32 @llvm.dx.load.input.i32(i32 2, i32 0, i8 0, i32 0)
   ret i32 %v
 }

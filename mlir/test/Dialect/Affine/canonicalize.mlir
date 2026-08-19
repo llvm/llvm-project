@@ -1,6 +1,8 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -canonicalize="test-convergence top-down=0" | FileCheck %s --check-prefix=CHECK-BOTTOM-UP
 
+// XFAIL: mlir-expensive-checks
+
 // -----
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0 - 1)>

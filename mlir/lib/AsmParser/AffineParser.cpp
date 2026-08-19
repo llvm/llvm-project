@@ -25,6 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <utility>
 
 using namespace mlir;
@@ -345,7 +346,14 @@ AffineExpr AffineParser::parseSymbolSSAIdExpr() {
 ///   affine-expr ::= integer-literal
 AffineExpr AffineParser::parseIntegerExpr() {
   auto val = getToken().getUInt64IntegerValue();
-  if (!val.has_value() || (int64_t)*val < 0)
+  // Allow 9223372036854775808 (= 2^63 = |INT64_MIN|) because the printer
+  // emits it as the magnitude in "... - 9223372036854775808" to represent
+  // affine expressions containing INT64_MIN (e.g. "d0 + INT64_MIN" is
+  // printed as "d0 - 9223372036854775808"). The cast to int64_t yields
+  // INT64_MIN, which is the correct internal representation.
+  if (!val.has_value() ||
+      (static_cast<int64_t>(*val) < 0 &&
+       *val != static_cast<uint64_t>(std::numeric_limits<int64_t>::min())))
     return emitError("constant too large for index"), nullptr;
 
   consumeToken(Token::integer);

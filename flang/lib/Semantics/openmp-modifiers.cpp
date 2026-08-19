@@ -557,6 +557,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapTypeModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMemSpace>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"mem-space",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_uses_allocators}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"order-modifier",
@@ -751,6 +767,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       {
           {45, {Clause::OMPC_depend}},
           {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTraitsArray>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"traits-array",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_uses_allocators}},
       },
   };
   return desc;

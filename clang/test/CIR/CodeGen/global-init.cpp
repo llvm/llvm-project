@@ -230,7 +230,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   %[[CUR:.*]] = load ptr, ptr %[[CUR_ADDR]]
 // LLVM:   %[[PREV:.*]] = getelementptr %struct.ArrayDtor, ptr %[[CUR]], i64 -1
 // LLVM:   store ptr %[[PREV]], ptr %[[CUR_ADDR]]
-// LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[PREV]]) #0
+// LLVM:   call void @_ZN9ArrayDtorD1Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[PREV]]) [[NOUNWIND:#[0-9]+]]
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[LOOP_END]]:
 // LLVM:   ret void
@@ -278,6 +278,8 @@ ArrayDtor arrDtor[16];
 // LLVM:   call void @__cxx_global_var_init.3()
 // LLVM:   call void @__cxx_global_var_init.4()
 // LLVM:   call void @__cxx_global_var_init.5()
+
+// LLVM: attributes [[NOUNWIND]] = { nounwind }
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME]]() {{.*}} section ".text.startup" {
 // OGCG:   call void @__cxx_global_var_init()

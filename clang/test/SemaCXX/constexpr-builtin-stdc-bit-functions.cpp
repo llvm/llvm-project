@@ -355,6 +355,10 @@ static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(37))0x11) == 0x20, "");
 static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(17))(-1)) ==
               (unsigned _BitInt(17))(0), "");
 
+// _BitInt(1):
+static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(1))0) == 1, "");
+static_assert(__builtin_stdc_bit_ceil((unsigned _BitInt(1))1) == 1, "");
+
 // _BitInt(128): sparse pattern, leading zero count, popcount.
 constexpr unsigned _BitInt(128) bi128_pattern = 0x123456789ABCDEF0ULL;
 static_assert(__builtin_stdc_count_ones(bi128_pattern) == 32, "");

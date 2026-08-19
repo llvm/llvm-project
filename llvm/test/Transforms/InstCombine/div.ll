@@ -2260,6 +2260,102 @@ define i32 @sdiv_mul_nsw_gcd_is_one(i32 %x) {
   %d = sdiv i32 %m, 101
   ret i32 %d
 }
+; (X udiv Y) udiv Z --> X udiv (Y * Z) if Y * Z does not overflow
+
+define i8 @udiv_udiv_bounded(i8 %a, i8 range(i8 0, 15) %b, i8 range(i8 0, 15) %c) {
+; CHECK-LABEL: @udiv_udiv_bounded(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D2]]
+;
+  %d1 = udiv i8 %a, %b
+  %d2 = udiv i8 %d1, %c
+  ret i8 %d2
+}
+
+; negative test - the product may overflow
+
+define i8 @udiv_udiv_unbounded(i8 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: @udiv_udiv_unbounded(
+; CHECK-NEXT:    [[D1:%.*]] = udiv i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv i8 [[D1]], [[C:%.*]]
+; CHECK-NEXT:    ret i8 [[D2]]
+;
+  %d1 = udiv i8 %a, %b
+  %d2 = udiv i8 %d1, %c
+  ret i8 %d2
+}
+
+; negative test - inner div has an extra use
+
+define i32 @udiv_udiv_multiuse(i32 %a, i32 range(i32 0, 15) %b, i32 range(i32 0, 15) %c) {
+; CHECK-LABEL: @udiv_udiv_multiuse(
+; CHECK-NEXT:    [[D1:%.*]] = udiv i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv i32 [[D1]], [[C:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[D1]])
+; CHECK-NEXT:    ret i32 [[D2]]
+;
+  %d1 = udiv i32 %a, %b
+  %d2 = udiv i32 %d1, %c
+  call void @use(i32 %d1)
+  ret i32 %d2
+}
+
+; exact propagates when both divides are exact
+
+define i8 @udiv_udiv_exact(i8 %a, i8 range(i8 0, 15) %b, i8 range(i8 0, 15) %c) {
+; CHECK-LABEL: @udiv_udiv_exact(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv exact i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D2]]
+;
+  %d1 = udiv exact i8 %a, %b
+  %d2 = udiv exact i8 %d1, %c
+  ret i8 %d2
+}
+
+; exact does not propagate when only the inner divide is exact
+
+define i8 @udiv_udiv_exact_inner_only(i8 %a, i8 range(i8 0, 15) %b, i8 range(i8 0, 15) %c) {
+; CHECK-LABEL: @udiv_udiv_exact_inner_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D2]]
+;
+  %d1 = udiv exact i8 %a, %b
+  %d2 = udiv i8 %d1, %c
+  ret i8 %d2
+}
+
+; exact does not propagate when only the outer divide is exact
+
+define i8 @udiv_udiv_exact_outer_only(i8 %a, i8 range(i8 0, 15) %b, i8 range(i8 0, 15) %c) {
+; CHECK-LABEL: @udiv_udiv_exact_outer_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i8 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[D2]]
+;
+  %d1 = udiv i8 %a, %b
+  %d2 = udiv exact i8 %d1, %c
+  ret i8 %d2
+}
+
+; vector splat
+
+define <2 x i8> @udiv_udiv_vec(<2 x i8> %a, <2 x i8> %b, <2 x i8> %c) {
+; CHECK-LABEL: @udiv_udiv_vec(
+; CHECK-NEXT:    [[B_N:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[C_N:%.*]] = and <2 x i8> [[C:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i8> [[B_N]], [[C_N]]
+; CHECK-NEXT:    [[D2:%.*]] = udiv <2 x i8> [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[D2]]
+;
+  %b.n = and <2 x i8> %b, <i8 15, i8 15>
+  %c.n = and <2 x i8> %c, <i8 15, i8 15>
+  %d1 = udiv <2 x i8> %a, %b.n
+  %d2 = udiv <2 x i8> %d1, %c.n
+  ret <2 x i8> %d2
+}
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.

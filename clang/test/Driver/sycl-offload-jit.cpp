@@ -47,6 +47,19 @@
 // CHK-FSYCL-IS-DEVICE: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-emit-llvm-bc"
 // CHK-FSYCL-IS-HOST: "-cc1"{{.*}} "-fsycl-is-host"
 
+/// Check that SYCL compilation defaults to relocatable device code (-fgpu-rdc
+/// is passed to both the device and the host -cc1 invocation) and that
+/// -fno-gpu-rdc disables it.
+// RUN: %clang -### -fsycl -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-SYCL-RDC,CHK-SYCL-RDC-HOST %s
+// RUN: %clang -### -fsycl -fgpu-rdc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-SYCL-RDC,CHK-SYCL-RDC-HOST %s
+// RUN: %clang -### -fsycl -fno-gpu-rdc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-SYCL-NORDC %s
+// CHK-SYCL-RDC: "-cc1"{{.*}} "-fsycl-is-device" {{.*}} "-fgpu-rdc"
+// CHK-SYCL-RDC-HOST: "-cc1"{{.*}} "-fsycl-is-host" {{.*}} "-fgpu-rdc"
+// CHK-SYCL-NORDC-NOT: "-fgpu-rdc"
+
 // Check that --allow-partial-linkage and --create-library are not passed to
 // clang-linker-wrapper for SYCL (they are spirv-link flags, not clang-sycl-linker flags).
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \

@@ -989,6 +989,10 @@ class AMDGPUDimProps<bits<3> enc, string name, string asmsuffix,
   bit DA = 0; // DA bit in MIMG encoding
   bit MSAA = msaa;
 
+  // The corresponding non-arrayed dim, e.g. 2D_ARRAY -> 2D. Defaults to Dim.
+  // The arrayed dims override it below.
+  AMDGPUDimProps NonArrayDim = Dim;
+
   list<AMDGPUArg> CoordSliceArgs =
     makeArgList<!listconcat(coord_names, slice_names), llvm_anyfloat_ty>.ret;
   list<AMDGPUArg> CoordSliceIntArgs =
@@ -1007,11 +1011,14 @@ def AMDGPUDim2D : AMDGPUDimProps<0x1, "2d", "2D", ["s", "t"], []>;
 def AMDGPUDim3D : AMDGPUDimProps<0x2, "3d", "3D", ["s", "t", "r"], []>;
 let DA = 1 in {
   def AMDGPUDimCube : AMDGPUDimProps<0x3, "cube", "CUBE", ["s", "t"], ["face"]>;
+  let NonArrayDim = AMDGPUDim1D in
   def AMDGPUDim1DArray : AMDGPUDimProps<0x4, "1darray", "1D_ARRAY", ["s"], ["slice"]>;
+  let NonArrayDim = AMDGPUDim2D in
   def AMDGPUDim2DArray : AMDGPUDimProps<0x5, "2darray", "2D_ARRAY", ["s", "t"], ["slice"]>;
 }
 def AMDGPUDim2DMsaa : AMDGPUDimProps<0x6, "2dmsaa", "2D_MSAA", ["s", "t"], ["fragid"], 1>;
 let DA = 1 in {
+  let NonArrayDim = AMDGPUDim2DMsaa in
   def AMDGPUDim2DArrayMsaa : AMDGPUDimProps<0x7, "2darraymsaa", "2D_MSAA_ARRAY", ["s", "t"], ["slice", "fragid"], 1>;
 }
 
@@ -1466,7 +1473,7 @@ def int_amdgcn_make_buffer_rsrc : PureIntrinsic <
   [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
-   llvm_i64_ty,    // NumRecords / extent
+   llvm_anyint_ty, // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [ReadNone<ArgIndex<0>>]>;

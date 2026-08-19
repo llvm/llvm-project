@@ -2193,9 +2193,9 @@ def : Pat<(v8f32 (loongarch_vffint_s_l (v4i64 LASX256:$xj), (v4i64 LASX256:$xk))
 // XVFTINTRZ_{W_S/L_D}
 def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_sint v4f64:$vj)), (XVFTINTRZ_L_D v4f64:$vj)>;
-def : Pat<(v4i64(fp_to_sint v4f32:$vj)), (VEXT2XV_D_W(SUBREG_TO_REG
-                                             (VFTINTRZ_W_S v4f32:$vj),
-                                             sub_128))>;
+def : Pat<(v4i64 (fp_to_sint v4f32:$vj)),
+          (XVFTINTRZL_L_S
+              (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216))>;
 def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
           (EXTRACT_SUBREG(XVPICKEV_W(XVPERMI_D(XVFTINTRZ_L_D v4f64:$vj), 238),
                (XVFTINTRZ_L_D v4f64:$vj)),
@@ -2204,9 +2204,10 @@ def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
 // XVFTINTRZ_{W_SU/L_DU}
 def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
-def : Pat<(v4i64(fp_to_uint v4f32:$vj)), (VEXT2XV_DU_WU(SUBREG_TO_REG
-                                             (VFTINTRZ_WU_S v4f32:$vj),
-                                             sub_128))>;
+def : Pat<(v4i64 (fp_to_uint v4f32:$vj)),
+          (XVFTINTRZ_LU_D
+              (XVFCVTL_D_S
+                  (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216)))>;
 def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
           (EXTRACT_SUBREG(XVPICKEV_W(XVPERMI_D(XVFTINTRZ_LU_D v4f64:$vj), 238),
                (XVFTINTRZ_LU_D v4f64:$vj)),

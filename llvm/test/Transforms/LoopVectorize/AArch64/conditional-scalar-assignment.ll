@@ -910,7 +910,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
 ; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP3]], 1
+; SVE-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP0]], 3
 ; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP14]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0

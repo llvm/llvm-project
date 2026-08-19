@@ -23,6 +23,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -122,18 +123,32 @@ public:
   bool isComplete() const { return !isIncomplete(); }
   bool getPacked() const;
   bool getPadded() const;
+  llvm::ArrayRef<RecordMemberKind> getMemberKinds() const;
 
   bool isClass() const;
   bool isStruct() const;
   bool isUnion() const { return mlir::isa<UnionType>(*this); }
+
+  /// Whether no member holds data.  Vacuously true for a complete record with
+  /// no members, and false for an incomplete one, whose members are not known
+  /// yet.  A union's tail-padding slot is not a member and does not count.
+  bool isEmptyForABI() const;
+
+  /// One `Data` kind per member.  Takes the member list rather than a count so
+  /// the length cannot drift from the record it describes.
+  static llvm::SmallVector<RecordMemberKind>
+  getAllDataKinds(llvm::ArrayRef<mlir::Type> members);
 
   size_t getNumElements() const { return getMembers().size(); }
   mlir::Type getElementType(size_t idx) const { return getMembers()[idx]; }
   std::string getKindAsStr() const;
   std::string getPrefixedName() const;
 
-  void complete(llvm::ArrayRef<mlir::Type> members, bool packed, bool padded,
-                mlir::Type padding = {});
+  /// \p padding is union-only.  A struct carries its padding as a member
+  /// marked pad.
+  void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                mlir::Type padding,
+                llvm::ArrayRef<RecordMemberKind> memberKinds);
   uint64_t getElementOffset(const mlir::DataLayout &dataLayout,
                             unsigned idx) const;
   bool isLayoutIdentical(const RecordType &other);

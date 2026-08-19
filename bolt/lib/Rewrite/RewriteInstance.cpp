@@ -3318,8 +3318,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   // Occasionally we may see a reference past the last byte of the function
   // typically as a result of __builtin_unreachable(). Check it here.
-  BinaryFunction *ReferencedBF = BC->getBinaryFunctionContainingAddress(
-      Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
+  //
+  // Only look for a referenced function when the symbol itself denotes code
+  // or it is a section relocation.
+  BinaryFunction *ReferencedBF = nullptr;
+  if (IsToCode || IsSectionRelocation)
+    ReferencedBF = BC->getBinaryFunctionContainingAddress(
+        Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
 
   if (!IsSectionRelocation) {
     if (BinaryFunction *BF =
@@ -3779,6 +3784,8 @@ void RewriteInstance::readDebugInfo() {
                        TimerGroupDesc, opts::TimeRewrite);
     BC->collectDebugScopeBoundaries();
   }
+
+  BC->releaseAllDWOContexts();
 }
 
 void RewriteInstance::preprocessProfileData() {

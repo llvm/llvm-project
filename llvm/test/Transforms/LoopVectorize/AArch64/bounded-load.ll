@@ -437,7 +437,7 @@ define i32 @scalable_vf_rejected(ptr %A, i64 %N) #0 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -515,7 +515,7 @@ attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = distinct !{!3, !4, !5}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
-!5 = !{!"llvm.loop.interleave.count", i32 8}!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!5 = !{!"llvm.loop.interleave.count", i32 8}!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 
 ; Loop combining a bounded (i % 4) load with a reverse-stride load.
