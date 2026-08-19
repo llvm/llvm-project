@@ -2408,26 +2408,37 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
     D->Friend = readDeclAs<NamedDecl>();
   else
     D->Friend = readTypeSourceInfo();
-  for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
-  D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
   D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   VisitDecl(D);
-  unsigned NumParams = Record.readInt();
-  D->NumParams = NumParams;
-  D->Params = new (Reader.getContext()) TemplateParameterList *[NumParams];
-  for (unsigned i = 0; i != NumParams; ++i)
-    D->Params[i] = Record.readTemplateParameterList();
-  if (Record.readInt()) // HasFriendDecl
-    D->Friend = readDeclAs<NamedDecl>();
-  else
+  for (unsigned I = 0; I != D->NumTPLists; ++I)
+    D->getTrailingObjects()[I] = Record.readTemplateParameterList();
+  auto Kind = static_cast<FriendTemplateDeclKind>(Record.readInt());
+  switch (Kind) {
+  case FTDK_Type:
     D->Friend = readTypeSourceInfo();
+    break;
+  case FTDK_Decl:
+    D->Friend = readDeclAs<NamedDecl>();
+    break;
+  case FTDK_Template:
+    D->Template = Record.readTemplateName();
+    assert(D->Template.getAsTemplateDecl() &&
+           "friend template name must resolve to a template declaration");
+    D->Friend = D->Template.getAsTemplateDecl();
+    break;
+  case FTDK_Dependent:
+    D->Friend = readTypeSourceInfo();
+    D->Template = Record.readTemplateName();
+    break;
+  }
+  D->NextFriend = readDeclID().getRawValue();
   D->FriendLoc = readSourceLocation();
+  D->EllipsisLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
@@ -2959,10 +2970,10 @@ void ASTDeclMerger::mergeLambda(CXXRecordDecl *D, RedeclarableResult &Redecl,
 
   // Look up this lambda to see if we've seen it before. If so, merge with the
   // one we already loaded.
-  NamedDecl *&Slot = Reader.LambdaDeclarationsForMerging[{
-      Context.getCanonicalDecl(), IndexInContext}];
-  if (Slot)
-    mergeRedeclarable(D, cast<TagDecl>(Slot), Redecl);
+  auto *&Slot = Reader.getContext().getLambdaDeclarationSlotForMerging(
+      &Context, IndexInContext);
+  if (TagDecl *PrevDecl = Slot)
+    mergeRedeclarable(D, PrevDecl, Redecl);
   else
     Slot = D;
 }
@@ -4104,10 +4115,11 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = AccessSpecDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND:
-    D = FriendDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = FriendDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID);
+    D = FriendTemplateDecl::CreateDeserialized(Context, ID,
+                                               /*NumTPLists=*/Record.readInt());
     break;
   case DECL_CLASS_TEMPLATE:
     D = ClassTemplateDecl::CreateDeserialized(Context, ID);

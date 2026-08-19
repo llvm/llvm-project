@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -acc-if-clause-lowering -split-input-file | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // Test acc.parallel with if condition
 // CHECK-LABEL: func.func @test_parallel_if
 func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {

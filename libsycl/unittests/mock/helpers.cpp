@@ -223,8 +223,10 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateQueue)
-      .WillByDefault([this](ol_device_handle_t Device,
+      .WillByDefault([this](ol_context_handle_t Context,
+                            ol_device_handle_t Device,
                             ol_queue_handle_t *Queue) -> ol_result_t {
+        std::ignore = Context;
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Queue, nullptr);
         // Attach device as data to check what device queue belongs to if needed
@@ -307,7 +309,19 @@ void mock::MockLiboffload::initDefault() {
         EXPECT_NE(SrcDevice, nullptr);
         return OL_SUCCESS;
       });
-
+  ON_CALL(*this, olMemPrefetch)
+      .WillByDefault([this](ol_queue_handle_t Queue, size_t Count,
+                            const void **Mems, const size_t *Sizes,
+                            ol_mem_migration_flags_t Flags) -> ol_result_t {
+        EXPECT_NE(Queue, nullptr);
+        EXPECT_EQ(Count, 1);
+        EXPECT_NE(Mems, nullptr);
+        EXPECT_NE(*Mems, nullptr);
+        EXPECT_NE(Sizes, nullptr);
+        EXPECT_GT(*Sizes, 0);
+        EXPECT_EQ(Flags, OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE);
+        return OL_SUCCESS;
+      });
   ON_CALL(*this, olGetMemInfo)
       .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
                             size_t PropSize, void *PropValue) -> ol_result_t {
@@ -325,4 +339,31 @@ void mock::MockLiboffload::initDefault() {
         mock::releaseDummyHandle(Event);
         return OL_SUCCESS;
       });
+
+  ON_CALL(*this, olMemAlloc)
+      .WillByDefault([this](ol_device_handle_t Device, ol_alloc_type_t Type,
+                            size_t Size, void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
+        EXPECT_GT(Size, 0);
+        EXPECT_NE(AllocationOut, nullptr);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olMemAllocHost)
+      .WillByDefault([this](ol_device_handle_t Device, size_t Size,
+                            void **AllocationOut) -> ol_result_t {
+        EXPECT_NE(Device, nullptr);
+        EXPECT_GT(Size, 0);
+        EXPECT_NE(AllocationOut, nullptr);
+        *AllocationOut = mock::createDummyHandle<void *>(Size);
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olMemFree).WillByDefault([this](void *Address) -> ol_result_t {
+    EXPECT_NE(Address, nullptr);
+    mock::releaseDummyHandle(Address);
+    return OL_SUCCESS;
+  });
 }

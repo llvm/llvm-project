@@ -131,6 +131,7 @@
 ; O2-NEXT:     localstackalloc
 ; O2-NEXT:     dead-mi-elimination
 ; O2-NEXT:     early-ifcvt
+; O2-NEXT:     machine-combiner
 ; O2-NEXT:     x86-cmov-conversion
 ; O2-NEXT:     early-machinelicm
 ; O2-NEXT:     machine-cse
@@ -331,6 +332,7 @@
 ; O3-WINDOWS-NEXT:     localstackalloc
 ; O3-WINDOWS-NEXT:     dead-mi-elimination
 ; O3-WINDOWS-NEXT:     early-ifcvt
+; O3-WINDOWS-NEXT:     machine-combiner
 ; O3-WINDOWS-NEXT:     x86-cmov-conversion
 ; O3-WINDOWS-NEXT:     early-machinelicm
 ; O3-WINDOWS-NEXT:     machine-cse
