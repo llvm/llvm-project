@@ -335,11 +335,10 @@ public:
     transientAllocator = std::make_unique<llvm::BumpPtrAllocator>();
   }
 
-  void endTransientScope() {
-    transientAllocator.reset();
-  }
+  void endTransientScope() { transientAllocator.reset(); }
 
   bool isInTransientScope() const {
+    assert(!transientAllocator || !getContext()->isMultithreadingEnabled());
     return transientAllocator != nullptr;
   }
 
