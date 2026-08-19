@@ -29917,6 +29917,34 @@ class HorizontalReduction {
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
   }
 
+  /// Return CmpZero for a scalar OR/UMax reduction whose only use is an eq/ne
+  /// comparison against zero.
+  TTI::VectorInstrContext getReductionContext() const {
+    TTI::VectorInstrContext Context = TTI::VectorInstrContext::None;
+
+    auto *Root = dyn_cast<Instruction>(ReductionRoot);
+    if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse())
+      return Context;
+
+    CmpPredicate Pred;
+    if (!match(*Root->user_begin(),
+               m_c_ICmp(Pred, m_Specific(Root), m_ZeroInt())) ||
+        !ICmpInst::isEquality(Pred))
+      return Context;
+
+    switch (RdxKind) {
+    case RecurKind::Or:
+    case RecurKind::UMax:
+      return TTI::VectorInstrContext::CmpZero;
+    default:
+      return Context;
+    }
+  }
+
+  static bool isZeroCmpContext(TTI::VectorInstrContext Context) {
+    return Context == TTI::VectorInstrContext::CmpZero;
+  }
+
   /// Checks if instruction is associative and can be vectorized.
   enum class ReductionOrdering { Unordered, Ordered, None };
   ReductionOrdering RK = ReductionOrdering::None;
@@ -30761,6 +30789,7 @@ public:
     if (RK == ReductionOrdering::Ordered)
       IgnoreList.clear();
     bool IsCmpSelMinMax = isCmpSelMinMax(cast<Instruction>(ReductionRoot));
+    TTI::VectorInstrContext RdxContext = getReductionContext();
 
     // Need to track reduced vals, they may be changed during vectorization of
     // subvectors.
@@ -31166,7 +31195,7 @@ public:
         else
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               RdxFMF, V, DT, DL, TLI);
+                               RdxFMF, V, DT, DL, TLI, RdxContext);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31591,7 +31620,8 @@ public:
 
       InstructionCost ReductionCost =
           getReductionCost(TTI, VL, EmptySameValuesCounter,
-                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
+                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI,
+                           TTI::VectorInstrContext::None);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -31811,7 +31841,8 @@ private:
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
-      DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
+      DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI,
+      TargetTransformInfo::VectorInstrContext Context) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -31894,6 +31925,42 @@ private:
     // 2. The storage does not have any vector with full vector use (first
     // vector with full register use).
     bool DoesRequireReductionOp = !AllConsts && VectorValuesAndScales.empty();
+    bool IsCompleteReduction =
+        this->ReducedVals.size() == 1 &&
+        ReducedVals.size() == this->ReducedVals.front().size();
+    bool UseCmpZeroCost = isZeroCmpContext(Context) && IsCompleteReduction &&
+                          DoesRequireReductionOp && !isa<VectorType>(ScalarTy);
+    InstructionCost CmpReductionCost = InstructionCost::getInvalid();
+    if (UseCmpZeroCost) {
+      // For a complete OR/UMax reduction used only by an eq/ne zero test,
+      // account for moving the comparison before the reduction:
+      //
+      //   %rdx = call iN @llvm.vector.reduce.or/umax(<VF x iN> %vec)
+      //   %cmp = icmp eq/ne iN %rdx, 0
+      //
+      // becomes:
+      //
+      //   %lane.cmp = icmp eq/ne <VF x iN> %vec, zeroinitializer
+      //   %cmp = call i1 @llvm.vector.reduce.and/or(<VF x i1> %lane.cmp)
+      //
+      // Equality requires every lane to be zero, so it uses an AND reduction;
+      // inequality requires any lane to be nonzero, so it uses OR. Add the
+      // vector comparison and boolean reduction costs, then remove the scalar
+      // comparison cost eliminated by this replacement.
+      assert((RdxKind == RecurKind::Or || RdxKind == RecurKind::UMax) &&
+             "Unexpected zero comparison reduction");
+      auto *ScalarCmp =
+          cast<ICmpInst>(*cast<Instruction>(ReductionRoot)->user_begin());
+      CmpPredicate Pred = ScalarCmp->getPredicate();
+      auto *CmpTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
+      unsigned ReductionOpcode =
+          Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
+      CmpReductionCost = TTI->getCmpSelInstrCost(Instruction::ICmp, VectorTy,
+                                                 CmpTy, Pred, CostKind) +
+                         TTI->getArithmeticReductionCost(ReductionOpcode, CmpTy,
+                                                         {}, CostKind) -
+                         TTI->getInstructionCost(ScalarCmp, CostKind);
+    }
     switch (RdxKind) {
     case RecurKind::Add:
     case RecurKind::Mul:
@@ -31905,7 +31972,9 @@ private:
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+          if (UseCmpZeroCost) {
+            VectorCost = CmpReductionCost;
+          } else if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
@@ -32010,7 +32079,11 @@ private:
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
-          VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
+          if (UseCmpZeroCost)
+            VectorCost = CmpReductionCost;
+          else
+            VectorCost =
+                TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
         } else {
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.
