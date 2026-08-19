@@ -1348,7 +1348,7 @@ Not every combination of operand type, rounding mode and modifier maps to a
 PTX instruction. The supported combinations are:
 
 ```{list-table}
-:widths: 25 25 25 25
+:widths: 25 25 25
 :header-rows: 1
 
    * - Operand Type
