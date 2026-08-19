@@ -768,7 +768,10 @@ The available directives are as follows:
         `FieldParser` specialization is available or when the selected
         specialization declares `isKeyValueCompositional = false`.
     -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
-        accepted when parsing and is used by the generated printer.
+        accepted when parsing. The generated printer uses the key-value
+        spelling and the same custom-printer or attribute-conversion choice.
+        Operations that provide a custom `printProperties` hook should set
+        `hasCustomPropertiesPrinter` to suppress the shadowed generated helper.
     -   Any property or inherent attribute that is not used elsewhere in the
         format is parsed and printed as part of this list.
     -   If present, the `attr-dict` will not contain any inherent attributes.
