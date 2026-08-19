@@ -1196,8 +1196,8 @@ static VPValue *reconstructSSAImpl(VPBasicBlock *VPBB,
   return Phi;
 }
 
-VPValue *vputils::reconstructSSA(DenseMap<VPBasicBlock *, VPValue *> Defs,
-                                 VPBasicBlock *VPBB) {
+VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
+                                 DenseMap<VPBasicBlock *, VPValue *> Defs) {
   assert(!Defs.empty() && "Defs shouldn't be empty");
   return reconstructSSAImpl(VPBB, Defs);
 }

@@ -226,7 +226,7 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 /// reconstructed value at VPBB. Use if the CFG has been modified such that a
 /// def no longer dominates all its uses.
 LLVM_ABI_FOR_TEST VPValue *
-reconstructSSA(DenseMap<VPBasicBlock *, VPValue *> Defs, VPBasicBlock *VPBB);
+reconstructSSA(VPBasicBlock *VPBB, DenseMap<VPBasicBlock *, VPValue *> Defs);
 
 namespace detail {
 

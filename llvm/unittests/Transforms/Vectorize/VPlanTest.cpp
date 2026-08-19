@@ -1925,7 +1925,7 @@ TEST_F(VPUtilsTest, ReconstructSSA) {
   VPBB2->appendRecipe(Def2);
 
   auto *Res = cast<VPPhi>(
-      vputils::reconstructSSA({{VPBB1, Def1}, {VPBB2, Def2}}, VPBB4));
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB2, Def2}}));
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def2);
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Def1);
 }
@@ -1957,7 +1957,7 @@ TEST_F(VPUtilsTest, ReconstructSSAPoisonExample) {
   VPBB1->appendRecipe(Def1);
 
   auto *Res = cast<VPPhi>(
-      vputils::reconstructSSA({{VPBB1, Poison}, {VPBB2, Def1}}, VPBB4));
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Poison}, {VPBB2, Def1}}));
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB2), Def1);
   EXPECT_EQ(Res->getIncomingValueForBlock(VPBB3), Poison);
 }
@@ -1994,7 +1994,7 @@ TEST_F(VPUtilsTest, ReconstructSSAMultiplePhis) {
   VPBB3->appendRecipe(Def3);
 
   auto *Phi6 = cast<VPPhi>(
-      vputils::reconstructSSA({{VPBB2, Def2}, {VPBB3, Def3}}, VPBB6));
+      vputils::reconstructSSA(VPBB6, {{VPBB2, Def2}, {VPBB3, Def3}}));
   EXPECT_EQ(Phi6->getIncomingValueForBlock(VPBB5), Def3);
   EXPECT_TRUE(isa<VPPhi>(Phi6->getIncomingValueForBlock(VPBB4)));
 
@@ -2026,7 +2026,7 @@ TEST_F(VPUtilsTest, ReconstructSSAFold) {
   VPBB1->appendRecipe(Def);
 
   // Check that phis with all equal incoming values are folded away.
-  EXPECT_EQ(vputils::reconstructSSA({{VPBB2, Def}, {VPBB3, Def}}, VPBB4), Def);
+  EXPECT_EQ(vputils::reconstructSSA(VPBB4, {{VPBB2, Def}, {VPBB3, Def}}), Def);
 }
 
 TEST_F(VPUtilsTest, ReconstructSSACycle) {
@@ -2057,7 +2057,7 @@ TEST_F(VPUtilsTest, ReconstructSSACycle) {
   VPBB3->appendRecipe(Def2);
 
   auto *Phi1 = cast<VPPhi>(
-      vputils::reconstructSSA({{VPBB1, Def1}, {VPBB3, Def2}}, VPBB4));
+      vputils::reconstructSSA(VPBB4, {{VPBB1, Def1}, {VPBB3, Def2}}));
   EXPECT_EQ(Phi1->getIncomingValueForBlock(VPBB3), Def2);
   EXPECT_TRUE(isa<VPPhi>(Phi1->getIncomingValueForBlock(VPBB2)));
 
