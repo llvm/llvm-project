@@ -7139,7 +7139,9 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
 /// otherwise CM_EpilogueAllowed.
 static EpilogueLowering
 getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
-                        OptimizationRemarkEmitter *ORE) {
+                        OptimizationRemarkEmitter *ORE,
+                        LoopVectorizationLegality &LVL,
+                        LoopVectorizeHints &Hints) {
   // Epilogue TF is only enabled when explicitly requested via command line.
   if (!EpilogueTailFoldingPolicy.getNumOccurrences() ||
       EpilogueTailFoldingPolicy != TailFoldingPolicyTy::PreferFoldTail)
@@ -7148,23 +7150,64 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
   if (!EnableEpilogueVectorization) {
     reportVectorizationInfo(
         "Options conflict, epilogue vectorization is disallowed while "
-        "epilogue tail-folding allowed!\n",
+        "epilogue tail-folding allowed!",
         "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!Hints.getWidth() || !hasForcedEpilogueVF()) {
+    reportVectorizationInfo("For now, Epilogue tail-folding can't be "
+                            "applied without forced main/epilogue loop VF",
+                            "UnsupportedEpilogueTailFoldingPolicy", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (!L->isInnermost()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported for outer loop",
+        "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
 
   // If scalar epilogue is explicitly required, we can't apply TF.
   if (MainCM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
-    LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding can't be applied because "
-                         "scalar epilogue is required\n"
-                         "LV: Fall back to a normal epilogue\n");
+    reportVectorizationInfo(
+        "Epilogue tail-folding can't be applied because scalar epilogue is "
+        "required. Fall back to a normal epilogue",
+        "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
 
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
-    LLVM_DEBUG(dbgs() << "LV: No epilogue to apply tail-folding for.\n"
-                         "LV: Fall back to a normal epilogue\n");
+    reportVectorizationInfo("No epilogue to apply tail-folding for. Fall back "
+                            "to a normal epilogue",
+                            "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  // For now epilogue TF is not supported for some kinds of reductions that
+  // results in more overhead
+  bool HasReductions = !LVL.getReductionVars().empty();
+  bool HasSelectCmpReductions =
+      HasReductions &&
+      any_of(LVL.getReductionVars(), [](auto &Reduction) -> bool {
+        const RecurrenceDescriptor &RdxDesc = Reduction.second;
+        RecurKind RK = RdxDesc.getRecurrenceKind();
+        return RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+               RecurrenceDescriptor::isFindIVRecurrenceKind(RK);
+      });
+  if (HasSelectCmpReductions) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported yet for select-cmp Reductions",
+        "InvalidTailFoldedEpilogue", ORE, L);
+    return CM_EpilogueAllowed;
+  }
+
+  if (L->getExitingBlock() != L->getLoopLatch()) {
+    reportVectorizationInfo(
+        "Epilogue tail-folding is not supported yet for early-exit loops",
+        "InvalidTailFoldedEpilogue", ORE, L);
     return CM_EpilogueAllowed;
   }
 
@@ -7994,7 +8037,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                ORE);
 
   EpilogueLowering EpilogueTailLoweringStatus =
-      getEpilogueTailLowering(CM, L, ORE);
+      getEpilogueTailLowering(CM, L, ORE, LVL, Hints);
   if (EpilogueTailLoweringStatus ==
       EpilogueLowering::CM_EpilogueNotNeededFoldTail) {
     // TODO: Apply tail-folding on the vectorized epilogue loop.
