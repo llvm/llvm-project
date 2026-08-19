@@ -38,6 +38,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -171,6 +172,16 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
     op.setAsyncOnlyAttr(builder.getArrayAttr(asyncOnlyDeviceTypes));
   op.setModifiers(modifiers);
   return op;
+}
+
+/// Return true when allocatables and pointers are backed by memory that is
+/// addressable from both the host and the device (`-gpu unified`). Device code
+/// then reaches a `declare` variable through its host address, so mirroring the
+/// data on the device would create a second copy that the kernels never read;
+/// the allocation and deallocation actions of section 2.13.2 are skipped.
+static bool isUnifiedMemoryMode(Fortran::lower::AbstractConverter &converter) {
+  return converter.getFoldingContext().languageFeatures().IsEnabled(
+      Fortran::common::LanguageFeature::CudaUnified);
 }
 
 static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
@@ -798,22 +809,24 @@ getWholeArrayBase(const Fortran::semantics::MaybeExpr &designator,
 }
 
 template <typename Op>
-static void
-genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
-                         Fortran::lower::AbstractConverter &converter,
-                         Fortran::semantics::SemanticsContext &semanticsContext,
-                         Fortran::lower::StatementContext &stmtCtx,
-                         llvm::SmallVectorImpl<mlir::Value> &dataOperands,
-                         mlir::acc::DataClause dataClause, bool structured,
-                         bool implicit, llvm::ArrayRef<mlir::Value> async,
-                         llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
-                         llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
-                         bool setDeclareAttr = false,
-                         AccDataMap *dataMap = nullptr) {
+static void genDataOperandOperations(
+    const Fortran::parser::AccObjectList &objectList,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    llvm::SmallVectorImpl<mlir::Value> &dataOperands,
+    mlir::acc::DataClause dataClause, bool structured, bool implicit,
+    llvm::ArrayRef<mlir::Value> async,
+    llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
+    llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
+    bool setDeclareAttr = false, AccDataMap *dataMap = nullptr,
+    std::function<bool(const Fortran::parser::AccObject &)> filter = {}) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   const bool unwrapBoxAddr = true;
   for (const auto &accObject : objectList.v) {
+    if (filter && !filter(accObject))
+      continue;
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
@@ -1077,7 +1090,8 @@ static void genDeclareDataOperandOperations(
         /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
     dataOperands.push_back(op.getAccVar());
     addDeclareAttr(builder, op.getVar().getDefiningOp(), dataClause);
-    if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(info.addr.getType()))) {
+    if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(info.addr.getType())) &&
+        !isUnifiedMemoryMode(converter)) {
       mlir::OpBuilder modBuilder(builder.getModule().getBodyRegion());
       modBuilder.setInsertionPointAfter(builder.getFunction());
       std::string prefix = converter.mangleName(symbol);
@@ -2888,12 +2902,28 @@ static Op createComputeOp(
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      // CUDA device variables (DataAttribute::Device) are always present on
+      // the device, no need for a present check - use deviceptr instead.
+      auto isCUDADevice = [](const Fortran::parser::AccObject &obj) {
+        return Fortran::semantics::IsCUDADevice(
+            getSymbolFromAccObject(obj).GetUltimate());
+      };
+      genDataOperandOperations<mlir::acc::DevicePtrOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
+          /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap,
+          /*filter=*/isCUDADevice);
+      // DevicePtrOp requires no exit operation. Track only the PresentOp ones.
       auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap,
+          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
+            return !isCUDADevice(obj);
+          });
       presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                   dataClauseOperands.end());
     } else if (const auto *devicePtrClause =
@@ -3182,13 +3212,29 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
-      auto crtDataStart = dataClauseOperands.size();
+      // CUDA device variables (DataAttribute::Device) are always present on
+      // the device, no need for a present check - use deviceptr instead.
+      auto isCUDADevice = [](const Fortran::parser::AccObject &obj) {
+        return Fortran::semantics::IsCUDADevice(
+            getSymbolFromAccObject(obj).GetUltimate());
+      };
+      genDataOperandOperations<mlir::acc::DevicePtrOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
+          /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, /*dataMap=*/nullptr,
+          /*filter=*/isCUDADevice);
+      // DevicePtrOp requires no exit operation. Track only the PresentOp ones.
+      auto crtPresentStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
-      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, /*dataMap=*/nullptr,
+          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
+            return !isCUDADevice(obj);
+          });
+      presentEntryOperands.append(dataClauseOperands.begin() + crtPresentStart,
                                   dataClauseOperands.end());
     } else if (const auto *deviceptrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
@@ -4139,11 +4185,15 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                             mlir::acc::DeclareEnterOp, ExitOp>(
           modBuilder, builder, operandLocation, globalOp, clause,
           declareGlobalCtorName.str(), /*implicit=*/true, asFortran);
-      createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
-                                      globalOp, clause);
-      if constexpr (!std::is_same_v<EntryOp, ExitOp>)
-        createDeclareDeallocFunc<ExitOp>(modBuilder, builder, operandLocation,
-                                         globalOp, clause);
+      // The constructor and destructor are kept in unified memory mode: they
+      // map the host global onto the symbol that device code references.
+      if (!isUnifiedMemoryMode(converter)) {
+        createDeclareAllocFunc<EntryOp>(modBuilder, builder, operandLocation,
+                                        globalOp, clause);
+        if constexpr (!std::is_same_v<EntryOp, ExitOp>)
+          createDeclareDeallocFunc<ExitOp>(modBuilder, builder, operandLocation,
+                                           globalOp, clause);
+      }
     } else {
       createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
                             mlir::acc::DeclareEnterOp, ExitOp>(
@@ -5179,6 +5229,8 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
   if (!ultimate.test(Flag::AccDeclareAction))
     return;
+  if (isUnifiedMemoryMode(converter))
+    return;
 
   mlir::ModuleOp module = builder.getModule();
   mlir::Location loc = converter.genLocation(sym.name());
@@ -5205,6 +5257,9 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
 void Fortran::lower::attachDeclarePostAllocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
+  if (isUnifiedMemoryMode(converter))
+    return;
+
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostAllocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
@@ -5238,6 +5293,9 @@ void Fortran::lower::attachDeclarePostAllocAction(
 void Fortran::lower::attachDeclarePreDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     mlir::Value beginOpValue, const Fortran::semantics::Symbol &sym) {
+  if (isUnifiedMemoryMode(converter))
+    return;
+
   if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
       !sym.test(Fortran::semantics::Symbol::Flag::AccCopyIn) &&
       !sym.test(Fortran::semantics::Symbol::Flag::AccCopyInReadOnly) &&
@@ -5272,6 +5330,9 @@ void Fortran::lower::attachDeclarePreDeallocAction(
 void Fortran::lower::attachDeclarePostDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
+  if (isUnifiedMemoryMode(converter))
+    return;
+
   if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
       !sym.test(Fortran::semantics::Symbol::Flag::AccCopyIn) &&
       !sym.test(Fortran::semantics::Symbol::Flag::AccCopyInReadOnly) &&

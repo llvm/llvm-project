@@ -473,7 +473,7 @@ void X86PassConfig::addPreRegBankSelect() {
   }
 }
 bool X86PassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

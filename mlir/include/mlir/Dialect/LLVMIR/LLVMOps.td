@@ -769,8 +769,8 @@ def LLVM_InvokeOp
     LLVMFunctionType getCalleeFunctionType();
 
     /// Successor operands are restricted to LLVM-compatible types.
-    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
-      return isCompatibleType(type);
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
@@ -1130,8 +1130,8 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
   ];
   let extraClassDeclaration = [{
     /// Successor operands are restricted to LLVM-compatible types.
-    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
-      return isCompatibleType(type);
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
@@ -1173,8 +1173,8 @@ def LLVM_CondBrOp
   }]>, LLVM_TerminatorPassthroughOpBuilder];
   let extraClassDeclaration = [{
     /// Successor operands are restricted to LLVM-compatible types.
-    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
-      return isCompatibleType(type);
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
@@ -1297,8 +1297,8 @@ def LLVM_SwitchOp
     }
 
     /// Successor operands are restricted to LLVM-compatible types.
-    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
-      return isCompatibleType(type);
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
@@ -1961,8 +1961,8 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
   ];
   let extraClassDeclaration = [{
     /// Successor operands are restricted to LLVM-compatible types.
-    bool mayForwardTypeToSuccessor(unsigned index, Type type) {
-      return isCompatibleType(type);
+    bool areTypesCompatible(Type lhs, Type rhs) {
+      return lhs == rhs && isCompatibleType(lhs);
     }
   }];
 }
