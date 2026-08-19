@@ -4,8 +4,8 @@
 define void @test(ptr %ptr) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[L11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[L22:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[L11:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[L22:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;

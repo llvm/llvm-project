@@ -9,19 +9,35 @@ tablegen(LLVM WebAssemblyGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM WebAssemblyGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM WebAssemblyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM WebAssemblyGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM WebAssemblyGenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM WebAssemblyGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM WebAssemblyGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM WebAssemblyGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS WebAssemblyGISel.td)
+tablegen(LLVM WebAssemblyGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
+tablegen(LLVM WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPreLegalizerCombiner")
+tablegen(LLVM WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="WebAssemblyPostLegalizerCombiner")
+
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 
 add_llvm_target(WebAssemblyCodeGen
+  GISel/WebAssemblyCallLowering.cpp
+  GISel/WebAssemblyInstructionSelector.cpp
+  GISel/WebAssemblyPostLegalizerCombiner.cpp
+  GISel/WebAssemblyPreLegalizerCombiner.cpp
+  GISel/WebAssemblyLegalizerInfo.cpp
+  GISel/WebAssemblyRegisterBankInfo.cpp
   WebAssemblyAddMissingPrototypes.cpp
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
   WebAssemblyCleanCodeAfterTrap.cpp
   WebAssemblyCFGSort.cpp
+  WebAssemblyCoalesceFeaturesAndStripAtomics.cpp
+  WebAssemblyCodeGenPassBuilder.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
   WebAssemblyLateEHPrepare.cpp
@@ -37,7 +53,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyInstrInfo.cpp
   WebAssemblyLowerBrUnless.cpp
   WebAssemblyLowerEmscriptenEHSjLj.cpp
-  WebAssemblyLowerRefTypesIntPtrConv.cpp
   WebAssemblyMachineFunctionInfo.cpp
   WebAssemblyMCInstLower.cpp
   WebAssemblyMCLowerPrePass.cpp
@@ -45,6 +60,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
   WebAssemblyPeephole.cpp
+  WebAssemblyReduceToAnyAllTrue.cpp
   WebAssemblyRefTypeMem2Local.cpp
   WebAssemblyRegisterInfo.cpp
   WebAssemblyRegColoring.cpp
@@ -72,7 +88,10 @@ add_llvm_target(WebAssemblyCodeGen
   CodeGen
   CodeGenTypes
   Core
+  IRPrinter
+  GlobalISel
   MC
+  ObjCARC
   Scalar
   SelectionDAG
   Support

@@ -239,7 +239,6 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       FunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
@@ -424,7 +423,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 // Search recursively back through the operands to find a tree of values that
 // form a multiply-accumulate chain. The search records the Add and Mul
 // instructions that form the reduction and allows us to find a single value
-// to be used as the initial input to the accumlator.
+// to be used as the initial input to the accumulator.
 bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
   // If we find a non-instruction, try to use it as the initial accumulator
   // value. This may have already been found during the search in which case

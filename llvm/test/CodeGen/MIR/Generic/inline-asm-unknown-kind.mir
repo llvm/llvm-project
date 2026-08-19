@@ -1,0 +1,11 @@
+# RUN: not llc -run-pass=none -o - %s 2>&1 | FileCheck %s
+
+# Test error handling for unknown inline asm operand kind.
+
+---
+name: test_unknown_operand_kind
+body: |
+  bb.0:
+    ; CHECK: [[@LINE+1]]:32: unknown inline asm operand kind 'badkind'
+    INLINEASM &"", attdialect, badkind
+...

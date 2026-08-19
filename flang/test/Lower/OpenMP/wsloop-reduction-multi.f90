@@ -57,7 +57,7 @@
 !CHECK:          %[[RES_Y:.+]] = arith.addf %[[LPRV_Y]], %{{.+}} : f32
 !CHECK:          hlfir.assign %[[RES_Y]] to %[[PRV_Y_DECL]]#0 : f32, !fir.ref<f32>
 !CHECK:          %[[LPRV_Z:.+]] = fir.load %[[PRV_Z_DECL]]#0 : !fir.ref<i32>
-!CHECK:          %[[RES_Z:.+]] = arith.select %{{.+}}, %[[LPRV_Z]], %{{.+}} : i32
+!CHECK:          %[[RES_Z:.+]] = arith.minsi %[[LPRV_Z]], %{{.+}} : i32
 !CHECK:          hlfir.assign %[[RES_Z]] to %[[PRV_Z_DECL]]#0 : i32, !fir.ref<i32>
 !CHECK:          omp.yield
 !CHECK:        }

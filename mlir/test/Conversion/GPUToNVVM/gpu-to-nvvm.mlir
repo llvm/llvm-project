@@ -85,7 +85,7 @@ gpu.module @test_module_2 {
     %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
@@ -101,7 +101,7 @@ gpu.module @test_module_3 {
     %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
@@ -185,10 +185,62 @@ gpu.module @test_module_4 {
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     gpu.barrier
     func.return
   }
+
+  // CHECK-LABEL: func @gpu_sync_subgroup()
+  func.func @gpu_sync_subgroup() {
+    // CHECK: %[[WARP_MASK:.*]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: nvvm.bar.warp.sync %[[WARP_MASK]]
+    gpu.barrier scope <subgroup>
+    func.return
+  }
+
+  // CHECK-LABEL: func @gpu_named_barriers
+  // CHECK-SAME: (%[[MEMBER_COUNT:.*]]: i32)
+  func.func @gpu_named_barriers(%member_count : i32) {
+    // CHECK: %[[ID0_ADDR:.*]] = llvm.mlir.addressof @[[$NB0:__named_barrier_id[_0-9]*]] : !llvm.ptr
+    // CHECK: %[[ID0:.*]] = llvm.load %[[ID0_ADDR]] : !llvm.ptr -> i32
+    // CHECK: %[[WARP_SIZE0:.*]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[THREADS0:.*]] = llvm.mul %[[MEMBER_COUNT]], %[[WARP_SIZE0]] : i32
+    // CHECK: %[[DESC0:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC1:.*]] = llvm.insertvalue %[[ID0]], %[[DESC0]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC2:.*]] = llvm.insertvalue %[[THREADS0]], %[[DESC1]][1] : !llvm.struct<(i32, i32)>
+    %nb0 = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+    %c2 = arith.constant 2 : i32
+    // CHECK: %[[ID1_ADDR:.*]] = llvm.mlir.addressof @[[$NB1:__named_barrier_id[_0-9]*]] : !llvm.ptr
+    // CHECK: %[[ID1:.*]] = llvm.load %[[ID1_ADDR]] : !llvm.ptr -> i32
+    // CHECK: %[[WARP_SIZE1:.*]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[THREADS1:.*]] = llvm.mul %{{.*}}, %[[WARP_SIZE1]] : i32
+    // CHECK: %[[DESC3:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC4:.*]] = llvm.insertvalue %[[ID1]], %[[DESC3]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[THREADS1]], %[[DESC4]][1] : !llvm.struct<(i32, i32)>
+    %nb1 = gpu.initialize_named_barrier %c2 : i32 -> !gpu.named_barrier
+    // CHECK: %[[BARRIER_ID0:.*]] = llvm.extractvalue %[[DESC2]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS0:.*]] = llvm.extractvalue %[[DESC2]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID0]] number_of_threads = %[[BARRIER_THREADS0]]
+    gpu.barrier named(%nb0 : !gpu.named_barrier)
+    // CHECK: %[[BARRIER_ID1:.*]] = llvm.extractvalue %[[DESC5]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS1:.*]] = llvm.extractvalue %[[DESC5]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID1]] number_of_threads = %[[BARRIER_THREADS1]]
+    gpu.barrier named(%nb1 : !gpu.named_barrier)
+    func.return
+  }
+
+  // CHECK-LABEL: func @gpu_named_barrier_arg
+  // CHECK-SAME: (%[[NB:.*]]: !llvm.struct<(i32, i32)>)
+  func.func @gpu_named_barrier_arg(%nb : !gpu.named_barrier) {
+    // CHECK: %[[BARRIER_ID:.*]] = llvm.extractvalue %[[NB]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS:.*]] = llvm.extractvalue %[[NB]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID]] number_of_threads = %[[BARRIER_THREADS]]
+    gpu.barrier named(%nb : !gpu.named_barrier)
+    func.return
+  }
+
+  // CHECK: llvm.mlir.global internal constant @[[$NB0]](1 : i32) {addr_space = 0 : i32} : i32
+  // CHECK: llvm.mlir.global internal constant @[[$NB1]](2 : i32) {addr_space = 0 : i32} : i32
 }
 
 
@@ -644,39 +696,45 @@ gpu.module @test_module_29 {
 
 gpu.module @test_module_30 {
   // CHECK-LABEL: func @subgroup_reduce_add
-  gpu.func @subgroup_reduce_add(%arg0 : i32) {
+  gpu.func @subgroup_reduce_add(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync add {{.*}}
     %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: @subgroup_reduce_minsi
-  gpu.func @subgroup_reduce_minsi(%arg0 : i32) {
+  gpu.func @subgroup_reduce_minsi(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync min {{.*}}
     %result = gpu.subgroup_reduce minsi %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_maxsi
-  gpu.func @subgroup_reduce_maxsi(%arg0 : i32) {
+  gpu.func @subgroup_reduce_maxsi(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync max {{.*}}
     %result = gpu.subgroup_reduce maxsi %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: func @subgroup_reduce_and
-  gpu.func @subgroup_reduce_and(%arg0 : i32) {
+  gpu.func @subgroup_reduce_and(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync and {{.*}}
     %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_or
-  gpu.func @subgroup_reduce_or(%arg0 : i32) {
+  gpu.func @subgroup_reduce_or(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync or {{.*}}
     %result = gpu.subgroup_reduce or %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: @subgroup_reduce_xor
-  gpu.func @subgroup_reduce_xor(%arg0 : i32) {
+  gpu.func @subgroup_reduce_xor(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync xor {{.*}}
     %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
 }
@@ -1025,7 +1083,7 @@ module attributes {transform.with_named_sequence} {
         use_bare_ptr_call_conv = false}
     } {
       legal_dialects = ["llvm", "memref", "nvvm", "test"],
-      legal_ops = ["func.func", "gpu.module", "gpu.yield"],
+      legal_ops = ["gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
                     "llvm.ffloor", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
@@ -1173,11 +1231,11 @@ gpu.module @test_module_cluster_block_ops {
     %1 = gpu.cluster_block_id y
     // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.z range <i32, 0, 2> : i32
     %2 = gpu.cluster_block_id z
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 1, 9> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 8, 9> : i32
     %3 = gpu.cluster_dim_blocks x
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 1, 5> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 4, 5> : i32
     %4 = gpu.cluster_dim_blocks y
-    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 1, 3> : i32
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 2, 3> : i32
     %5 = gpu.cluster_dim_blocks z
 
     %6 = arith.addi %0, %1 : index
@@ -1191,3 +1249,20 @@ gpu.module @test_module_cluster_block_ops {
   }
 }
 
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK-LABEL: llvm.func @gpu_ballot
+    gpu.func @gpu_ballot(%arg0: i1) -> (i32, i64) {
+      // CHECK: %[[BALLOT_MASK1:.*]] = llvm.mlir.constant(-1 : i32) : i32
+      // CHECK: %[[BALLOT_I32:.*]] = nvvm.vote.sync ballot %[[BALLOT_MASK1]], %{{.*}} -> i32
+      %0 = gpu.ballot %arg0 : i32
+      // CHECK: %[[BALLOT_MASK2:.*]] = llvm.mlir.constant(-1 : i32) : i32
+      // CHECK: %[[BALLOT_I64_TMP:.*]] = nvvm.vote.sync ballot %[[BALLOT_MASK2]], %{{.*}} -> i32
+      // CHECK: %[[BALLOT_I64:.*]] = llvm.zext %[[BALLOT_I64_TMP]] : i32 to i64
+      %1 = gpu.ballot %arg0 : i64
+      gpu.return %0, %1 : i32, i64
+    }
+  }
+}

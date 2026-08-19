@@ -9,6 +9,7 @@
 #include "lldb/Core/Disassembler.h"
 
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Architecture.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Mangled.h"
@@ -78,10 +79,8 @@ DisassemblerSP Disassembler::FindPlugin(const ArchSpec &arch,
         return disasm_sp;
     }
   } else {
-    for (uint32_t idx = 0;
-         (create_callback = PluginManager::GetDisassemblerCreateCallbackAtIndex(
-              idx)) != nullptr;
-         ++idx) {
+    for (auto create_callback :
+         PluginManager::GetDisassemblerCreateCallbacks()) {
       if (auto disasm_sp = create_callback(arch, flavor, cpu, features))
         return disasm_sp;
     }
@@ -389,7 +388,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
     if (!v || v->IsArtificial())
       continue;
 
-    const char *nm = v->GetName().AsCString();
+    const char *nm = v->GetName().AsCString(nullptr);
     llvm::StringRef name = nm ? nm : "<anon>";
 
     DWARFExpressionList &exprs = v->LocationExpressionList();
@@ -415,13 +414,13 @@ VariableAnnotator::AnnotateStructured(Instruction &inst) {
 
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
-      decl_file = decl.GetFile().GetFilename().AsCString();
+      decl_file = decl.GetFile().GetFilename().str();
       if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
     }
 
     if (Type *type = v->GetType())
-      if (const char *type_str = type->GetName().AsCString())
+      if (const char *type_str = type->GetName().AsCString(nullptr))
         type_name = type_str;
 
     current_vars.try_emplace(
@@ -501,7 +500,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   // inlined functions which the user wants to skip).
 
   std::map<FileSpec, std::set<uint32_t>> source_lines_seen;
-  Symbol *previous_symbol = nullptr;
+  const Symbol *previous_symbol = nullptr;
 
   size_t address_text_size = 0;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -1087,7 +1086,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
 
 bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
   if (!file_name) {
-    out_stream.Printf("Instruction::TestEmulation:  Missing file_name.");
+    out_stream.PutCString("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
   FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
@@ -1159,9 +1158,9 @@ bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
         insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
-    out_stream.Printf("Emulation test succeeded.");
+    out_stream.PutCString("Emulation test succeeded.");
   else
-    out_stream.Printf("Emulation test failed.");
+    out_stream.PutCString("Emulation test failed.");
 
   return success;
 }
@@ -1187,6 +1186,47 @@ bool Instruction::Emulate(
 
 uint32_t Instruction::GetData(DataExtractor &data) {
   return m_opcode.GetData(data);
+}
+
+StructuredData::ArraySP Instruction::GetVariableAnnotations() {
+  VariableAnnotator annotator;
+  std::vector<VariableAnnotation> annotations =
+      annotator.AnnotateStructured(*this);
+
+  StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
+
+  for (const VariableAnnotation &ann : annotations) {
+    StructuredData::DictionarySP dict_sp =
+        std::make_shared<StructuredData::Dictionary>();
+
+    dict_sp->AddStringItem("variable_name", ann.variable_name);
+    dict_sp->AddStringItem("location_description", ann.location_description);
+    if (ann.address_range.has_value()) {
+      const auto &range = *ann.address_range;
+      dict_sp->AddItem("start_address",
+                       std::make_shared<StructuredData::UnsignedInteger>(
+                           range.GetBaseAddress().GetFileAddress()));
+      dict_sp->AddItem(
+          "end_address",
+          std::make_shared<StructuredData::UnsignedInteger>(
+              range.GetBaseAddress().GetFileAddress() + range.GetByteSize()));
+    }
+    dict_sp->AddItem(
+        "register_kind",
+        std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
+    if (ann.decl_file.has_value())
+      dict_sp->AddStringItem("decl_file", *ann.decl_file);
+    if (ann.decl_line.has_value())
+      dict_sp->AddItem(
+          "decl_line",
+          std::make_shared<StructuredData::UnsignedInteger>(*ann.decl_line));
+    if (ann.type_name.has_value())
+      dict_sp->AddStringItem("type_name", *ann.type_name);
+
+    array_sp->AddItem(dict_sp);
+  }
+
+  return array_sp;
 }
 
 InstructionList::InstructionList() : m_instructions() {}
@@ -1316,6 +1356,18 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   start = ResolveAddress(target, start);
 
+  // Don't decode a non-instruction function header.
+  if (Architecture *arch = target.GetArchitecturePlugin()) {
+    const Address first_insn = arch->SkipFunctionHeader(start);
+    if (first_insn.GetFileAddress() != start.GetFileAddress()) {
+      const addr_t skip = first_insn.GetFileAddress() - start.GetFileAddress();
+      start = first_insn;
+      // The skipped header bytes still count against a byte limit.
+      if (limit.kind == Limit::Bytes && limit.value > skip)
+        limit.value -= skip;
+    }
+  }
+
   addr_t byte_size = limit.value;
   if (limit.kind == Limit::Instructions)
     byte_size *= m_arch.GetMaximumOpcodeByteSize();
@@ -1330,7 +1382,7 @@ size_t Disassembler::AppendInstructions(Target &target, Address start,
 
   if (bytes_read == 0) {
     if (error_strm_ptr) {
-      if (const char *error_cstr = error.AsCString())
+      if (const char *error_cstr = error.AsCString(nullptr))
         error_strm_ptr->Printf("error: %s\n", error_cstr);
     }
     return 0;

@@ -118,6 +118,7 @@ static_library("LLVMRISCVCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "GISel/RISCVCallLowering.cpp",
+    "GISel/RISCVInlineAsmLowering.cpp",
     "GISel/RISCVInstructionSelector.cpp",
     "GISel/RISCVLegalizerInfo.cpp",
     "GISel/RISCVO0PreLegalizerCombiner.cpp",
@@ -126,6 +127,7 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
     "RISCVCallingConv.cpp",
+    "RISCVCodeGenPassBuilder.cpp",
     "RISCVCodeGenPrepare.cpp",
     "RISCVConstantPoolValue.cpp",
     "RISCVDeadRegisterDefinitions.cpp",
@@ -154,6 +156,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVPostRAExpandPseudoInsts.cpp",
     "RISCVPromoteConstant.cpp",
     "RISCVPushPopOptimizer.cpp",
+    "RISCVQCRelaxMarking.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
     "RISCVSelectionDAGInfo.cpp",

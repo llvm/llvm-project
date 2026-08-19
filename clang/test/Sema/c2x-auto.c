@@ -6,14 +6,14 @@ void test_basic_types(void) {
   auto auto_int = 4;
   auto auto_long = 4UL;
   auto int auto_int_ts = 12;
-  signed auto a = 1L; // expected-error {{'auto' cannot be signed or unsigned}}
+  signed auto a = 1L;
 
   _Static_assert(_Generic(auto_int, int : 1));
   _Static_assert(_Generic(auto_long, unsigned long : 1));
 }
 
 void test_complex_types(void) {
-  _Complex auto i = 12.0; // expected-error {{'_Complex auto' is invalid}}
+  _Complex auto i = 12.0; // expected-warning {{plain '_Complex' requires a type specifier; assuming '_Complex double'}}
 }
 
 void test_gnu_extensions(void) {
@@ -84,16 +84,16 @@ void test_qualifiers(const int y) {
   _Static_assert(_Generic(pc, int * : 1));
 }
 
-void test_strings(void) {
+void test_parens(void) {
   auto str = "this is a string";
-  auto str2[] = "this is a string";       // expected-warning {{type inference of a declaration other than a plain identifier with optional trailing attributes is a Clang extension}}
-  auto (str3) = "this is a string";
-  auto (((str4))) = "this is a string";
+  auto (str2) = "this is a string";
+  auto (((str3))) = "this is a string";
+  auto ((((x)))) = 12;
 
   _Static_assert(_Generic(str, char * : 1));
   _Static_assert(_Generic(str2, char * : 1));
   _Static_assert(_Generic(str3, char * : 1));
-  _Static_assert(_Generic(str4, char * : 1));
+  _Static_assert(_Generic(x, int : 1));
 }
 
 void test_pointers(void) {
@@ -136,4 +136,13 @@ void test_scopes(void) {
 [[clang::overloadable]] auto test(auto x) { // expected-error {{'auto' not allowed in function prototype}} \
                                                expected-error {{'auto' not allowed in function return type}}
   return x;
+}
+
+
+void test_incompatible_initializer(void) {
+  auto s1[] = "test";   // expected-error {{cannot use 'auto' with array in C}}
+  auto s2[4] = "test";  // expected-error {{cannot use 'auto' with array in C}}
+  auto s3[5] = "test";  // expected-error {{cannot use 'auto' with array in C}}
+  auto i = { 1 };       // expected-error {{cannot use 'auto' with initializer list in C}}
+  auto i2 = { 1, 2 };   // expected-error {{cannot use 'auto' with initializer list in C}}
 }

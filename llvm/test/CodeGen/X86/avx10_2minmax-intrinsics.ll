@@ -561,6 +561,25 @@ define <2 x double>@test_int_x86_maskz_vminmaxsd_round(<2 x double> %A, <2 x dou
   ret <2 x double> %ret
 }
 
+define <2 x double> @test_upper_lane_passthrough_vminmaxsd_round(<2 x double> %A, <2 x double> %B, <2 x double> %C) nounwind {
+; X64-LABEL: test_upper_lane_passthrough_vminmaxsd_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc2]
+; X64-NEXT:    # xmm0 = xmm2[0],xmm0[1]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_upper_lane_passthrough_vminmaxsd_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsd %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xfb,0x10,0xc2]
+; X86-NEXT:    # xmm0 = xmm2[0],xmm0[1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;; Constant false mask (i8 0) forces the output to be the first source operand
+  %ret = call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 127, <2 x double> %C,
+    i8 0,
+    i32 8)
+  ret <2 x double> %ret
+}
+
 declare<2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(<2 x double> %A, <2 x double> %B, i32 %C, <2 x double> %D, i8 %E, i32 %F)
 
 define <8 x half>@test_int_x86_vminmaxsh(<8 x half> %A, <8 x half> %B) nounwind {
@@ -659,6 +678,25 @@ define <8 x half>@test_int_x86_maskz_vminmaxsh_round(<8 x half> %A, <8 x half> %
   ret <8 x half> %ret
 }
 
+define <8 x half> @test_upper_lane_passthrough_vminmaxsh_round(<8 x half> %A, <8 x half> %B, <8 x half> %C) nounwind {
+; X64-LABEL: test_upper_lane_passthrough_vminmaxsh_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovsh %xmm2, %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x10,0xc2]
+; X64-NEXT:    # xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_upper_lane_passthrough_vminmaxsh_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovsh %xmm2, %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x10,0xc2]
+; X86-NEXT:    # xmm0 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; X86-NEXT:    retl # encoding: [0xc3]
+;; Constant false mask (i8 0) forces the output to be the first source operand
+  %ret = call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 127, <8 x half> %C,
+    i8 0,
+    i32 8)
+  ret <8 x half> %ret
+}
+
 declare<8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(<8 x half> %A, <8 x half> %B, i32 %C, <8 x half> %D, i8 %E, i32 %F)
 
 define <4 x float>@test_int_x86_vminmaxss(<4 x float> %A, <4 x float> %B) nounwind {
@@ -754,6 +792,25 @@ define <4 x float>@test_int_x86_maskz_vminmaxss_round(<4 x float> %A, <4 x float
 ; X86-NEXT:    vminmaxss $127, {sae}, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7d,0x99,0x53,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 127, <4 x float> zeroinitializer, i8 %C, i32 8)
+  ret <4 x float> %ret
+}
+
+define <4 x float> @test_upper_lane_passthrough_vminmaxss_round(<4 x float> %A, <4 x float> %B, <4 x float> %C) nounwind {
+; X64-LABEL: test_upper_lane_passthrough_vminmaxss_round:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovss %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc2]
+; X64-NEXT:    # xmm0 = xmm2[0],xmm0[1,2,3]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_upper_lane_passthrough_vminmaxss_round:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovss %xmm2, %xmm0, %xmm0 # encoding: [0xc5,0xfa,0x10,0xc2]
+; X86-NEXT:    # xmm0 = xmm2[0],xmm0[1,2,3]
+; X86-NEXT:    retl # encoding: [0xc3]
+;; Constant false mask (i8 0) forces the output to be the first source operand
+  %ret = call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(<4 x float> %A, <4 x float> %B, i32 0, <4 x float> %C,
+    i8 0,
+    i32 8)
   ret <4 x float> %ret
 }
 

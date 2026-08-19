@@ -220,6 +220,31 @@ indirectgoto:                                     ; preds = %if.then18, %if.then
 
 ; CHECK-LABEL: Printing analysis {{.*}} for function '_Z11irreduciblePh2':
 ; CHECK: block-frequency-info: _Z11irreduciblePh2
-; CHECK: - sw.bb6: {{.*}} count = 100
+; CHECK: - sw.bb6: {{.*}} count = 300
 ; CHECK: - sw.bb15: {{.*}} count = 100, irr_loop_header_weight = 100
 ; CHECK: - indirectgoto: {{.*}} count = 400, irr_loop_header_weight = 400
+
+; Weights of zero pin nothing, so the SCC falls back to the branch weights.
+; The mass still has to leave it.
+define void @all_weights_zero(i1 %x) {
+entry:
+  br i1 %x, label %c1, label %c2, !prof !43
+
+c1:
+  br i1 %x, label %c2, label %exit, !prof !43, !irr_loop !44
+
+c2:
+  br i1 %x, label %c1, label %exit, !prof !43, !irr_loop !44
+
+exit:
+  ret void
+}
+!43 = !{!"branch_weights", i32 3, i32 1}
+!44 = !{!"loop_header_weight", i64 0}
+
+; CHECK-LABEL: Printing analysis {{.*}} for function 'all_weights_zero':
+; CHECK-NEXT: block-frequency-info: all_weights_zero
+; CHECK-NEXT: - entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+; CHECK-NEXT: - c1: float = 2.0,
+; CHECK-NEXT: - c2: float = 2.0,
+; CHECK-NEXT: - exit: float = 1.0, int = [[ENTRY]]

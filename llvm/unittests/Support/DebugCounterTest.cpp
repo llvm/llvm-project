@@ -35,6 +35,19 @@ TEST(DebugCounterTest, Basic) {
   llvm::raw_string_ostream OS(Str);
   DC->print(OS);
   EXPECT_TRUE(StringRef(Str).contains("{200,1:3-5:78:79:89:100-102:150}"));
+
+  DC->resetAllCounters();
+
+  // After resetting, counter is no longer set.
+  EXPECT_FALSE(DebugCounter::isCounterSet(TestCounter));
+
+  DC->push_back("test-counter=1");
+  EXPECT_TRUE(DebugCounter::isCounterSet(TestCounter));
+  EXPECT_EQ(DC->getCounterState(TestCounter).Count, 0);
+
+  DC->shouldExecute(TestCounter);
+
+  EXPECT_EQ(DC->getCounterState(TestCounter).Count, 1);
 }
 
 #endif

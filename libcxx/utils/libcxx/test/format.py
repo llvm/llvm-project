@@ -36,7 +36,7 @@ def _checkBaseSubstitutions(substitutions):
 
 def _executeScriptInternal(test, litConfig, commands):
     """
-    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands), or an appropriate lit.Test.Result
+    Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands, testUpdateOutput), or an appropriate lit.Test.Result
     in case of an error while parsing the script.
 
     TODO: This really should be easier to access from Lit itself
@@ -53,9 +53,9 @@ def _executeScriptInternal(test, litConfig, commands):
         )
     except lit.TestRunner.ScriptFatal as e:
         res = ("", str(e), 127, None)
-    (out, err, exitCode, timeoutInfo) = res
+    (out, err, exitCode, timeoutInfo, testUpdateOutput) = res
 
-    return (out, err, exitCode, timeoutInfo, parsedCommands)
+    return (out, err, exitCode, timeoutInfo, parsedCommands, testUpdateOutput)
 
 
 def _validateModuleDependencies(modules):
@@ -167,7 +167,7 @@ def parseScript(test, preamble):
         # The moduleCompileFlags are added to the %{compile_flags}, but
         # the modules need to be built without these flags. So expand the
         # %{compile_flags} eagerly and hardcode them in the build script.
-        compileFlags = config._getSubstitution("%{compile_flags}", test.config)
+        compileFlags = config._getSubstitution("%{compile_flags}", substitutions)
 
         # Building the modules needs to happen before the other script
         # commands are executed. Therefore the commands are added to the
@@ -205,8 +205,12 @@ def parseScript(test, preamble):
         )
 
     # Perform substitutions in the script itself.
+    conditions = {feature: True for feature in test.config.available_features}
     script = lit.TestRunner.applySubstitutions(
-        script, substitutions, recursion_limit=test.config.recursiveExpansionLimit
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
     )
 
     return script
@@ -359,7 +363,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{benchmark_flags} %{link_flags} -o %t.exe",
             ]
             if "enable-benchmarks=run" in test.config.available_features:
-                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
+                steps += ["%dbg(EXECUTED AS) %{exec} %t.exe --benchmark_min_time=%{benchmark_min_time} --benchmark_out=%{temp}/benchmark-result.json --benchmark_out_format=json"]
                 parse_results = os.path.join(LIBCXX_UTILS, 'parse-google-benchmark-results')
                 steps += [f"{parse_results} %{{temp}}/benchmark-result.json --output-format=lnt > %{{temp}}/results.lnt"]
             return self._executeShTest(test, litConfig, steps)
@@ -406,7 +410,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             yield generator
             return
 
-        (out, err, exitCode, _, _) = result
+        (out, err, exitCode, _, _, _) = result
         if exitCode != 0:
             raise RuntimeError(f"Error while trying to generate gen test {'/'.join(pathInSuite)}\nstdout:\n{out}\n\nstderr:\n{err}")
 

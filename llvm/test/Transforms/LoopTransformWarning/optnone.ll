@@ -40,7 +40,7 @@ attributes #0 = { noinline optnone }
 !1 = !{!"llvm.loop.unroll.enable"}
 !2 = !{!"llvm.loop.distribute.enable"}
 !3 = !{!"llvm.loop.unroll_and_jam.enable"}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.enable"}
 
 
 ; CHECK-NOT: warning

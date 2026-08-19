@@ -284,7 +284,7 @@ entry:
 define double @test_fabs_select1(double %a) {
 ; CHECK-LABEL: @test_fabs_select1(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp uno double [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double 0x7FF8000000000000, double [[A]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], double +qnan, double [[A]]
 ; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %cond = fcmp uno double %a, 0.000000e+00
@@ -297,7 +297,7 @@ define double @test_fabs_select1(double %a) {
 define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 ; CHECK-LABEL: @test_fabs_select1_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp uno <2 x double> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> splat (double 0x7FF8000000000000), <2 x double> [[A]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select <2 x i1> [[COND]], <2 x double> splat (double +qnan), <2 x double> [[A]]
 ; CHECK-NEXT:    ret <2 x double> [[SEL2]]
 ;
   %cond = fcmp uno <2 x double> %a, zeroinitializer
@@ -310,7 +310,7 @@ define <2 x double> @test_fabs_select1_vec(<2 x double> %a) {
 define double @test_fabs_select2(double %a) {
 ; CHECK-LABEL: @test_fabs_select2(
 ; CHECK-NEXT:    [[ABS1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[ABS1]], +inf
 ; CHECK-NEXT:    [[ABS2:%.*]] = select i1 [[CMP]], double 0.000000e+00, double [[ABS1]]
 ; CHECK-NEXT:    ret double [[ABS2]]
 ;
@@ -337,7 +337,7 @@ define double @test_fabs_select_fmf1(i1 %cond, double %a) {
 define double @test_fabs_select_fmf2(i1 %cond, double %a) {
 ; CHECK-LABEL: @test_fabs_select_fmf2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[SEL1:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select nnan ninf i1 [[COND:%.*]], double 0.000000e+00, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL1]]
 ;
   %sel1 = select i1 %cond, double 0.0, double %a
@@ -347,7 +347,7 @@ define double @test_fabs_select_fmf2(i1 %cond, double %a) {
 
 define float @test_fabs_select_multiuse(i1 %cond, float %x) {
 ; CHECK-LABEL: @test_fabs_select_multiuse(
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float +inf
 ; CHECK-NEXT:    call void @usef32(float [[SELECT]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[FABS]]
@@ -531,4 +531,157 @@ define <2 x i8> @test_select_rotate_right_non_splat(i1 %0) {
   %s = select i1 %0, <2 x i8> <i8 1, i8 2>, <2 x i8> <i8 -1, i8 -2>
   %ret = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %s, <2 x i8> %s, <2 x i8> <i8 7, i8 7>)
   ret <2 x i8> %ret
+}
+
+define i32 @select_of_ctpop(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctpop(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctpop1 = call i32 @llvm.ctpop.i32(i32 %x)
+  %ctpop2 = call i32 @llvm.ctpop.i32(i32 %y)
+  %sel = select i1 %cond, i32 %ctpop1, i32 %ctpop2
+  ret i32 %sel
+}
+
+; Negative test: TV is not ctpop, should not transform
+define i32 @select_of_ctpop_negative_tv(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctpop_negative_tv(
+; CHECK-NEXT:    [[CTPOP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[CTPOP2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctpop1 = add i32 %x, 0
+  %ctpop2 = call i32 @llvm.ctpop.i32(i32 %y)
+  %sel = select i1 %cond, i32 %ctpop1, i32 %ctpop2
+  ret i32 %sel
+}
+
+; Negative test: FV is not ctpop, should not transform
+define i32 @select_of_ctpop_negative_fv(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctpop_negative_fv(
+; CHECK-NEXT:    [[CTPOP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[CTPOP1]], i32 [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctpop1 = call i32 @llvm.ctpop.i32(i32 %y)
+  %ctpop2 = add i32 %x, 0
+  %sel = select i1 %cond, i32 %ctpop1, i32 %ctpop2
+  ret i32 %sel
+}
+
+; Negative test: ctpop1 has multiple uses, don't transform
+define i32 @select_of_ctpop_negative_multi_use(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctpop_negative_multi_use(
+; CHECK-NEXT:    [[CTPOP1:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    call void @use(i32 [[CTPOP1]])
+; CHECK-NEXT:    [[CTPOP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[CTPOP1]], i32 [[CTPOP2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctpop1 = call i32 @llvm.ctpop.i32(i32 %x)
+  call void @use(i32 %ctpop1)
+  %ctpop2 = call i32 @llvm.ctpop.i32(i32 %y)
+  %sel = select i1 %cond, i32 %ctpop1, i32 %ctpop2
+  ret i32 %sel
+}
+
+define <4 x i32> @select_of_ctpop_vec(<4 x i1> %cond, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @select_of_ctpop_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[COND:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %ctpop1 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %x)
+  %ctpop2 = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %y)
+  %sel = select <4 x i1> %cond, <4 x i32> %ctpop1, <4 x i32> %ctpop2
+  ret <4 x i32> %sel
+}
+
+define i32 @select_of_ctlz(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 false)
+  %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
+  ret i32 %sel
+}
+
+define i32 @select_of_ctlz_zero_poison_false(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz_zero_poison_false(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 true)
+  %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
+  ret i32 %sel
+}
+
+define i32 @select_of_ctlz_zero_poison_true(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz_zero_poison_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
+  %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 true)
+  %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
+  ret i32 %sel
+}
+
+; Negative test: ctlz1 has multiple uses, don't transform
+define i32 @select_of_ctlz_negative_multi_use(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz_negative_multi_use(
+; CHECK-NEXT:    [[CTLZ1:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[CTLZ1]])
+; CHECK-NEXT:    [[CTLZ2:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[Y:%.*]], i1 false)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i32 [[CTLZ1]], i32 [[CTLZ2]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  call void @use(i32 %ctlz1)
+  %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 false)
+  %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
+  ret i32 %sel
+}
+
+define <4 x i32> @select_of_ctlz_vec(<4 x i1> %cond, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @select_of_ctlz_vec(
+; CHECK-NEXT:    [[CTLZ2:%.*]] = call range(i32 0, 33) <4 x i32> @llvm.ctlz.v4i32(<4 x i32> [[Y:%.*]], i1 false)
+; CHECK-NEXT:    ret <4 x i32> [[CTLZ2]]
+;
+  %ctlz1 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %x, i1 false)
+  %ctlz2 = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %y, i1 false)
+  %sel = select <4 x i1> %cond, <4 x i32> %ctlz2, <4 x i32> %ctlz2
+  ret <4 x i32> %sel
+}
+
+define i32 @select_of_cttz(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_cttz(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cttz1 = call i32 @llvm.cttz.i32(i32 %x, i1 false)
+  %cttz2 = call i32 @llvm.cttz.i32(i32 %y, i1 false)
+  %sel = select i1 %cond, i32 %cttz1, i32 %cttz2
+  ret i32 %sel
+}
+
+define i32 @select_of_abs(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_abs(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %abs1 = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %abs2 = call i32 @llvm.abs.i32(i32 %y, i1 false)
+  %sel = select i1 %cond, i32 %abs1, i32 %abs2
+  ret i32 %sel
 }

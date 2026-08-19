@@ -133,8 +133,11 @@ TEST(URITest, ParseFailed) {
 
 TEST(URITest, Resolve) {
 #ifdef _WIN32
-  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c%3a/x/y/z")), "c:\\x\\y\\z");
-  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:\\x\\y\\z");
+  // Expected path style depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c%3a/x/y/z")),
+              llvm::sys::path::native("c:/x/y/z"));
+  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")),
+              llvm::sys::path::native("c:/x/y/z"));
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
   EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "//auth/a/b/c");
@@ -148,13 +151,14 @@ TEST(URITest, Resolve) {
 
 TEST(URITest, ResolveUNC) {
 #ifdef _WIN32
+  // Expected path style depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
   EXPECT_THAT(resolveOrDie(parseOrDie("file://example.com/x/y/z")),
-              "\\\\example.com\\x\\y\\z");
+              llvm::sys::path::native("//example.com/x/y/z"));
   EXPECT_THAT(resolveOrDie(parseOrDie("file://127.0.0.1/x/y/z")),
-              "\\\\127.0.0.1\\x\\y\\z");
+              llvm::sys::path::native("//127.0.0.1/x/y/z"));
   // Ensure non-traditional file URI still resolves to correct UNC path.
   EXPECT_THAT(resolveOrDie(parseOrDie("file:////127.0.0.1/x/y/z")),
-              "\\\\127.0.0.1\\x\\y\\z");
+              llvm::sys::path::native("//127.0.0.1/x/y/z"));
 #else
   EXPECT_THAT(resolveOrDie(parseOrDie("file://example.com/x/y/z")),
               "//example.com/x/y/z");

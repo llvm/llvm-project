@@ -9,6 +9,7 @@
 #include <valarray>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 9
 template _LIBCPP_EXPORTED_FROM_ABI valarray<size_t>::valarray(size_t);
@@ -45,4 +46,5 @@ void gslice::__init(size_t __start) {
   }
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

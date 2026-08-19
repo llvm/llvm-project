@@ -39,6 +39,14 @@ def OL_APIEXPORT : Macro {
   let alt_value = "";
 }
 
+def OL_NODISCARD : Macro {
+  let desc = "Marks a function whose result should not be discarded";
+  let condition = "(defined(__cplusplus) && __cplusplus >= 201703L) || "
+                  "(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)";
+  let value = "[[nodiscard]]";
+  let alt_value = "";
+}
+
 def ol_platform_handle_t : Handle {
   let desc = "Handle of a platform instance";
 }
@@ -69,6 +77,7 @@ def ol_symbol_handle_t : Handle {
 
 def ol_errc_t : Enum {
   let desc = "Defines Return/Error codes";
+  let nodiscard = 1;
   let etors =[
     Etor<"SUCCESS", "success">,
 
@@ -98,6 +107,7 @@ def ol_errc_t : Enum {
     Etor<"INVALID_DEVICE", "invalid device">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
+    Etor<"INVALID_CONTEXT", "invalid context">,
     Etor<"SYMBOL_KIND", "the operation does not support this symbol kind">,
   ];
 }
@@ -139,14 +149,30 @@ def ol_dimensions_t : Struct {
   ];
 }
 
+def ol_init_args_t : Struct {
+  let desc = "Configuration arguments for olInit.";
+  let members = [
+    StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
+    StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+  ];
+}
+
+def OL_INIT_ARGS_INIT : Macro {
+  let desc = "Default initializer for ol_init_args_t. Sets Size to the correct value and all other fields to zero/NULL.";
+  let value = "{ sizeof(ol_init_args_t), 0, NULL }";
+}
+
 def olInit : Function {
   let desc = "Perform initialization of the Offload library";
   let details = [
     "This must be the first API call made by a user of the Offload library",
-    "The underlying platforms are lazily initialized on their first use"
-    "Each call will increment an internal reference count that is decremented by `olShutDown`"
+    "Each call will increment an internal reference count that is decremented by `olShutDown`",
+    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
   ];
-  let params = [];
+  let params = [
+    Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
+  ];
   let returns = [];
 }
 

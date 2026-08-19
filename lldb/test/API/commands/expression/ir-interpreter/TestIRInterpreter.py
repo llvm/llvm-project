@@ -172,3 +172,112 @@ class IRInterpreterTestCase(TestBase):
         self.assertEqual(short_val.GetValueAsSigned(), -1)
         long_val = target.EvaluateExpression("(long) " + short_val.GetName())
         self.assertEqual(long_val.GetValueAsSigned(), -1)
+
+    def test_fpconv(self):
+        self.build_and_run()
+
+        interp_options = lldb.SBExpressionOptions()
+        interp_options.SetLanguage(lldb.eLanguageTypeC_plus_plus)
+        interp_options.SetAllowJIT(False)
+
+        jit_options = lldb.SBExpressionOptions()
+        jit_options.SetLanguage(lldb.eLanguageTypeC_plus_plus)
+        jit_options.SetAllowJIT(True)
+
+        set_up_expressions = [
+            "int32_t $i = 3",
+            "int32_t $n = -3",
+            "uint32_t $u = 5",
+            "int64_t $l = -7",
+            "float $f = 9.0625",
+            "double $d = 13.75",
+            "float $nf = -11.25",
+        ]
+
+        expressions = [
+            "$i + $f",  # sitofp i32 to float
+            "$d - $n",  # sitofp i32 to double
+            "$u + $f",  # uitofp i32 to float
+            "$u + $d",  # uitofp i32 to double
+            "(int32_t)$d",  # fptosi double to i32
+            "(int32_t)$f",  # fptosi float to i32
+            "(int64_t)$d",  # fptosi double to i64
+            "(int16_t)$f",  # fptosi float to i16
+            "(int64_t)$nf",  # fptosi float to i64
+            "(uint16_t)$f",  # fptoui float to i16
+            "(uint32_t)$d",  # fptoui double to i32
+            "(uint64_t)$d",  # fptoui double to i64
+            "(float)$d",  # fptrunc double to float
+            "(double)$f",  # fpext float to double
+            "(double)$nf",  # fpext float to double
+        ]
+
+        for expression in set_up_expressions:
+            self.frame().EvaluateExpression(expression, interp_options)
+
+        func_call = "(int)getpid()"
+        if lldbplatformutil.getPlatform() == "windows":
+            func_call = "(int)GetCurrentProcessId()"
+
+        for expression in expressions:
+            interp_expression = expression
+            # Calling a function forces the expression to be executed with JIT.
+            jit_expression = func_call + "; " + expression
+
+            interp_result = self.frame().EvaluateExpression(
+                interp_expression, interp_options
+            )
+            jit_result = self.frame().EvaluateExpression(jit_expression, jit_options)
+
+            self.assertEqual(
+                interp_result.GetValue(),
+                jit_result.GetValue(),
+                "Values match for " + expression,
+            )
+            self.assertEqual(
+                interp_result.GetTypeName(),
+                jit_result.GetTypeName(),
+                "Types match for " + expression,
+            )
+
+    def test_fpconv_ub(self):
+        target = self.dbg.GetDummyTarget()
+
+        set_up_expressions = [
+            "float $f = 3e9",
+            "double $d = 1e20",
+            "float $nf = -1.5",
+        ]
+
+        expressions = [
+            (
+                "(int32_t)$f",
+                "Conversion error: (float) 3.0E+9 cannot be converted to i32",
+            ),
+            (
+                "(uint32_t)$nf",
+                "Conversion error: (float) -1.5 cannot be converted to unsigned i32",
+            ),
+            (
+                "(int64_t)$d",
+                "Conversion error: (float) 1.0E+20 cannot be converted to i64",
+            ),
+            (
+                "(uint64_t)$d",
+                "Conversion error: (float) 1.0E+20 cannot be converted to unsigned i64",
+            ),
+        ]
+
+        for expression in set_up_expressions:
+            target.EvaluateExpression(expression)
+
+        # The IR Interpreter returns an error if a value cannot be converted.
+        for expression in expressions:
+            result = target.EvaluateExpression(expression[0])
+            self.assertIn(expression[1], str(result.GetError()))
+
+        # The conversion should succeed if the destination type can represent the result.
+        self.expect_expr(
+            "(uint32_t)$f", result_type="uint32_t", result_value="3000000000"
+        )
+        self.expect_expr("(int32_t)$nf", result_type="int32_t", result_value="-1")

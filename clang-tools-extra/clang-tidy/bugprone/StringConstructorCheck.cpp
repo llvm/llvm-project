@@ -81,7 +81,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          argumentCountIs(2), hasArgument(0, hasType(qualType(isInteger()))),
+          anyOf(argumentCountIs(2), argumentCountIs(3)),
+          hasArgument(0, hasType(qualType(isInteger()))),
           hasArgument(1, hasType(qualType(isInteger()))),
           anyOf(
               // Detect the expression: string('x', 40);
@@ -101,7 +102,10 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          argumentCountIs(2), hasArgument(0, hasType(CharPtrType)),
+          anyOf(argumentCountIs(2),
+                allOf(argumentCountIs(3),
+                      hasArgument(2, unless(hasType(qualType(isInteger())))))),
+          hasArgument(0, hasType(CharPtrType)),
           hasArgument(1, hasType(isInteger())),
           anyOf(
               // Detect the expression: string("...", 0);
@@ -123,7 +127,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          argumentCountIs(3), hasArgument(0, hasType(CharPtrType)),
+          anyOf(argumentCountIs(3), argumentCountIs(4)),
+          hasArgument(0, hasType(CharPtrType)),
           hasArgument(1, hasType(qualType(isInteger()))),
           hasArgument(2, hasType(qualType(isInteger()))),
           anyOf(

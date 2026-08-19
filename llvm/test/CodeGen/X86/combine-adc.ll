@@ -136,5 +136,118 @@ define i32 @adc_merge_sub(i32 %a0) nounwind {
   ret i32 %result
 }
 
+; Basic positive test
+define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
+; X86-LABEL: adc_add:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    js .LBB4_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB4_2:
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    adcl %ecx, %edx
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %5 = icmp ult i32 %0, %1
+  %6 = add i32 %3, %2
+  %7 = zext i1 %5 to i32
+  %8 = add i32 %6, %7
+  %9 = icmp slt i32 %8, 0
+  %10 = select i1 %9, i32 %0, i32 %1
+  ret i32 %10
+}
+
+; Negative test: Carry or overflow flag is used
+define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
+; X86-LABEL: adc_add_wrong_flags:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    jb .LBB5_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB5_2:
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_add_wrong_flags:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    addl %ecx, %edx
+; X64-NEXT:    cmpl %esi, %edi
+; X64-NEXT:    adcl $0, %edx
+; X64-NEXT:    cmovbl %edi, %eax
+; X64-NEXT:    retq
+  %5 = icmp ult i32 %0, %1
+  %6 = add i32 %3, %2
+  %7 = zext i1 %5 to i32
+  %8 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %6, i32 %7)
+  %9 = extractvalue { i32, i1 } %8, 1
+  %10 = select i1 %9, i32 %0, i32 %1
+  ret i32 %10
+}
+
+; Negative test: Multi-use
+define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) nounwind {
+; X86-LABEL: adc_add_multi_use:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    leal (%edi,%esi), %ebx
+; X86-NEXT:    cmpl %ecx, %eax
+; X86-NEXT:    movl %ebx, (%edx)
+; X86-NEXT:    adcl %esi, %edi
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    js .LBB6_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB6_2:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: adc_add_multi_use:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    leal (%rcx,%rdx), %esi
+; X64-NEXT:    cmpl %eax, %edi
+; X64-NEXT:    movl %esi, (%r9)
+; X64-NEXT:    adcl %edx, %ecx
+; X64-NEXT:    addl %r8d, %ecx
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %7 = icmp ult i32 %0, %1
+  %8 = add i32 %3, %2
+  store i32 %8, ptr %5, align 4
+  %9 = zext i1 %7 to i32
+  %10 = add i32 %8, %9
+  %11 = add i32 %10, %4
+  %12 = icmp slt i32 %11, 0
+  %13 = select i1 %12, i32 %0, i32 %1
+  ret i32 %13
+}
+
 declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32)
 declare void @use(i8)

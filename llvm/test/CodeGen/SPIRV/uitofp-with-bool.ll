@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=SPV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; The IR was generated from the following source:
 ;; void __kernel K(global float* A, int B) {
@@ -142,11 +143,11 @@ entry:
 ; SPV: %[[#ufp2:]] = OpConvertUToF %[[#vec_float]] %[[#ufp2_res]]
   %ufp2 = uitofp <2 x i1> %i1v to <2 x float>
   store <2 x float> %ufp2, ptr @G_ufp2
-; SPV: %[[#sfp1_res:]] = OpSelect %[[#int_32]] %[[#i1s]] %[[#one_32]] %[[#zero_32]]
+; SPV: %[[#sfp1_res:]] = OpSelect %[[#int_32]] %[[#i1s]] %[[#mone_32]] %[[#zero_32]]
 ; SPV: %[[#sfp1:]] = OpConvertSToF %[[#float]] %[[#sfp1_res]]
   %sfp1 = sitofp i1 %i1s to float
   store float %sfp1, ptr @G_sfp1
-; SPV: %[[#sfp2_res:]] = OpSelect %[[#vec_32]] %[[#i1v]] %[[#ones_32]] %[[#zeros_32]]
+; SPV: %[[#sfp2_res:]] = OpSelect %[[#vec_32]] %[[#i1v]] %[[#mones_32]] %[[#zeros_32]]
 ; SPV: %[[#sfp2:]] = OpConvertSToF %[[#vec_float]] %[[#sfp2_res]]
   %sfp2 = sitofp <2 x i1> %i1v to <2 x float>
   store <2 x float> %sfp2, ptr @G_sfp2

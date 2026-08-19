@@ -6,10 +6,10 @@ define i32 @call_nneg(i16 %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   %2:_(s32) = nneg G_ZEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $w0 = COPY %2(s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = nneg G_ZEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = zext nneg i16 %a to i32
@@ -21,10 +21,10 @@ define i32 @call_not_nneg(i16 %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
-  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = zext i16 %a to i32
@@ -36,10 +36,10 @@ define i32 @call_disjoint(i32 %a, i32 %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   %2:_(s32) = disjoint G_OR [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $w0 = COPY %2(s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = disjoint G_OR [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $w0 = COPY [[OR]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = or disjoint i32 %a, %b
@@ -51,10 +51,10 @@ define i32 @call_add(i32 %a, i32 %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $w0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i32) = nsw G_ADD [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $w0 = COPY [[ADD]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = add nsw i32 %a, %b
@@ -66,10 +66,10 @@ define i32 @call_not_disjoint(i32 %a, i32 %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0, $w1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $w0 = COPY [[OR]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(i32) = G_OR [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $w0 = COPY [[OR]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
   %result = or i32 %a, %b
@@ -81,10 +81,10 @@ define <2 x i64> @call_not_disjoint_vector(<2 x i64> %a, <2 x i64> %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $q0 = COPY [[OR]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(<2 x i64>) = G_OR [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $q0 = COPY [[OR]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %result = or <2 x i64> %a, %b
@@ -96,10 +96,10 @@ define <2 x i64> @call_disjoint_vector(<2 x i64> %a, <2 x i64> %b) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $q0, $q1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   %2:_(<2 x s64>) = disjoint G_OR [[COPY]], [[COPY1]]
-  ; CHECK-NEXT:   $q0 = COPY %2(<2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $q1
+  ; CHECK-NEXT:   [[OR:%[0-9]+]]:_(<2 x i64>) = disjoint G_OR [[COPY]], [[COPY1]]
+  ; CHECK-NEXT:   $q0 = COPY [[OR]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %result = or disjoint <2 x i64> %a, %b
@@ -111,9 +111,9 @@ define <2 x i64> @call_nneg_vector(<2 x i32> %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK-NEXT:   %1:_(<2 x s64>) = nneg G_ZEXT [[COPY]](<2 x s32>)
-  ; CHECK-NEXT:   $q0 = COPY %1(<2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(<2 x i64>) = nneg G_ZEXT [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   $q0 = COPY [[ZEXT]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %result = zext nneg <2 x i32> %a to <2 x i64>
@@ -125,9 +125,9 @@ define <2 x i64> @call_not_nneg_vector(<2 x i32> %a) {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $d0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[COPY]](<2 x s32>)
-  ; CHECK-NEXT:   $q0 = COPY [[ZEXT]](<2 x s64>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(<2 x i64>) = G_ZEXT [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   $q0 = COPY [[ZEXT]](<2 x i64>)
   ; CHECK-NEXT:   RET_ReallyLR implicit $q0
 entry:
   %result = zext <2 x i32> %a to <2 x i64>

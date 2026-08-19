@@ -22,6 +22,7 @@
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "Variables.h"
+#include "Watchpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -63,6 +64,7 @@ typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
     InstructionBreakpointMap;
+typedef llvm::DenseMap<lldb::addr_t, Watchpoint> WatchpointMap;
 
 using AdapterFeature = protocol::AdapterFeature;
 using ClientFeature = protocol::ClientFeature;
@@ -102,12 +104,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// The target instance for this DAP session.
   lldb::SBTarget target;
 
-  Variables variables;
+  VariableReferenceStorage reference_storage;
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
-  llvm::once_flag init_exception_breakpoints_flag;
+  WatchpointMap data_breakpoints;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
@@ -122,6 +124,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
+  bool is_live_session = true;
 
   /// The process event thread normally responds to process exited events by
   /// shutting down the entire adapter. When we're restarting, we keep the id of
@@ -132,7 +135,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// the client has finished initialization of the debug adapter.
   bool configuration_done;
 
-  bool waiting_for_run_in_terminal = false;
+  std::mutex call_mutex;
   ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
@@ -140,7 +143,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
   protocol::Id seq = 0;
-  std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
@@ -150,10 +152,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -195,7 +196,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log &log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
@@ -237,9 +238,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
 
-  void __attribute__((format(printf, 3, 4)))
-  SendFormattedOutput(OutputType o, const char *format, ...);
-
   int32_t CreateSourceReference(lldb::addr_t address);
 
   std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
@@ -247,14 +245,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
-  lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
-  /// TODO: remove this function when we finish migrating to the
-  /// new protocol types.
-  lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   void PopulateExceptionBreakpoints();
+
+  bool ProcessIsNotStopped();
 
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
@@ -313,10 +309,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///   \b false if a fatal error was found while executing these commands,
   ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
   bool RunLLDBCommands(llvm::StringRef prefix,
-                       llvm::ArrayRef<std::string> commands);
+                       llvm::ArrayRef<protocol::String> commands);
 
-  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
-  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error
+  RunAttachCommands(llvm::ArrayRef<protocol::String> attach_commands);
+  llvm::Error
+  RunLaunchCommands(llvm::ArrayRef<protocol::String> launch_commands);
   llvm::Error RunPreInitCommands();
   llvm::Error RunInitCommands();
   llvm::Error RunPreRunCommands();
@@ -378,7 +376,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   protocol::Capabilities GetCustomCapabilities();
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() { reference_storage.Clear(); }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///
@@ -483,7 +481,7 @@ private:
 
   /// Event threads.
   /// @{
-  void ProgressEventThread();
+  void ProgressEventThread(lldb::SBListener listener);
 
   /// Event thread is a shared pointer in case we have a multiple
   /// DAP instances sharing the same event thread.

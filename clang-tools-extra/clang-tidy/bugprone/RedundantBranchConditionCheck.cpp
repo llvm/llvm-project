@@ -104,7 +104,8 @@ void RedundantBranchConditionCheck::check(
   if (hasPtrOrReferenceInFunc(Func, CondVar))
     return;
 
-  auto Diag = diag(InnerIf->getBeginLoc(), "redundant condition %0") << CondVar;
+  const auto Diag = diag(InnerIf->getBeginLoc(), "redundant condition %0")
+                    << CondVar;
 
   // For standalone condition variables and for "or" binary operations we simply
   // remove the inner `if`.
@@ -166,14 +167,13 @@ void RedundantBranchConditionCheck::check(
           CondOp->getRHS()->getBeginLoc().getLocWithOffset(-1);
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
-    } else {
-      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
-              CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
-              getLangOpts())) {
-        const SourceLocation AfterLHS = NextToken->getLocation();
-        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-            AfterLHS, CondOp->getRHS()->getEndLoc()));
-      }
+    } else if (const auto NextToken =
+                   utils::lexer::findNextTokenSkippingComments(
+                       CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
+                       getLangOpts())) {
+      const SourceLocation AfterLHS = NextToken->getLocation();
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+          AfterLHS, CondOp->getRHS()->getEndLoc()));
     }
   }
 }

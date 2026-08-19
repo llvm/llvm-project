@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=thumbv7-unknown-linux-android30 -run-pass=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=thumbv7-unknown-linux-android30 -run-pass=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s
 
 # When saving and restoring callee-saved registers, LR is saved but not restored,
 # because it is reloaded directly into PC. Therefore it should be available to scavenge

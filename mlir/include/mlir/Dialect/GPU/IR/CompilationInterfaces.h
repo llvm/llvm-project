@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_GPU_IR_COMPILATIONINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
@@ -170,6 +171,24 @@ protected:
 private:
   TypeID typeID;
 };
+
+/// This class represents a serialized object (GPU binary) with metadata (e.g.
+/// timings, logs, ...).
+class SerializedObject {
+public:
+  SerializedObject(::mlir::SmallVector<char, 0> object,
+                   DictionaryAttr metadata = {})
+      : object(std::move(object)), metadata(metadata) {}
+
+  const SmallVector<char, 0> &getObject() const { return object; }
+
+  DictionaryAttr getMetadata() const { return metadata; }
+
+private:
+  SmallVector<char, 0> object;
+  DictionaryAttr metadata;
+};
+
 } // namespace gpu
 } // namespace mlir
 

@@ -406,23 +406,23 @@ TEST(IOApiTests, FormatDoubleValues) {
       {// +Inf
           0x7ff0000000000000,
           {
-              {"(E9.1,';')", "      Inf;"},
-              {"(F9.1,';')", "      Inf;"},
-              {"(G9.1,';')", "      Inf;"},
-              {"(EX9.1,';')", "      Inf;"},
-              {"(SP,E9.1,';')", "     +Inf;"},
-              {"(SP,F9.1,';')", "     +Inf;"},
-              {"(SP,G9.1,';')", "     +Inf;"},
-              {"(SP,EX9.1,';')", "     +Inf;"},
+              {"(E9.1,';')", " Infinity;"},
+              {"(F9.1,';')", " Infinity;"},
+              {"(G9.1,';')", " Infinity;"},
+              {"(EX9.1,';')", " Infinity;"},
+              {"(SP,E9.1,';')", "+Infinity;"},
+              {"(SP,F9.1,';')", "+Infinity;"},
+              {"(SP,G9.1,';')", "+Infinity;"},
+              {"(SP,EX9.1,';')", "+Infinity;"},
               {"(G0,';')", "Inf;"},
           }},
       {// -Inf
           0xfff0000000000000,
           {
-              {"(E9.1,';')", "     -Inf;"},
-              {"(F9.1,';')", "     -Inf;"},
-              {"(G9.1,';')", "     -Inf;"},
-              {"(EX9.1,';')", "     -Inf;"},
+              {"(E9.1,';')", "-Infinity;"},
+              {"(F9.1,';')", "-Infinity;"},
+              {"(G9.1,';')", "-Infinity;"},
+              {"(EX9.1,';')", "-Infinity;"},
               {"(G0,';')", "-Inf;"},
           }},
       {// NaN
@@ -1017,4 +1017,69 @@ TEST(IOApiTests, ConfusingMinimization) {
   std::string got{std::string{buffer, sizeof buffer}};
   EXPECT_TRUE(CompareFormattedStrings(" 65504. ", got))
       << "expected ' 65504. ', got '" << got << '\''; // not 65500.!
+}
+
+// Test AT edit descriptor (F2023) - trims trailing blanks on output
+TEST(IOApiTests, ATEditDescriptorOutput) {
+  // Helper to test AT formatted output
+  auto testAT = [](const char *format, const std::string &input,
+                    const char *expect) {
+    char buffer[800];
+    auto cookie{IONAME(BeginInternalFormattedOutput)(
+        buffer, sizeof buffer, format, std::strlen(format))};
+    EXPECT_TRUE(IONAME(OutputAscii)(cookie, input.data(), input.size()));
+    auto status{IONAME(EndIoStatement)(cookie)};
+    EXPECT_EQ(status, 0) << "AT test: '" << format << "' failed, status "
+                         << static_cast<int>(status);
+    std::string got{buffer, sizeof buffer};
+    auto lastNonBlank{got.find_last_not_of(" ")};
+    if (lastNonBlank != std::string::npos) {
+      got.resize(lastNonBlank + 1);
+    }
+    EXPECT_TRUE(CompareFormattedStrings(expect, got))
+        << "AT test: format '" << format << "' input '" << input
+        << "' expected '" << expect << "' got '" << got << "'";
+  };
+
+  // AT trims trailing blanks; use a marker character in the format so that the
+  // trimmed width is verified (replacing (AT) with (A) would shift '#' right).
+  testAT("(AT,'#')", "hello     ", "hello#");
+  testAT("(AT,'#')", "hello", "hello#");
+  testAT("(AT,'#')", "  hi  ", "  hi#");
+  testAT("(AT,'#')", "          ", "#"); // all blanks -> empty
+
+  // A (without T) does NOT trim - outputs full length
+  {
+    char buffer[800];
+    const char *format{"(A)"};
+    auto cookie{IONAME(BeginInternalFormattedOutput)(
+        buffer, sizeof buffer, format, std::strlen(format))};
+    EXPECT_TRUE(IONAME(OutputAscii)(cookie, "hi        ", 10));
+    auto status{IONAME(EndIoStatement)(cookie)};
+    EXPECT_EQ(status, 0);
+    std::string got{buffer, sizeof buffer};
+    // A without width outputs all 10 characters including trailing blanks
+    EXPECT_TRUE(CompareFormattedStrings("hi        ", got))
+        << "A test: expected 'hi        ' got '" << got << "'";
+  }
+
+  // Multiple AT descriptors; '#' marker pins the output position so the
+  // trimmed width is verified without manual blank-stripping.
+  {
+    char buffer[800];
+    const char *format{"(AT,1X,AT,'#')"};
+    auto cookie{IONAME(BeginInternalFormattedOutput)(
+        buffer, sizeof buffer, format, std::strlen(format))};
+    EXPECT_TRUE(IONAME(OutputAscii)(cookie, "abc   ", 6));
+    EXPECT_TRUE(IONAME(OutputAscii)(cookie, "def   ", 6));
+    auto status{IONAME(EndIoStatement)(cookie)};
+    EXPECT_EQ(status, 0);
+    std::string got{buffer, sizeof buffer};
+    auto lastNonBlank{got.find_last_not_of(" ")};
+    if (lastNonBlank != std::string::npos) {
+      got.resize(lastNonBlank + 1);
+    }
+    EXPECT_TRUE(CompareFormattedStrings("abc def#", got))
+        << "Multiple AT test: expected 'abc def#' got '" << got << "'";
+  }
 }

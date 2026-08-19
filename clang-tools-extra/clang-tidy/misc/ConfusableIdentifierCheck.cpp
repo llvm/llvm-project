@@ -17,8 +17,17 @@ namespace {
 // Preprocessed version of
 // https://www.unicode.org/Public/security/latest/confusables.txt
 //
-// This contains a sorted array of { UTF32 codepoint; UTF32 values[N];}
+// This contains a sorted array of code points and slices into a shared UTF-8
+// replacement array.
+struct ConfusableEntry {
+  llvm::UTF32 CodePoint;
+  uint16_t Offset;
+  uint16_t Length;
+};
+static_assert(sizeof(ConfusableEntry) == 8);
+
 #include "Confusables.inc"
+static_assert(sizeof(ConfusableReplacementData) <= 1ULL << 16);
 } // namespace
 
 namespace clang::tidy::misc {
@@ -45,7 +54,7 @@ ConfusableIdentifierCheck::~ConfusableIdentifierCheck() = default;
 // We're skipping 1. and 3. for the sake of simplicity, but this can lead to
 // false positive.
 
-static llvm::SmallString<64U> skeleton(StringRef Name) {
+static SmallString<64U> skeleton(StringRef Name) {
   using namespace llvm;
   SmallString<64U> Skeleton;
   Skeleton.reserve(1U + Name.size());
@@ -63,26 +72,14 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
       break;
     }
 
-    const StringRef Key(Prev, Curr - Prev);
-    auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
-                                    [](decltype(ConfusableEntries[0]) X,
-                                       UTF32 Y) { return X.codepoint < Y; });
-    if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
+    auto *Where = llvm::lower_bound(
+        ConfusableEntries, CodePoint,
+        [](const ConfusableEntry &X, UTF32 Y) { return X.CodePoint < Y; });
+    if (Where == std::end(ConfusableEntries) || CodePoint != Where->CodePoint) {
       Skeleton.append(Prev, Curr);
     } else {
-      UTF8 Buffer[32];
-      UTF8 *BufferStart = std::begin(Buffer);
-      UTF8 *IBuffer = BufferStart;
-      const UTF32 *ValuesStart = std::begin(Where->values);
-      const UTF32 *ValuesEnd = llvm::find(Where->values, '\0');
-      if (ConvertUTF32toUTF8(&ValuesStart, ValuesEnd, &IBuffer,
-                             std::end(Buffer),
-                             strictConversion) != conversionOK) {
-        errs() << "Unicode conversion issue\n";
-        break;
-      }
-      Skeleton.append(reinterpret_cast<char *>(BufferStart),
-                      reinterpret_cast<char *>(IBuffer));
+      Skeleton.append(
+          StringRef(ConfusableReplacementData + Where->Offset, Where->Length));
     }
   }
   return Skeleton;
@@ -102,7 +99,7 @@ struct Entry {
 // that has no corresponding context, such as an alias template or variable
 // template.
 using DeclsWithinContextMap =
-    llvm::DenseMap<const Decl *, llvm::SmallVector<Entry, 1>>;
+    llvm::DenseMap<const Decl *, SmallVector<Entry, 1>>;
 
 static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
                          const Decl *Context, Entry E) {
@@ -189,7 +186,7 @@ void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
-  llvm::StringMap<llvm::SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
+  llvm::StringMap<SmallVector<const IdentifierInfo *, 1>> SkeletonToNames;
   // Compute the skeleton for each identifier.
   for (auto &[Ident, Decls] : NameToDecls)
     SkeletonToNames[skeleton(Ident->getName())].push_back(Ident);

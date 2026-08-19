@@ -50,4 +50,46 @@
 #  define _LIBCPP_HAS_EXCEPTIONS 0
 #endif
 
+#if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
+#  define _LIBCPP_HAS_CHAR8_T 0
+#else
+#  define _LIBCPP_HAS_CHAR8_T 1
+#endif
+
+#if _LIBCPP_STD_VER <= 11
+#  define _LIBCPP_EXPLICIT_SINCE_CXX14
+#else
+#  define _LIBCPP_EXPLICIT_SINCE_CXX14 explicit
+#endif
+
+#if _LIBCPP_STD_VER >= 14
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX14 constexpr
+#else
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX14
+#endif
+
+#if _LIBCPP_STD_VER >= 17
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX17 constexpr
+#else
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX17
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX20 constexpr
+#else
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX20
+#endif
+
+#if _LIBCPP_STD_VER >= 23
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX23 constexpr
+#else
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX23
+#endif
+
+#if _LIBCPP_STD_VER >= 26
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX26 constexpr
+#else
+#  define _LIBCPP_CONSTEXPR_SINCE_CXX26
+#endif
+
 #endif // _LIBCPP___CONFIGURATION_LANGUAGE_H

@@ -149,6 +149,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.PassName = getCombinedCategoryName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
+  // Add all args (includes RemarkId and RelatedTo if they were added).
   for (const Remark::Arg &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
@@ -171,12 +172,13 @@ InFlightRemark::~InFlightRemark() {
 // Remark Engine
 //===----------------------------------------------------------------------===//
 
-template <typename RemarkT, typename... Args>
-InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
+template <typename RemarkT>
+InFlightRemark RemarkEngine::makeRemark(Location loc, RemarkOpts opts) {
   static_assert(std::is_base_of_v<Remark, RemarkT>,
                 "RemarkT must derive from Remark");
-  return InFlightRemark(*this,
-                        std::make_unique<RemarkT>(std::forward<Args>(args)...));
+  auto remark = std::make_unique<RemarkT>(loc, opts);
+  remark->setId(generateRemarkId());
+  return InFlightRemark(*this, std::move(remark));
 }
 
 template <typename RemarkT>
@@ -345,4 +347,37 @@ llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
 namespace mlir::remark {
 RemarkEmittingPolicyAll::RemarkEmittingPolicyAll() = default;
 RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
+
+void RemarkEmittingPolicyFinal::finalize() {
+  assert(reportImpl && "reportImpl is not set");
+
+  // Build ID -> Remark* lookup for resolving related remark references.
+  llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
+  llvm::DenseSet<uint64_t> childIds; // IDs referenced as children
+
+  for (const auto &remark : postponedRemarks) {
+    if (remark.getId())
+      idMap[remark.getId().getValue()] = &remark;
+    for (auto relId : remark.getRelatedRemarkIds())
+      childIds.insert(relId.getValue());
+  }
+
+  // Emit remarks with related remarks grouped after their parents.
+  // Parent remarks are emitted first, followed by their related (child)
+  // remarks. Child-only remarks are skipped at the top level to avoid
+  // duplication.
+  for (const auto &remark : postponedRemarks) {
+    if (remark.getId() && childIds.count(remark.getId().getValue()))
+      continue; // will be printed grouped under its parent
+
+    reportImpl(remark);
+
+    // Emit related remarks immediately after the parent.
+    for (auto relId : remark.getRelatedRemarkIds()) {
+      if (const auto *related = idMap.lookup(relId.getValue()))
+        reportImpl(*related);
+    }
+  }
+}
+
 } // namespace mlir::remark

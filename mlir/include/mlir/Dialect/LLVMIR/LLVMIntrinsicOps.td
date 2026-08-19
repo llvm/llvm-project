@@ -100,6 +100,13 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure],
                    I1Attr:$is_int_min_poison);
 }
 
+// Do not use LLVM_UnaryIntrOpF here: arithmetic.fence operates on floating
+// types, but the fence itself should not carry fastmath flags.
+def LLVM_ArithmeticFenceOp
+    : LLVM_UnaryIntrOpBase<"arithmetic.fence", LLVM_AnyFloat> {
+  let arguments = commonArgs;
+}
+
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   /*requiresFastmath=*/0, /*requiresArgAndResultAttrs=*/0,
   /*immArgPositions=*/[1], /*immArgAttrNames=*/["bit"]> {
@@ -422,7 +429,8 @@ def LLVM_StripInvariantGroupOp
 
 class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            bit overloadedResult, list<int> overloadedOperands,
-                           bit hasRoundingMode>
+                           bit hasRoundingMode,
+                           list<Trait> extraTraits = []>
     : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
                            /*overloadedResults=*/
                            !cond(!gt(overloadedResult, 0) : [0],
@@ -431,15 +439,18 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
                            /*traits=*/[Pure, DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>]
                            # !cond(
                                !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
-                               true : []),
-                           /*requiresFastmath=*/0,
+                               true : [])
+                           # extraTraits,
+                           /*requiresFastmath=*/1,
                            /*requiresArgAndResultAttrs=*/0,
                            /*immArgPositions=*/[],
                            /*immArgAttrNames=*/[]> {
   dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
   dag attrArgs = !con(!cond(!gt(hasRoundingMode, 0) : (ins ValidRoundingModeAttr:$roundingmode),
                             true : (ins)),
-                      (ins FPExceptionBehaviorAttr:$fpExceptionBehavior));
+                      (ins FPExceptionBehaviorAttr:$fpExceptionBehavior,
+                           DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                             "{}">:$fastmathFlags));
   let arguments = !con(regularArgs, attrArgs);
   let llvmBuilder = [{
     SmallVector<llvm::Value *> args =
@@ -490,10 +501,263 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
         $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
                                roundingModeAttr));
     }], true : "") # [{
-    $res = $_qualCppClassName::create($_builder, $_location,
+    auto op = $_qualCppClassName::create($_builder, $_location,
       $_resultType, mlirOperands, mlirAttrs);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
   }];
 }
+
+// Convenience base class for constrained intrinsics that take a single
+// floating-point operand of the same type as the result and support a rounding
+// mode (e.g. the transcendental math functions).
+class LLVM_ConstrainedUnaryIntrRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained intrinsics that take a single
+// floating-point operand of the same type as the result and do not support a
+// rounding mode (e.g. the rounding math functions such as `ceil`).
+class LLVM_ConstrainedUnaryIntrNoRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/0, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained intrinsics that take two
+// floating-point operands of the same type as the result and support a rounding
+// mode (e.g. `pow` and `atan2`).
+class LLVM_ConstrainedBinaryIntrRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained intrinsics that take two
+// floating-point operands of the same type as the result and do not support a
+// rounding mode (e.g. `maxnum` and `minnum`).
+class LLVM_ConstrainedBinaryIntrNoRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/0, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained FP-to-int conversions that support a
+// rounding mode (e.g. `lrint`).
+class LLVM_ConstrainedFPToIntIntrRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:`
+    type($arg_0) `to` type(results)
+  }];
+}
+
+// Convenience base class for constrained FP-to-int conversions that do not
+// support a rounding mode (e.g. `lround` and `fptosi`).
+class LLVM_ConstrainedFPToIntIntrNoRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/0> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
+// Constrained floating-point comparisons. These take a predicate attribute
+// instead of a rounding mode and lower via CreateConstrainedFPCmp.
+class LLVM_ConstrainedFCmpIntrBase<string mnem>
+    : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
+        /*overloadedResults=*/[], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure, SameTypeOperands,
+          TypesMatchWith<"result type has i1 element type and same shape as "
+                         "operands", "arg_0", "res",
+                         "::getI1SameShape($_self)">,
+          DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>],
+        /*requiresFastmath=*/1> {
+  let arguments = (ins FCmpPredicate:$predicate,
+                       LLVM_Type:$arg_0,
+                       LLVM_Type:$arg_1,
+                       FPExceptionBehaviorAttr:$fpExceptionBehavior,
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                         "{}">:$fastmathFlags);
+  // Predicate and fast-math flags are attributes (no matching LLVM operand);
+  // the exception behavior metadata is the fourth LLVM operand.
+  list<int> llvmArgIndices = [-1, 0, 1, 3, -1];
+  let assemblyFormat = [{
+    $predicate $arg_0 `,` $arg_1 $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+  let llvmBuilder = [{
+    $res = builder.CreateConstrainedFPCmp(
+        llvm::Intrinsic::experimental_constrained_}] # mnem # [{,
+        convertFCmpPredicateToLLVM($predicate), $arg_0, $arg_1, "",
+        moduleTranslation.translateFPExceptionBehavior(
+            $fpExceptionBehavior));
+  }];
+  let mlirBuilder = [{
+    auto *cmpInst = cast<llvm::ConstrainedFPCmpIntrinsic>(inst);
+    auto op = $_qualCppClassName::create(
+        $_builder, $_location, $_resultType,
+        $_builder.getAttr<FCmpPredicateAttr>(
+            convertFCmpPredicateFromLLVM(cmpInst->getPredicate())),
+        $arg_0, $arg_1,
+        $_fpExceptionBehavior_attr($fpExceptionBehavior));
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
+  }];
+}
+
+def LLVM_ConstrainedFAddIntr
+    : LLVM_ConstrainedIntr<"fadd", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFSubIntr
+    : LLVM_ConstrainedIntr<"fsub", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFMulIntr
+    : LLVM_ConstrainedIntr<"fmul", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFDivIntr
+    : LLVM_ConstrainedIntr<"fdiv", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFRemIntr
+    : LLVM_ConstrainedIntr<"frem", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFMAIntr
+    : LLVM_ConstrainedIntr<"fma", /*numArgs=*/3,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 `,` $arg_2 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+def LLVM_ConstrainedFMulAddIntr
+    : LLVM_ConstrainedIntr<"fmuladd", /*numArgs=*/3,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 `,` $arg_2 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Constrained intrinsics for math library functions. These correspond to the
+// like-named operations in the Math dialect and are produced when the source
+// operation carries a `#arith.fenv` floating-point environment attribute.
+
+// Unary transcendental functions (support a rounding mode).
+def LLVM_ConstrainedSqrtIntr  : LLVM_ConstrainedUnaryIntrRM<"sqrt">;
+def LLVM_ConstrainedSinIntr   : LLVM_ConstrainedUnaryIntrRM<"sin">;
+def LLVM_ConstrainedCosIntr   : LLVM_ConstrainedUnaryIntrRM<"cos">;
+def LLVM_ConstrainedTanIntr   : LLVM_ConstrainedUnaryIntrRM<"tan">;
+def LLVM_ConstrainedASinIntr  : LLVM_ConstrainedUnaryIntrRM<"asin">;
+def LLVM_ConstrainedACosIntr  : LLVM_ConstrainedUnaryIntrRM<"acos">;
+def LLVM_ConstrainedATanIntr  : LLVM_ConstrainedUnaryIntrRM<"atan">;
+def LLVM_ConstrainedSinhIntr  : LLVM_ConstrainedUnaryIntrRM<"sinh">;
+def LLVM_ConstrainedCoshIntr  : LLVM_ConstrainedUnaryIntrRM<"cosh">;
+def LLVM_ConstrainedTanhIntr  : LLVM_ConstrainedUnaryIntrRM<"tanh">;
+def LLVM_ConstrainedExpIntr   : LLVM_ConstrainedUnaryIntrRM<"exp">;
+def LLVM_ConstrainedExp2Intr  : LLVM_ConstrainedUnaryIntrRM<"exp2">;
+def LLVM_ConstrainedLogIntr   : LLVM_ConstrainedUnaryIntrRM<"log">;
+def LLVM_ConstrainedLog10Intr : LLVM_ConstrainedUnaryIntrRM<"log10">;
+def LLVM_ConstrainedLog2Intr  : LLVM_ConstrainedUnaryIntrRM<"log2">;
+def LLVM_ConstrainedRIntIntr  : LLVM_ConstrainedUnaryIntrRM<"rint">;
+def LLVM_ConstrainedNearbyIntIntr : LLVM_ConstrainedUnaryIntrRM<"nearbyint">;
+
+// Unary rounding functions (do not support a rounding mode).
+def LLVM_ConstrainedCeilIntr      : LLVM_ConstrainedUnaryIntrNoRM<"ceil">;
+def LLVM_ConstrainedFloorIntr     : LLVM_ConstrainedUnaryIntrNoRM<"floor">;
+def LLVM_ConstrainedRoundIntr     : LLVM_ConstrainedUnaryIntrNoRM<"round">;
+def LLVM_ConstrainedRoundEvenIntr : LLVM_ConstrainedUnaryIntrNoRM<"roundeven">;
+def LLVM_ConstrainedTruncIntr     : LLVM_ConstrainedUnaryIntrNoRM<"trunc">;
+
+// Binary functions (support a rounding mode).
+def LLVM_ConstrainedPowIntr   : LLVM_ConstrainedBinaryIntrRM<"pow">;
+def LLVM_ConstrainedATan2Intr : LLVM_ConstrainedBinaryIntrRM<"atan2">;
+
+// Binary min/max functions (do not support a rounding mode).
+def LLVM_ConstrainedMaxNumIntr  : LLVM_ConstrainedBinaryIntrNoRM<"maxnum">;
+def LLVM_ConstrainedMinNumIntr  : LLVM_ConstrainedBinaryIntrNoRM<"minnum">;
+def LLVM_ConstrainedMaximumIntr : LLVM_ConstrainedBinaryIntrNoRM<"maximum">;
+def LLVM_ConstrainedMinimumIntr : LLVM_ConstrainedBinaryIntrNoRM<"minimum">;
+
+def LLVM_ConstrainedPowIIntr
+    : LLVM_ConstrainedIntr<"powi", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+def LLVM_ConstrainedLdexpIntr
+    : LLVM_ConstrainedIntr<"ldexp", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[1],
+        /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
+// FP-to-int rounding conversions.
+def LLVM_ConstrainedLRintIntr  : LLVM_ConstrainedFPToIntIntrRM<"lrint">;
+def LLVM_ConstrainedLLRintIntr : LLVM_ConstrainedFPToIntIntrRM<"llrint">;
+def LLVM_ConstrainedLRoundIntr  : LLVM_ConstrainedFPToIntIntrNoRM<"lround">;
+def LLVM_ConstrainedLLRoundIntr : LLVM_ConstrainedFPToIntIntrNoRM<"llround">;
+
+// FP-to-int conversions (do not support a rounding mode).
+def LLVM_ConstrainedFPToSIIntr : LLVM_ConstrainedFPToIntIntrNoRM<"fptosi">;
+def LLVM_ConstrainedFPToUIIntr : LLVM_ConstrainedFPToIntIntrNoRM<"fptoui">;
+
+// Constrained floating-point comparisons.
+def LLVM_ConstrainedFCmpIntr  : LLVM_ConstrainedFCmpIntrBase<"fcmp">;
+def LLVM_ConstrainedFCmpSIntr : LLVM_ConstrainedFCmpIntrBase<"fcmps">;
 
 def LLVM_ConstrainedUIToFP
     : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,
@@ -559,6 +823,11 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 //
 // Optimization hint intrinsics.
 //
+
+def LLVM_FakeUseOp : LLVM_ZeroResultIntrOp<"fake.use"> {
+  let arguments = (ins Variadic<LLVM_Type>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
+}
 
 def LLVM_AssumeOp
     : LLVM_ZeroResultIntrOp<"assume", /*overloadedOperands=*/[], /*traits=*/[],
@@ -628,7 +897,7 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
 // Coroutine intrinsics.
 //
 
-def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
+def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins I32:$align,
                        LLVM_AnyPointer:$promise,
                        LLVM_AnyPointer:$coroaddr,
@@ -637,10 +906,17 @@ def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
     " attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$token,
+def LLVM_CoroBeginOp
+    : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
+  let arguments = (ins Token:$token,
                        LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
+}
+
+def LLVM_CoroAllocOp
+    : LLVM_IntrOp<"coro.alloc", [], [], [], 1> {
+  let arguments = (ins Token:$id);
+  let assemblyFormat = "$id attr-dict `:` functional-type(operands, results)";
 }
 
 def LLVM_CoroSizeOp : LLVM_IntrOp<"coro.size", [0], [], [], 1> {
@@ -651,26 +927,30 @@ def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
+def LLVM_CoroSaveOp
+    : LLVM_IntrOp<"coro.save", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$save,
+def LLVM_CoroSuspendOp
+    : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
+  let arguments = (ins Token:$save,
                        I1:$final);
   let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
 }
 
-def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
+def LLVM_CoroEndOp
+    : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
-                       LLVM_TokenType:$retvals);
+                       Token:$retvals);
   let assemblyFormat = "$handle `,` $unwind `,` $retvals attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$id,
+def LLVM_CoroFreeOp
+    : LLVM_IntrOp<"coro.free", [], [], [], 1> {
+  let arguments = (ins Token:$id,
                        LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
 }
@@ -686,6 +966,70 @@ def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
                        I1:$from);
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "$handle `,` $align `,` $from attr-dict `:` functional-type(operands, results)";
+}
+
+def LLVM_CoroFrameOp : LLVM_IntrOp<"coro.frame", [], [], [], 1> {
+  let results = (outs LLVM_AnyPointer:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_CoroNoopOp : LLVM_IntrOp<"coro.noop", [], [], [], 1> {
+  let results = (outs LLVM_AnyPointer:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_CoroDestroyOp : LLVM_IntrOp<"coro.destroy", [], [], [], 0> {
+  let arguments = (ins LLVM_AnyPointer:$handle);
+  let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
+}
+
+def LLVM_CoroDoneOp : LLVM_IntrOp<"coro.done", [], [], [], 1> {
+  let arguments = (ins LLVM_AnyPointer:$handle);
+  let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
+}
+
+def LLVM_CoroIsInRampOp : LLVM_IntrOp<"coro.is_in_ramp", [], [], [], 1> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def LLVM_CoroDeadOp : LLVM_IntrOp<"coro.dead", [], [], [], 0> {
+  let arguments = (ins LLVM_AnyPointer:$handle);
+  let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
+}
+
+def LLVM_CoroAwaitSuspendVoidOp
+    : LLVM_IntrOp<"coro.await.suspend.void", [], [], [], 0> {
+  let arguments = (ins LLVM_AnyPointer:$awaiter,
+                       LLVM_AnyPointer:$frame,
+                       LLVM_AnyPointer:$wrapper);
+  let assemblyFormat = [{
+    $awaiter `,` $frame `,` $wrapper attr-dict `:`
+      qualified(type($awaiter)) `,` qualified(type($frame)) `,`
+      qualified(type($wrapper))
+  }];
+}
+
+def LLVM_CoroAwaitSuspendBoolOp
+    : LLVM_IntrOp<"coro.await.suspend.bool", [], [], [], 1> {
+  let arguments = (ins LLVM_AnyPointer:$awaiter,
+                       LLVM_AnyPointer:$frame,
+                       LLVM_AnyPointer:$wrapper);
+  let assemblyFormat = [{
+    $awaiter `,` $frame `,` $wrapper attr-dict `:`
+      functional-type(operands, results)
+  }];
+}
+
+def LLVM_CoroAwaitSuspendHandleOp
+    : LLVM_IntrOp<"coro.await.suspend.handle", [], [], [], 0> {
+  let arguments = (ins LLVM_AnyPointer:$awaiter,
+                       LLVM_AnyPointer:$frame,
+                       LLVM_AnyPointer:$wrapper);
+  let assemblyFormat = [{
+    $awaiter `,` $frame `,` $wrapper attr-dict `:`
+      qualified(type($awaiter)) `,` qualified(type($frame)) `,`
+      qualified(type($wrapper))
+  }];
 }
 
 //
@@ -751,7 +1095,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
 
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
-    debugInfoBuilder.insertDbgValueIntrinsic(
+    debugInfoBuilder.insertDbgValue(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
         llvm::cast<llvm::DILocalVariable>(
             moduleTranslation.translateDebugInfo($varInfo)),
@@ -1049,22 +1393,25 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
 /// Create a call to Masked Store intrinsic.
 def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
   let arguments = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
-                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
+                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment,
+                   UnitAttr:$nontemporal);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` qualified(type($data))";
 
   string llvmBuilder = [{
-    builder.CreateMaskedStore(
+    auto *inst = builder.CreateMaskedStore(
       $value, $data, llvm::Align($alignment), $mask);
-  }];
+  }] #setNonTemporalMetadataCode;
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
+    bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()));
+      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()),
+      nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 1, 2, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
@@ -1120,7 +1467,7 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload
-  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [0],
   /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
   dag args = (ins LLVM_AnyPointer:$ptr,
@@ -1136,7 +1483,7 @@ def LLVM_masked_expandload
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0, 1],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {

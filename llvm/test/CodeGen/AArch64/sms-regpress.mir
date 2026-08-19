@@ -102,7 +102,7 @@ body:             |
     %0:fpr64 = LDRDui %10, 0 :: (load (s64) from %ir.a)
     %1:fpr64 = LDRDui %10, 1 :: (load (s64) from %ir.arrayidx1)
     %16:gpr32 = ORRWrs $wzr, %12, 0
-    %2:gpr64all = SUBREG_TO_REG 0, killed %16, %subreg.sub_32
+    %2:gpr64all = SUBREG_TO_REG killed %16, %subreg.sub_32
     %15:fpr64 = FMOVD0
     B %bb.3
   

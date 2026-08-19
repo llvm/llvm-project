@@ -34,6 +34,7 @@ class Error;
 class Module;
 class ModuleSummaryIndex;
 class raw_pwrite_stream;
+class PassPlugin;
 
 namespace lto {
 
@@ -50,7 +51,12 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  std::vector<std::string> PassPlugins;
+  // LTO will register both lists of plugins, but
+  // if an LTO client has already loaded a set of plugins,
+  // they should register them via LoadedPassPlugins.
+  // LoadedPassPlugins is currently used by distributed thin-lto.
+  std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  std::vector<std::string> PassPluginFilenames;
   /// For adding passes that run right before codegen.
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
@@ -286,6 +292,24 @@ struct Config {
   LLVM_ABI Error addSaveTemps(std::string OutputFileName,
                               bool UseInputModulePath = false,
                               const DenseSet<StringRef> &SaveTempsArgs = {});
+
+  /// Called by WriteIndexesThinBackend when it needs to write a bitcode
+  /// module's summary index. The callback should return a stream to write
+  /// the index into. If not set, the backend falls back
+  /// to writing the summary index to a file.
+  std::function<std::unique_ptr<raw_pwrite_stream>(size_t Task)>
+      GetSummaryIndexOutputStream;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's imports list. The callback should return a vector that the
+  /// backend will populate with the imported module paths. If not set, the
+  /// backend writes the imports list to a file instead.
+  std::function<std::vector<std::string> &(size_t Task)>
+      GetImportsListOutputArray;
+  /// Called by WriteIndexesThinBackend when it needs to store a bitcode
+  /// module's cache key. The callback should return a string that the backend
+  /// will fill with the computed cache key. If not set, the cache key is
+  /// discarded.
+  std::function<std::string &(size_t Task)> GetCacheKeyOutputString;
 };
 
 struct LTOLLVMDiagnosticHandler : public DiagnosticHandler {

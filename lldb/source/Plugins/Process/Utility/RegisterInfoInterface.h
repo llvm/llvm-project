@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOINTERFACE_H
 
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/lldb-private-types.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include <vector>
 
 namespace lldb_private {

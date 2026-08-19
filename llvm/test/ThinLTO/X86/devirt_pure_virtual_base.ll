@@ -2,7 +2,7 @@
 
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt --thinlto-bc -o %t1a.o %s
+; RUN: opt -passes=assign-guid --thinlto-bc -o %t1a.o %s
 ; RUN: llvm-lto2 run %t1a.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3a \
@@ -18,7 +18,7 @@
 
 ;; Hybrid WPD
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t1b.o %s
+; RUN: opt -passes=assign-guid --thinlto-bc --thinlto-split-lto-unit -o %t1b.o %s
 ; RUN: llvm-lto2 run %t1b.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3b \
@@ -38,7 +38,7 @@
 ; RUN: llvm-dis %t3b.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt -o %t1c.o %s
+; RUN: opt -passes=assign-guid -o %t1c.o %s
 ; RUN: llvm-lto2 run %t1c.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t3c \

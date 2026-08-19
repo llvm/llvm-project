@@ -15,15 +15,15 @@ class TestCase(TestBase):
         self.expect(
             "process signal az",
             error=True,
-            startstr="error: Invalid signal argument 'az'.",
+            startstr="error: Invalid signal argument 'az'",
         )
         self.expect(
             "process signal 0x1ffffffff",
             error=True,
-            startstr="error: Invalid signal argument '0x1ffffffff'.",
+            startstr="error: Invalid signal argument '0x1ffffffff'",
         )
         self.expect(
             "process signal 0xffffffff",
             error=True,
-            startstr="error: Invalid signal argument '0xffffffff'.",
+            startstr="error: Invalid signal argument '0xffffffff'",
         )

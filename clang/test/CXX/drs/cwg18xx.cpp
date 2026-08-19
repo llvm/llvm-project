@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify=expected,cxx98-14,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,cxx98-14,cxx11-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,cxx98-14,cxx11-17,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,cxx98-14,cxx11-17,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,since-cxx17,cxx11-17,since-cxx11,since-cxx14,cxx17
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-23,since-cxx14,since-cxx17,since-cxx20,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx23,cxx11-23,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14
+// RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx14,since-cxx17,since-cxx20,since-cxx23,since-cxx11,since-cxx14
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -213,8 +213,8 @@ namespace cwg1815 { // cwg1815: 20
 
   struct B { int &&r = 0; }; // #cwg1815-B
   // since-cxx14-error@-1 {{reference member 'r' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
-  //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
+  //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   B b; // #cwg1815-b
 
 #if __cplusplus >= 201703L
@@ -375,7 +375,7 @@ namespace cwg1837 { // cwg1837: 3.3
 #endif
 } // namespace cwg1837
 
-namespace cwg1862 { // cwg1862: no
+namespace cwg1862 { // cwg1862: 24
 template<class T>
 struct A {
   struct B {
@@ -416,29 +416,24 @@ struct A<float*> {
 };
 
 class C {
-  int private_int;
+  int private_int; // #cwg1862-C-private_int
 
   template<class T>
   friend struct A<T>::B;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   friend void A<T>::f();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 
-  // FIXME: this is ill-formed, because A<T>​::​D does not end with a simple-template-id
   template<class T>
   friend void A<T>::D::g();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::D' for friend class declaration is not supported; turning off access control for 'C'}}
+  // expected-error@-1 {{'A<T>::D' does not name a class template}}
 
   template<class T>
   friend int *A<T*>::h();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T *>' for friend class declaration is not supported; turning off access control for 'C'}}
 
   template<class T>
   template<T U>
   friend T A<T>::i();
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'C'}}
 };
 
 C c;
@@ -450,11 +445,16 @@ void A<int>::B::e() { (void)c.private_int; }
 template<class T>
 void A<T>::f() { (void)c.private_int; }
 int A<int>::f() { (void)c.private_int; return 0; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
-// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 void A<int>::D::g() { (void)c.private_int; }
+// expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
+//   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
 template<class T>
 T A<T>::h() { (void)c.private_int; }
@@ -466,6 +466,17 @@ T A<T>::i() { (void)c.private_int; }
 template<int U>
 int A<int>::i() { (void)c.private_int; }
 } // namespace cwg1862
+
+namespace cwg1870 { // cwg1870: 2.7
+#if __cplusplus >= 201103L
+struct S {
+  // FIXME: why C++11 has its own diagnostic message?
+  template<class T> operator auto() { return 42; }
+  // cxx11-error@-1 {{'auto' not allowed in conversion function type}}
+  // since-cxx14-error@-2 {{'auto' not allowed in declaration of conversion function template}}
+};
+#endif
+} // namespace cwg1870
 
 namespace cwg1872 { // cwg1872: 9
 #if __cplusplus >= 201103L
@@ -491,9 +502,9 @@ namespace cwg1872 { // cwg1872: 9
   static_assert(y2 == 0);
 #endif
   constexpr int z = A<Z>().f();
-  // since-cxx11-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
+  // cxx11-23-error@-1 {{constexpr variable 'z' must be initialized by a constant expression}}
   //   cxx11-20-note@-2 {{non-literal type 'A<Z>' cannot be used in a constant expression}}
-  //   since-cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
+  //   cxx23-note@-3 {{cannot construct object of type 'A<cwg1872::Z>' with virtual base class in a constant expression}}
 #endif
 } // namespace cwg1872
 
@@ -568,8 +579,8 @@ struct Bar {
     int a = 0;
   };
   static_assert(__is_constructible(Baz), "");
-  // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(cwg1890::ex2::Bar::Baz)'}}
-  // since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
+  // since-cxx11-error@-1 {{static assertion failed due to requirement '__is_constructible(cwg1890::ex2::Bar::Baz)':}}
+  //   since-cxx11-note@#cwg1890-Baz {{'Baz' defined here}}
 };
 #endif
 } // namespace ex2
@@ -584,16 +595,16 @@ void cwg1891() { // cwg1891: 4
   typedef decltype(b) B;
 
   static_assert(!__is_trivially_constructible(A), "");
-  // since-cxx20-error@-1 {{failed}}
+  // since-cxx20-error-re@-1 {{static assertion failed due to requirement '!__is_trivially_constructible((lambda at {{.+}}))':}}
   static_assert(!__is_trivially_constructible(B), "");
 
   // C++20 allows default construction for non-capturing lambdas (P0624R2).
   A x;
-  // cxx11-17-error@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at}}
+  // cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}
   //   cxx11-17-note@#cwg1891-a {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
   //   cxx11-17-note@#cwg1891-a {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
   B y;
-  // since-cxx11-error@-1 {{no matching constructor for initialization of 'B' (aka '(lambda at}}
+  // since-cxx11-error-re@-1 {{no matching constructor for initialization of 'B' (aka '(lambda at {{.+}})')}}
   //   since-cxx11-note@#cwg1891-b {{candidate constructor (the implicit copy constructor) not viable: requires 1 argument, but 0 were provided}}
   //   since-cxx11-note@#cwg1891-b {{candidate constructor (the implicit move constructor) not viable: requires 1 argument, but 0 were provided}}
 

@@ -55,6 +55,12 @@ class Dialect {
   // dialect declaration.
   code extraClassDeclaration = "";
 
+  // If this dialect should require declarative parsers for property-backed
+  // operations to bind every inherent attribute and property directly in the
+  // custom assembly format, or otherwise cover them with `prop-dict`. This
+  // stricter mode is disabled by default for now.
+  bit useStrictPropertiesInAssemblyFormat = 0;
+
   // If this dialect overrides the hook for materializing constants.
   bit hasConstantMaterializer = 0;
 
@@ -92,9 +98,6 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
-
-  // Whether inherent Attributes defined in ODS will be stored as Properties.
-  bit usePropertiesForAttributes = 1;
 }
 
 #endif // DIALECTBASE_TD

@@ -229,7 +229,9 @@ patterns:
             \\bnofree\\b|\
             \\bnoimplicitfloat\\b|\
             \\bnoinline\\b|\
+            \\bnoipa\\b|\
             \\bnomerge\\b|\
+            \\bnooutline\\b|\
             \\bnonlazybind\\b|\
             \\bnonnull\\b|\
             \\bnoprofile\\b|\
@@ -291,7 +293,6 @@ patterns:
             \\bunnamed_addr\\b|\
             \\bunordered\\b|\
             \\buselistorder\\b|\
-            \\buselistorder_bb\\b|\
             \\buwtable\\b|\
             \\bvolatile\\b|\
             \\bweak\\b|\

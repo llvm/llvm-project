@@ -2,6 +2,7 @@
 
 ; RUN: not llvm-ir2vec embeddings %s 2>&1 | FileCheck %s -check-prefix=CHECK-NO-VOCAB
 ; RUN: not llvm-ir2vec embeddings --function=nonexistent --ir2vec-vocab-path=%ir2vec_test_vocab_dir/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-FUNC-NOT-FOUND
+; RUN: not llvm-ir2vec embeddings --function=nonexistent --ir2vec-vocab-path=%ir2vec_test_vocab_dir/incorrect_vocab1.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-FUNC-INCORRECT-VOCAB
 
 ; Simple test function for valid IR
 define i32 @test_func(i32 %a) {
@@ -11,3 +12,4 @@ entry:
 
 ; CHECK-NO-VOCAB: error: IR2Vec vocabulary file path not specified; You may need to set it using --ir2vec-vocab-path
 ; CHECK-FUNC-NOT-FOUND: error: Function 'nonexistent' not found
+; CHECK-FUNC-INCORRECT-VOCAB: error: Missing 'Opcodes' section in vocabulary file

@@ -6,7 +6,7 @@ FileCheck - Flexible pattern matching file verifier
 SYNOPSIS
 --------
 
-:program:`FileCheck` *match-filename* [*--check-prefix=XXX*] [*--strict-whitespace*]
+:program:`FileCheck` *match-filename* [*--check-prefixes=XXX*] [*--strict-whitespace*]
 
 DESCRIPTION
 -----------
@@ -33,23 +33,22 @@ and from the command line.
 
  Print a summary of command line options.
 
-.. option:: --check-prefix prefix
+.. option:: --check-prefixes prefix1,prefix2,...
 
  FileCheck searches the contents of ``match-filename`` for patterns to
  match.  By default, these patterns are prefixed with "``CHECK:``".
  If you'd like to use a different prefix (e.g. because the same input
  file is checking multiple different tool or options), the
- :option:`--check-prefix` argument allows you to specify (without the trailing
+ :option:`--check-prefixes` argument allows you to specify (without the trailing
  "``:``") one or more prefixes to match. Multiple prefixes are useful for tests
  which might change for different run options, but most lines remain the same.
 
  FileCheck does not permit duplicate prefixes, even if one is a check prefix
  and one is a comment prefix (see :option:`--comment-prefixes` below).
 
-.. option:: --check-prefixes prefix1,prefix2,...
+.. option:: --check-prefix prefix1,prefix2,...
 
- An alias of :option:`--check-prefix` that allows multiple prefixes to be
- specified as a comma separated list.
+ An alias of :option:`--check-prefixes`.
 
 .. option:: --comment-prefixes prefix1,prefix2,...
 
@@ -67,7 +66,7 @@ and from the command line.
 .. option:: --allow-unused-prefixes
 
  This option controls the behavior when using more than one prefix as specified
- by :option:`--check-prefix` or :option:`--check-prefixes`, and some of these
+ by :option:`--check-prefixes`, and some of these
  prefixes are missing in the test file. If true, this is allowed, if false,
  FileCheck will report an error, listing the missing prefixes. The default value
  is false.
@@ -257,10 +256,10 @@ unless there is a "``subl``" in between those labels.  If it existed somewhere
 else in the file, that would not count: "``grep subl``" matches if "``subl``"
 exists anywhere in the file.
 
-The FileCheck -check-prefix option
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The FileCheck -check-prefixes option
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The FileCheck `-check-prefix` option allows multiple test
+The FileCheck `-check-prefixes` option allows multiple test
 configurations to be driven from one `.ll` file.  This is useful in many
 circumstances, for example, testing different architectural variants with
 :program:`llc`.  Here's a simple example:
@@ -268,9 +267,9 @@ circumstances, for example, testing different architectural variants with
 .. code-block:: llvm
 
    ; RUN: llvm-as < %s | llc -mtriple=i686-apple-darwin9 -mattr=sse41 \
-   ; RUN:              | FileCheck %s -check-prefix=X32
+   ; RUN:              | FileCheck %s -check-prefixes=X32
    ; RUN: llvm-as < %s | llc -mtriple=x86_64-apple-darwin9 -mattr=sse41 \
-   ; RUN:              | FileCheck %s -check-prefix=X64
+   ; RUN:              | FileCheck %s -check-prefixes=X64
 
    define <4 x i32> @pinsrd_1(i32 %s, <4 x i32> %tmp) nounwind {
            %tmp1 = insertelement <4 x i32>; %tmp, i32 %s, i32 1

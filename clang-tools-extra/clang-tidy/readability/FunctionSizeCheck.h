@@ -32,6 +32,9 @@ namespace clang::tidy::readability {
 ///     nesting level).
 ///   * `VariableThreshold` - flag functions having a high number of variable
 ///     declarations. The default is `-1` (ignore the number of variables).
+///   * `IgnoreMacros` - if set to `true`, the check will not count statements,
+///     branches, nesting levels, or variable declarations inside macros. The
+///     default is `false`.
 class FunctionSizeCheck : public ClangTidyCheck {
 public:
   FunctionSizeCheck(StringRef Name, ClangTidyContext *Context);
@@ -48,6 +51,7 @@ private:
   const std::optional<unsigned> NestingThreshold;
   const std::optional<unsigned> VariableThreshold;
   const bool CountMemberInitAsStmt;
+  const bool IgnoreMacros;
 
   static constexpr std::optional<unsigned> DefaultLineThreshold = std::nullopt;
   static constexpr std::optional<unsigned> DefaultStatementThreshold = 800U;
@@ -60,6 +64,7 @@ private:
   static constexpr std::optional<unsigned> DefaultVariableThreshold =
       std::nullopt;
   static constexpr bool DefaultCountMemberInitAsStmt = true;
+  static constexpr bool DefaultIgnoreMacros = false;
 };
 
 } // namespace clang::tidy::readability

@@ -15,10 +15,10 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -131,15 +131,15 @@ bool constantUnaryOpShouldBeFolded(TosaOp unaryOp, DenseElementsAttr values) {
 }
 
 template <typename RangeType>
-DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
-                                ShapedType outputType,
-                                llvm::ArrayRef<int64_t> permValues) {
+auto transposeValues(const RangeType &data, ShapedType inputType,
+                     ShapedType outputType,
+                     llvm::ArrayRef<int64_t> permValues) {
   using ElementType = std::decay_t<decltype(*std::begin(data))>;
 
   assert(inputType.getElementType() == outputType.getElementType());
 
   if (inputType.getNumElements() == 0)
-    return DenseElementsAttr::get(outputType, llvm::ArrayRef<ElementType>{});
+    return SmallVector<ElementType>{};
 
   auto inputShape = inputType.getShape();
 
@@ -171,30 +171,31 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
     outputValues[dstLinearIndex] = it.value();
   }
 
+  return outputValues;
+}
+
+template <typename RangeType>
+DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
+                                ShapedType outputType,
+                                llvm::ArrayRef<int64_t> permValues) {
+  using ElementType = std::decay_t<decltype(*std::begin(data))>;
+  SmallVector<ElementType> outputValues =
+      transposeValues(data, inputType, outputType, permValues);
   return DenseElementsAttr::get(outputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
 }
 
-// Try to get the values of a DenseResourceElementsAttr construct
-template <typename T>
-std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
-  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
-    // Check that the resource memory blob exists
-    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
-    if (!blob)
-      return std::nullopt;
-
-    // Check that the data are in a valid form
-    bool isSplat = false;
-    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
-                                             blob->getData(), isSplat)) {
-      return std::nullopt;
-    }
-
-    return blob->template getDataAs<T>();
-  }
-
-  return std::nullopt;
+template <typename RangeType>
+DenseElementsAttr transposeRawType(const RangeType &data, ShapedType inputType,
+                                   ShapedType outputType,
+                                   llvm::ArrayRef<int64_t> permValues) {
+  using StorageType = std::decay_t<decltype(*std::begin(data))>;
+  SmallVector<StorageType> outputValues =
+      transposeValues(data, inputType, outputType, permValues);
+  llvm::ArrayRef<char> rawData(
+      reinterpret_cast<const char *>(outputValues.data()),
+      outputValues.size() * sizeof(StorageType));
+  return DenseElementsAttr::getFromRawBuffer(outputType, rawData);
 }
 
 // A type specialized transposition of an ElementsAttr.
@@ -253,6 +254,19 @@ DenseElementsAttr transpose(ElementsAttr attr, ShapedType inputType,
     if (auto data = tryGetDenseResourceValues<float>(attr);
         data && elementTy.isF32())
       return transposeType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<uint8_t>(attr);
+        data && isa<Float4E2M1FNType, Float8E4M3FNType, Float8E5M2Type,
+                    Float8E8M0FNUType>(elementTy))
+      return transposeRawType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<uint16_t>(attr);
+        data && isa<Float16Type, BFloat16Type>(elementTy))
+      return transposeRawType(*data, inputType, outputType, permValues);
+
+    if (auto data = tryGetDenseResourceValues<double>(attr);
+        data && elementTy.isF64())
+      return transposeType(*data, inputType, outputType, permValues);
   }
 
   return nullptr;
@@ -264,6 +278,8 @@ struct TosaFoldConstantTranspose : public OpRewritePattern<tosa::TransposeOp> {
   LogicalResult matchAndRewrite(tosa::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
     auto outputType = cast<ShapedType>(op.getType());
+    if (!outputType.hasRank() || !outputType.hasStaticShape())
+      return failure();
     // TOSA supports quantized types.
     if (!outputType.getElementType().isIntOrIndexOrFloat())
       return failure();
@@ -316,6 +332,10 @@ struct TosaFoldConstantReciprocal : public OpRewritePattern<ReciprocalOp> {
           recip, "Currently, reciprocals will only be folded if the input "
                  "tensor has a single user");
     }
+
+    if (inputTensor.getType() != recip.getType())
+      return rewriter.notifyMatchFailure(
+          recip, "input tensor and reciprocal output have different type");
 
     // Create a new tensor with the updated values
     auto newTensor = applyElementWise<APFloat, APFloat, FloatType>(

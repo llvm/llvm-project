@@ -92,7 +92,16 @@ TEST(JITLinkLazyReexportsTest, Basics) {
 
   auto &OLL = cast<ObjectLinkingLayer>((*J)->getObjLinkingLayer());
 
-  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL);
+  auto MA = (*J)->getExecutionSession()
+                .getExecutorProcessControl()
+                .createDefaultMemoryAccess();
+  if (!MA) {
+    dbgs() << "Boom for MA\n";
+    consumeError(MA.takeError());
+    GTEST_SKIP();
+  }
+
+  auto RSMgr = JITLinkRedirectableSymbolManager::Create(OLL, **MA);
   if (!RSMgr) {
     dbgs() << "Boom for RSMgr\n";
     consumeError(RSMgr.takeError());

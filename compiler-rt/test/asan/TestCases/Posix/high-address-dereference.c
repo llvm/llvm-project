@@ -27,14 +27,14 @@ int main(int argc, const char *argv[]) {
 // HIGH:  {{BUS|SEGV}} on unknown address (pc
 // MAX:   {{BUS|SEGV}} on unknown address (pc
 
-// HINT-PAGE0-NOT: Hint: this fault was caused by a dereference of a high value address
-// HINT-PAGE0:     Hint: address points to the zero page.
+// HINT-PAGE0-NOT: HINT: this fault was caused by a dereference of a high value address
+// HINT-PAGE0:     HINT: address points to the zero page.
 
-// HINT-NONE-NOT:  Hint: this fault was caused by a dereference of a high value address
-// HINT-NONE-NOT:  Hint: address points to the zero page.
+// HINT-NONE-NOT:  HINT: this fault was caused by a dereference of a high value address
+// HINT-NONE-NOT:  HINT: address points to the zero page.
 
-// HINT-HIGHADDR:     Hint: this fault was caused by a dereference of a high value address
-// HINT-HIGHADDR-NOT: Hint: address points to the zero page.
+// HINT-HIGHADDR:     HINT: this fault was caused by a dereference of a high value address
+// HINT-HIGHADDR-NOT: HINT: address points to the zero page.
 
 // ZERO:  SCARINESS: 10 (null-deref)
 // LOW1:  SCARINESS: 10 (null-deref)

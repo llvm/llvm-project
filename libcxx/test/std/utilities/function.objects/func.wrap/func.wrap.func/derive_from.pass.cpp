@@ -13,6 +13,7 @@
 // See https://llvm.org/PR20002
 
 #include <functional>
+#include <memory>
 #include <type_traits>
 
 #include "test_macros.h"

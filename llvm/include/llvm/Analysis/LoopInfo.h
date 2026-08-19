@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
 
@@ -288,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and
@@ -311,12 +311,13 @@ public:
   bool isCanonical(ScalarEvolution &SE) const;
 
   /// Return true if the Loop is in LCSSA form. If \p IgnoreTokens is set to
-  /// true, token values defined inside loop are allowed to violate LCSSA form.
+  /// true, token-like values defined inside loop are allowed to violate LCSSA
+  /// form.
   bool isLCSSAForm(const DominatorTree &DT, bool IgnoreTokens = true) const;
 
   /// Return true if this Loop and all inner subloops are in LCSSA form. If \p
-  /// IgnoreTokens is set to true, token values defined inside loop are allowed
-  /// to violate LCSSA form.
+  /// IgnoreTokens is set to true, token-like values defined inside loop are
+  /// allowed to violate LCSSA form.
   bool isRecursivelyLCSSAForm(const DominatorTree &DT, const LoopInfo &LI,
                               bool IgnoreTokens = true) const;
 
@@ -368,6 +369,24 @@ public:
   /// Add llvm.loop.mustprogress to this loop's loop id metadata.
   void setLoopMustProgress();
 
+  /// Add a string-only metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode containing just \p Name (no value operand) and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  void addStringLoopAttribute(StringRef Name,
+                              ArrayRef<StringRef> RemovePrefixes = {}) const;
+
+  /// Add an integer metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode of the form { Name, ConstantInt(Value) } and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  void addIntLoopAttribute(StringRef Name, unsigned Value,
+                           ArrayRef<StringRef> RemovePrefixes = {}) const;
+
   void dump() const;
   void dumpVerbose() const;
 
@@ -398,7 +417,6 @@ private:
 
   friend class LoopInfoBase<BasicBlock, Loop>;
   friend class LoopBase<BasicBlock, Loop>;
-  explicit Loop(BasicBlock *BB) : LoopBase<BasicBlock, Loop>(BB) {}
   ~Loop() = default;
 };
 
@@ -577,19 +595,17 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public PassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit LoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute loop information.

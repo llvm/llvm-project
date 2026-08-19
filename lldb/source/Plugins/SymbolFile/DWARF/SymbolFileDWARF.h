@@ -94,6 +94,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
+  static llvm::StringRef GetDwoDiagnosticSuffix();
+
   static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
@@ -280,6 +282,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter,
                     bool show_colors) override;
 
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
+
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
@@ -330,7 +334,8 @@ public:
     return LLDB_INVALID_OFFSET;
   }
 
-  virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+  virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                      const llvm::DataExtractor &opcodes,
                                       lldb::offset_t &offset,
                                       RegisterContext *reg_ctx,
                                       lldb::RegisterKind reg_kind,

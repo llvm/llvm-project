@@ -15,7 +15,7 @@ define void @foo(i64 %n, i64 %m, i64 %o, i64 %p, ptr nocapture %A) nounwind uwta
 ; CHECK-NEXT:  AccessFunction: {{\{\{\{}}(56 + (8 * (-4 + (3 * %m)) * (%o + %p))),+,(8 * (%o + %p) * %m)}<%for.cond4.preheader.lr.ph.us>,+,(8 * (%o + %p))}<%for.body6.lr.ph.us.us>,+,8}<%for.body6.us.us>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m][(%o + %p)] with elements of 8 bytes.
-; CHECK-NEXT:  ArrayRef[{3,+,1}<nuw><%for.cond4.preheader.lr.ph.us>][{-4,+,1}<nw><%for.body6.lr.ph.us.us>][{7,+,1}<nw><%for.body6.us.us>]
+; CHECK-NEXT:  ArrayRef[{3,+,1}<nuw><%for.cond4.preheader.lr.ph.us>][{-4,+,1}<%for.body6.lr.ph.us.us>][{7,+,1}<%for.body6.us.us>]
 ; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:

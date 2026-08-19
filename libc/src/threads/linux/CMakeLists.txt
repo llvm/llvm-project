@@ -21,6 +21,7 @@ add_entrypoint_object(
     ../cnd_init.h
   DEPENDS
     libc.include.threads
+    libc.src.__support.CPP.new
     libc.src.__support.threads.CndVar
 )
 
@@ -45,6 +46,20 @@ add_entrypoint_object(
     libc.include.threads
     libc.src.__support.threads.mutex
     libc.src.__support.threads.CndVar
+)
+
+add_entrypoint_object(
+  cnd_timedwait
+  SRCS
+    cnd_timedwait.cpp
+  HDRS
+    ../cnd_timedwait.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.CndVar
+    libc.src.__support.time.abs_timeout
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

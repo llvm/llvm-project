@@ -13,9 +13,9 @@ using namespace mlir;
 
 static Operation *createOp(MLIRContext *context) {
   context->allowUnregisteredDialects();
-  return Operation::create(UnknownLoc::get(context),
-                           OperationName("foo.bar", context), {}, {},
-                           NamedAttrList(), /*properties=*/nullptr, {}, 0);
+  return Operation::create(
+      UnknownLoc::get(context), OperationName("foo.bar", context), {}, {},
+      NamedAttrList(), /*properties=*/PropertyRef(), {}, 0);
 }
 
 namespace {

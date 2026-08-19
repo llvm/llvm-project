@@ -12,8 +12,7 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1000, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1000, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1000, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[EXTRACT0:%.*]] = extractvalue { i64, i64 } [[SV]], 0
@@ -57,6 +56,6 @@ attributes #0 = { "target-features"="+sve" }
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
-!5 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.enable"}

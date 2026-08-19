@@ -11,10 +11,10 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <vector>
 
 #include "lldb/Target/StackFrame.h"
+#include "llvm/Support/RWMutex.h"
 
 namespace lldb_private {
 
@@ -24,7 +24,8 @@ class StackFrameList : public std::enable_shared_from_this<StackFrameList> {
 public:
   // Constructors and Destructors
   StackFrameList(Thread &thread, const lldb::StackFrameListSP &prev_frames_sp,
-                 bool show_inline_frames);
+                 bool show_inline_frames,
+                 lldb::frame_list_id_t provider_id = 0);
 
   virtual ~StackFrameList();
 
@@ -48,6 +49,23 @@ public:
 
   /// Resets the selected frame index of this object.
   void ClearSelectedFrameIndex();
+
+  /// Returns \p true if the next frame is hidden.
+  bool IsNextFrameHidden(lldb_private::StackFrame &frame);
+
+  /// Returns \p true if the previous frame is hidden.
+  bool IsPreviousFrameHidden(lldb_private::StackFrame &frame);
+
+  /// Returns the stack frame marker depending on if \p frame_sp:
+  /// @li is selected: *
+  /// @li is the first non hidden frame: ﹍
+  /// @li is the last non hidden frame: ﹉
+  ///
+  /// If the terminal does not support Unicode rendering, the hidden frame
+  /// markers are replaced with whitespaces.
+  std::string GetFrameMarker(lldb::StackFrameSP frame_sp,
+                             lldb::StackFrameSP selected_frame_sp,
+                             bool show_hidden_marker);
 
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
@@ -96,13 +114,17 @@ public:
   size_t GetStatus(Stream &strm, uint32_t first_frame, uint32_t num_frames,
                    bool show_frame_info, uint32_t num_frames_with_source,
                    bool show_unique = false, bool show_hidden = false,
-                   const char *frame_marker = nullptr);
+                   bool show_hidden_marker = true,
+                   bool show_selected_frame = false);
 
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;
 
   /// Get the thread associated with this frame list.
   Thread &GetThread() const { return m_thread; }
+
+  /// Get the unique identifier for this frame list.
+  lldb::frame_list_id_t GetIdentifier() const { return m_identifier; }
 
 protected:
   friend class Thread;
@@ -165,7 +187,7 @@ protected:
   /// unique lock is Clear.  All other clients take the shared lock, though
   /// if we need more frames we may swap shared for unique to fulfill that
   /// requirement.
-  mutable std::shared_mutex m_list_mutex;
+  mutable llvm::sys::RWMutex m_list_mutex;
 
   // Setting the inlined depth should be protected against other attempts to
   // change it, but since it doesn't mutate the list itself, we can limit the
@@ -212,15 +234,17 @@ protected:
   /// Whether or not to show synthetic (inline) frames. Immutable.
   const bool m_show_inlined_frames;
 
+  /// Unique identifier for this frame list instance.
+  lldb::frame_list_id_t m_identifier = 0;
+
   /// Returns true if fetching frames was interrupted, false otherwise.
   virtual bool FetchFramesUpTo(uint32_t end_idx,
                                InterruptionControl allow_interrupt);
 
 private:
   uint32_t SetSelectedFrameNoLock(lldb_private::StackFrame *frame);
-  lldb::StackFrameSP
-  GetFrameAtIndexNoLock(uint32_t idx,
-                        std::shared_lock<std::shared_mutex> &guard);
+  lldb::StackFrameSP GetFrameAtIndexNoLock(uint32_t idx,
+                                           llvm::sys::ScopedReader &guard);
 
   /// @{
   /// These two Fetch frames APIs and SynthesizeTailCallFrames are called in
@@ -231,6 +255,12 @@ private:
   /// }@
   void FetchOnlyConcreteFramesUpTo(uint32_t end_idx);
   void SynthesizeTailCallFrames(StackFrame &next_frame);
+
+  /// Synthesize inline frames for \p frame_sp by walking the inlined
+  /// scope chain via GetParentOfInlinedScope and appending frames to the
+  /// list. Returns the number of inline frames created.
+  uint32_t SynthesizeInlineFrames(lldb::StackFrameSP frame_sp,
+                                  lldb::addr_t cfa);
 
   StackFrameList(const StackFrameList &) = delete;
   const StackFrameList &operator=(const StackFrameList &) = delete;
@@ -244,7 +274,8 @@ public:
   SyntheticStackFrameList(Thread &thread, lldb::StackFrameListSP input_frames,
                           const lldb::StackFrameListSP &prev_frames_sp,
                           bool show_inline_frames,
-                          lldb::SyntheticFrameProviderSP provider_sp);
+                          lldb::SyntheticFrameProviderSP provider_sp,
+                          uint64_t provider_id);
 
 protected:
   /// Override FetchFramesUpTo to lazily return frames from the provider

@@ -107,12 +107,10 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
-                                                const MCFixup &Fixup,
-                                                const MCValue &, uint64_t Value,
+                                                const MCFixup &,
+                                                const MCValue &, uint64_t,
                                                 bool Resolved) const {
-  if (!Resolved)
-    return true;
-  return fixupNeedsRelaxation(Fixup, Value);
+  return !Resolved;
 }
 
 void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,

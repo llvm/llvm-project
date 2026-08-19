@@ -60,9 +60,8 @@ define <3 x double> @insert_v3f64_0(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-SD-NEXT:    mov v0.d[0], v3.d[0]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3f64_0:
@@ -99,9 +98,8 @@ define <3 x double> @insert_v3f64_c(<3 x double> %a, double %b, i32 %c) {
 ; CHECK-SD-NEXT:    str d3, [x8, x9, lsl #3]
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1182,9 +1180,8 @@ define <3 x i64> @insert_v3i64_0(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[0], x0
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: insert_v3i64_0:
@@ -1221,9 +1218,8 @@ define <3 x i64> @insert_v3i64_c(<3 x i64> %a, i64 %b, i32 %c) {
 ; CHECK-SD-NEXT:    str x0, [x8, x9, lsl #3]
 ; CHECK-SD-NEXT:    ldr q0, [sp]
 ; CHECK-SD-NEXT:    ldr d2, [sp, #16]
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    add sp, sp, #32
 ; CHECK-SD-NEXT:    ret
 ;
@@ -2856,23 +2852,23 @@ define i128 @extract_v2i128_c(<2 x i128> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    adds x9, x0, x0
-; CHECK-SD-NEXT:    mov w8, w4
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-SD-NEXT:    adc x10, x1, x1
 ; CHECK-SD-NEXT:    adds x11, x2, x2
 ; CHECK-SD-NEXT:    fmov d1, x9
 ; CHECK-SD-NEXT:    fmov d0, x11
-; CHECK-SD-NEXT:    adc x12, x3, x3
-; CHECK-SD-NEXT:    add x8, x8, x8
-; CHECK-SD-NEXT:    and x9, x8, #0x3
-; CHECK-SD-NEXT:    add w8, w8, #1
-; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    adc x11, x3, x3
+; CHECK-SD-NEXT:    orr w8, w8, w4, lsl #1
+; CHECK-SD-NEXT:    ubfiz x9, x4, #4, #1
 ; CHECK-SD-NEXT:    mov v1.d[1], x10
 ; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    and x8, x8, #0x3
-; CHECK-SD-NEXT:    mov v0.d[1], x12
+; CHECK-SD-NEXT:    mov v0.d[1], x11
+; CHECK-SD-NEXT:    mov x11, sp
 ; CHECK-SD-NEXT:    stp q1, q0, [sp]
 ; CHECK-SD-NEXT:    stp q1, q0, [sp, #32]
-; CHECK-SD-NEXT:    ldr x0, [x10, x9, lsl #3]
+; CHECK-SD-NEXT:    ldr x0, [x10, x9]
 ; CHECK-SD-NEXT:    ldr x1, [x11, x8, lsl #3]
 ; CHECK-SD-NEXT:    add sp, sp, #64
 ; CHECK-SD-NEXT:    ret

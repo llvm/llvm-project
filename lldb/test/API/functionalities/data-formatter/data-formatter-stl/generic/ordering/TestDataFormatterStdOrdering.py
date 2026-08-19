@@ -9,6 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class StdOrderingTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def do_test(self):
@@ -47,7 +48,7 @@ class StdOrderingTestCase(TestBase):
         self.assertEqual(frame.FindVariable("so_greater").summary, "greater")
 
     @add_test_categories(["libc++"])
-    def test_libstdcxx(self):
+    def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 

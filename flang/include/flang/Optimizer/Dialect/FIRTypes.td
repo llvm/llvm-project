@@ -14,6 +14,8 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -77,14 +79,15 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile, "int64_t":$corank);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return Base::get(eleTy.getContext(), eleTy, isVolatile);
+        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile, 
+        CArg<"int64_t", "0">:$corank), [{
+      return Base::get(eleTy.getContext(), eleTy, isVolatile, corank);
     }]>,
   ];
 
@@ -146,11 +149,12 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile, "int64_t":$corank);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return $_get(eleTy.getContext(), eleTy, isVolatile);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile, 
+        CArg<"int64_t", "0">:$corank), [{
+      return $_get(eleTy.getContext(), eleTy, isVolatile, corank);
     }]>
   ];
 
@@ -313,7 +317,9 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type"> {
+def fir_RecordType : FIR_Type<"Record", "type",
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAlias"]>,
+     MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{
@@ -356,6 +362,10 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     // array fields.
     bool isPacked() const;
     void pack(bool);
+
+    // The presence of SEQUENCE attribute.
+    bool isSequence() const;
+    void setSequence(bool);
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
@@ -597,6 +607,10 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
+def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
+def AnyLogicalOrIntegerLike : TypeConstraint<Or<[
+    fir_LogicalType.predicate,
+    SignlessIntegerLike.predicate]>, "fir.logical or signless integer">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;

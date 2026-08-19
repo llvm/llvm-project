@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=inline -inline-cost-full=true -inline-threshold=0 -inline-instr-cost=5 -inline-call-penalty=0 -debug-only=inline < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -S -passes=inline -inline-cost-full=true -inline-threshold=0 -inline-instr-cost=5 -inline-call-penalty=0 -debug-only=inline < %s 2>&1 | FileCheck %s
 
 ; CHECK:      Inlining (cost={{-+[0-9]+}}, threshold=330), Call:   call void @Dummy
 

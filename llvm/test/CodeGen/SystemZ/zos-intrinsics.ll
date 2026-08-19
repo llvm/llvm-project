@@ -1,4 +1,4 @@
-; RUN: llc -mtriple s390x-zos -emit-gnuas-syntax-on-zos=0 < %s | FileCheck %s
+; RUN: llc -mtriple s390x-zos < %s | FileCheck %s
 
 define float @sqrt_ieee(float %x) {
 entry:

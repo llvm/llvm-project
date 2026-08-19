@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec \
-// RUN: -target-feature +power8-vector -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: -target-feature +power8-vector -target-feature +isa-v207-instructions -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 #include <altivec.h>
 vector signed long long vsll1, vsll2, vsll3;

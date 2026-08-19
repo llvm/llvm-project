@@ -34,7 +34,7 @@
 ; CHECK:      observation: 4
 ; CHECK-DEFAULT: inlining_default: 1
 ; CHECK:      observation: 5
-; CHECK-DEFAULT: inlining_default: 1
+; CHECK-DEFAULT: inlining_default: 0
 
 ; CHECK:      inlining_decision: 1
 ; CHECK-NEXT: inlining_decision: 0

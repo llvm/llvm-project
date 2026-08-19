@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/symbol.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Semantics/scope.h"
@@ -70,27 +71,61 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
+    const llvm::omp::ClauseSet &clauses, llvm::omp::Directive dir,
+    parser::CharBlock name) const {
+  auto toLower = parser::ToLowerCaseLetters;
+  size_t idx{0}, size{clauses.count()};
+
+  for (llvm::omp::Clause c : clauses) {
+    os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
+    switch (c) {
+    case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+      os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_device_type: {
+      // device_type is carried by several directives; print the value
+      // recorded for the one being emitted.
+      const std::optional<common::OmpDeviceType> &dt{
+          dir == llvm::omp::Directive::OMPD_groupprivate
+              ? ompGroupprivateDeviceType()
+              : ompDeclTargetDeviceType()};
+      os << '(' << toLower(EnumToString(*dt)) << ')';
+      break;
+    }
+    case llvm::omp::Clause::OMPC_enter:
+    case llvm::omp::Clause::OMPC_link:
+      if (!name.empty()) {
+        os << '(' << name.ToString() << ')';
+      }
+      break;
+    case llvm::omp::Clause::OMPC_indirect:
+      os << "(true)";
+      break;
+    default:
+      break;
+    }
+    if (++idx < size) {
+      os << ' ';
+    }
+  }
+}
+
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
+  if (const llvm::omp::ClauseSet &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
-    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
-      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
-                llvm::omp::Clause::OMPC_atomic_default_mem_order))
-         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
-      if (x.has_ompRequires()) {
-        os << ',';
-      }
-    }
-    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
-      size_t num{0}, size{reqs->count()};
-      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
-        if (++num < size) {
-          os << ',';
-        }
-      });
-    }
+    x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+    os << ')';
+  }
+  if (const llvm::omp::ClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+    os << " OmpDeclareTargetFlags:(";
+    x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
+    os << ')';
+  }
+  if (const llvm::omp::ClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
+    os << " OmpGroupprivateFlags:(";
+    x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
     os << ')';
   }
   return os;
@@ -535,6 +570,7 @@ llvm::raw_ostream &operator<<(
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -574,12 +610,14 @@ llvm::raw_ostream &operator<<(
   if (x.isCUDAKernel()) {
     os << " isCUDAKernel";
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const DerivedTypeDetails &x) {
   DumpBool(os, "sequence", x.sequence_);
+  DumpBool(os, "isEnumerationType", x.isEnumerationType_);
   DumpList(os, "components", x.componentNames_);
   return os;
 }
@@ -669,6 +707,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             for (const auto &object : x.objects()) {
               os << ' ' << object->name();
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());

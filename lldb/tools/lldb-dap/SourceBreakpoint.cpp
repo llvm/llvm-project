@@ -10,7 +10,6 @@
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
-#include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
@@ -81,8 +80,9 @@ void SourceBreakpoint::UpdateBreakpoint(const SourceBreakpoint &request_bp) {
 void SourceBreakpoint::CreatePathBreakpoint(const protocol::Source &source) {
   const auto source_path = source.path.value_or("");
   lldb::SBFileSpecList module_list;
-  m_bp = m_dap.target.BreakpointCreateByLocation(source_path.c_str(), m_line,
-                                                 m_column, 0, module_list);
+  m_bp = m_dap.target.BreakpointCreateByLocation(
+      lldb::SBFileSpec(source_path.c_str(), /*resolve=*/true), m_line, m_column,
+      0, module_list);
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
@@ -121,7 +121,8 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(
     const protocol::PersistenceData &persistence_data) {
-  lldb::SBFileSpec file_spec(persistence_data.module_path.c_str());
+  lldb::SBFileSpec file_spec(persistence_data.module_path.c_str(),
+                             /*resolve=*/true);
   lldb::SBFileSpecList comp_unit_list;
   lldb::SBFileSpecList file_spec_list;
   file_spec_list.Append(file_spec);
@@ -398,8 +399,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value =
-          frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
+      lldb::SBValue value = frame.GetValueForVariablePath(
+          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(

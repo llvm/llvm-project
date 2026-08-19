@@ -21,68 +21,86 @@
 ;; Constant pools for function @cold_func.
 ; CHECK:       .section	.rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_0:
-; CHECK-NEXT:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
+; CHECK-LABEL: .type .LCPI0_0,@object
+; CHECK-NEXT: .LCPI0_0:
+; CHECK:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; CHECK-NEXT:  .size .LCPI0_0, 8
+; CHECK: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_1:
-; CHECK-NEXT:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
-; CHECK-NEXT:	.section	.rodata.cst8,"aM",@progbits,8
+; CHECK-LABEL: .type .LCPI0_1,@object
+; CHECK-NEXT: .LCPI0_1:
+; CHECK:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
+; CHECK-NEXT:  .size .LCPI0_1, 8
+; CHECK:	.section	.rodata.cst8,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI0_2:
-; CHECK-NEXT:     .byte   0                               // 0x0
+; CHECK-LABEL: .type .LCPI0_2,@object
+; CHECK-NEXT: .LCPI0_2:
+; CHECK:     .byte   1                               // 0x1
+; CHECK-NEXT:     .byte   2                               // 0x2
+; CHECK-NEXT:     .byte   3                               // 0x3
 ; CHECK-NEXT:     .byte   4                               // 0x4
+; CHECK-NEXT:     .byte   5                               // 0x5
+; CHECK-NEXT:     .byte   6                               // 0x6
+; CHECK-NEXT:     .byte   7                               // 0x7
 ; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:     .byte   12                              // 0xc
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
+; CHECK-NEXT:  .size .LCPI0_2, 8
 
 ;; Constant pools for function @unprofiled_func
 ; CHECK:	    .section	.rodata.cst8,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_0:
-; CHECK-NEXT:     .byte   0                               // 0x0
+; CHECK-LABEL: .type .LCPI1_0,@object
+; CHECK-NEXT: .LCPI1_0:
+; CHECK:     .byte   1                               // 0x1
+; CHECK-NEXT:     .byte   2                               // 0x2
+; CHECK-NEXT:     .byte   3                               // 0x3
 ; CHECK-NEXT:     .byte   4                               // 0x4
+; CHECK-NEXT:     .byte   5                               // 0x5
+; CHECK-NEXT:     .byte   6                               // 0x6
+; CHECK-NEXT:     .byte   7                               // 0x7
 ; CHECK-NEXT:     .byte   8                               // 0x8
-; CHECK-NEXT:     .byte   12                              // 0xc
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT:     .byte   255                             // 0xff
-; CHECK-NEXT: .section .rodata.cst16,"aM",@progbits,16
+; CHECK-NEXT:  .size .LCPI1_0, 8
+; CHECK: .section .rodata.cst16,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_1:
-; CHECK-NEXT:     .word 2                                 // 0x2
+; CHECK-LABEL: .type .LCPI1_1,@object
+; CHECK-NEXT: .LCPI1_1:
+; CHECK:     .word 2                                 // 0x2
 ; CHECK-NEXT:     .word 3                                 // 0x3
 ; CHECK-NEXT:     .word 5                                 // 0x5
 ; CHECK-NEXT:     .word 7                                 // 0x7
-; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
+; CHECK-NEXT:  .size .LCPI1_1, 16
+; CHECK: .section        .rodata.cst16.hot.,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI1_2:
-; CHECK-NEXT:     .word   442                             // 0x1ba
+; CHECK-LABEL: .type .LCPI1_2,@object
+; CHECK-NEXT: .LCPI1_2:
+; CHECK:     .word   442                             // 0x1ba
 ; CHECK-NEXT:     .word   100                             // 0x64
 ; CHECK-NEXT:     .word   0                               // 0x0
 ; CHECK-NEXT:     .word   0                               // 0x0
+; CHECK-NEXT:  .size .LCPI1_2, 16
 
 ;; Constant pools for function @hot_func
 ; CHECK:      .section        .rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI2_0:
-; CHECK-NEXT:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
+; CHECK-LABEL: .type .LCPI2_0,@object
+; CHECK-NEXT: .LCPI2_0:
+; CHECK:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
+; CHECK-NEXT:  .size .LCPI2_0, 8
+; CHECK: .section        .rodata.cst16.hot.,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
-; CHECK-NEXT:   .LCPI2_1:
-; CHECK-NEXT:     .word   0                               // 0x0
+; CHECK-LABEL: .type .LCPI2_1,@object
+; CHECK-NEXT: .LCPI2_1:
+; CHECK:     .word   0                               // 0x0
 ; CHECK-NEXT:     .word   100                             // 0x64
 ; CHECK-NEXT:     .word   0                               // 0x0
 ; CHECK-NEXT:     .word   442                             // 0x1ba
-; CHECK-NEXT:   .LCPI2_2:
-; CHECK-NEXT:     .word   442                             // 0x1ba
+; CHECK-NEXT:  .size   .LCPI2_1, 16
+; CHECK-LABEL: .type .LCPI2_2,@object
+; CHECK-NEXT: .LCPI2_2:
+; CHECK:     .word   442                             // 0x1ba
 ; CHECK-NEXT:     .word   100                             // 0x64
 ; CHECK-NEXT:     .word   0                               // 0x0
 ; CHECK-NEXT:     .word   0                               // 0x0
+; CHECK-NEXT:  .size .LCPI2_2, 16
 
 ;; For global variable @val
 ;; The section name remains `.rodata.cst32` without hotness prefix because
@@ -94,7 +112,7 @@
 define i32 @cold_func(double %x, <16 x i8> %a, <16 x i8> %b) !prof !16 {
   %2 = tail call i32 (...) @func_taking_arbitrary_param(double 6.800000e-01)
   %num = tail call i32 (...) @func_taking_arbitrary_param(double 6.8500000e-01)
-  %t1 = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> %a, <16 x i8> %b, <8 x i8> <i8 0, i8 4, i8 8, i8 12, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %t1 = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> %a, <16 x i8> %b, <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>)
   %t2 = bitcast <8 x i8> %t1 to <2 x i32>
   %3 = extractelement <2 x i32> %t2, i32 1
   %sum = add i32 %2, %3
@@ -106,7 +124,7 @@ declare <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8>, <16 x i8>, <8 x i8>)
 declare i32 @func_taking_arbitrary_param(...)
 
 define <4 x i1> @unprofiled_func(<16 x i8> %a, <16 x i8> %b) {
-  %t1 = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> %a, <16 x i8> %b, <8 x i8> <i8 0, i8 4, i8 8, i8 12, i8 -1, i8 -1, i8 -1, i8 -1>)
+  %t1 = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> %a, <16 x i8> %b, <8 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>)
   %t2 = bitcast <8 x i8> %t1 to <4 x i16>
   %t3 = zext <4 x i16> %t2 to <4 x i32>
   %t4 = add <4 x i32> %t3, <i32 2, i32 3, i32 5, i32 7>

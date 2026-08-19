@@ -118,27 +118,28 @@ void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
-  auto ExplicitSingleVarDecl =
+  const auto ExplicitSingleVarDecl =
       [](const ast_matchers::internal::Matcher<VarDecl> &InnerMatcher,
-         llvm::StringRef ID) {
+         StringRef ID) {
         return declStmt(
             unless(isInTemplateInstantiation()),
             hasSingleDecl(
                 varDecl(unless(isImplicit()), InnerMatcher).bind(ID)));
       };
-  auto ExplicitSingleVarDeclInTemplate =
+  const auto ExplicitSingleVarDeclInTemplate =
       [](const ast_matchers::internal::Matcher<VarDecl> &InnerMatcher,
-         llvm::StringRef ID) {
+         StringRef ID) {
         return declStmt(
             isInTemplateInstantiation(),
             hasSingleDecl(
                 varDecl(unless(isImplicit()), InnerMatcher).bind(ID)));
       };
 
-  auto IsBoundToType = refersToType(equalsBoundNode("type"));
-  auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
+  const auto IsBoundToType = refersToType(equalsBoundNode("type"));
+  const auto UnlessFunctionType =
+      unless(hasUnqualifiedDesugaredType(functionType()));
 
-  auto IsPointerType = [this](const auto &...InnerMatchers) {
+  const auto IsPointerType = [this](const auto &...InnerMatchers) {
     if (this->IgnoreAliasing) {
       return qualType(
           hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))));
@@ -148,7 +149,7 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
                               pointerType(pointee(InnerMatchers...)))))));
   };
 
-  auto IsAutoDeducedToPointer =
+  const auto IsAutoDeducedToPointer =
       [IsPointerType](const std::vector<StringRef> &AllowedTypes,
                       const auto &...InnerMatchers) {
         return autoType(hasDeducedType(
@@ -193,11 +194,12 @@ void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
     if (std::optional<SourceRange> TypeSpec =
             getTypeSpecifierLocation(Var, Result)) {
       TypeSpecifier = *TypeSpec;
-    } else
+    } else {
       return;
+    }
 
-    llvm::SmallVector<SourceRange, 4> RemoveQualifiersRange;
-    auto CheckQualifier = [&](bool IsPresent, Qualifier Qual) {
+    SmallVector<SourceRange, 4> RemoveQualifiersRange;
+    const auto CheckQualifier = [&](bool IsPresent, Qualifier Qual) {
       if (IsPresent) {
         std::optional<Token> Token = findQualToken(Var, Qual, Result);
         if (!Token || Token->getLocation().isMacroID())

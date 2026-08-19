@@ -65,7 +65,7 @@ static bool hasSameParameterTypes(const FunctionDecl &FD, const FunctionDecl &O,
     const ParmVarDecl *DPD = FD.getParamDecl(I);
     const QualType OPT = O.getParamDecl(I)->getType();
     if (DPD == &PD) {
-      if (!llvm::isa<RValueReferenceType>(OPT) ||
+      if (!isa<RValueReferenceType>(OPT) ||
           !isSameTypeIgnoringConstRef(DPD->getType(), OPT))
         return false;
     } else {
@@ -90,9 +90,9 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;
-    if (const auto *O = dyn_cast<FunctionDecl>(Overload))
-      if (hasSameParameterTypes(FD, *O, PD))
-        return O;
+    if (const auto *O = dyn_cast<FunctionDecl>(Overload);
+        O && hasSameParameterTypes(FD, *O, PD))
+      return O;
   }
   return nullptr;
 }

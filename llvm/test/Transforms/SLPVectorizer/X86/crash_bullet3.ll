@@ -24,7 +24,7 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       for.body233:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY233]], label [[FOR_END271]]
 ; CHECK:       for.end271:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float 0x47EFFFFFE0000000), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float f0x7F7FFFFF), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> undef, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN291:%.*]], label [[RETURN]]
 ; CHECK:       if.then291:
@@ -41,7 +41,7 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP6]], [[IF_THEN329]] ], [ [[TMP6]], [[IF_END327]] ], [ splat (float 0x3F847AE140000000), [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP6]], [[IF_THEN329]] ], [ [[TMP6]], [[IF_END327]] ], [ splat (float f0x3C23D70A), [[IF_THEN291]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[VERTICES:%.*]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]

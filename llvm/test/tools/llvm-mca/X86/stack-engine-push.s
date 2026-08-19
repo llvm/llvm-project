@@ -89,4 +89,4 @@ pushq %r12
 # CHECK-NEXT: 3.     2     4.0    1.0    0.0       pushq	%rdx
 # CHECK-NEXT: 4.     2     4.0    1.0    0.0       pushq	%rbx
 # CHECK-NEXT: 5.     2     5.0    1.0    0.0       pushq	%r12
-# CHECK-NEXT:        2     3.3    0.9    0.3       <total>
+# CHECK-NEXT:        12    3.3    0.9    0.3       <total>

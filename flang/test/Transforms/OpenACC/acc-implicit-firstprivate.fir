@@ -12,7 +12,7 @@
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i32>, %[[DST:.*]]: !fir.ref<i32>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i32>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i32>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i32, !fir.ref<i32>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -38,7 +38,7 @@ func.func @test_i32_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i64>, %[[DST:.*]]: !fir.ref<i64>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i64>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i64>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i64, !fir.ref<i64>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -64,7 +64,7 @@ func.func @test_i64_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<f32>, %[[DST:.*]]: !fir.ref<f32>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<f32>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<f32>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : f32, !fir.ref<f32>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -90,7 +90,7 @@ func.func @test_f32_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<f64>, %[[DST:.*]]: !fir.ref<f64>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<f64>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<f64>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : f64, !fir.ref<f64>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -116,7 +116,7 @@ func.func @test_f64_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<!fir.logical<4>>, %[[DST:.*]]: !fir.ref<!fir.logical<4>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<!fir.logical<4>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<!fir.logical<4>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -142,7 +142,7 @@ func.func @test_logical_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<complex<f32>>, %[[DST:.*]]: !fir.ref<complex<f32>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f32>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<complex<f32>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : complex<f32>, !fir.ref<complex<f32>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -168,7 +168,7 @@ func.func @test_complex_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<complex<f64>>, %[[DST:.*]]: !fir.ref<complex<f64>>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<complex<f64>>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<complex<f64>>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : complex<f64>, !fir.ref<complex<f64>>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -230,7 +230,7 @@ func.func @test_f64_scalar_in_serial() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i8>, %[[DST:.*]]: !fir.ref<i8>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i8>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i8>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i8, !fir.ref<i8>
 // CHECK:         acc.terminator
 // CHECK:       }
 
@@ -256,7 +256,7 @@ func.func @test_i8_scalar_in_parallel() {
 // CHECK:       } copy {
 // CHECK:       ^bb0(%[[SRC:.*]]: !fir.ref<i16>, %[[DST:.*]]: !fir.ref<i16>):
 // CHECK:         %[[LOADED:.*]] = fir.load %[[SRC]] : !fir.ref<i16>
-// CHECK:         fir.store %[[LOADED]] to %[[DST]] : !fir.ref<i16>
+// CHECK:         hlfir.assign %[[LOADED]] to %[[DST]] temporary_lhs : i16, !fir.ref<i16>
 // CHECK:         acc.terminator
 // CHECK:       }
 
