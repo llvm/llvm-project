@@ -2108,15 +2108,18 @@ LogicalResult ReinterpretCastOp::verify() {
                                      "result")))
     return failure();
 
+  auto printDynamicOrValue = [](int64_t value) {
+    return ShapedType::isDynamic(value) ? std::string("dynamic")
+                                        : std::to_string(value);
+  };
+
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
-    if (ShapedType::isStatic(resultSize) && resultSize != expectedSize)
+    if (resultSize != expectedSize)
       return emitError("expected result type with size = ")
-             << (ShapedType::isDynamic(expectedSize)
-                     ? std::string("dynamic")
-                     : std::to_string(expectedSize))
-             << " instead of " << resultSize << " in dim = " << idx;
+             << printDynamicOrValue(expectedSize) << " instead of "
+             << printDynamicOrValue(resultSize) << " in dim = " << idx;
   }
 
   // Match offset and strides in static_offset and static_strides attributes. If
@@ -2130,22 +2133,18 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
-  if (ShapedType::isStatic(resultOffset) && resultOffset != expectedOffset)
+  if (resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
-           << (ShapedType::isDynamic(expectedOffset)
-                   ? std::string("dynamic")
-                   : std::to_string(expectedOffset))
-           << " instead of " << resultOffset;
+           << printDynamicOrValue(expectedOffset) << " instead of "
+           << printDynamicOrValue(resultOffset);
 
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
        llvm::enumerate(resultStrides, getStaticStrides())) {
-    if (ShapedType::isStatic(resultStride) && resultStride != expectedStride)
+    if (resultStride != expectedStride)
       return emitError("expected result type with stride = ")
-             << (ShapedType::isDynamic(expectedStride)
-                     ? std::string("dynamic")
-                     : std::to_string(expectedStride))
-             << " instead of " << resultStride << " in dim = " << idx;
+             << printDynamicOrValue(expectedStride) << " instead of "
+             << printDynamicOrValue(resultStride) << " in dim = " << idx;
   }
 
   return success();

@@ -45,6 +45,23 @@ struct StridedMetadata {
   SmallVector<OpFoldResult> strides;
 };
 
+static MemRefType updateTypeFromDescriptor(MemRefType type,
+                                           const StridedMetadata &metadata) {
+  SmallVector<OpFoldResult> offsets{metadata.offset};
+  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
+  SmallVector<int64_t> staticSizes = decomposeMixedValues(metadata.sizes).first;
+  SmallVector<int64_t> staticStrides =
+      decomposeMixedValues(metadata.strides).first;
+  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
+                                       staticStrides);
+  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
+                                           layout, type.getMemorySpace());
+  if (!type.getLayout().isIdentity())
+    return updatedType;
+  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
+  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
+}
+
 /// From `subview(memref, subOffset, subSizes, subStrides))` compute
 ///
 /// \verbatim
@@ -197,10 +214,18 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        subview, subview.getType(), stridedMetadata->basePtr,
+    MemRefType resultType =
+        updateTypeFromDescriptor(subview.getType(), *stridedMetadata);
+    auto reinterpretCast = memref::ReinterpretCastOp::create(
+        rewriter, subview.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == subview.getType()) {
+      rewriter.replaceOp(subview, reinterpretCast);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<memref::CastOp>(subview, subview.getType(),
+                                                reinterpretCast);
     return success();
   }
 };
@@ -600,10 +625,19 @@ public:
                                          "failed to resolve reshape metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        reshape, reshape.getType(), stridedMetadata->basePtr,
+    MemRefType resultType = reshape.getResultType();
+    if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
+      resultType = updateTypeFromDescriptor(resultType, *stridedMetadata);
+    auto reinterpretCast = memref::ReinterpretCastOp::create(
+        rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == reshape.getResultType()) {
+      rewriter.replaceOp(reshape, reinterpretCast);
+      return success();
+    }
+    rewriter.replaceOpWithNewOp<memref::CastOp>(
+        reshape, reshape.getResultType(), reinterpretCast);
     return success();
   }
 };
