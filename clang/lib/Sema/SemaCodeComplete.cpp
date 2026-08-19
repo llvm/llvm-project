@@ -6050,6 +6050,57 @@ static void AddHLSLVectorSwizzleCompletions(Sema &SemaRef,
   }
 }
 
+static void AddHLSLMatrixSwizzleCompletions(Sema &SemaRef,
+                                            ResultBuilder &Results,
+                                            const ConstantMatrixType *MT) {
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+
+  StringRef Filter = SemaRef.PP.getCodeCompletionFilter();
+
+  bool UseMNotation = true;
+  bool UseOneNotation = true;
+
+  if (!Filter.empty()) {
+    if (Filter.starts_with("_m")) {
+      UseOneNotation = false;
+      if (Filter.size() % 4 != 0 || Filter.size() >= 16)
+        return;
+    } else if (Filter.starts_with("_")) {
+      UseMNotation = false;
+      if (Filter.size() % 3 != 0 || Filter.size() >= 12)
+        return;
+    } else {
+      return;
+    };
+  }
+
+  for (unsigned R = 0; R < Rows; ++R) {
+    for (unsigned C = 0; C < Cols; ++C) {
+      if (UseMNotation) {
+        llvm::SmallString<16> Name(Filter);
+        llvm::raw_svector_ostream OS(Name);
+        OS << "_m" << R << C;
+        CodeCompletionBuilder CCB(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(Name));
+        Results.AddResult(
+            CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+      }
+      if (UseOneNotation) {
+        llvm::SmallString<16> Name(Filter);
+        llvm::raw_svector_ostream OS(Name);
+        OS << "_" << (R + 1) << (C + 1);
+        CodeCompletionBuilder CCB(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+        CCB.AddTypedTextChunk(Results.getAllocator().CopyString(Name));
+        Results.AddResult(
+            CodeCompletionResult(CCB.TakeString(), CCP_MemberDeclaration));
+      }
+    }
+  }
+}
+
 void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     Scope *S, Expr *Base, Expr *OtherOpBase, SourceLocation OpLoc, bool IsArrow,
     bool IsBaseExprStatement, QualType PreferredType) {
@@ -6128,6 +6179,8 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
                    .CodeCompleter->includeHLSLSwizzleCompletions()) {
       if (const auto *VT = BaseType->getAs<ExtVectorType>())
         AddHLSLVectorSwizzleCompletions(SemaRef, Results, VT);
+      else if (const auto *MT = BaseType->getAs<ConstantMatrixType>())
+        AddHLSLMatrixSwizzleCompletions(SemaRef, Results, MT);
     } else if (const auto *TTPT =
                    dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
       auto Operator =

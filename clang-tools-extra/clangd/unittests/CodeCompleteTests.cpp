@@ -5249,6 +5249,51 @@ TEST(CompletionTest, HLSLVectorSwizzle) {
   EXPECT_THAT(ResultsMaxLen.Completions, IsEmpty());
 }
 
+TEST(CompletionTest, HLSLMatrixSwizzle) {
+  // m. -> suggests individual matrix components (e.g., _m00, _11)
+  Annotations Dot(R"hlsl(
+    // Mocking a 4x4 matrix for the test environment
+    typedef float float4x4 __attribute__((matrix_type(4, 4)));
+    void main() {
+      float4x4 m;
+      m.^
+    }
+  )hlsl");
+  TestTU TUDot = TestTU::withCode(Dot.code());
+  configureHLSL(TUDot);
+  auto ResultsDot = completions(TUDot, Dot.point());
+
+  // 0-based indexing (_m00 to _m33)
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m33")));
+
+  // 1-based indexing (_11 to _44)
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_11")));
+  EXPECT_THAT(ResultsDot.Completions,
+              Contains(Field(&CodeCompletion::Name, "_44")));
+
+  // m._m00_ -> continuation test (if your implementation supports
+  // multi-component matrix swizzle)
+  Annotations Partial(R"hlsl(
+    typedef float float4x4 __attribute__((matrix_type(4, 4)));
+    void main() {
+      float4x4 m;
+      m._m00^
+    }
+  )hlsl");
+  TestTU TUPartial = TestTU::withCode(Partial.code());
+  configureHLSL(TUPartial);
+  auto ResultsPartial = completions(TUPartial, Partial.point());
+
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00_m00")));
+  EXPECT_THAT(ResultsPartial.Completions,
+              Contains(Field(&CodeCompletion::Name, "_m00_m33")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
