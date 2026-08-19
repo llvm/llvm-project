@@ -4703,22 +4703,26 @@ static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
 
   PrimType ElemT = *S.getContext().classify(ElemType);
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-    llvm::SmallVector<T> ConvertedElts;
-    ConvertedElts.reserve(NumSrcElems);
     for (unsigned I = 0; I != NumSrcElems; ++I) {
       const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
       llvm::APSInt IntResult(BitWidth, IsUnsigned);
 
       bool IsExact = false;
+      // We only allow exact conversions so rounding mode does not matter for
+      // cvt* and cvtt* builtins
       FloatElem.getAPFloat().convertToInteger(
           IntResult, llvm::APFloat::rmTowardZero, &IsExact);
       if (!IsExact)
         return false;
-      ConvertedElts.push_back(T::from(IntResult.getZExtValue()));
+      Dst.elem<T>(I) = T::from(IntResult.getZExtValue());
     }
 
-    for (unsigned I = 0; I != NumDstElems; ++I)
-      Dst.elem<T>(I) = I < NumSrcElems ? ConvertedElts[I] : T::from(0);
+    // Zero out remaining elements if the destination has more elements
+    // (e.g., cvtpd2dq converting 2 doubles(_m128d) to 2 ints stored in _m128i).
+    if (NumDstElems > NumSrcElems) {
+      for (unsigned I = NumSrcElems; I != NumDstElems; ++I)
+        Dst.elem<T>(I) = T::from(0);
+    }
   });
 
   Dst.initializeAllElements();
