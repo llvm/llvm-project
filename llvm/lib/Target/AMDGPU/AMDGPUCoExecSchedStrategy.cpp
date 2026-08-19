@@ -149,7 +149,7 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
   // BufferSize of 0 or 1 implies that each SU uses the HardwareUnit for
   // BlockingCycles
   if (BufferSize <= 1 || (ScheduledSUs.size() % BufferSize == 0))
-    TotalCycles -= BlockingCycles;
+    TotalCycles -= std::min(TotalCycles, BlockingCycles);
 
   if (AllSUs.empty())
     return;
@@ -267,9 +267,8 @@ void CandidateHeuristics::collectHWUIPressure() {
     HWUInfo[(int)(Flavor)].insert(&SU, getHWUICyclesForInst(&SU));
   }
 
-  for (auto &HWUI : HWUInfo) {
+  for (auto &HWUI : HWUInfo)
     HWUI.finalizeCycles();
-  }
 
   LLVM_DEBUG(dumpRegionSummary());
 }
@@ -724,8 +723,8 @@ bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
         *SU->getInstr(), *static_cast<const SIInstrInfo *>(DAG->TII));
     HardwareUnitInfo *HWUI = Heurs.getHWUIFromFlavor(Flavor);
 
-    // A BufferSize of 0 means "unlimited" buffer, thus we will never fill it.
-    if (HWUI->getBufferSize() == 0)
+    // A BufferSize of 0 or 1 means there is no buffered scheduling cost.
+    if (HWUI->getBufferSize() <= 1)
       return 0;
 
     // getBufferAvailableCycle assumes top-down scheduling.

@@ -81,7 +81,7 @@ private:
   /// instructions on other HardwareUnits.
   bool ProducesCoexecWindow = false;
   /// How many instructions can be held simultaneously for this HardwareUnit.
-  /// A value of 0 means there is no limit.
+  /// A value of 0 or 1 disables buffering.
   ///
   /// This may approximate the hardware. For example, for LDS instructions
   /// it is a well-known phenomena that oversubscribing the LDS unit results in
@@ -127,7 +127,7 @@ public:
   /// \returns the next cycle where there is space in the buffer.
   unsigned getBufferAvailableCycle(unsigned CurrCycle) {
     // There is no buffer.
-    if (BufferSize == 0)
+    if (BufferSize <= 1)
       return CurrCycle;
 
     // Buffer is available now.
