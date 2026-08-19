@@ -12,11 +12,10 @@
 #include "lldb/Host/linux/Ptrace.h"
 
 #include <asm/ptrace.h>
+#include <elf.h>
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
 #include <sys/uio.h>
-// NT_PRSTATUS and NT_FPREGSET definition
-#include <elf.h>
 
 using namespace lldb;
 using namespace lldb_private;
