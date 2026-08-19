@@ -522,16 +522,14 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   }
 }
 
-bool GCNTTIImpl::canFuseFMulWithFAddSub(MVT::SimpleValueType SLT,
-                                        const Instruction *FMul,
+bool GCNTTIImpl::canFuseFMulWithFAddSub(Type *Ty, const Instruction *FMul,
                                         const Instruction *FAddSub) const {
-  const int OPC = TLI->InstructionOpcodeToISD(FAddSub->getOpcode());
-  if (OPC != ISD::FADD && OPC != ISD::FSUB)
+  const unsigned Opc = FAddSub->getOpcode();
+  if (Opc != Instruction::FAdd && Opc != Instruction::FSub)
     return false;
 
   // The mad forms fuse exactly without fast-math flags but flush denormals.
-  const DenormalFPEnv FPEnv = FAddSub->getFunction()->getDenormalFPEnv();
-  if (TLI->isFMADLegal(MVT(SLT), FPEnv))
+  if (TLI->isFMADLegal(*FAddSub->getFunction(), Ty))
     return true;
 
   // Other types fuse only with contract or fast.
@@ -604,7 +602,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // fused operation.
     if (CxtI && CxtI->hasOneUse())
       if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin()))
-        if (canFuseFMulWithFAddSub(SLT, CxtI, FAdd))
+        if (canFuseFMulWithFAddSub(Ty, CxtI, FAdd))
           return TargetTransformInfo::TCC_Free;
     [[fallthrough]];
   case ISD::FADD:
@@ -1493,12 +1491,10 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
   // so this stays a move.
   if (I->getOpcode() == Instruction::FAdd ||
       I->getOpcode() == Instruction::FSub) {
-    MVT::SimpleValueType SLT =
-        getTypeLegalizationCost(I->getType()).second.getScalarType().SimpleTy;
     for (Use &Op : I->operands()) {
       auto *FMul = dyn_cast<Instruction>(Op.get());
       if (!FMul || FMul->getOpcode() != Instruction::FMul ||
-          !FMul->hasOneUse() || !canFuseFMulWithFAddSub(SLT, FMul, I))
+          !FMul->hasOneUse() || !canFuseFMulWithFAddSub(I->getType(), FMul, I))
         continue;
       // The fused operand. Sink it when it sits in another block, then stop.
       if (FMul->getParent() != I->getParent())
