@@ -443,7 +443,7 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when an `address_space` attribute with a dependent argument was
   written after the declarator-id, where it appertains to the declared entity
-  rather than to a declarator chunk. (#GH196982)
+  rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
 

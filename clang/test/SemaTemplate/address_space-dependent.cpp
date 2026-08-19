@@ -151,3 +151,10 @@ void invalidFirst() {
   void *v __attribute__((address_space)) __attribute__((address_space(AS))); // expected-error {{'address_space' attribute takes one argument}}
 }
 }
+
+namespace gh111463 {
+template <int I>
+void func() {
+  int *y __attribute__((address_space(I)));
+}
+}
