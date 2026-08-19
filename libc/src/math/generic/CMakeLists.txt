@@ -664,6 +664,7 @@ add_entrypoint_object(
   HDRS
     ../floorf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.floorf128
 )
 
@@ -2697,6 +2698,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.sqrtf128
 )
 

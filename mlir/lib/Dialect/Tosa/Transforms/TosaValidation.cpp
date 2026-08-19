@@ -668,6 +668,20 @@ private:
     return success();
   }
 
+  LogicalResult attributeCheckCast(Operation *op) {
+    if (auto cast = dyn_cast<tosa::CastOp>(op)) {
+      const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
+      const TosaSpecificationVersion minRequiredVersion(1, 1, true);
+      if (cast.getInputUnsigned() &&
+          !(targetVersion.isBackwardsCompatibleWith(minRequiredVersion)))
+        return op->emitOpError()
+               << "failed attribute check: CAST attribute input_unsigned "
+               << "requires version 1.1.draft"
+               << " (got " << stringifyVersion(targetVersion) << ") ";
+    }
+    return success();
+  }
+
   LogicalResult CheckVariable(Operation *op);
   LogicalResult CheckVariableReadOrWrite(Operation *op);
   LogicalResult validateValidElementType(Operation *op, Type type,
@@ -974,6 +988,8 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
 
 LogicalResult TosaValidation::applyAttributeCheck(Operation *op) {
   if (failed(attributeCheckRescale(op)))
+    return failure();
+  if (failed(attributeCheckCast(op)))
     return failure();
   return success();
 }

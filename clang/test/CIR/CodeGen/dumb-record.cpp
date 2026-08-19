@@ -15,8 +15,8 @@ struct Empty {
 } empty;
 
 // CHECK: Layout: <CIRecordLayout
-// CHECK:  CIR Type:!cir.struct<"Empty" padded {pad !cir.int<u, 8>}>
-// CHECK:  NonVirtualBaseCIRType:!cir.struct<"Empty" padded {pad !cir.int<u, 8>}>
+// CHECK:  CIR Type:!cir.struct<"Empty" {pad !cir.int<u, 8>}>
+// CHECK:  NonVirtualBaseCIRType:!cir.struct<"Empty" {pad !cir.int<u, 8>}>
 // CHECK:  IsZeroInitializable:1
 // CHECK:  BitFields:[
 // CHECK:  ]>

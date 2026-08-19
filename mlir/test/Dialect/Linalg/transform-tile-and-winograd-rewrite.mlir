@@ -1,6 +1,5 @@
 // RUN: mlir-opt %s -transform-interpreter -canonicalize --split-input-file | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
 
 func.func @conv2d(%arg0: tensor<2x10x10x5xf32>, %arg1: tensor<2x3x3x5xf32>, %arg2: tensor<2x8x8x2xf32>) -> tensor<2x8x8x2xf32> {
   %0 = tensor.empty() : tensor<6x6x5x2xf32>

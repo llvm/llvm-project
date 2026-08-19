@@ -14,14 +14,13 @@
 #include <algorithm>
 #include <charconv>
 #include <functional>
-#include <iomanip>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "orc-rt/Error.h"
+#include "orc-rt/StringExtras.h"
 
 namespace orc_rt {
 namespace detail {
@@ -109,7 +108,8 @@ public:
     return *this;
   }
 
-  void printHelp(std::ostream &OS, std::string_view ProgramName) const {
+  std::string formatHelp(std::string_view ProgramName) const {
+    StringOutputStream OS;
     OS << "Usage: " << ProgramName << " [options] [positional arguments]\n\n";
     OS << "OPTIONS:\n";
 
@@ -143,8 +143,10 @@ public:
       if (Opt.Kind == OptionKind::Value)
         FlagStr += " <value>";
 
-      OS << std::left << std::setw(MaxWidth + 2) << FlagStr << Opt.Desc << "\n";
+      OS << ljust(FlagStr, MaxWidth + 2) << Opt.Desc << "\n";
     }
+
+    return std::move(OS).str();
   }
 
   template <typename I> orc_rt::Error parse(I Begin, I End) {

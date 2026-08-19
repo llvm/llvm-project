@@ -1121,8 +1121,7 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
     mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
     auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
-    return cgm.getBuilder().getConstRecordOrZeroAttr(
-        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+    return cgm.getBuilder().getConstRecordOrZeroAttr(newMembers, recordTy);
   }
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
