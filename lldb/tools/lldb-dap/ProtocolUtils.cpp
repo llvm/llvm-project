@@ -162,7 +162,7 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
   if (file.GetPath(path, sizeof(path)) &&
       lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
     source.path = path;
-    if (!lldb::SBFileSpec(path).Exists())
+    if (!lldb::SBFileSpec(path, /*resolve=*/true).Exists())
       source.presentationHint = Source::eSourcePresentationHintDeemphasize;
   }
   return source;

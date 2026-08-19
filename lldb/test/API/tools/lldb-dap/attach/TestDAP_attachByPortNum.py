@@ -51,6 +51,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
             str(self.get_debug_server_path()),
             debug_server_args,
             install_remote=False,
+            cwd=self.getBuildDir(),
         )
 
         # Read the port number from the debug server pipe.
@@ -108,7 +109,9 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
         if debug_server.stem == "lldb-server":
             server_args = ["gdbserver", *server_args]
 
-        self.spawnSubprocess(str(debug_server), server_args, install_remote=False)
+        self.spawnSubprocess(
+            str(debug_server), server_args, install_remote=False, cwd=self.getBuildDir()
+        )
 
         pending = session.initialize_and_launch(
             AttachArgs(
