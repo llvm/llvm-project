@@ -28,6 +28,19 @@ class FunctionOpInterface;
 
 namespace function_interface_impl {
 
+inline bool areValidInsertionIndices(ArrayRef<unsigned> indices,
+                                     unsigned originalSize) {
+  unsigned previousIndex = 0;
+  bool isFirstIndex = true;
+  for (unsigned index : indices) {
+    if (index > originalSize || (!isFirstIndex && index < previousIndex))
+      return false;
+    previousIndex = index;
+    isFirstIndex = false;
+  }
+  return true;
+}
+
 /// Returns the dictionary attribute corresponding to the argument at 'index'.
 /// If there are no argument attributes at 'index', a null attribute is
 /// returned.
