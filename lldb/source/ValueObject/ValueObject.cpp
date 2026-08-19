@@ -3190,7 +3190,8 @@ ValueObject::CastBaseToDerivedType(CompilerType type, uint64_t offset) {
   return value->Dereference(error);
 }
 
-lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
+llvm::Expected<lldb::ValueObjectSP>
+ValueObject::CastToBasicType(CompilerType type) {
   bool is_scalar = GetCompilerType().IsScalarType();
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_pointer =
@@ -3200,14 +3201,11 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   if (!type.IsScalarType())
-    return ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(),
-        Status::FromErrorString("target type must be a scalar"));
+    return llvm::createStringError("target type must be a scalar");
 
   if (!is_scalar && !is_enum && !is_pointer)
-    return ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(),
-        Status::FromErrorString("argument must be a scalar, enum, or pointer"));
+    return llvm::createStringError(
+        "argument must be a scalar, enum, or pointer");
 
   lldb::TargetSP target = GetTargetSP();
   uint64_t type_byte_size = 0;
@@ -3220,14 +3218,11 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
 
   if (is_pointer) {
     if (!type.IsInteger() && !type.IsBoolean())
-      return ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorString("target type must be an integer or boolean"));
+      return llvm::createStringError(
+          "target type must be an integer or boolean");
     if (!type.IsBoolean() && type_byte_size < val_byte_size)
-      return ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorString(
-              "target type cannot be smaller than the pointer type"));
+      return llvm::createStringError(
+          "target type cannot be smaller than the pointer type");
   }
 
   if (type.IsBoolean()) {
@@ -3242,11 +3237,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
             exe_ctx, type.GetTypeSystem().GetSharedPointer(),
             !float_value_or_err->isZero(), "result");
       else
-        return ValueObjectConstResult::Create(
-            exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorStringWithFormat(
-                "cannot get value as APFloat: %s",
-                llvm::toString(float_value_or_err.takeError()).c_str()));
+        return llvm::createStringErrorV(
+            "cannot get value as APFloat: {0}",
+            llvm::toString(float_value_or_err.takeError()));
     }
   }
 
@@ -3261,11 +3254,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, ext, type,
                                                        "result");
       } else
-        return ValueObjectConstResult::Create(
-            exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorStringWithFormat(
-                "cannot get value as APSInt: %s",
-                llvm::toString(int_value_or_err.takeError()).c_str()));
+        return llvm::createStringErrorV(
+            "cannot get value as APSInt: {0}",
+            llvm::toString(int_value_or_err.takeError()));
     } else if (is_scalar && is_float) {
       llvm::APSInt integer(type_byte_size * CHAR_BIT, !type.IsSigned());
       bool is_exact;
@@ -3278,13 +3269,13 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         // Casting floating point values that are out of bounds of the target
         // type is undefined behaviour.
         if (status & llvm::APFloatBase::opInvalidOp)
-          return ValueObjectConstResult::Create(
-              exe_ctx.GetBestExecutionContextScope(),
-              Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+          return llvm::createStringError("invalid cast from float to integer");
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return llvm::createStringErrorV(
+            "cannot get value as APFloat: {0}",
+            llvm::toString(float_value_or_err.takeError()));
       }
     }
   }
@@ -3301,11 +3292,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                          "result");
       } else {
-        return ValueObjectConstResult::Create(
-            exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorStringWithFormat(
-                "cannot get value as APSInt: %s",
-                llvm::toString(int_value_or_err.takeError()).c_str()));
+        return llvm::createStringErrorV(
+            "cannot get value as APSInt: {0}",
+            llvm::toString(int_value_or_err.takeError()));
       }
     } else {
       if (is_integer) {
@@ -3317,11 +3306,9 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                            "result");
         } else {
-          return ValueObjectConstResult::Create(
-              exe_ctx.GetBestExecutionContextScope(),
-              Status::FromErrorStringWithFormat(
-                  "cannot get value as APSInt: %s",
-                  llvm::toString(int_value_or_err.takeError()).c_str()));
+          return llvm::createStringErrorV(
+              "cannot get value as APSInt: {0}",
+              llvm::toString(int_value_or_err.takeError()));
         }
       }
       if (is_float) {
@@ -3333,37 +3320,30 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObject::CreateValueObjectFromAPFloat(exe_ctx, f, type,
                                                            "result");
         } else {
-          return ValueObjectConstResult::Create(
-              exe_ctx.GetBestExecutionContextScope(),
-              Status::FromErrorStringWithFormat(
-                  "cannot get value as APFloat: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+          return llvm::createStringErrorV(
+              "cannot get value as APFloat: {0}",
+              llvm::toString(float_value_or_err.takeError()));
         }
       }
     }
   }
 
-  return ValueObjectConstResult::Create(
-      exe_ctx.GetBestExecutionContextScope(),
-      Status::FromErrorString("Unable to perform requested cast"));
+  return llvm::createStringError("Unable to perform requested cast");
 }
 
-lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
+llvm::Expected<lldb::ValueObjectSP>
+ValueObject::CastToEnumType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_integer = GetCompilerType().IsInteger();
   bool is_float = HasFloatingRepresentation(GetCompilerType());
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   if (!is_enum && !is_integer && !is_float)
-    return ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(),
-        Status::FromErrorString(
-            "argument must be an integer, a float, or an enum"));
+    return llvm::createStringError(
+        "argument must be an integer, a float, or an enum");
 
   if (!type.IsEnumerationType())
-    return ValueObjectConstResult::Create(
-        exe_ctx.GetBestExecutionContextScope(),
-        Status::FromErrorString("target type must be an enum"));
+    return llvm::createStringError("target type must be an enum");
 
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
@@ -3382,17 +3362,12 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       // Casting floating point values that are out of bounds of the target
       // type is undefined behaviour.
       if (status & llvm::APFloatBase::opInvalidOp)
-        return ValueObjectConstResult::Create(
-            exe_ctx.GetBestExecutionContextScope(),
-            Status::FromErrorString("invalid cast from float to integer"));
+        return llvm::createStringError("invalid cast from float to integer");
       return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                      "result");
     } else
-      return ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorStringWithFormatv(
-              "cannot get value as APFloat: {0}",
-              llvm::toString(value_or_err.takeError())));
+      return llvm::createStringErrorV("cannot get value as APFloat: {0}",
+                                      llvm::toString(value_or_err.takeError()));
   } else {
     // Get the value as APSInt and extend or truncate it to the requested size.
     auto value_or_err = GetValueAsAPSInt();
@@ -3401,15 +3376,10 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
       return ValueObject::CreateValueObjectFromAPInt(exe_ctx, ext, type,
                                                      "result");
     } else
-      return ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(),
-          Status::FromErrorStringWithFormat(
-              "cannot get value as APSInt: %s",
-              llvm::toString(value_or_err.takeError()).c_str()));
+      return llvm::createStringErrorV("cannot get value as APSInt: {0}",
+                                      llvm::toString(value_or_err.takeError()));
   }
-  return ValueObjectConstResult::Create(
-      exe_ctx.GetBestExecutionContextScope(),
-      Status::FromErrorString("Cannot perform requested cast"));
+  return llvm::createStringError("Cannot perform requested cast");
 }
 
 ValueObject::EvaluationPoint::EvaluationPoint() : m_mod_id(), m_exe_ctx_ref() {}
