@@ -901,6 +901,7 @@ public:
       return builder.getConstInt(loc, cgf.convertType(e->getType()),
                                  (uint64_t)e->getBoolValue());
     }
+    assert(e->getType()->isIntegerType() && "not a scalar type trait");
     return builder.getConstInt(loc, e->getAPValue().getInt());
   }
   mlir::Value

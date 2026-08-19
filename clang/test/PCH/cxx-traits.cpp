@@ -3,6 +3,7 @@
 
 // RUN: %clang_cc1 -fms-extensions -x c++-header -std=c++11 -emit-pch -o %t %S/cxx-traits.h
 // RUN: %clang_cc1 -fms-extensions -std=c++11 -include-pch %t -DPCH -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fms-extensions -std=c++11 -include-pch %t -DPCH -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 #ifdef PCH
 // expected-no-diagnostics
@@ -13,6 +14,9 @@ bool _Is_empty_check = n::__is_empty<int>::__value;
 
 bool default_construct_int = n::is_trivially_constructible<int>::value;
 bool copy_construct_int = n::is_trivially_constructible<int, const int&>::value;
+
+static_assert(type_order<int, int>().value == std::__order::equal, "");
+static_assert(type_order<int, long>().value != std::__order::equal, "");
 
 // The built-ins should still work too:
 bool _is_abstract_result = __is_abstract(int);

@@ -636,6 +636,26 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   }
 }
 
+static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
+                                                  QualType RHS) {
+  if (S.Context.hasSameType(LHS, RHS))
+    return ComparisonCategoryResult::Equal;
+
+  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
+  SmallString<64> LhsName, RhsName;
+  {
+    llvm::raw_svector_ostream LhsOut(LhsName), RhsOut(RhsName);
+    MC->mangleCanonicalTypeName(LHS, LhsOut);
+    MC->mangleCanonicalTypeName(RHS, RhsOut);
+  }
+
+  int Result = LhsName.compare(RhsName);
+  if (Result == 0)
+    return ComparisonCategoryResult::Equal;
+  return Result > 0 ? ComparisonCategoryResult::Greater
+                    : ComparisonCategoryResult::Less;
+}
+
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
                                    SourceLocation KeyLoc,
                                    TypeSourceInfo *TInfo) {
@@ -1413,6 +1433,32 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   return false;
 }
 
+static ExprResult
+EvaluateStrongOrderingTypeTrait(Sema &S, TypeTrait Kind, SourceLocation KWLoc,
+                                ArrayRef<TypeSourceInfo *> Args,
+                                SourceLocation RParenLoc, bool IsDependent) {
+  QualType StrongOrdering = S.CheckComparisonCategoryType(
+      ComparisonCategoryType::StrongOrdering, KWLoc,
+      Sema::ComparisonCategoryUsage::Builtin);
+  if (StrongOrdering.isNull())
+    return ExprError();
+
+  if (IsDependent)
+    return TypeTraitExpr::Create(S.Context, StrongOrdering, KWLoc, Kind, Args,
+                                 RParenLoc, APValue());
+
+  switch (Kind) {
+  case clang::BTT_TypeOrder: {
+    ComparisonCategoryResult Result =
+        EvaluateTypeOrder(S, Args[0]->getType(), Args[1]->getType());
+    return TypeTraitExpr::Create(S.Context, StrongOrdering, KWLoc, Kind, Args,
+                                 RParenLoc, Result);
+  }
+  default:
+    llvm_unreachable("not a strong_ordering type trait");
+  }
+}
+
 namespace {
 void DiagnoseBuiltinDeprecation(Sema &S, TypeTrait Kind, SourceLocation KWLoc) {
   TypeTrait Replacement;
@@ -1468,26 +1514,6 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
   return true;
 }
 
-static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
-                                                  QualType RHS) {
-  if (S.Context.hasSameType(LHS, RHS))
-    return ComparisonCategoryResult::Equal;
-
-  std::unique_ptr<MangleContext> MC(S.Context.createMangleContext());
-  SmallString<64> LhsName, RhsName;
-  {
-    llvm::raw_svector_ostream LhsOut(LhsName), RhsOut(RhsName);
-    MC->mangleCanonicalTypeName(LHS, LhsOut);
-    MC->mangleCanonicalTypeName(RHS, RhsOut);
-  }
-
-  int Result = LhsName.compare(RhsName);
-  if (Result == 0)
-    return ComparisonCategoryResult::Equal;
-  return Result > 0 ? ComparisonCategoryResult::Greater
-                    : ComparisonCategoryResult::Less;
-}
-
 ExprResult Sema::ActOnBuiltinTypeOrder(SourceLocation KWLoc, ParsedType LhsTy,
                                        ParsedType RhsTy,
                                        SourceLocation RParenLoc) {
@@ -1509,7 +1535,7 @@ ExprResult Sema::BuildBuiltinTypeOrderExpr(SourceLocation KWLoc,
                                            SourceLocation RParenLoc) {
   QualType StrongOrdering =
       CheckComparisonCategoryType(ComparisonCategoryType::StrongOrdering, KWLoc,
-                                  ComparisonCategoryUsage::BuiltinTypeOrder);
+                                  ComparisonCategoryUsage::Builtin);
   if (StrongOrdering.isNull())
     return ExprError();
 
@@ -1533,11 +1559,14 @@ ExprResult Sema::BuildBuiltinTypeOrderExpr(SourceLocation KWLoc,
 enum class TypeTraitReturnType {
   Bool,
   SizeT,
+  StrongOrdering,
 };
 
 static TypeTraitReturnType GetReturnType(TypeTrait Kind) {
   if (Kind == TypeTrait::UTT_StructuredBindingSize)
     return TypeTraitReturnType::SizeT;
+  if (Kind == TypeTrait::BTT_TypeOrder)
+    return TypeTraitReturnType::StrongOrdering;
   return TypeTraitReturnType::Bool;
 }
 
@@ -1574,6 +1603,9 @@ ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
     return TypeTraitExpr::Create(Context, Context.getSizeType(), KWLoc, Kind,
                                  Args, RParenLoc, Result);
   }
+  case TypeTraitReturnType::StrongOrdering:
+    return EvaluateStrongOrderingTypeTrait(*this, Kind, KWLoc, Args, RParenLoc,
+                                           Dependent);
   }
   llvm_unreachable("unhandled type trait return type");
 }
