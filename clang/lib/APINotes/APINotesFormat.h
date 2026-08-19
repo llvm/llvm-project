@@ -412,7 +412,7 @@ std::optional<FunctionTableKey> getFunctionKeyImpl(
   if (!NameID)
     return std::nullopt;
 
-  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
   ParameterTypeIDs.reserve(Parameters.size());
   for (const ParameterT &Parameter : Parameters) {
     std::optional<IdentifierID> ParameterID =
@@ -437,7 +437,7 @@ std::optional<FunctionTableKey> getFunctionKeyImpl(
   if (!NameID)
     return std::nullopt;
 
-  llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
   ParameterTypeIDs.reserve(Parameters.size());
   for (const ParameterT &Parameter : Parameters) {
     std::optional<IdentifierID> ParameterID =
