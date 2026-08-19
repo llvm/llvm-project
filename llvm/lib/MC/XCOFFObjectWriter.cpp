@@ -569,7 +569,7 @@ static bool haveDifferentSections(const MCFragment &F, MCValue Target) {
   return TargetSection != FragSection;
 }
 
-static bool CallOverflows(MCFixupKindInfo Info, uint64_t FixedValue) {
+static bool callOverflows(MCFixupKindInfo Info, uint64_t FixedValue) {
   if (Info.TargetSize != 24)
     report_fatal_error("Unexepected call fixup kind for XCOFF");
 
