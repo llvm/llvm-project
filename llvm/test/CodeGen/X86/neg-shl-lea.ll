@@ -140,8 +140,8 @@ define i32 @add_neg_form(i32 %x, i32 %y) {
   ret i32 %r
 }
 
-; X live across the sub. The two-address SUB would need a MOV of X; the LEA
-; does not, which is where the saving comes from.
+; X is still live after the sub, so the two-address SUB needs a MOV to preserve
+; it, while the LEA writes a fresh register. The fold saves one instruction.
 define i64 @x_live_after(i64 %x, i64 %y) {
 ; CHECK-LABEL: x_live_after:
 ; CHECK:       # %bb.0:
@@ -155,10 +155,11 @@ define i64 @x_live_after(i64 %x, i64 %y) {
   ret i64 %r
 }
 
-; Y has another use, so the NEG would clobber a value that is still needed.
-; The model declines here even though this particular other use happens to be
-; schedulable before the NEG - see @y_outlives_lea for the shape where it
-; genuinely costs a copy.
+; Y has another use, so the NEG would clobber a value that is still needed. Here
+; that use is a store, which is scheduled before the NEG, so folding would in
+; fact have been a win by one instruction. hasOneUse() counts uses without
+; ordering them, so it cannot tell this apart from @y_outlives_lea, where
+; folding genuinely costs one.
 define i32 @y_multi_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: y_multi_use:
 ; CHECK:       # %bb.0:
@@ -192,9 +193,13 @@ define void @y_outlives_lea(i64 %x, i64 %y, ptr %p) {
   ret void
 }
 
-; X - (X << C): X is also the base, so the NEG cannot write it in place and a
-; copy is unavoidable. The shift is emitted as a non-destructive LEA here, so
-; there is nothing to absorb either - the cost model declines.
+; X - (X << C): X is also the base, so NEG cannot write it in place and the fold
+; needs a copy, which exactly cancels the absorbed shift - three instructions
+; either way (the folded form is four bytes shorter). The model declines because
+; BaseIsNegatedValue suppresses the "base has multiple uses" discount, which
+; would otherwise double-count that copy. Suppressing it changes nothing in this
+; function, but avoids regressions of 9 and 4 instructions in
+; vector-idiv-udiv-128 and -256.
 define i32 @x_minus_x_shl(i32 %x) {
 ; CHECK-LABEL: x_minus_x_shl:
 ; CHECK:       # %bb.0:
