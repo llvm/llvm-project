@@ -1935,6 +1935,12 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   if (!DefR.Reg.isVirtual())
     return false;
 
+  // The evaluators below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
+
   if (MI.isCopy()) {
     LatticeCell RC;
     RegSubRegPair SrcR(getRegSubRegPair(MI.getOperand(1)));
@@ -2296,7 +2302,10 @@ Undetermined:
     // we currently recognize.
     if (PR.SubReg)
       goto Undetermined;
-    assert(Inputs.has(PR.Reg));
+    // A predicate with no reaching definition (e.g. an undef operand) has no
+    // cell; its value is unknown.
+    if (!Inputs.has(PR.Reg))
+      goto Undetermined;
     const LatticeCell &PredC = Inputs.get(PR.Reg);
     if (PredC.isBottom())
       goto Undetermined;
@@ -2328,6 +2337,12 @@ Undetermined:
 bool HexagonConstEvaluator::rewrite(MachineInstr &MI, const CellMap &Inputs) {
   if (MI.isBranch())
     return rewriteHexBranch(MI, Inputs);
+
+  // The rewriters below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
