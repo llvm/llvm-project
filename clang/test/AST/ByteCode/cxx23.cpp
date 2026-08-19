@@ -680,4 +680,26 @@ namespace BrokenExplicitInstanceParam {
   static_assert( (&decltype(b)::operator())(1) == 1); // expected-error {{not an integral constant expression}}
 }
 
+namespace InvalidRecord {
+  struct S {
+    S();
+  };
+
+  template <typename T> void F(S &, T...);
+
+  struct SS {
+    template <typename T> SS(T &val) { __builtin_dump_struct(&val, F, s); }
+    S s;
+  };
+
+  template <typename T> S foo(const T &t) { return SS(t).s; }
+
+  struct A {
+    S s;
+  };
+
+  struct B : A; // all-error {{expected '{' after base class list}}
+
+  static_assert(foo(B{1, 2, 3}), "");
+}
 #endif

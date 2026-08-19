@@ -12302,6 +12302,51 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::riscv_pnclipp:
+  case Intrinsic::riscv_pnclipup: {
+    bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
+    EVT VT = Op.getValueType();
+    SDValue Rs1 = Op.getOperand(1);
+    SDValue Rs2 = Op.getOperand(2);
+    if (Subtarget.is64Bit()) {
+      if (VT == MVT::v2i32 && !Rs1.getValueType().isVector()) {
+        unsigned WOpc = IsSigned ? RISCVISD::PNCLIPP_W : RISCVISD::PNCLIPUP_W;
+        return DAG.getNode(WOpc, DL, VT, Rs1, Rs2);
+      }
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      return DAG.getNode(Opc, DL, VT, Rs1, Rs2);
+    }
+
+    MVT XLenVT = Subtarget.getXLenVT();
+    SDValue Shift = DAG.getTargetConstant(0, DL, XLenVT);
+    if (VT == MVT::v4i8) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
+    }
+    if (VT == MVT::v2i16) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      SDValue Pair = DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2i32, Rs1, Rs2);
+      return DAG.getNode(ClipOpc, DL, VT, Pair, Shift);
+    }
+    if (VT == MVT::v2i32) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::NCLIP : RISCVISD::NCLIPU;
+      auto [Rs1Lo, Rs1Hi] = DAG.SplitScalar(Rs1, DL, XLenVT, XLenVT);
+      auto [Rs2Lo, Rs2Hi] = DAG.SplitScalar(Rs2, DL, XLenVT, XLenVT);
+      SDValue Lo = DAG.getNode(ClipOpc, DL, XLenVT, Rs1Lo, Rs1Hi, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, XLenVT, Rs2Lo, Rs2Hi, Shift);
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
+    }
+    if (VT == MVT::v8i8 || VT == MVT::v4i16) {
+      unsigned ClipOpc = IsSigned ? RISCVISD::PNCLIP : RISCVISD::PNCLIPU;
+      MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
+      SDValue Lo = DAG.getNode(ClipOpc, DL, HalfVT, Rs1, Shift);
+      SDValue Hi = DAG.getNode(ClipOpc, DL, HalfVT, Rs2, Shift);
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+    }
+
+    llvm_unreachable("unexpected VT for pnclipp/pnclipup on RV32");
+  }
   case Intrinsic::riscv_pmulq:
   case Intrinsic::riscv_pmulqr: {
     unsigned Opc;
@@ -16591,8 +16636,31 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Res = DAG.getNode(Opc, DL, WideVT, Ops);
       else
         Res = DAG.getNode(Opc, DL, WideVT, ArrayRef(Ops).slice(1));
-      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                    DAG.getVectorIdxConstant(0, DL)));
+      Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      return;
+    }
+    case Intrinsic::riscv_pnclipp:
+    case Intrinsic::riscv_pnclipup: {
+      bool IsSigned = IntNo == Intrinsic::riscv_pnclipp;
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+      unsigned Opc = IsSigned ? RISCVISD::PNCLIPP : RISCVISD::PNCLIPUP;
+      SDValue Src1 = N->getOperand(1);
+      SDValue Src2 = N->getOperand(2);
+      if (VT == MVT::v4i8) {
+        MVT WideSrcVT = MVT::v4i16;
+        SDValue Packed =
+            DAG.getNode(ISD::CONCAT_VECTORS, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v8i8, {Packed, Packed});
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      } else {
+        MVT WideSrcVT = MVT::v2i32;
+        SDValue Packed =
+            DAG.getNode(ISD::BUILD_VECTOR, DL, WideSrcVT, {Src1, Src2});
+        SDValue Res = DAG.getNode(Opc, DL, MVT::v4i16, {Packed, Packed});
+        Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
+      }
       return;
     }
     case Intrinsic::riscv_pssha:
@@ -18833,6 +18901,88 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   return true;
 }
 
+/// Given
+/// ```
+/// %b = splat %base
+/// %s = <%offset, %offset + 1, %offset + 2, %offset + 3, ...>
+/// %a = add nuw %b, %s
+/// %N = splat %n
+/// %p = setcc ult %a, %N
+/// ```
+/// in which the SETCC's condition code could be (U)LT or (U)GT.
+/// We can turn it into
+/// ```
+/// %s = <0, 1, 2, 3, ...>
+/// %m = sub %n, min(%n, %base + %offset)
+/// %M = splat %m
+/// %p = setcc ult %s, %M
+/// ```
+/// where the SETCC's condition code is also canonicalized into (U)LT;
+/// The idea behind this canonicalization is that if %p is used as a mask
+/// in a masked.load/store, we can easily turn it to use VL-predicate later
+/// by assigning `vl = min(%m, <number of vector elements>)`.
+static SDValue canonicalizeMaskForVLPredicate(EVT MaskVT, SDValue LHS,
+                                              SDValue RHS, ISD::CondCode CC,
+                                              const SDLoc &DL,
+                                              SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
+  if (!MaskVT.isFixedLengthVector() ||
+      !(CC == ISD::SETUGT || CC == ISD::SETGT || CC == ISD::SETULT ||
+        CC == ISD::SETLT) ||
+      !LHS.getValueType().isInteger())
+    return SDValue();
+
+  // Canonicalize the comparison.
+  if (CC == ISD::SETUGT || CC == ISD::SETGT) {
+    std::swap(LHS, RHS);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+  bool IsSigned = ISD::isSignedIntSetCC(CC);
+
+  SDValue Boundary = DAG.getSplatValue(RHS, /*LegalizeType=*/true);
+  if (!Boundary)
+    return SDValue();
+
+  SDValue LHSOp0, LHSOp1;
+  if (IsSigned) {
+    if (!sd_match(LHS, m_NSWAddLike(m_Value(LHSOp0), m_Value(LHSOp1))))
+      return SDValue();
+  } else {
+    if (!sd_match(LHS, m_NUWAddLike(m_Value(LHSOp0), m_Value(LHSOp1))))
+      return SDValue();
+  }
+
+  SDValue BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+  if (!BaseIndex) {
+    std::swap(LHSOp0, LHSOp1);
+    BaseIndex = DAG.getSplatValue(LHSOp0, /*LegalizeType=*/true);
+  }
+  if (!BaseIndex || !isa<BuildVectorSDNode>(LHSOp1) ||
+      BaseIndex.getValueType() != Boundary.getValueType())
+    return SDValue();
+
+  // Return {a,n} from a build_vector sequence of {a, a+n, a+2n, a+3n, ....}
+  auto StepVector = cast<BuildVectorSDNode>(LHSOp1)->isArithmeticSequence();
+  if (!StepVector || !StepVector->second.isOne())
+    return SDValue();
+  EVT LenVT = BaseIndex.getValueType();
+  const APInt &Start = StepVector->first;
+  unsigned LenWidth = LenVT.getScalarSizeInBits();
+  APInt Offset =
+      IsSigned ? Start.sextOrTrunc(LenWidth) : Start.zextOrTrunc(LenWidth);
+
+  unsigned MinOpc = IsSigned ? ISD::SMIN : ISD::UMIN;
+  SDValue NewStepVector = DAG.getStepVector(DL, LHS.getValueType());
+  BaseIndex = DAG.getNode(
+      ISD::ADD, DL, LenVT, BaseIndex, DAG.getConstant(Offset, DL, LenVT),
+      IsSigned ? SDNodeFlags::NoSignedWrap : SDNodeFlags::NoUnsignedWrap);
+  BaseIndex = DAG.getNode(MinOpc, DL, LenVT, Boundary, BaseIndex);
+  Boundary = DAG.getNode(ISD::SUB, DL, LenVT, Boundary, BaseIndex);
+  Boundary = DAG.getSplat(RHS.getValueType(), DL, Boundary);
+
+  return DAG.getSetCC(DL, MaskVT, NewStepVector, Boundary, CC);
+}
+
 /// Try to map an integer comparison with size > XLEN to vector instructions
 /// before type legalization splits it up into chunks.
 static SDValue
@@ -18962,6 +19112,9 @@ static SDValue performSETCCCombine(SDNode *N,
   EVT OpVT = N0.getValueType();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (SDValue V = canonicalizeMaskForVLPredicate(VT, N0, N1, Cond, dl, DAG))
+    return V;
+
   // Looking for an equality compare.
   if (!isIntEqualitySetCC(Cond))
     return SDValue();

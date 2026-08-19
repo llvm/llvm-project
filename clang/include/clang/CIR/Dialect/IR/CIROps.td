@@ -3343,6 +3343,12 @@ def CIR_GlobalOp : CIR_Op<"global", [
     into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
     environment. LoweringPrepare forwards it to the `strictfp` attribute of the
     generated `__cxx_global_var_init` function.
+
+    The `init_priority` attribute records the priority specified by a
+    C++ `init_priority` attribute on the source variable declaration.
+    LoweringPrepare uses it to place the dynamic initializer emitted from
+    `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
+    instead of the default `_GLOBAL__sub_I_*` function.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3369,7 +3375,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       UnitAttr:$strictfp
+                       UnitAttr:$strictfp,
+                       OptionalAttr<I32Attr>:$init_priority
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -3761,8 +3768,8 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
-                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    !record_type = !cir.struct<"S" packed {!u64i, !u16i,
+                                           pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -3852,7 +3859,8 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     ```
     // 'e' is in the storage with the index 1
-    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    !cir.struct<"S" packed {!u64i, !u16i,
+                            pad !cir.array<!u8i x 2>}>
     #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
                                 offset = 0, is_signed = true>
 
@@ -6029,7 +6037,7 @@ def CIR_VecTernaryOp : CIR_Op<"vec.ternary", [
   }];
 
   let arguments = (ins
-    CIR_VectorOfIntType:$cond,
+    CIR_VectorOfIntOrBoolType:$cond,
     CIR_VectorType:$lhs,
     CIR_VectorType:$rhs
   );

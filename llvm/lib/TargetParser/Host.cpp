@@ -1907,19 +1907,23 @@ struct RISCVHwProbe {
 
 StringRef sys::getHostCPUName() {
 #if defined(__linux__)
-  // Try the hwprobe way first.
-  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_MVENDORID=*/0, 0},
-                       {/*RISCV_HWPROBE_KEY_MARCHID=*/1, 0},
-                       {/*RISCV_HWPROBE_KEY_MIMPID=*/2, 0}};
-  int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
-                    /*pair_count=*/std::size(Query), /*cpu_count=*/0,
-                    /*cpus=*/0, /*flags=*/0);
-  if (Ret == 0) {
-    RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value), Query[1].Value,
-                          Query[2].Value};
-    StringRef Name = RISCV::getCPUNameFromCPUModel(Model);
-    if (!Name.empty())
-      return Name;
+  cpu_set_t Affinity;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0) {
+    // Try the hwprobe way first.
+    RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_MVENDORID=*/0, 0},
+                         {/*RISCV_HWPROBE_KEY_MARCHID=*/1, 0},
+                         {/*RISCV_HWPROBE_KEY_MIMPID=*/2, 0}};
+    int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
+                      /*pair_count=*/std::size(Query),
+                      /*cpusetsize=*/sizeof(Affinity),
+                      /*cpus=*/&Affinity, /*flags=*/0);
+    if (Ret == 0) {
+      RISCV::CPUModel Model{static_cast<uint32_t>(Query[0].Value),
+                            Query[1].Value, Query[2].Value};
+      StringRef Name = RISCV::getCPUNameFromCPUModel(Model);
+      if (!Name.empty())
+        return Name;
+    }
   }
 
   // Then try the cpuinfo way.

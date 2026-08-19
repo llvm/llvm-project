@@ -1680,6 +1680,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   // If the alloca describes the variable itself, i.e. the expression in the

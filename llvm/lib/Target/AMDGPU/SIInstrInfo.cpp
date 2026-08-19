@@ -291,6 +291,8 @@ bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
     if (Op.isReg() && Op.getReg().isVirtual() &&
         RI.isSGPRClass(MRI.getRegClass(Op.getReg()))) {
       MachineInstr *SgprDef = MRI.getVRegDef(Op.getReg());
+      if (!SgprDef)
+        continue;
 
       // SgprDef defined inside cycle
       CycleRef FromCycle = CI->getCycle(SgprDef->getParent());
