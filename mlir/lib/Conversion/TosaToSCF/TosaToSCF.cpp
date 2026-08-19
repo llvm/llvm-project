@@ -11,8 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TosaToSCF/TosaToSCF.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -94,10 +93,7 @@ class ScatterOpConverter : public OpRewritePattern<tosa::ScatterOp> {
   }
 
 public:
-  ScatterOpConverter(MLIRContext *context, bool scatterHardening,
-                     PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit),
-        scatterHardening(scatterHardening) {};
+  using OpRewritePattern<tosa::ScatterOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tosa::ScatterOp scatter,
                                 PatternRewriter &rewriter) const final {
@@ -125,26 +121,16 @@ public:
     auto lbs = Repeated<Value>(2, zero);
     auto steps = Repeated<Value>(2, one);
     auto ubs = llvm::SmallVector<Value>{{dimN, dimW}};
-    Value kSzVal;
-    if (scatterHardening)
-      kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, valuesIn, 1);
+    Value kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, valuesIn, 1);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                          ValueRange args) -> scf::ValueVector {
       auto n = ivs[0];
 
-      // Read the index, cast it to index type and clamp it
+      // Read the index and cast it to index type
       auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
       auto castIndex = arith::IndexCastOp::create(
           builder, loc, builder.getIndexType(), index);
-      if (scatterHardening) {
-        auto outOfBound =
-            arith::CmpIOp::create(builder, loc, builder.getI1Type(),
-                                  arith::CmpIPredicate::uge, castIndex, kSzVal);
-        cf::AssertOp::create(
-            rewriter, loc, outOfBound,
-            "Out of bound access for output on dimension #1 in tosa.scatter");
-      }
 
       // Offset, sizes, and strides for the input tensor
       auto inputOffset = llvm::to_vector(ivs);
@@ -156,12 +142,24 @@ public:
       auto slice = tensor::ExtractSliceOp::create(builder, loc, input,
                                                   inputOffset, sizes, strides);
 
+      // Test if index is out of bound.
+      auto inBound = index::CmpOp::create(
+          rewriter, loc, index::IndexCmpPredicate::ULT, castIndex, kSzVal);
       // Insert the slice into the output accumulator tensor.
-      llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
-      auto updated = tensor::InsertSliceOp::create(
-          builder, loc, slice, args[0], outputOffset, sizes, strides);
+      auto emitThenRegion = [&](OpBuilder &opBuilder, Location loc) {
+        llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
+        auto updated = tensor::InsertSliceOp::create(
+            builder, loc, slice, args[0], outputOffset, sizes, strides);
+        scf::YieldOp::create(rewriter, loc, {updated});
+      };
+      // Skip write if index is out of bound.
+      auto emitElseRegion = [&](OpBuilder &opBuilder, Location loc) {
+        scf::YieldOp::create(opBuilder, loc, args[0]);
+      };
+      auto ifOp = scf::IfOp::create(rewriter, loc, inBound, emitThenRegion,
+                                    emitElseRegion);
 
-      return {updated};
+      return {ifOp.getResult(0)};
     };
 
     auto loops = scf::buildLoopNest(rewriter, loc, lbs, ubs, steps,
@@ -170,9 +168,6 @@ public:
 
     return success();
   }
-
-private:
-  bool scatterHardening = false;
 };
 
 class WhileOpConverter : public OpRewritePattern<tosa::WhileOp> {
@@ -198,7 +193,7 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToSCFConversionPatterns(
-    RewritePatternSet *patterns, bool scatterHardening) {
-  patterns->add<IfOpConverter, WhileOpConverter>(patterns->getContext());
-  patterns->add<ScatterOpConverter>(patterns->getContext(), scatterHardening);
+    RewritePatternSet *patterns) {
+  patterns->add<IfOpConverter, ScatterOpConverter, WhileOpConverter>(
+      patterns->getContext());
 }

@@ -1412,10 +1412,7 @@ def TosaToLinalg
            "Disable tosa decompositions pass">,
     Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
            "bool", /*default=*/"false",
-           "Always perform the reduce constant optimization">,
-    Option<"gatherHardening", "gather-hardening",
-           "bool", /*default=*/"true",
-           "Enable gather bound checking on input accesses">
+           "Always perform the reduce constant optimization">
   ];
 }
 
@@ -1459,19 +1456,11 @@ def TosaToMLProgram : Pass<"tosa-to-mlprogram", "ModuleOp"> {
 
 def TosaToSCFPass : Pass<"tosa-to-scf"> {
   let summary = "Lower TOSA to the SCF dialect";
-  let dependentDialects = [
-    "tensor::TensorDialect, scf::SCFDialect", "cf::ControlFlowDialect"
-  ];
+  let dependentDialects = ["tensor::TensorDialect, scf::SCFDialect"];
   let description = [{
     Pass that converts TOSA's control flow operations to the equivalent SCF
     operations.
   }];
-  let constructor = "tosa::createTosaToSCFPass()";
-  let options = [
-    Option<"scatterHardening", "scatter-hardening",
-           "bool", /*default=*/"true",
-           "Enable scatter bound checking on output accesses">
-  ];
 }
 
 //===----------------------------------------------------------------------===//

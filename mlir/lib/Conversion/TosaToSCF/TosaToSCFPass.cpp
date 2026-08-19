@@ -12,7 +12,6 @@
 
 #include "mlir/Conversion/TosaToSCF/TosaToSCF.h"
 
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -32,10 +31,6 @@ using namespace tosa;
 namespace {
 struct TosaToSCF : public impl::TosaToSCFPassBase<TosaToSCF> {
 public:
-  TosaToSCF(bool scatterHardening)
-      : impl::TosaToSCFPassBase<TosaToSCF>(),
-        scatterHardening(scatterHardening) {};
-
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -44,22 +39,13 @@ public:
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     auto *op = getOperation();
-    mlir::tosa::populateTosaToSCFConversionPatterns(&patterns,
-                                                    scatterHardening);
+    mlir::tosa::populateTosaToSCFConversionPatterns(&patterns);
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }
-
-private:
-  bool scatterHardening = true;
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToSCFPass(bool scatterHardening) {
-  return std::make_unique<TosaToSCF>(scatterHardening);
-}
-
-void mlir::tosa::addTosaToSCFPasses(OpPassManager &pm,
-                                    const TosaToSCFPassOptions &options) {
-  pm.addNestedPass<func::FuncOp>(createTosaToSCFPass(options.scatterHardening));
+void mlir::tosa::addTosaToSCFPasses(OpPassManager &pm) {
+  pm.addNestedPass<func::FuncOp>(createTosaToSCFPass());
 }

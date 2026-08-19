@@ -1885,15 +1885,20 @@ func.func @argmax_dyn_axis(%arg0 : tensor<3x?xi32>) -> () {
 func.func @gather_float(%arg0: tensor<2x3x2xf32>, %arg1: tensor<2x3xi32>) -> () {
   // CHECK: %[[INIT:.+]] = tensor.empty()
   // CHECK: %[[C3:.+]] = arith.constant 3
+  // CHECK: %[[CST:.+]] = arith.constant 0.0
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG1]] : tensor<2x3xi32>) outs(%[[INIT]] : tensor<2x3x2xf32>)
   // CHECK: ^bb0(%[[BBARG0:.+]]: i32, %[[BBARG1:.+]]: f32)
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
-  // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
+  // CHECK:   %[[COND:.+]] = index.cmp ult(%[[CAST]], %[[C3]])
+  // CHECK:   %[[IF:.+]] = scf.if %[[COND]] {{.*}} {
   // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xf32>
-  // CHECK:   linalg.yield %[[EXTRACT]]
+  // CHECK:   scf.yield %[[EXTRACT]]
+  // CHECK:   } else {
+  // CHECK:   scf.yield %[[CST]]
+  // CHECK:   }
+  // CHECK:   linalg.yield %[[IF]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<2x3x2xf32>, tensor<2x3xi32>)  -> tensor<2x3x2xf32>
   return
 }
@@ -1908,15 +1913,20 @@ func.func @gather_float_dyn(%arg0: tensor<?x3x2xf32>, %arg1: tensor<?x3xi32>) ->
   // CHECK: %[[BATCH:.+]] = tensor.dim %[[ARG0]], %[[C0]]
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]])
   // CHECK: %[[C3:.+]] = arith.constant 3
+  // CHECK: %[[CST:.+]] = arith.constant 0.0
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG1]] : tensor<?x3xi32>) outs(%[[INIT]] : tensor<?x3x2xf32>)
   // CHECK: ^bb0(%[[BBARG0:.+]]: i32, %[[BBARG1:.+]]: f32)
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
-  // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
+  // CHECK:   %[[COND:.+]] = index.cmp ult(%[[CAST]], %[[C3]])
+  // CHECK:   %[[IF:.+]] = scf.if %[[COND]] {{.*}} {
   // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<?x3x2xf32>
-  // CHECK:   linalg.yield %[[EXTRACT]]
+  // CHECK:   scf.yield %[[EXTRACT]]
+  // CHECK:   } else {
+  // CHECK:   scf.yield %[[CST]]
+  // CHECK:   }
+  // CHECK:   linalg.yield %[[IF]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<?x3x2xf32>, tensor<?x3xi32>)  -> tensor<?x3x2xf32>
   return
 }
@@ -1936,15 +1946,20 @@ func.func @gather_float_all_dynamic(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x
   // CHECK: %[[INIT:.+]] = tensor.empty(%[[BATCH]], %[[INDEX]], %[[CHANNEL]])
   // CHECK: %[[C1_2:.+]] = arith.constant 1
   // CHECK: %[[RANGE:.+]] = tensor.dim %[[ARG0]], %[[C1_2]]
+  // CHECK: %[[CST:.+]] = arith.constant 0.0
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG1]] : tensor<?x?xi32>) outs(%[[INIT]] : tensor<?x?x?xf32>)
   // CHECK: ^bb0(%[[BBARG0:.+]]: i32, %[[BBARG1:.+]]: f32)
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
-  // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[RANGE]]
-  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
+  // CHECK:   %[[COND:.+]] = index.cmp ult(%[[CAST]], %[[RANGE]])
+  // CHECK:   %[[IF:.+]] = scf.if %[[COND]] {{.*}} {
   // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<?x?x?xf32>
-  // CHECK:   linalg.yield %[[EXTRACT]]
+  // CHECK:   scf.yield %[[EXTRACT]]
+  // CHECK:   } else {
+  // CHECK:   scf.yield %[[CST]]
+  // CHECK:   }
+  // CHECK:   linalg.yield %[[IF]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<?x?x?xf32>, tensor<?x?xi32>)  -> tensor<?x?x?xf32>
   return
 }
@@ -1957,15 +1972,20 @@ func.func @gather_float_all_dynamic(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x
 func.func @gather_int(%arg0: tensor<2x3x2xi32>, %arg1: tensor<2x3xi32>) -> () {
   // CHECK: %[[INIT:.+]] = tensor.empty()
   // CHECK: %[[C3:.+]] = arith.constant 3
+  // CHECK: %[[C0:.+]] = arith.constant 0
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[ARG1]] : tensor<2x3xi32>) outs(%[[INIT]] : tensor<2x3x2xi32>)
   // CHECK: ^bb0(%[[BBARG0:.+]]: i32, %[[BBARG1:.+]]: i32)
   // CHECK:   %[[IDX0:.+]] = linalg.index 0
   // CHECK:   %[[CAST:.+]] = arith.index_cast %[[BBARG0]]
-  // CHECK:   %[[COND:.+]] = arith.cmpi uge, %[[CAST]], %[[C3]]
-  // CHECK:   cf.assert %[[COND]]
   // CHECK:   %[[IDX2:.+]] = linalg.index 2
+  // CHECK:   %[[COND:.+]] = index.cmp ult(%[[CAST]], %[[C3]])
+  // CHECK:   %[[IF:.+]] = scf.if %[[COND]] {{.*}} {
   // CHECK:   %[[EXTRACT:.+]] = tensor.extract %[[ARG0]][%[[IDX0]], %[[CAST]], %[[IDX2]]] : tensor<2x3x2xi32>
-  // CHECK:   linalg.yield %[[EXTRACT]]
+  // CHECK:   scf.yield %[[EXTRACT]]
+  // CHECK:   } else {
+  // CHECK:   scf.yield %[[C0]]
+  // CHECK:   }
+  // CHECK:   linalg.yield %[[IF]]
   %0 = tosa.gather %arg0, %arg1 : (tensor<2x3x2xi32>, tensor<2x3xi32>)  -> tensor<2x3x2xi32>
   return
 }
