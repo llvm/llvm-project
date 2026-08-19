@@ -1,4 +1,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim1 \
+// RUN:   -DTEXTURE=Texture1D -DLOD_TYPE=float %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim1 \
+// RUN:   -DTEXTURE=Texture1DArray -DLOD_TYPE=float %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim2 \
 // RUN:   -DTEXTURE=Texture2D -DLOD_TYPE=float2 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
@@ -22,6 +28,7 @@
 //                      vector
 //   dim3               diagnostics naming a 3-component offset or location
 //                      vector
+//   dim1               diagnostics naming a scalar offset or location
 
 TEXTURE<float4> tex;
 SamplerState samp;
@@ -48,10 +55,12 @@ void main() {
   // expected-note@* {{'CalculateLevelOfDetailUnclamped' declared here}}
   tex.CalculateLevelOfDetailUnclamped(samp, loc, 0);
 
+  // dim1-error@+3 {{cannot initialize a parameter of type 'float' with an lvalue of type 'const char[8]'}}
   // dim2-error@+2 {{cannot initialize a parameter of type 'vector<float, 2>' (vector of 2 'float' values) with an lvalue of type 'const char[8]'}}
   // dim3-error@+1 {{cannot initialize a parameter of type 'vector<float, 3>' (vector of 3 'float' values) with an lvalue of type 'const char[8]'}}
   tex.CalculateLevelOfDetail(samp, "invalid");
 
+  // dim1-error@+3 {{cannot initialize a parameter of type 'float' with an lvalue of type 'const char[8]'}}
   // dim2-error@+2 {{cannot initialize a parameter of type 'vector<float, 2>' (vector of 2 'float' values) with an lvalue of type 'const char[8]'}}
   // dim3-error@+1 {{cannot initialize a parameter of type 'vector<float, 3>' (vector of 3 'float' values) with an lvalue of type 'const char[8]'}}
   tex.CalculateLevelOfDetailUnclamped(samp, "invalid");

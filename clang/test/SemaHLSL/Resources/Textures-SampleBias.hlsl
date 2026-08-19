@@ -1,4 +1,12 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int -DTEXTURE=Texture1D \
+// RUN:   -DCOORD_TYPE=float %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim1 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int -DTEXTURE=Texture1DArray \
+// RUN:   -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 %s

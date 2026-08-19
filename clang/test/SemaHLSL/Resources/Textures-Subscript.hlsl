@@ -1,32 +1,56 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=Texture2D -DINDEX_TYPE=uint2 \
 // RUN:   -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
-// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify -o - %s
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture1D -DINDEX_TYPE=uint \
+// RUN:   -DINDEX_ARG="1" -DWIDE_INDEX_TYPE=int2 -DWIDE_INDEX_ARG="int2(1, 2)" \
+// RUN:   -verify=expected,scalaridx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=Texture2DArray -DINDEX_TYPE=uint3 \
 // RUN:   -DINDEX_ARG="uint3(1, 2, 0)" -DWIDE_INDEX_TYPE=int4 \
 // RUN:   -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" -DNARROW_INDEX_TYPE=uint2 \
-// RUN:   -DNARROW_INDEX_ARG="uint2(1, 2)" -verify -o - %s
+// RUN:   -DNARROW_INDEX_ARG="uint2(1, 2)" -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture1DArray -DINDEX_TYPE=uint2 \
+// RUN:   -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
-// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify -o - %s
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture1D -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint -DINDEX_ARG="1" -DWIDE_INDEX_TYPE=int2 \
+// RUN:   -DWIDE_INDEX_ARG="int2(1, 2)" -verify=expected,scalaridx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
-// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \
-// RUN:   -o - %s
+// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" \
+// RUN:   -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture1DArray -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
-// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify -o - %s
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture1D -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint -DINDEX_ARG="1" -DWIDE_INDEX_TYPE=int2 \
+// RUN:   -DWIDE_INDEX_ARG="int2(1, 2)" -verify=expected,scalaridx -o - %s
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
-// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \
-// RUN:   -o - %s
+// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" \
+// RUN:   -verify=expected,vecidx -o - %s
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture1DArray -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
+// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -44,6 +68,10 @@
 //
 // The diagnostics use `-re` directives so that neither the type name nor the
 // index width has to be spelled out per texture type.
+//
+// Verify prefixes:
+//   vecidx             the index is a coordinate vector
+//   scalaridx          1D textures, whose index is a scalar
 
 TEXTURE<float4> Tex;
 TEXTURE<float> Tex2;
@@ -57,20 +85,25 @@ void main() {
   // Reading through the subscript works for every texture type.
   float4 val1 = Tex[valid_index];
 
-  // The index has to be convertible to the coordinate vector.
+  // The index has to be convertible to the coordinate.
   S s = { 1 };
-  // expected-error-re@+2 {{no viable overloaded operator[] for type '{{.*}}Texture{{.*}}<float4>'}}
-  // expected-note-re@*:* {{candidate function not viable: no known conversion from 'S' to 'vector<unsigned int, {{[0-9]}}>'}}
+  // expected-error-re@+3 {{no viable overloaded operator[] for type '{{.*}}Texture{{.*}}<float4>'}}
+  // vecidx-note-re@*:* {{candidate function not viable: no known conversion from 'S' to 'vector<unsigned int, {{[0-9]}}>'}}
+  // scalaridx-note@*:* {{candidate function not viable: no known conversion from 'S' to 'unsigned int'}}
   float4 val2 = Tex[s];
 
-  // A scalar index is splatted, which changes signedness.
+  // A signed scalar index is splatted into the coordinate vector, or used
+  // directly on a 1D texture; either way the signedness changes.
   int i = 1;
-  float4 val3 = Tex[i]; // expected-warning-re {{implicit conversion changes signedness: 'int' to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
+  // vecidx-warning-re@+2 {{implicit conversion changes signedness: 'int' to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
+  // scalaridx-warning@+1 {{implicit conversion changes signedness: 'int' to 'unsigned int'}}
+  float4 val3 = Tex[i];
 
   // An index with one component too many is truncated.
   WIDE_INDEX_TYPE big = WIDE_INDEX_ARG;
-  // expected-warning-re@+2 {{implicit conversion truncates vector: 'int{{[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
-  // expected-warning-re@+1 {{implicit conversion changes signedness: 'int{{[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
+  // vecidx-warning-re@+3 {{implicit conversion truncates vector: 'int{{[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
+  // vecidx-warning-re@+2 {{implicit conversion changes signedness: 'int{{[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'vector<unsigned int, {{[0-9]}}>' (vector of {{[0-9]}} 'unsigned int' values)}}
+  // scalaridx-warning-re@+1 {{implicit conversion turns vector to scalar: 'int{{[0-9]}}' (aka 'vector<int, {{[0-9]}}>') to 'unsigned int'}}
   float4 val4 = Tex[big];
 
 #ifdef NARROW_INDEX_TYPE

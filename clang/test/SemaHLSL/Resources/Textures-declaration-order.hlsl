@@ -12,6 +12,14 @@
 // expected-no-diagnostics
 
 #ifdef SCALAR_FIRST
+Texture1D<float> Tex1D;
+Texture1D<float2> Tex1DVec;
+RWTexture1D<float> RWTex1D;
+RWTexture1D<float2> RWTex1DVec;
+Texture1DArray<float> Tex1DArray;
+Texture1DArray<float2> Tex1DArrayVec;
+RWTexture1DArray<float> RWTex1DArray;
+RWTexture1DArray<float2> RWTex1DArrayVec;
 Texture2D<float> Tex2D;
 Texture2D<float2> Tex2DVec;
 RWTexture2D<float> RWTex2D;
@@ -25,6 +33,14 @@ TextureCube<float2> TexCubeVec;
 TextureCubeArray<float> TexCubeArray;
 TextureCubeArray<float2> TexCubeArrayVec;
 #else
+Texture1D<float2> Tex1DVec;
+Texture1D<float> Tex1D;
+RWTexture1D<float2> RWTex1DVec;
+RWTexture1D<float> RWTex1D;
+Texture1DArray<float2> Tex1DArrayVec;
+Texture1DArray<float> Tex1DArray;
+RWTexture1DArray<float2> RWTex1DArrayVec;
+RWTexture1DArray<float> RWTex1DArray;
 Texture2D<float2> Tex2DVec;
 Texture2D<float> Tex2D;
 RWTexture2D<float2> RWTex2DVec;
@@ -43,7 +59,17 @@ SamplerState Samp;
 
 // Use members of both the primary template and the partial specialization to
 // make sure both patterns really have been completed.
-export void useTextures(float2 UV, float3 UVW, float4 UVWA) {
+export void useTextures(float U, float2 UV, float3 UVW, float4 UVWA) {
+  float S1 = Tex1D.Sample(Samp, U);
+  float2 V1 = Tex1DVec.Sample(Samp, U);
+  RWTex1D[0] = S1;
+  RWTex1DVec[0] = V1;
+
+  float S1A = Tex1DArray.Sample(Samp, UV);
+  float2 V1A = Tex1DArrayVec.Sample(Samp, UV);
+  RWTex1DArray[uint2(0, 0)] = S1A;
+  RWTex1DArrayVec[uint2(0, 0)] = V1A;
+
   float S = Tex2D.Sample(Samp, UV);
   float2 V = Tex2DVec.Sample(Samp, UV);
   RWTex2D[uint2(0, 0)] = S;
