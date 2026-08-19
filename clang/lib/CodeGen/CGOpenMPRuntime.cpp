@@ -8519,10 +8519,21 @@ private:
   /// Function the directive is being generated for.
   CodeGenFunction &CGF;
 
+  /// What a firstprivate clause said about one of its variables: whether the
+  /// clause was implicit, and whether it carried the "saved" modifier.
+  struct FirstPrivateInfo {
+    bool isImplicit = false;
+    bool isSaved = false;
+
+    FirstPrivateInfo() = default;
+    FirstPrivateInfo(bool isImplicit) : isImplicit(isImplicit) {}
+    FirstPrivateInfo(bool isImplicit, bool isSaved)
+        : isImplicit(isImplicit), isSaved(isSaved) {}
+  };
+
   /// Set of all first private variables in the current directive.
-  /// bool data is set to true if the variable is implicitly marked as
-  /// firstprivate, false otherwise.
-  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, bool> FirstPrivateDecls;
+  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, FirstPrivateInfo>
+      FirstPrivateDecls;
 
   /// Set of defaultmap clause kinds that use firstprivate behavior.
   llvm::SmallSet<OpenMPDefaultmapClauseKind, 4> DefaultmapFirstprivateKinds;
@@ -9841,11 +9852,18 @@ private:
     // 'private ptr' and 'map to' flag. Return the right flags if the captured
     // declaration is known as first-private in this handler.
     if (FirstPrivateDecls.count(Cap.getCapturedVar())) {
+      OpenMPOffloadMappingFlags Bits;
       if (Cap.getCapturedVar()->getType()->isAnyPointerType())
-        return OpenMPOffloadMappingFlags::OMP_MAP_TO |
+        Bits = OpenMPOffloadMappingFlags::OMP_MAP_TO |
                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
-      return OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE |
-             OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      else
+        Bits = OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE |
+               OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      auto FP =
+          FirstPrivateDecls.find(Cap.getCapturedVar()->getCanonicalDecl());
+      if (FP->getSecond().isSaved)
+        Bits |= OpenMPOffloadMappingFlags::OMP_MAP_SAVED;
+      return Bits;
     }
     auto I = LambdasMap.find(Cap.getCapturedVar()->getCanonicalDecl());
     if (I != LambdasMap.end())
@@ -10497,12 +10515,28 @@ public:
   MappableExprsHandler(const OMPExecutableDirective &Dir, CodeGenFunction &CGF)
       : CurDir(&Dir), CGF(CGF), AttachPtrComparator(*this) {
     // Extract firstprivate clause information.
+    //
+    // A variable declared inside the enclosing taskgraph region has no value
+    // in the data environment a replay starts from, which is the taskgraph
+    // construct's own, so its copy comes from the saved data environment
+    // (OpenMP 6.0 [14.3]) exactly as though the clause had said `saved`.  The
+    // taskgraph's captured record is what tells the two apart: it captures
+    // every automatic variable of the enclosing environment the region uses,
+    // and nothing declared within it.
+    auto DeclaredInTaskgraph = [&CGF](const VarDecl *VD) {
+      return CGF.getOMPWithinTaskgraph() && !VD->hasGlobalStorage() &&
+             CGF.CapturedStmtInfo && !CGF.CapturedStmtInfo->lookup(VD);
+    };
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlist()) {
-        const ValueDecl *VD = cast<DeclRefExpr>(D)->getDecl();
-        if (const auto *BD = dyn_cast<BindingDecl>(VD))
-          VD = cast<VarDecl>(BD->getDecomposedDecl());
-        FirstPrivateDecls.try_emplace(cast<VarDecl>(VD), C->isImplicit());
+        const ValueDecl *Decl = cast<DeclRefExpr>(D)->getDecl();
+        if (const auto *BD = dyn_cast<BindingDecl>(Decl))
+          Decl = cast<VarDecl>(BD->getDecomposedDecl());
+        const auto *VD = cast<VarDecl>(Decl);
+        FirstPrivateDecls.try_emplace(VD, C->isImplicit(),
+                                      C->getKind() ==
+                                              clang::OMPC_FIRSTPRIVATE_saved ||
+                                          DeclaredInTaskgraph(VD));
       }
     // Extract implicit firstprivates from uses_allocators clauses.
     for (const auto *C : Dir.getClausesOfKind<OMPUsesAllocatorsClause>()) {
@@ -11407,7 +11441,7 @@ public:
   bool isEffectivelyFirstprivate(const VarDecl *VD, QualType Type) const {
     // Check explicit firstprivate clauses (not implicit from defaultmap)
     auto I = FirstPrivateDecls.find(VD);
-    if (I != FirstPrivateDecls.end() && !I->getSecond())
+    if (I != FirstPrivateDecls.end() && !I->getSecond().isImplicit)
       return true; // Explicit firstprivate only
 
     // Check defaultmap(firstprivate:scalar) for scalar types
@@ -11484,7 +11518,7 @@ public:
       }
       auto I = FirstPrivateDecls.find(VD);
       if (I != FirstPrivateDecls.end())
-        IsImplicit = I->getSecond();
+        IsImplicit = I->getSecond().isImplicit;
     } else {
       assert(CI.capturesVariable() && "Expected captured reference.");
       const auto *PtrTy = cast<ReferenceType>(RI.getType().getTypePtr());
@@ -11515,7 +11549,7 @@ public:
       }
       auto I = FirstPrivateDecls.find(VD);
       if (I != FirstPrivateDecls.end())
-        IsImplicit = I->getSecond();
+        IsImplicit = I->getSecond().isImplicit;
     }
     // Every default map produces a single argument which is a target parameter.
     CombinedInfo.Types.back() |=

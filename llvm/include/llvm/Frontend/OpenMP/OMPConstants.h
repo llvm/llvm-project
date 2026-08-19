@@ -256,6 +256,9 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   // instead of preserving the original pointer's value. Currently only
   // useful in conjunction with RETURN_PARAM.
   OMP_MAP_FB_NULLIFY = 0x8000,
+  // Set on a firstprivate aggregate whose clause carried the "saved" modifier,
+  // meaning a taskgraph recording must snapshot its value at record time.
+  OMP_MAP_SAVED = 0x10000,
   /// Signal that the runtime library should use args as an array of
   /// descriptor_dim pointers and use args_size as dims. Used when we have
   /// non-contiguous list items in target update directive

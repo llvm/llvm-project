@@ -86,11 +86,36 @@ enum tgt_map_type : uint64_t {
   // instead of preserving the original pointer's value. Currently only
   // useful in conjunction with RETURN_PARAM.
   OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
+  // For firstprivate values, set if the (aggregate) value has the "saved"
+  // modifier: if so, we will snapshot the pointed-to data when recording
+  // taskgraphs.
+  OMP_TGT_MAPTYPE_SAVED = 0x10000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
   OMP_TGT_MAPTYPE_MEMBER_OF = 0xffff000000000000
 };
+
+#ifdef __cplusplus
+/// Map-type accessor helpers, which name the bits of a map type rather than
+/// spelling out their encoding at each use.
+namespace omptarget {
+namespace maptype {
+
+/// Private (firstprivate aggregate) variable -- not mapped, needs its own
+/// per-launch device storage.
+inline bool isPrivate(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_PRIVATE;
+}
+/// Pass-by-value literal -- the argument *is* the value (no device pointer).
+inline bool isLiteral(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_LITERAL;
+}
+/// Firstprivate aggregate whose clause carried the "saved" modifier.
+inline bool isSaved(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_SAVED; }
+} // namespace maptype
+} // namespace omptarget
+#endif // __cplusplus
 
 /// Flags for offload entries.
 enum OpenMPOffloadingDeclareTargetFlags {
