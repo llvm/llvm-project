@@ -41,11 +41,10 @@ using namespace llvm;
 
 STATISTIC(NumInstCombined, "Number of machineinst combined");
 
-static cl::opt<unsigned> inc_threshold(
-    "machine-combiner-inc-threshold", cl::Hidden,
-    cl::desc("Incremental depth computation will be used for basic "
-             "blocks with more instructions."),
-    cl::init(500));
+static cl::opt<unsigned>
+inc_threshold("machine-combiner-inc-threshold", cl::Hidden,
+              cl::desc("Incremental depth computation will be used for basic "
+                       "blocks with more instructions."), cl::init(500));
 
 static cl::opt<bool> dump_intrs("machine-combiner-dump-subst-intrs", cl::Hidden,
                                 cl::desc("Dump all substituted intrs"),
@@ -652,8 +651,7 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
       }
 
       if (ML && TII->isThroughputPattern(P)) {
-        LLVM_DEBUG(
-            dbgs() << "\t Replacing due to throughput pattern in loop\n");
+        LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
@@ -661,8 +659,8 @@ bool MachineCombinerImpl::combineInstructions(MachineBasicBlock *MBB) {
         break;
       } else if (OptForSize && InsInstrs.size() < DelInstrs.size()) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
-                          << InsInstrs.size() << " < " << DelInstrs.size()
-                          << ")\n");
+                          << InsInstrs.size() << " < "
+                          << DelInstrs.size() << ")\n");
         insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
