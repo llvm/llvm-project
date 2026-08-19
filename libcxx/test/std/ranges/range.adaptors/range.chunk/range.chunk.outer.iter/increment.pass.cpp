@@ -21,21 +21,38 @@
 #include <ranges>
 #include <vector>
 
-#include "../types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  std::vector<int> vector                                = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::ranges::chunk_view<input_span<int>> input_chunked = input_span<int>(vector) | std::views::chunk(2);
-
   // Test `constexpr outer_iterator& operator++();`
   {
-    /*chunk_view::__outer_iterator*/ std::input_iterator auto it = input_chunked.begin();
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked =
+            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sentinel_wrapper<cpp17_input_iterator<int*>>(
+                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+            std::views::chunk(2);
+
+    /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
     assert(std::ranges::equal(*++it, std::vector{3, 4}));
   }
 
   // Test `constexpr void operator++(int);`
   {
-    /*chunk_view::__outer_iterator*/ std::input_iterator auto it = input_chunked.begin();
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked =
+            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sentinel_wrapper<cpp17_input_iterator<int*>>(
+                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+            std::views::chunk(2);
+
+    /*chunk_view::__outer_iterator*/ std::input_iterator auto it = chunked.begin();
     static_assert(std::same_as<decltype(it++), void>);
     it++;
     assert(std::ranges::equal(*it, std::vector{3, 4}));

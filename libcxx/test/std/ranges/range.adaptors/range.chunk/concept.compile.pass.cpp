@@ -22,8 +22,8 @@
 #include <utility>
 
 #include "almost_satisfies_types.h"
+#include "test_iterators.h"
 #include "test_range.h"
-#include "types.h"
 
 template <>
 inline constexpr bool std::ranges::enable_view<InputRangeNotDerivedFrom> = true;
@@ -50,9 +50,14 @@ static_assert(std::ranges::view<InputRangeNotDerivedFrom>);
 static_assert(!CanFormChunkView<InputRangeNotDerivedFrom>);
 
 // Test constraints when the template argument is an input_range and a view
-static_assert(std::ranges::input_range<input_span<int>>);
-static_assert(std::ranges::view<input_span<int>>);
-static_assert(CanFormChunkView<input_span<int>> && CanConstructChunkView<input_span<int>>);
+static_assert(std::ranges::input_range<
+              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
+static_assert(std::ranges::view<
+              std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
+static_assert(CanFormChunkView<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>> &&
+              CanConstructChunkView<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
 
 // Test constraints when the template argument is a forward_range and a view
 static_assert(std::ranges::forward_range<BorrowedView>);
@@ -60,5 +65,6 @@ static_assert(std::ranges::view<BorrowedView>);
 static_assert(CanFormChunkView<BorrowedView> && CanConstructChunkView<BorrowedView>);
 
 // chunk_view itself models view
-static_assert(std::ranges::view<std::ranges::chunk_view<input_span<int>>>);
+static_assert(std::ranges::view<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
 static_assert(std::ranges::view<std::ranges::chunk_view<BorrowedView>>);

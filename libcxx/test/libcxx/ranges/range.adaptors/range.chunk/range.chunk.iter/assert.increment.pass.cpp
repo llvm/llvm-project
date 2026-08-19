@@ -20,12 +20,16 @@
 #include <vector>
 
 #include "check_assertion.h"
-#include "../types.h"
+#include "test_iterators.h"
 
 int main() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
   auto chunked            = vector | std::views::chunk(3);
-  auto input_chunked      = input_span(vector.data(), 8) | std::views::chunk(3);
+  auto input_chunked =
+      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+          cpp17_input_iterator<int*>(vector.data()),
+          sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+      std::views::chunk(3);
 
   // Test increment past-the-end iterator when V models only input_range
   {
