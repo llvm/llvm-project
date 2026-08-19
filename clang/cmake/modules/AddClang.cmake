@@ -106,7 +106,19 @@ macro(add_clang_library name)
     endif()
     set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()
+  # Before creating the target, tag its clang ABI dimension so llvm_update_pch
+  # won't let it reuse an LLVM provider's PCH that was compiled without the
+  # clang ABI define this target carries.
+  set(LLVM_PCH_ABI_TAG "")
+  if(WIN32 AND NOT MINGW)
+    if(NOT CLANG_LINK_CLANG_DYLIB)
+      set(LLVM_PCH_ABI_TAG "clangstatic")
+    elseif(NOT ARG_SHARED AND NOT ARG_STATIC)
+      set(LLVM_PCH_ABI_TAG "clangexport")
+    endif()
+  endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
+  unset(LLVM_PCH_ABI_TAG)
 
   if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
     # Make sure all consumers also turn off visibility macros so they're not
@@ -157,7 +169,15 @@ macro(add_clang_library name)
 endmacro(add_clang_library)
 
 macro(add_clang_executable name)
+  # Clang executables inherit CLANG_BUILD_STATIC transitively (PUBLIC) from the
+  # clang libraries they link, so tag their PCH mode the same way clang libraries
+  # are tagged (see LLVM_PCH_ABI_TAG in llvm_update_pch).
+  set(LLVM_PCH_ABI_TAG "")
+  if(WIN32 AND NOT MINGW AND NOT CLANG_LINK_CLANG_DYLIB)
+    set(LLVM_PCH_ABI_TAG "clangstatic")
+  endif()
   add_llvm_executable( ${name} ${ARGN} )
+  unset(LLVM_PCH_ABI_TAG)
   set_clang_windows_version_resource_properties(${name})
   set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endmacro(add_clang_executable)

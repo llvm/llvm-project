@@ -79,7 +79,11 @@ function(llvm_update_compile_flags name)
   target_compile_definitions(${name} PRIVATE ${LLVM_COMPILE_DEFINITIONS})
 endfunction()
 
-function(llvm_update_pch name)
+# `kind` is the target's category for export-mode purposes: lib, objlib or exe.
+function(llvm_update_pch name kind)
+  if(NOT kind)
+    set(kind "lib")
+  endif()
   if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
     # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
     set(ARG_DISABLE_PCH_REUSE ON)
@@ -105,6 +109,44 @@ function(llvm_update_pch name)
   if(HAS_MM_SRC)
     # Disable for Objective-C as well to avoid errors due to mixed languages.
     set(ARG_DISABLE_PCH_REUSE ON)
+  endif()
+
+  # Determine how LLVM_ABI resolves in this target's translation units, which
+  # determines PCH compatibility. This mirrors the LLVM_EXPORTS /
+  # LLVM_BUILD_STATIC compile definitions applied elsewhere in this file.
+  #   export : -DLLVM_EXPORTS      -> dllexport   (dylib component libraries)
+  #   static : -DLLVM_BUILD_STATIC -> (no annotation)
+  #   import : neither             -> dllimport
+  if(NOT LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+    set(pch_mode "static")
+  elseif(kind STREQUAL "lib")
+    if(ARG_COMPONENT_LIB AND (LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS))
+      set(pch_mode "export")
+    elseif(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      set(pch_mode "static")
+    else()
+      set(pch_mode "import")
+    endif()
+  elseif(kind STREQUAL "exe")
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+      set(pch_mode "static")
+    else()
+      set(pch_mode "import")
+    endif()
+  else() # objlib: never receives LLVM_EXPORTS; LLVM_BUILD_STATIC iff disabled.
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      set(pch_mode "static")
+    else()
+      set(pch_mode "import")
+    endif()
+  endif()
+
+  # A target may carry an additional ABI dimension that changes its predefines
+  # but is orthogonal to LLVM_ABI.
+  # For instance, clang uses CLANG_BUILD_STATIC / CLANG_EXPORTS, which clang
+  # always applies on Windows regardless of LLVM's export annotations.
+  if(LLVM_PCH_ABI_TAG)
+    set(pch_mode "${pch_mode}+${LLVM_PCH_ABI_TAG}")
   endif()
 
   # Find PCH with highest priority from dependencies. We reuse the first PCH
@@ -137,10 +179,41 @@ function(llvm_update_pch name)
       # Set priority so that dependants can reuse the PCH.
       math(EXPR pch_priority "${pch_priority} + 1")
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+      # Record the export mode this PCH was compiled in and the headers it used,
+      # so a dependant in a different mode can build its own PCH instead of
+      # reusing this one.
+      set_target_properties(${name} PROPERTIES
+        LLVM_PCH_MODE "${pch_mode}"
+        LLVM_PCH_HEADER "${ARG_PRECOMPILE_HEADERS}")
     endif()
   elseif(pch_reuse AND NOT ARG_DISABLE_PCH_REUSE)
-    message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
-    target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    get_target_property(reuse_mode ${pch_reuse} LLVM_PCH_MODE)
+    # Mode comparison is the single source of truth. When LLVM export
+    # annotations are off, every LLVM target's mode is uniformly "static" (see
+    # above), so this still reuses as before -- unless an ABI tag (e.g. clang's)
+    # makes the consumer's mode differ from the provider's.
+    if(pch_mode STREQUAL "${reuse_mode}")
+      # Same export mode: reuse the provider's PCH. Its _PchSym_ object lives in
+      # the provider, which this target links (the provider was found among our
+      # link dependencies), so it is present in our image.
+      message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
+      target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    else()
+      # Different export mode: the provider's PCH bakes the wrong dllexport/
+      # dllimport state (MSVC warns C4651, then miscompiles). It is also unsafe
+      # to reuse at link time -- with the dylib the provider is reached through
+      # LLVM.dll, so its _PchSym_ object is not in our image (LNK2011). Build
+      # our own PCH from the same header(s): compiled with this target's flags
+      # it matches, and its _PchSym_ lives in this target's own objects.
+      get_target_property(reuse_header ${pch_reuse} LLVM_PCH_HEADER)
+      if(reuse_header)
+        message(DEBUG "Building own ${pch_mode}-mode PCH for ${name}")
+        target_precompile_headers(${name} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:${reuse_header}>)
+      else()
+        message(DEBUG "Using NO PCH for ${name} (provider recorded no header)")
+      endif()
+    endif()
   else()
     message(DEBUG "Using NO PCH for ${name}")
   endif()
@@ -648,7 +721,7 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
-    llvm_update_pch(${obj_name})
+    llvm_update_pch(${obj_name} objlib)
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
       file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
@@ -695,7 +768,7 @@ function(llvm_add_library name)
       endforeach()
     endif()
 
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB AND LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
       target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
     endif()
   endif()
@@ -783,7 +856,7 @@ function(llvm_add_library name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT obj_name)
     llvm_update_compile_flags(${name})
-    llvm_update_pch(${name})
+    llvm_update_pch(${name} lib)
   else()
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -865,7 +938,7 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
-      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB AND LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
         target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
       endif()
       llvm_map_components_to_libnames(llvm_libs
@@ -1103,7 +1176,7 @@ macro(generate_llvm_objects name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
-    llvm_update_pch(${obj_name})
+    llvm_update_pch(${obj_name} objlib)
     set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>")
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
@@ -1202,7 +1275,7 @@ macro(add_llvm_executable name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
-    llvm_update_pch(${name})
+    llvm_update_pch(${name} exe)
   elseif(NOT ARG_DISABLE_PCH_REUSE)
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -1276,7 +1349,8 @@ macro(add_llvm_executable name)
     export_executable_symbols(${name})
   endif()
 
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+  if((ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB) AND
+     LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
     target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
