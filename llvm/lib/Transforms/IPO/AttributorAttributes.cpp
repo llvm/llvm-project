@@ -12504,10 +12504,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     // can leave them to the indirect call. The question has to be asked here,
     // because the solver no longer answers once manifestation starts.
     //
-    // Only edges the call graph agrees are direct can close such a cycle, so
-    // walk the solver's known edges rather than asking AAInterFnReachability,
-    // which conservatively reaches everything downstream of an unknown callee
-    // and would suppress far more than this.
+    // The walk follows the optimistic edges AACallEdges has resolved to
+    // particular functions, which include the callees it models for indirect
+    // calls, rather than asking AAInterFnReachability, which conservatively
+    // reaches everything downstream of an unknown callee and would suppress far
+    // more than this.
     SmallPtrSet<Function *, 4> CalleesReachingCallerNow;
     if (Function *Caller = CB->getFunction()) {
       auto KnownEdgesReach = [&](Function *From) {
