@@ -376,6 +376,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf128
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -751,7 +752,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
     libc.src.math.canonicalizef128
-    libc.src.math.copysignf128
     libc.src.math.daddf128
     libc.src.math.ddivf128
     libc.src.math.dfmaf128
