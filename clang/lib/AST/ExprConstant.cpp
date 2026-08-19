@@ -15267,6 +15267,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return EvalVectorDotProduct(true);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq:
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256: {
+    APValue SrcVec;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SrcVec) || !SrcVec.isVector())
+      return false;
+
+    const auto *VT = E->getType()->castAs<VectorType>();
+    QualType EltTy = VT->getElementType();
+    bool isUnsigned = EltTy->isUnsignedIntegerType();
+    unsigned BitWidth = Info.Ctx.getIntWidth(EltTy);
+
+    unsigned NumSrcElems = SrcVec.getVectorLength();
+    unsigned NumDstElems = VT->getNumElements();
+
+    SmallVector<APValue, 8> ResultElts;
+    for (unsigned i = 0; i != NumDstElems; ++i) {
+      if (i < NumSrcElems) {
+        llvm::APFloat FloatElem = SrcVec.getVectorElt(i).getFloat();
+        llvm::APSInt IntResult(BitWidth, isUnsigned);
+        bool IsExact = false;
+        // We only allow exact conversions so rounding mode does not matter for
+        // cvt* and cvtt* builtins
+        FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                                   &IsExact);
+        if (!IsExact)
+          return false;
+        ResultElts.push_back(APValue(IntResult));
+      } else
+        // Pad remaining lanes with zero
+        ResultElts.push_back(APValue(llvm::APSInt(BitWidth, isUnsigned)));
+    }
+    return Success(ResultElts, E);
+  }
   }
 }
 
@@ -18688,6 +18727,34 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     return Success(APValue(RetMask), E);
+  }
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64: {
+    APValue ArgVal;
+    if (!EvaluateAsRValue(Info, E->getArg(0), ArgVal))
+      return false;
+
+    assert(ArgVal.isVector() && "Expected a vector argument");
+    llvm::APFloat FloatElem = ArgVal.getVectorElt(0).getFloat();
+    unsigned BitWidth = Info.Ctx.getIntWidth(E->getType());
+    bool isUnsigned = E->getType()->isUnsignedIntegerType();
+
+    llvm::APSInt IntResult(BitWidth, isUnsigned);
+    bool IsExact = false;
+    // We only allow exact conversions so rounding mode does not matter for cvt*
+    // and cvtt* builtins
+    FloatElem.convertToInteger(IntResult, llvm::APFloat::rmTowardZero,
+                               &IsExact);
+    if (!IsExact)
+      return false;
+
+    return Success(IntResult, E);
   }
   case X86::BI__builtin_ia32_vpshufbitqmb128_mask:
   case X86::BI__builtin_ia32_vpshufbitqmb256_mask:
