@@ -21,6 +21,8 @@ class L0DeviceTy;
 
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
+  /// L0 context that owns the built modules.
+  ze_context_handle_t ZeContext;
   std::unique_ptr<MemoryBuffer> Image;
   /// Handle multiple modules within a single target image.
   llvm::SmallVector<ze_module_handle_t> Modules;
@@ -39,11 +41,13 @@ class L0ProgramBuilderTy {
   Error linkModules();
 
 public:
-  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image)
-      : Device(Device), Image(std::move(Image)) {}
+  L0ProgramBuilderTy(L0DeviceTy &Device, ze_context_handle_t ZeContext,
+                     std::unique_ptr<MemoryBuffer> &&Image)
+      : Device(Device), ZeContext(ZeContext), Image(std::move(Image)) {}
   ~L0ProgramBuilderTy() = default;
 
   L0DeviceTy &getL0Device() const { return Device; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
   ze_module_handle_t getGlobalModule() const { return GlobalModule; }
   llvm::SmallVector<ze_module_handle_t> &getModules() { return Modules; }
 

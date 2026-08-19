@@ -129,6 +129,7 @@ static bool isImageCompatible(const DeviceImageManager &Image,
 
 ol_symbol_handle_t
 ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                           ol_context_handle_t Context,
                                            DeviceImpl &Device) {
 
   std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
@@ -144,7 +145,7 @@ ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
                         KernelInfo.getName().data() + " was found");
 
   auto DeviceHandle = Device.getOLHandle();
-  auto Program = DeviceImage.getOrCreateProgram(DeviceHandle);
+  auto Program = DeviceImage.getOrCreateProgram(Context, DeviceHandle);
 
   ol_symbol_handle_t Kernel{};
   callAndThrow(olGetSymbol, Program, KernelInfo.getName().data(),

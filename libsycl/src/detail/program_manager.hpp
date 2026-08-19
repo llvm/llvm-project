@@ -80,10 +80,12 @@ public:
   /// This method is thread-safe.
   /// \param KernelInfo a set of kernel specific data: name, corresponding
   /// device image, etc.
+  /// \param Context the context in which the underlying program is created.
   /// \param Device the device for which this kernel must be compiled.
   /// \return a liboffload kernel handle that is ready to be passed to kernel
   /// execution methods.
   ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                                       ol_context_handle_t Context,
                                        DeviceImpl &Device);
 
   /// \return kernel info for the kernel with the specified name.
