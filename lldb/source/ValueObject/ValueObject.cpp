@@ -765,6 +765,19 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
         size_t bytes_read =
             target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
                                error, /*force_live_memory=*/true);
+        if (!error.Success()) {
+          // The live read failed. Fall back to the object file's read-only
+          // sections, but keep the live-memory error to report if the fallback
+          // fails too.
+          Status file_error;
+          size_t file_bytes_read =
+              target->ReadMemory(target_addr, heap_buf_ptr->GetBytes(), bytes,
+                                 file_error, /*force_live_memory=*/false);
+          if (file_error.Success() || file_bytes_read > 0) {
+            bytes_read = file_bytes_read;
+            error = std::move(file_error);
+          }
+        }
         if (error.Success() || bytes_read > 0) {
           data.SetData(data_sp);
           return bytes_read;
@@ -3853,9 +3866,10 @@ bool ValueImpl::IsValid() {
   return target_sp && target_sp->IsValid();
 }
 
-lldb::ValueObjectSP
-ValueImpl::GetSP(Process::StopLocker &stop_locker,
-                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                                     TargetAPIMutex &api_mutex,
+                                     std::unique_lock<TargetAPIMutex> &lock,
+                                     Status &error) {
   if (!m_valobj_sp) {
     error = Status::FromErrorString("invalid value object");
     return m_valobj_sp;
@@ -3871,7 +3885,8 @@ ValueImpl::GetSP(Process::StopLocker &stop_locker,
   if (!target)
     return ValueObjectSP();
 
-  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+  api_mutex = target->GetAPIMutex();
+  lock = std::unique_lock<TargetAPIMutex>(api_mutex);
 
   ProcessSP process_sp(value_sp->GetProcessSP());
   if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
