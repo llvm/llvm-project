@@ -1819,9 +1819,9 @@ let TargetPrefix = "nvvm" in {
                         ArgInfo<ArgIndex<2>,
                                 [ArgName<"rnd">,
                                  ImmArgPrinter<"printFAddRoundingMode">]>] in
-    foreach ftz = ["", "_ftz"] in
-      foreach sat = ["", "_sat"] in
-        def int_nvvm_fadd # ftz # sat :
+    foreach sat = ["", "_sat"] in
+      foreach ftz = ["", "_ftz"] in
+        def int_nvvm_fadd # sat # ftz :
           DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                                 [LLVMMatchType<0>, LLVMMatchType<0>,
                                  llvm_i32_ty]>;
