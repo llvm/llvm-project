@@ -272,6 +272,14 @@ defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
   /*GenPredicate=*/0
 >;
 
+// Set on targets (gfx10/11/12) where a work-group can address only half of the
+// physical LDS block, i.e. the physical block is twice the addressable size (a
+// WGP is two CUs: 128k physical vs 64k addressable).
+defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressable-physical-local-memory",
+  "A work-group can address only half of the physical LDS block",
+  /*GenPredicate=*/0
+>;
+
 defm MFMAInlineLiteralBug : AMDGPUSubtargetFeature<"mfma-inline-literal-bug",
   "MFMA cannot use inline literal as SrcC",
   /*GenPredicate=*/0
@@ -1637,7 +1645,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
   "gfx10",
   [FeatureFP64, FeatureAddressableLocalMemorySize65536,
-   FeatureLocalMemorySize131072, FeatureMIMG_R128,
+   FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace,
    FeatureCIInsts, Feature16BitInsts,
@@ -1669,7 +1677,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
 def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
   [FeatureFP64, FeatureAddressableLocalMemorySize65536,
-   FeatureLocalMemorySize131072, FeatureMIMG_R128,
+   FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
@@ -2211,7 +2219,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
-   FeatureLocalMemorySize131072,
+   FeatureHalfAddressablePhysicalLocalMemory,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot7Insts,

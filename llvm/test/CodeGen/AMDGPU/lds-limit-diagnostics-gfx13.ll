@@ -1,9 +1,9 @@
 ; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 ; RUN: not llc -mtriple=amdgpu13.10-amd-amdhsa -mattr=+cumode -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERROR-CU %s
 
-; GFX1310 supports up to 192 KB LDS in WGP (full-SIMD) mode, where the whole
-; block is addressable by a single workgroup. In CU (half-WGP) mode the block is
-; split between the two CUs, so only half (96 KB) is usable.
+; GFX1310 has up to 192 KB LDS when a work-group runs on all four SIMD32s, where
+; the whole block is addressable by a single work-group. When it runs on only two
+; SIMD32s the block is split between them, so only half (96 KB) is usable.
 ; These are negative tests checking when the LDS size exceeds the usable limit.
 
 ; ERROR: error: <unknown>:0:0: local memory (196612) exceeds limit (196608) in function 'test_lds_limit'

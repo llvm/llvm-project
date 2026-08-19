@@ -1192,12 +1192,15 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   return 32768;
 }
 
-// Total LDS on the block. Larger than the addressable size when a work-group
-// cannot address the whole block. Defaults to the addressable size otherwise.
+// Total physical size of LDS on the block, in bytes. On targets with
+// FeatureHalfAddressablePhysicalLocalMemory a work-group can address only half of the
+// block (gfx10/11/12: a WGP is two CUs, 128k physical vs 64k addressable), so
+// the physical size is twice the addressable size; otherwise it is equal.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureLocalMemorySize131072))
-    return 131072;
-  return getMaxHWAddressableLocalMemorySize(STI);
+  unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
+  if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
+    return 2 * Addressable;
+  return Addressable;
 }
 
 // Sizes in use, by generation (addressable / physical block):
