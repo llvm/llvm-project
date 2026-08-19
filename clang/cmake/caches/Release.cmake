@@ -30,19 +30,13 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir")
+set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
-set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp")
-# Don't build flang on Darwin due to:
-# https://github.com/llvm/llvm-project/issues/160546
-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
-  list(APPEND DEFAULT_PROJECTS "flang")
-  list(APPEND DEFAULT_RUNTIMES "flang-rt")
-endif()
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp;flang-rt")
 
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")

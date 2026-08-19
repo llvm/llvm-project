@@ -19,6 +19,8 @@
 namespace llvm {
 
 class BasicBlock;
+class Instruction;
+class MDNode;
 enum FPClassTest : unsigned;
 
 /// Encapsulates all of the information needed to generate a stack protector
@@ -225,6 +227,13 @@ findSplitPointForStackProtector(MachineBasicBlock *BB,
 /// \returns The inverted test, or fcNone, if inversion does not produce a
 /// simpler test.
 LLVM_ABI FPClassTest invertFPClassTestIfSimpler(FPClassTest Test, bool UseFCmp);
+
+/// Return the cache hint metadata node for memory operand \p OperandNo on \p I,
+/// or nullptr when the instruction has no hint for that operand. For a \c
+/// CallBase, \p OperandNo is an argument index; otherwise it is an instruction
+/// operand index.
+LLVM_ABI const MDNode *getMemCacheHintMetadata(const Instruction &I,
+                                               unsigned OperandNo = 0);
 
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.

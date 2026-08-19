@@ -250,7 +250,7 @@ void simple(float *a, float *b, int *c) {
 // CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 45}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 // CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
-// CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable"}
 // CHECK: [[META4]] = !{!"llvm.loop.vectorize.width", i32 2}
 // CHECK: [[ACC_GRP5]] = distinct !{}
 // CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]], [[META3]]}

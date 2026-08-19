@@ -1241,7 +1241,7 @@ DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case tok::kw___##Trait:                                                      \
     return DeclSpec::TST_##Trait;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   default:
     llvm_unreachable("passed in an unhandled type transformation built-in");
   }
@@ -1604,7 +1604,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
           tok::kw___is_abstract,
           tok::kw___is_aggregate,
           tok::kw___is_arithmetic,
@@ -1986,7 +1986,10 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   bool Owned = false;
   SkipBodyInfo SkipBody;
-  if (TemplateId) {
+  if (TemplateId &&
+      (TUK != TagUseKind::Friend ||
+       TemplateInfo.Kind != ParsedTemplateKind::Template ||
+       TemplateId->isInvalid() || !TemplateId->Template.get().isDependent())) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
     ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
@@ -2006,10 +2009,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           TemplateId->TemplateNameLoc, TemplateId->LAngleLoc, TemplateArgsPtr,
           TemplateId->RAngleLoc, attrs);
 
-      // Friend template-ids are treated as references unless
-      // they have template headers, in which case they're ill-formed
-      // (FIXME: "template <class T> friend class A<T>::B<int>;").
-      // We diagnose this error in ActOnClassTemplateSpecialization.
     } else if (TUK == TagUseKind::Reference ||
                (TUK == TagUseKind::Friend &&
                 TemplateInfo.Kind == ParsedTemplateKind::NonTemplate)) {
@@ -2106,11 +2105,17 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       SkipUntil(tok::semi, StopBeforeMatch);
     }
 
+    if (TemplateId) {
+      Name = nullptr;
+      NameLoc = TemplateId->TemplateNameLoc;
+    }
+
     TagOrTempResult = Actions.ActOnTemplatedFriendTag(
         getCurScope(), DS.getFriendSpecLoc(), TagType, StartLoc, SS, Name,
         NameLoc, EllipsisLoc, attrs,
         MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0] : nullptr,
-                               TemplateParams ? TemplateParams->size() : 0));
+                               TemplateParams ? TemplateParams->size() : 0),
+        TemplateId);
   } else {
     if (TUK != TagUseKind::Declaration && TUK != TagUseKind::Definition)
       ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,

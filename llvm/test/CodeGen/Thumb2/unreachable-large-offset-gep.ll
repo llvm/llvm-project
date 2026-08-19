@@ -3,7 +3,7 @@
 ; CHECK: .LBB0_1:
 ; CHECK: b .LBB0_1
 
-target triple = "thumbv8m-unknown-linux-android"
+target triple = "thumbv8m.main-none-eabi"
 
 define void @d(ptr %c) {
 entry:

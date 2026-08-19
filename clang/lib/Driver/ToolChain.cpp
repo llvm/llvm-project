@@ -1637,6 +1637,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    return "libc++";
+  case ToolChain::CST_Libstdcxx:
+    return "libstdc++";
+  }
+  llvm_unreachable("unknown C++ standard library type");
+}
+
 ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
   if (cStdlibType)
     return *cStdlibType;

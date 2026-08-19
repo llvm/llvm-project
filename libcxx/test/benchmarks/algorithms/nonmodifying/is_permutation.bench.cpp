@@ -18,6 +18,7 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_is_permutation_3leg = [](auto first1, auto last1, auto first2, auto) {
@@ -72,7 +73,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto is_permutation) {
       benchmark::RegisterBenchmark(
           name,
-          [is_permutation](auto& st) {
+          [is_permutation](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();
@@ -100,7 +101,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto is_permutation) {
       benchmark::RegisterBenchmark(
           name,
-          [is_permutation](auto& st) {
+          [is_permutation](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             std::vector<ValueType> data;

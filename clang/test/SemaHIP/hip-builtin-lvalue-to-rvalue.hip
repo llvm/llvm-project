@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -std=c++20 -triple amdgcn -target-cpu gfx1200 -fsyntax-only -fcuda-is-device -ast-dump %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple amdgpu12.00 -fsyntax-only -fcuda-is-device -ast-dump %s 2>&1 | FileCheck %s
 
 // expected-no-diagnostics
 

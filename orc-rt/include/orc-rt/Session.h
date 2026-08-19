@@ -48,8 +48,8 @@ inline Session *unwrap(orc_rt_SessionRef S) noexcept {
 /// Represents an ORC executor Session.
 class Session {
 private:
-  // Implementation helper for callManagedCode (non-void version).
-  template <typename RetT> struct ManagedCodeCaller {
+  // Implementation helper for callWithKeepalive (non-void version).
+  template <typename RetT> struct KeepaliveCaller {
     template <typename FnT, typename... ArgTs>
     static std::optional<RetT> call(TaskGroup::Token Tok, FnT &&Fn,
                                     ArgTs &&...Args) {
@@ -59,8 +59,8 @@ private:
     }
   };
 
-  // Implementation helper for callManagedCode (void version).
-  template <> struct ManagedCodeCaller<void> {
+  // Implementation helper for callWithKeepalive (void version).
+  template <> struct KeepaliveCaller<void> {
     template <typename FnT, typename... ArgTs>
     static bool call(TaskGroup::Token Tok, FnT &&Fn, ArgTs &&...Args) {
       if (!Tok)
@@ -91,10 +91,6 @@ public:
   /// pool.
   using DispatchFn = move_only_function<void(Task)>;
 
-  /// Tag used to identify executor-callable functions in the controller.
-  /// See callController.
-  using HandlerTag = void *;
-
   /// Provides access to the controller.
   class ControllerAccess {
     friend class Session;
@@ -103,17 +99,15 @@ public:
     virtual ~ControllerAccess();
 
   protected:
-    using HandlerTag = Session::HandlerTag;
-
     /// Opaque wrapper for a controller-call result handler.
     ///
     /// ControllerAccess implementations hold these for pending calls but cannot
     /// invoke them directly. Each must be completed exactly once, via one of
     /// three Session-provided paths, so the handler runs in a context where it
-    /// may safely touch managed code:
+    /// may safely enter Session-managed code:
     ///
     ///   - handleControllerCallResult(OnComplete, ResultBytes): the controller
-    ///     returned a result. Dispatches the handler under a fresh managed-code
+    ///     returned a result. Dispatches the handler under a fresh keepalive
     ///     token.
     ///
     ///   - failPendingControllerCall(OnComplete): a call that was enqueued
@@ -186,7 +180,7 @@ public:
     ///
     /// When disconnecting, a ControllerAccess must fail every still-pending
     /// controller call via failPendingControllerCall(OnComplete). This drain
-    /// must complete before notifyDisconnected, while the managed-code group is
+    /// must complete before notifyDisconnected, while the keepalive group is
     /// still open, so the completions are dispatched rather than dropped
     /// (failPendingControllerCall dispatches under a token and asserts the
     /// group is open). The drain must be serialized with the disconnecting
@@ -215,15 +209,16 @@ public:
     /// Because the disconnecting case completes the handler inline, the handler
     /// may run before callController returns, on the calling thread; callers
     /// must tolerate this. It is safe: the caller is still on the stack, so a
-    /// managed-code caller's token still covers the handler, and a non-managed
-    /// caller needs none (a handler that re-enters managed code must acquire
-    /// its own token and handle denial).
-    virtual void callController(OnControllerCallReturn OnComplete, HandlerTag T,
+    /// keepalive-holding caller's token still covers the handler, and a caller
+    /// without one needs none (a handler that enters Session-managed code must
+    /// acquire its own keepalive and handle denial).
+    virtual void callController(OnControllerCallReturn OnComplete,
+                                orc_rt_ControllerHandlerTag T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
     /// Send the result of the given wrapper function call to the controller.
-    virtual void sendWrapperResult(uint64_t CallId,
-                                   WrapperFunctionBuffer ResultBytes) = 0;
+    virtual void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                   uint64_t CallId) = 0;
 
     /// Notify the Session that the controller has disconnected.
     ///
@@ -242,14 +237,14 @@ public:
     /// Ask the Session to run the given wrapper function.
     ///
     /// Subclasses must not call this method after notifyDisconnected is called.
-    void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
-                           WrapperFunctionBuffer ArgBytes) {
-      S.handleWrapperCall(CallId, Fn, std::move(ArgBytes));
+    void handleWrapperCall(orc_rt_WrapperFunction Fn,
+                           WrapperFunctionBuffer ArgBytes, uint64_t CallId) {
+      S.handleWrapperCall(Fn, std::move(ArgBytes), CallId);
     }
 
     /// Complete a controller call with a result the controller returned, by
-    /// dispatching its handler under a fresh managed-code token. Must be called
-    /// while the managed-code group is still open -- i.e. before
+    /// dispatching its handler under a fresh keepalive token. Must be called
+    /// while the keepalive group is still open -- i.e. before
     /// notifyDisconnected; the Session asserts this.
     ///
     /// To fail a pending call on disconnect, use failPendingControllerCall.
@@ -271,7 +266,7 @@ public:
     }
 
     /// Fail a controller call by running its handler inline, on the current
-    /// thread, with a disconnect error -- without acquiring a managed-code
+    /// thread, with a disconnect error -- without acquiring a keepalive
     /// token.
     ///
     /// Use ONLY from within callController, to fail a call that arrives while
@@ -413,8 +408,8 @@ public:
   /// Shutdown proceeds through the following phases:
   ///   1. Detach: If not already detached, disconnects the controller and
   ///      notifies all Services via onDetach.
-  ///   2. Drain: Waits for all in-flight tasks accessing managed code to
-  ///      complete (via ManagedCodeTaskGroup).
+  ///   2. Drain: Waits for all outstanding keepalives to be released (via
+  ///      KeepaliveTaskGroup).
   ///   3. Shutdown services: Calls onShutdown on all Services in reverse
   ///      order.
   ///
@@ -430,36 +425,35 @@ public:
   /// Session has already shut down, the callback will be called immediately.
   void addOnShutdown(OnShutdownFn OnShutdown);
 
-  /// Return a TokenSource for this Session's ManagedCodeTaskGroup.
+  /// Return a TokenSource for this Session's keepalive TaskGroup.
   ///
   /// When calling code managed by a Session (e.g. JIT'd code, or library code
-  /// loaded on behalf of JIT'd code), clients should hold a token for this
-  /// group, which can be constructed from the returned TokenSource. That token
-  /// will delay Session teardown until all tasks accessing managed code have
-  /// completed.
+  /// loaded on behalf of JIT'd code), clients should hold a keepalive token for
+  /// this group, which can be constructed from the returned TokenSource. That
+  /// token will delay Session teardown until it is released.
   ///
-  /// Clients should prefer using callManagedCode to automatically acquire
+  /// Clients should prefer using callWithKeepalive to automatically acquire
   /// and hold a token for the duration of a call.
-  TaskGroup::TokenSource managedCodeTokenSource() const {
-    return ManagedCodeTaskGroup;
+  TaskGroup::TokenSource keepaliveTokenSource() const {
+    return KeepaliveTaskGroup;
   }
 
-  /// Call managed code.
+  /// Call Session-managed code while holding a keepalive.
   ///
-  /// This helper tries to acquire a ManagedCodeTaskGroup token and, if
-  /// successful, calls the given function object with the given arguments
-  /// while holding the token.
+  /// This helper tries to acquire a keepalive token and, if successful, calls
+  /// the given function object with the given arguments while holding the
+  /// token.
   ///
   /// The token is held only for the duration of the (synchronous) call to Fn,
   /// and released as soon as Fn returns; anything Fn runs inline on this thread
   /// before returning is covered by it. Work Fn defers past its return --
   /// stashed to run later, or handed to another thread -- is NOT covered: it
   /// runs on a stack the token no longer guards. Whoever runs such deferred
-  /// work is responsible for ensuring a token covers it, typically by acquiring
-  /// one (e.g. from a TokenSource, see managedCodeTokenSource) and aborting the
-  /// work if the acquire is denied, exactly as for any entry into managed code.
-  /// (A resumed continuation cannot bracket its own entry, since its landing
-  /// point may itself be managed code.)
+  /// work is responsible for ensuring a keepalive covers it, typically by
+  /// acquiring one (e.g. from a TokenSource, see keepaliveTokenSource) and
+  /// aborting the work if the acquire is denied, exactly as for any entry into
+  /// Session-managed code. (A resumed continuation cannot bracket its own
+  /// entry, since its landing point may itself be Session-managed code.)
   ///
   /// If the token is successfully acquired then this function returns the
   /// result of the call to Fn as a std::optional<T> (for a non-void return
@@ -471,12 +465,12 @@ public:
   /// function returns std::nullopt (for a non-void return type) or boolean
   /// false (for void returns).
   ///
-  /// See the "Managed code execution and shutdown" section of docs/Design.md
-  /// for the model behind managed-code tokens and shutdown.
+  /// See the "Keepalives and shutdown" section of docs/Design.md for the model
+  /// behind keepalive tokens and shutdown.
   template <typename FnT, typename... ArgTs>
-  decltype(auto) callManagedCode(FnT &&Fn, ArgTs &&...Args) {
-    return ManagedCodeCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
-        TaskGroup::Token(ManagedCodeTaskGroup), std::forward<FnT>(Fn),
+  decltype(auto) callWithKeepalive(FnT &&Fn, ArgTs &&...Args) {
+    return KeepaliveCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
+        TaskGroup::Token(KeepaliveTaskGroup), std::forward<FnT>(Fn),
         std::forward<ArgTs>(Args)...);
   }
 
@@ -485,7 +479,8 @@ public:
   /// This method can be called directly, but is expected to be more commonly
   /// called via WrapperFunction::call using a ControllerCaller object (returned
   /// by the controllerCaller method).
-  void callController(OnControllerCallReturnFn OnComplete, HandlerTag T,
+  void callController(OnControllerCallReturnFn OnComplete,
+                      orc_rt_ControllerHandlerTag T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->callController(std::move(OnComplete), T, std::move(ArgBytes));
@@ -500,7 +495,7 @@ public:
   /// Useable as a Caller implementation with WrapperFunction::call.
   class ControllerCaller {
   public:
-    ControllerCaller(Session &S, HandlerTag T) : S(S), T(T) {}
+    ControllerCaller(Session &S, orc_rt_ControllerHandlerTag T) : S(S), T(T) {}
 
     void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
@@ -509,12 +504,12 @@ public:
 
   private:
     Session &S;
-    HandlerTag T;
+    orc_rt_ControllerHandlerTag T;
   };
 
   /// Get a WrapperFunction::call-compatible Caller that will call the given
   /// handler in the controller via Session::callController.
-  ControllerCaller controllerCaller(HandlerTag T) noexcept {
+  ControllerCaller controllerCaller(orc_rt_ControllerHandlerTag T) noexcept {
     return ControllerCaller(*this, T);
   }
 
@@ -558,16 +553,16 @@ private:
   void detachServices(std::vector<Service *> ToNotify, bool ShutdownRequested);
   void completeDetach();
 
-  void waitForManagedCodeTasksThenShutdown();
+  void waitForKeepalivesThenShutdown();
   void proceedToShutdown();
   void shutdownServices(std::vector<Service *> ToNotify);
   void completeShutdown();
 
-  void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
-                         WrapperFunctionBuffer ArgBytes) {
-    TaskGroup::Token T(ManagedCodeTaskGroup);
+  void handleWrapperCall(orc_rt_WrapperFunction Fn,
+                         WrapperFunctionBuffer ArgBytes, uint64_t CallId) {
+    TaskGroup::Token T(KeepaliveTaskGroup);
     if (!T) {
-      // The ManagedCodeTaskGroup is only closed after detach, so if token
+      // The KeepaliveTaskGroup is only closed after detach, so if token
       // acquisition fails we don't try to return an error: the controller
       // should already have signalled error to the caller, and we have no
       // way to transmit an error anyway.
@@ -576,14 +571,14 @@ private:
 
     Dispatch([this, CallId, Fn, ArgBytes = std::move(ArgBytes),
               T = std::move(T)]() mutable {
-      Fn(wrap(this), CallId, &wrapperReturn, ArgBytes.release());
+      Fn(wrap(this), ArgBytes.release(), &wrapperReturn, CallId);
     });
   }
 
   void handleControllerCallResult(
       ControllerAccess::OnControllerCallReturn OnComplete,
       WrapperFunctionBuffer ResultBytes) {
-    TaskGroup::Token T(ManagedCodeTaskGroup);
+    TaskGroup::Token T(KeepaliveTaskGroup);
 
     if (!T) {
       // Contract violation: a deferred completion must precede
@@ -592,7 +587,7 @@ private:
       // one of those was broken; falling through would run the handler
       // unbracketed into a possibly-torn-down Session. Fail loudly.
       assert(false && "handleControllerCallResult on a closed "
-                      "ManagedCodeTaskGroup");
+                      "KeepaliveTaskGroup");
       abort();
     }
 
@@ -622,13 +617,14 @@ private:
     OnComplete.Wrapped(disconnectError());
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
-  static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
-                            orc_rt_WrapperFunctionBuffer ResultBytes);
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes, uint64_t CallId);
+  static void wrapperReturn(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ResultBytes,
+                            uint64_t CallId);
 
   ExecutorProcessInfo EPI;
   DispatchFn Dispatch;
-  std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
+  std::shared_ptr<TaskGroup> KeepaliveTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 

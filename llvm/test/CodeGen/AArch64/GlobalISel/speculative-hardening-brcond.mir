@@ -31,7 +31,7 @@ body:             |
   bb.0:
     liveins: $w0
     successors: %bb.0, %bb.1
-    %reg:gpr(s32) = COPY $w0
+    %reg:gpr(i32) = COPY $w0
     G_BRCOND %reg, %bb.1
     G_BR %bb.0
   bb.1:
@@ -57,9 +57,9 @@ body:             |
   bb.0:
     liveins: $w0
     successors: %bb.0, %bb.1
-    %reg:gpr(s32) = COPY $w0
-    %zero:gpr(s32) = G_CONSTANT i32 0
-    %cmp:gpr(s32) = G_ICMP intpred(eq), %reg, %zero
+    %reg:gpr(i32) = COPY $w0
+    %zero:gpr(i32) = G_CONSTANT i32 0
+    %cmp:gpr(i32) = G_ICMP intpred(eq), %reg, %zero
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -86,9 +86,9 @@ body:             |
   bb.0:
     liveins: $s0, $s1
     successors: %bb.0, %bb.1
-    %reg0:fpr(s32) = COPY $s0
-    %reg1:fpr(s32) = COPY $s1
-    %cmp:gpr(s32) = G_FCMP floatpred(oeq), %reg0, %reg1
+    %reg0:fpr(f32) = COPY $s0
+    %reg1:fpr(f32) = COPY $s1
+    %cmp:gpr(i32) = G_FCMP floatpred(oeq), %reg0, %reg1
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:

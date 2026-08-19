@@ -233,6 +233,20 @@ func.func @invalid_call() {
 
 // -----
 
+llvm.func @invalid_invoke() attributes { personality = @__gxx_personality_v0 } {
+  // expected-error@+1 {{'llvm.invoke' op must have either a `callee` attribute or at least an operand}}
+  "llvm.invoke"()[^bb1, ^bb2] {op_bundle_sizes = array<i32>, operandSegmentSizes = array<i32: 0, 0, 0, 0>} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+}
+
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// -----
+
 func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected indirect call to have 2 trailing types}}
   llvm.call %callee(%arg) : (i8) -> (i8)
@@ -314,7 +328,7 @@ func.func @call_non_llvm_res(%callee : !llvm.ptr) {
 llvm.func @callee_func(i8) -> ()
 
 func.func @callee_arg_mismatch(%arg0 : i32) {
-  // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
+  // expected-error@+1 {{'llvm.call' op operand type mismatch: expected operand type 'i8', but provided 'i32' for operand number 0}}
   llvm.call @callee_func(%arg0) : (i32) -> ()
   llvm.return
 }
@@ -1847,6 +1861,11 @@ llvm.mlir.alias external @y5 : i32 {
 
 // -----
 
+// expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
+llvm.named_metadata "not_node" [#llvm.md_string<"int">]
+
+// -----
+
 module {
   llvm.func @foo()
 
@@ -2165,4 +2184,47 @@ func.func @nvvm_read_sreg_clock64_wrong_type() {
   // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
   %0 = nvvm.read.ptx.sreg.clock64 : i32
   return
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.alias' invalid value for thread_local}}
+llvm.mlir.alias private thread_local(invalid) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.alias private thread_local(localexec, generaldynamic) unnamed_addr @a30 {dso_local} : i32 {
+  %0 = llvm.mlir.addressof @g30 : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1{{custom op 'llvm.mlir.global' invalid value for thread_local}}
+llvm.mlir.global internal thread_local(invalid) constant @thread_local(42 : i32) : i32
+
+// -----
+
+// expected-error@+1{{expected ')'}}
+llvm.mlir.global internal thread_local(generaldynamic, localexec) constant @thread_local(42 : i32) : i32
+
+
+// -----
+
+llvm.func @md_addrspacecast_bad_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_string<"not a pointer">}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_string<"not a pointer">, 0>
+  llvm.return
+}
+
+// -----
+
+llvm.func @md_addrspacecast_int_operand() {
+  // expected-error@+1{{expected #llvm.md_global_value, #llvm.md_null, or #llvm.md_addrspacecast operand, but got #llvm.md_const<42 : i32>}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_addrspacecast<#llvm.md_const<42 : i32>, 0>
+  llvm.return
 }

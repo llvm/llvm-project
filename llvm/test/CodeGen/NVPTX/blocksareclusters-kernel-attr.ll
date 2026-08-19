@@ -12,7 +12,6 @@ define ptx_kernel void @kernel1(ptr %input, ptr %output) #0 #1 #2 {
 ; CHECK-NEXT:  .blocksareclusters
 ; CHECK-NEXT:  {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret void
@@ -27,7 +26,6 @@ define ptx_kernel void @kernel2(ptr %input, ptr %output) #0 #3 #4 {
 ; CHECK-NEXT:  .blocksareclusters // @kernel2
 ; CHECK-NEXT:  {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   ret void
@@ -41,7 +39,6 @@ define ptx_kernel void @kernel3(ptr %input, ptr %output) #0 #5 #6 {
 ; CHECK-NEXT:  .reqnctapercluster 2, 2
 ; CHECK-NEXT:  .blocksareclusters // @kernel3
 ; CHECK-NEXT:  {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
