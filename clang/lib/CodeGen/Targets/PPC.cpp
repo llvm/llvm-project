@@ -362,7 +362,18 @@ class PPC32_SVR4_ABIInfo : public DefaultABIInfo {
   bool IsSoftFloatABI;
   bool IsRetSmallStructInRegABI;
 
+  // Number of GPRs (r3..=r10) available for passing arguments, and their width.
+  static const int NumArgGPRs = 8;
+  static const unsigned GPRBits = 32;
+
+  bool isComplexGnuABI() const {
+    return !getTarget().getTriple().isOSDarwin() &&
+           !getContext().getLangOpts().isCompatibleWith(
+               LangOptions::ClangABI::Ver23);
+  }
+
   CharUnits getParamTypeAlignment(QualType Ty) const;
+  ABIArgInfo classifyComplexType(QualType Ty) const;
 
 public:
   PPC32_SVR4_ABIInfo(CodeGen::CodeGenTypes &CGT, bool SoftFloatABI,
@@ -371,12 +382,15 @@ public:
         IsRetSmallStructInRegABI(RetSmallStructInRegABI) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, int &ArgGPRsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
     if (!getCXXABI().classifyReturnType(FI))
       FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+
+    int ArgGPRsLeft = NumArgGPRs;
     for (auto &I : FI.arguments())
-      I.info = classifyArgumentType(I.type);
+      I.info = classifyArgumentType(I.type, ArgGPRsLeft);
   }
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
@@ -427,8 +441,93 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
   return CharUnits::fromQuantity(4);
 }
 
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyComplexType(QualType Ty) const {
+  assert(Ty->isAnyComplexType() && "not a complex type");
+
+  uint64_t Size = getContext().getTypeSize(Ty);
+  llvm::LLVMContext &VMC = getVMContext();
+  llvm::Type *I32 = llvm::Type::getInt32Ty(VMC);
+
+  // Coerce to an integer for _Complex char and _Complex short.
+  if (Size <= GPRBits)
+    return ABIArgInfo::getDirect(llvm::IntegerType::get(VMC, Size));
+
+  // Coerce to a vector <N x i32> for _Complex float and _Complex int.
+  // A vector gives this the correct 8-byte register alignment.
+  if (Size == 2 * GPRBits)
+    return ABIArgInfo::getDirect(llvm::FixedVectorType::get(I32, 2));
+
+  // Coerce to an array [N x i32] for _Complex double and similar.
+  // An array of i32 gives the correct 4-byte register alignment.
+  return ABIArgInfo::getDirect(llvm::ArrayType::get(I32, Size / GPRBits));
+}
+
+ABIArgInfo PPC32_SVR4_ABIInfo::classifyArgumentType(QualType Ty,
+                                                    int &ArgGPRsLeft) const {
+  assert(ArgGPRsLeft <= NumArgGPRs && "Arg GPR tracking underflow");
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  bool IsComplex = Ty->isAnyComplexType() && isComplexGnuABI();
+
+  // Use the default implementation when this argument is not relevant for GPR
+  // budget:
+  //
+  // - floating-point types are passed in FPRs
+  // - when GPRs are already exhausted
+  //
+  // Complex types (when GNU compatible) always need custom handling.
+  if (!IsComplex && (!ArgGPRsLeft || (Ty->isFloatingType() && !IsSoftFloatABI)))
+    return DefaultABIInfo::classifyArgumentType(Ty);
+
+  uint64_t TypeSize = getContext().getTypeSize(Ty);
+  uint64_t RegsNeeded = (TypeSize + GPRBits - 1) / GPRBits;
+
+  if (IsComplex || !isAggregateTypeForABI(Ty)) {
+    // Complex values and scalars are passed in GPRs.
+
+    // An 8-byte value (e.g. _Complex float, _Complex int, i64, soft-float
+    // double) must start in an even-numbered GPR, so skip an odd register to
+    // keep the pair aligned.
+    if (TypeSize == 2 * GPRBits && ArgGPRsLeft % 2 == 1)
+      ArgGPRsLeft -= 1;
+
+    if (RegsNeeded <= (uint64_t)ArgGPRsLeft) {
+      // All fits.
+      ArgGPRsLeft -= RegsNeeded;
+
+      // _Complex needs a type coercion to be passed correctly.
+      if (IsComplex)
+        return classifyComplexType(Ty);
+    } else if (IsComplex) {
+      // Never split a Complex value across GPRs and the stack. When a Complex
+      // value does not fit in the remaining GPRs, it is passed via the stack
+      // and the remaining GPRs are considered consumed, so any further
+      // arguments will be passed via the stack as well.
+
+      // _Complex needs a type coercion to be passed correctly.
+      llvm::Type *CoerceTy = classifyComplexType(Ty).getCoerceToType();
+
+      // Soak up the remaining GPRs with a padding argument.
+      llvm::Type *I32 = llvm::Type::getInt32Ty(getVMContext());
+      llvm::Type *Padding =
+          ArgGPRsLeft > 0 ? llvm::ArrayType::get(I32, ArgGPRsLeft) : nullptr;
+
+      ArgGPRsLeft = 0;
+      return ABIArgInfo::getDirect(CoerceTy, /*Offset=*/0, Padding);
+    }
+  } else {
+    // Other aggregates are passed indirectly, and consume one GPR.
+    ArgGPRsLeft -= 1;
+  }
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
+}
+
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
   uint64_t Size;
+
+  if (RetTy->isAnyComplexType() && isComplexGnuABI())
+    return classifyComplexType(RetTy);
 
   // -msvr4-struct-return puts small aggregates in GPR3 and GPR4.
   if (isAggregateTypeForABI(RetTy) && IsRetSmallStructInRegABI &&
@@ -464,8 +563,10 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     TI.Align = getParamTypeAlignment(Ty);
 
     CharUnits SlotSize = CharUnits::fromQuantity(4);
+    int ArgGPRsLeft = NumArgGPRs;
     return emitVoidPtrVAArg(CGF, VAList, Ty,
-                            classifyArgumentType(Ty).isIndirect(), TI, SlotSize,
+                            classifyArgumentType(Ty, ArgGPRsLeft).isIndirect(),
+                            TI, SlotSize,
                             /*AllowHigherAlign=*/true, Slot);
   }
 

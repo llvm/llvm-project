@@ -93,6 +93,9 @@ features cannot lower the translation-unit ABI level;
   always passed the parts separately. `-fclang-abi-compat=23` restores the previous
   behavior. (#GH212109)
 
+- On PowerPC (32-bit), the ABI of `_Complex` now matches GCC.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH208917)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
