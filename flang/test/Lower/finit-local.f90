@@ -289,8 +289,10 @@ subroutine test_derived(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_derived
-! ZERO: fir.zero_bits !fir.type<{{.*}}>
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.type<{{.*}}>>
+! ZERO: fir.do_loop
+! ZERO:   fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:   arith.constant 0 : i8
+! ZERO:   fir.store {{.*}} : !fir.ref<i8>
 
 
 ! HEX-LABEL:  func.func @_QPtest_derived

@@ -53,7 +53,8 @@ end subroutine
 
 
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_in_struct{{.*}}(
-! ZERO:        store {{.*}} zeroinitializer,
+! ZERO:        getelementptr i8, ptr {{.*}}, i64
+! ZERO:        store i8 0,
 
 ! ---------------------------------------------------------------------------
 ! Rank-2 array INTEGER(4)(3,4) -- 12 elements; flat loop via rank-1 view
@@ -120,7 +121,8 @@ end subroutine
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_of_struct{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 2, %{{.*}} ]
 ! ZERO:        getelementptr %{{.*}}t, ptr {{.*}}, i64
-! ZERO:        store {{.*}} zeroinitializer,
+! ZERO:        getelementptr i8, ptr {{.*}}, i64
+! ZERO:        store i8 0,
 
 ! ---------------------------------------------------------------------------
 ! Rank-2 array of derived type  type(t) :: x(2,3) -- 6 elements
@@ -147,4 +149,62 @@ end subroutine
 ! ZERO-LABEL: define {{.*}}@{{.*}}test_array_of_struct_2d{{.*}}(
 ! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 6, %{{.*}} ]
 ! ZERO:        getelementptr %{{.*}}t, ptr {{.*}}, i64
-! ZERO:        store {{.*}} zeroinitializer,
+! ZERO:        getelementptr i8, ptr {{.*}}, i64
+! ZERO:        store i8 0,
+
+! ---------------------------------------------------------------------------
+! Tail-padded scalar: integer(4) :: a followed by integer(1) :: b
+! LLVM lays this out as { i32, i8 } with 3 bytes of tail padding (alloc=8B).
+! Both zero and hex modes must write all 8 bytes, not just the 5 typed bytes.
+! ---------------------------------------------------------------------------
+subroutine test_tail_padded_scalar(res_a, res_b)
+  type :: t
+    integer(4) :: a
+    integer(1) :: b
+  end type
+  type(t) :: x
+  res_a = x%a
+  res_b = x%b
+end subroutine
+! HEX-LABEL: define {{.*}}@{{.*}}test_tail_padded_scalar{{.*}}(
+! HEX:         phi i64 [ {{.*}}, {{.*}} ], [ 8, %{{.*}} ]
+! HEX:         getelementptr i8, ptr {{.*}}, i64
+! HEX:         store i8 -86,
+! HEX-NOT:     store {{.*}} zeroinitializer,
+
+! ZERO-LABEL: define {{.*}}@{{.*}}test_tail_padded_scalar{{.*}}(
+! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 8, %{{.*}} ]
+! ZERO:        getelementptr i8, ptr {{.*}}, i64
+! ZERO:        store i8 0,
+! ZERO-NOT:    store {{.*}} zeroinitializer,
+
+! ---------------------------------------------------------------------------
+! Array of tail-padded records: type(t) :: x(3)
+! Each element is 8 bytes (5 typed + 3 tail padding); 3 elements = 24 bytes.
+! Both zero and hex modes must write all 8 bytes per element.
+! ---------------------------------------------------------------------------
+subroutine test_array_of_tail_padded(res_a, res_b)
+  type :: t
+    integer(4) :: a
+    integer(1) :: b
+  end type
+  type(t) :: x(3)
+  res_a = x(1)%a
+  res_b = x(1)%b
+end subroutine
+! HEX-LABEL: define {{.*}}@{{.*}}test_array_of_tail_padded{{.*}}(
+! HEX:         phi i64 [ {{.*}}, {{.*}} ], [ 3, %{{.*}} ]
+! HEX:         getelementptr %{{.*}}t, ptr {{.*}}, i64
+! HEX:         phi i64 [ {{.*}}, {{.*}} ], [ 8, %{{.*}} ]
+! HEX:         getelementptr i8, ptr {{.*}}, i64
+! HEX:         store i8 -86,
+! HEX-NOT:     store {{.*}} zeroinitializer,
+
+! ZERO-LABEL: define {{.*}}@{{.*}}test_array_of_tail_padded{{.*}}(
+! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 3, %{{.*}} ]
+! ZERO:        getelementptr %{{.*}}t, ptr {{.*}}, i64
+! ZERO:        phi i64 [ {{.*}}, {{.*}} ], [ 8, %{{.*}} ]
+! ZERO:        getelementptr i8, ptr {{.*}}, i64
+! ZERO:        store i8 0,
+! ZERO-NOT:    store {{.*}} zeroinitializer,
+
