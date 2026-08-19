@@ -4462,9 +4462,10 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (NumOpcodes < 2 || Src.empty())
     return false;
 
+  // RegBankSelect splits wider VALU logic ops and widens 1-bit ones, so only
+  // 16 and 32 bit types reach here. Note that <2 x i16> is 32 bits wide.
   unsigned Size = MRI->getType(DstReg).getSizeInBits();
-  if (Size != 16 && Size != 32)
-    return false;
+  assert((Size == 16 || Size == 32) && "Unexpected VALU logic op size");
   const bool IsB32 = Size == 32;
   if (NumOpcodes == 2 && IsB32) {
     // Avoid using BITOP3 for OR3, XOR3, AND_OR. This is not faster but makes
