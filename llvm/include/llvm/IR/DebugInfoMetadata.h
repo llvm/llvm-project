@@ -3074,7 +3074,9 @@ public:
   /// Raw form: returns the operand without casting, so it is safe to call
   /// before forward-ref resolution (the operand may still be a placeholder).
   Metadata *getRawIRLayers() const {
-    return HasIRLayers ? getOperand(getNumOperands() - 1) : nullptr;
+    if (HasIRLayers)
+      return getOperand(getNumOperands() - 1);
+    return nullptr;
   }
   DILayerLocList *getIRLayers() const {
     return cast_if_present<DILayerLocList>(getRawIRLayers());
