@@ -1962,8 +1962,12 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-GI-NEXT:    v_alignbit_b32 v2, v0, v0, 31
+; GFX7-GI-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX7-GI-NEXT:    v_lshr_b64 v[0:1], v[2:3], 1
+; GFX7-GI-NEXT:    v_lshlrev_b32_e32 v2, 31, v2
+; GFX7-GI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_signed_i64_f16:
@@ -2047,8 +2051,11 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
-; GFX12-GI-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX12-GI-NEXT:    v_alignbit_b32 v2, v0, v0, 31
+; GFX12-GI-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX12-GI-NEXT:    v_lshrrev_b64 v[0:1], 1, v[2:3]
+; GFX12-GI-NEXT:    v_lshl_or_b32 v1, v2, 31, v1
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i64 @llvm.fptosi.sat.i64.f16(half %f)
     ret i64 %x
@@ -2375,8 +2382,16 @@ define i64 @test_s_signed_i64_f16(half inreg %f) nounwind {
 ; GFX7-GI:       ; %bb.0:
 ; GFX7-GI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GI-NEXT:    v_cvt_f32_f16_e32 v0, s16
-; GFX7-GI-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7-GI-NEXT:    s_mov_b32 s4, 0
 ; GFX7-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX7-GI-NEXT:    v_alignbit_b32 v0, v0, v0, 31
+; GFX7-GI-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX7-GI-NEXT:    s_ashr_i32 s7, s6, 31
+; GFX7-GI-NEXT:    s_lshl_b32 s5, s6, 31
+; GFX7-GI-NEXT:    s_lshr_b64 s[6:7], s[6:7], 1
+; GFX7-GI-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
+; GFX7-GI-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-GI-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-GI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: test_s_signed_i64_f16:
@@ -2439,11 +2454,20 @@ define i64 @test_s_signed_i64_f16(half inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GI-NEXT:    s_cvt_f32_f16 s0, s0
-; GFX12-GI-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-GI-NEXT:    s_mov_b32 s2, 0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_cvt_i32_f32 s0, s0
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GI-NEXT:    v_alignbit_b32 v0, s0, s0, 31
+; GFX12-GI-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GI-NEXT:    s_ashr_i32 s1, s0, 31
+; GFX12-GI-NEXT:    s_lshl_b32 s3, s0, 31
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GI-NEXT:    s_lshr_b64 s[0:1], s[0:1], 1
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GI-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GI-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
     %x = call i64 @llvm.fptosi.sat.i64.f16(half %f)
     ret i64 %x

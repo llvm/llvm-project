@@ -7464,21 +7464,71 @@ LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
   if (TypeIdx != 0)
     return UnableToLegalize;
 
-  bool IsSigned = MI.getOpcode() == TargetOpcode::G_FPTOSI;
+  unsigned Opcode = MI.getOpcode();
+  bool IsSigned =
+      Opcode == TargetOpcode::G_FPTOSI || Opcode == TargetOpcode::G_FPTOSI_SAT;
+  bool IsSaturating = Opcode == TargetOpcode::G_FPTOSI_SAT ||
+                      Opcode == TargetOpcode::G_FPTOUI_SAT;
 
   Register Src = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(Src);
 
-  // If all finite floats fit into the narrowed integer type, we can just swap
-  // out the result type. This is practically only useful for conversions from
-  // half to at least 16-bits, so just handle the one case.
-  if (SrcTy.getScalarType() != LLT::scalar(16) ||
-      NarrowTy.getScalarSizeInBits() < (IsSigned ? 17u : 16u))
+  // If all finite floats fit into the narrowed integer type, perform the
+  // conversion at the narrower width and extend it. This is practically only
+  // useful for conversions from half, so just handle the one case.
+  //
+  // For saturating conversions, reserve the narrow signed extrema to represent
+  // the wide extrema. The signed case needs an extra value bit so rotating an
+  // ordinary result left by one does not change its sign.
+  unsigned MinSize =
+      IsSaturating ? (IsSigned ? 18u : 17u) : (IsSigned ? 17u : 16u);
+  if (SrcTy.getScalarType() != LLT::float16() ||
+      NarrowTy.getScalarSizeInBits() < MinSize)
     return UnableToLegalize;
 
   Observer.changingInstr(MI);
-  narrowScalarDst(MI, NarrowTy, 0,
-                  IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT);
+  if (!IsSaturating) {
+    narrowScalarDst(MI, NarrowTy, 0,
+                    IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT);
+  } else if (!IsSigned) {
+    // Finite values remain positive. Map the narrow unsigned maximum produced
+    // for +inf to the wide unsigned maximum, using sign extension for the
+    // usual power-of-two types.
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    if (isPowerOf2_32(DstTy.getScalarSizeInBits())) {
+      narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_SEXT);
+    } else {
+      MachineOperand &DstOp = MI.getOperand(0);
+      Register Dst = DstOp.getReg();
+      Register NarrowDst = MRI.createGenericVirtualRegister(NarrowTy);
+      DstOp.setReg(NarrowDst);
+
+      MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+      auto Ext = MIRBuilder.buildZExt(DstTy, NarrowDst);
+      auto NarrowMax = MIRBuilder.buildConstant(NarrowTy, -1);
+      LLT CondTy = NarrowTy.changeElementType(LLT::integer(1));
+      auto IsMax =
+          MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, NarrowDst, NarrowMax);
+      auto DstMax = MIRBuilder.buildConstant(
+          DstTy, APInt::getMaxValue(DstTy.getScalarSizeInBits()));
+      MIRBuilder.buildSelect(Dst, IsMax, DstMax, Ext);
+    }
+  } else {
+    // Move the narrow signed extrema next to zero, sign extend, and rotate them
+    // back to the wide signed extrema. Ordinary finite results are unchanged.
+    MachineOperand &DstOp = MI.getOperand(0);
+    Register Dst = DstOp.getReg();
+    LLT DstTy = MRI.getType(Dst);
+    Register NarrowDst = MRI.createGenericVirtualRegister(NarrowTy);
+    DstOp.setReg(NarrowDst);
+
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+    auto NarrowOne = MIRBuilder.buildConstant(NarrowTy, 1);
+    auto NarrowRot = MIRBuilder.buildRotateLeft(NarrowTy, NarrowDst, NarrowOne);
+    auto Ext = MIRBuilder.buildSExt(DstTy, NarrowRot);
+    auto DstOne = MIRBuilder.buildConstant(DstTy, 1);
+    MIRBuilder.buildRotateRight(Dst, Ext, DstOne);
+  }
   Observer.changedInstr(MI);
   return Legalized;
 }
