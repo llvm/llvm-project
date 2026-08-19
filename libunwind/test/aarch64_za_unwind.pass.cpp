@@ -9,6 +9,10 @@
 // REQUIRES: target={{aarch64-.+}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
+// Fails on targets that support SME but where the system libunwind is too old
+// to disable ZA before resuming from unwinding.
+// UNSUPPORTED: stdlib=system && target={{.+}}-apple-{{.*}}{{(11|12|13|14|15|26)(\.\d+)?}}
+
 #include <alloca.h>
 #include <libunwind.h>
 #include <stdint.h>

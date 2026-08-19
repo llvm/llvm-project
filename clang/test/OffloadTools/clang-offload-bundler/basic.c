@@ -236,11 +236,11 @@
 // RUN: diff %t.empty %t.res.tgt2
 
 // Check that bindler prints an error if given host bundle does not exist in the fat binary.
-// RUN: not clang-offload-bundler -type=s -targets=host-amdgcn-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle 2>&1 | FileCheck %s --check-prefix CK-NO-HOST-BUNDLE
-// CK-NO-HOST-BUNDLE: error: Can't find bundles for host-amdgcn-xxx-linux-
+// RUN: not clang-offload-bundler -type=s -targets=host-amdgpu-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle 2>&1 | FileCheck %s --check-prefix CK-NO-HOST-BUNDLE
+// CK-NO-HOST-BUNDLE: error: Can't find bundles for host-amdgpu-xxx-linux-
 
 // Check missing host entry is allowed with -allow-missing-bundles
-// RUN: clang-offload-bundler -type=s -targets=host-amdgcn-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle -allow-missing-bundles
+// RUN: clang-offload-bundler -type=s -targets=host-amdgpu-xxx-linux-gnu,openmp-powerpc64le-ibm-linux-gnu -output=%t.res.s -output=%t.res.tgt1 -input=%t.bundle3.s -unbundle -allow-missing-bundles
 
 //
 // Check binary bundle/unbundle. The content that we have before bundling must be the same we have after unbundling.
@@ -356,30 +356,30 @@
 //
 // Check error due to missing bundles
 //
-// RUN: clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx900 -input=%t.bc -input=%t.tgt1 -output=%t.hip.bundle.bc
+// RUN: clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.00-amd-amdhsa--gfx900 -input=%t.bc -input=%t.tgt1 -output=%t.hip.bundle.bc
 // RUN: not clang-offload-bundler -type=bc -input=%t.hip.bundle.bc -output=%t.tmp.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
 // RUN: not clang-offload-bundler -type=bc -input=%t.hip.bundle.bc -output=%t.tmp.bc -output=%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx900 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS1 %s
-// MISS1: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906
+// MISS1: error: Can't find bundles for hip-amdgpu9.06-amd-amdhsa--gfx906
 // RUN: not clang-offload-bundler -type=bc -input=%t.hip.bundle.bc -output=%t.tmp.bc -output=%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS2 %s
-// MISS2: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx803 and hip-amdgcn-amd-amdhsa--gfx906
+// MISS2: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx803 and hip-amdgpu9.06-amd-amdhsa--gfx906
 // RUN: not clang-offload-bundler -type=bc -input=%t.hip.bundle.bc -output=%t.tmp.bc -output=%t.tmp2.bc -output=%t.tmp3.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803,hip-amdgcn-amd-amdhsa--gfx1010 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx803,hip-amdgcn-amd-amdhsa--gfx1010 \
 // RUN:   2>&1 | FileCheck -check-prefix=MISS3 %s
-// MISS3: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx1010, hip-amdgcn-amd-amdhsa--gfx803, and hip-amdgcn-amd-amdhsa--gfx906
+// MISS3: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx1010, hip-amdgcn-amd-amdhsa--gfx803, and hip-amdgpu9.06-amd-amdhsa--gfx906
 
 //
 // Check error due to duplicate targets
 //
-// RUN: not clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN: not clang-offload-bundler -type=bc -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgpu9.00-amd-amdhsa--gfx900 \
 // RUN:   -input=%t.bc -input=%t.tgt1 -input=%t.tgt1 -output=%t.hip.bundle.bc 2>&1 | FileCheck -check-prefix=DUP %s
 // RUN: not clang-offload-bundler -type=bc -input=%t.hip.bundle.bc -output=%t.tmp.bc -output=%t.tmp2.bc -unbundle \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906,hip-amdgpu9.06-amd-amdhsa--gfx906 \
 // RUN:   2>&1 | FileCheck -check-prefix=DUP %s
 // DUP: error: Duplicate targets are not allowed
 //
@@ -413,26 +413,26 @@
 // archive of unbundled bitcodes.
 //
 // RUN: mkdir -p %t.dir
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.dir/hip_bundle1.bc
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.dir/hip_bundle2.bc
 // RUN: llvm-ar cr %t.dir/hip_archive.a %t.dir/hip_bundle1.bc %t.dir/hip_bundle2.bc
-// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.dir/hip_900.a -output=%t.dir/hip_906.a -input=%t.dir/hip_archive.a
 // RUN: llvm-ar t %t.dir/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
 // RUN: llvm-ar t %t.dir/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
-// HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
-// HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle1-hip-amdgpu9.00-amd-amdhsa--gfx900
+// HIP-AR-900-DAG: hip_bundle2-hip-amdgpu9.00-amd-amdhsa--gfx900
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 // HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 
 //
 // Check unbundling archive for host target
 //
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.00-amd-amdhsa--gfx900 \
 // RUN:   -input=%t.a.o -input=%t.tgt1 -output=%t.a.bundled.o
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.00-amd-amdhsa--gfx900 \
 // RUN:   -input=%t.b.o -input=%t.tgt1 -output=%t.b.bundled.o
 // RUN: rm -f %t.bundled.a
 // RUN: llvm-ar cr %t.bundled.a %t.a.bundled.o %t.b.bundled.o
@@ -450,118 +450,118 @@
 // the input file is not an archive.
 //
 // RUN: echo 'This is not an archive file.' > %t.non-archive
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu9.00-amd-amdhsa--gfx900 \
 // RUN:   -output=%t.res.a -input=%t.non-archive --allow-missing-bundles 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=INVARCHIVE
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu9.00-amd-amdhsa--gfx900 \
 // RUN:   -output=%t.res.a -input=%t.non-archive 2>&1 | FileCheck %s -check-prefix=INVARCHIVE
 // INVARCHIVE: error: file too small to be an archive
 
 //
 // Check bundling without host target is allowed for HIP.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc
 // RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST %s
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.00-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
 // NOHOST-NOT: host-
-// NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-DAG: hip-amdgpu9.00-amd-amdhsa--gfx900
 // NOHOST-DAG: hip-amdgcn-amd-amdhsa--gfx906
 
 //
 // Check bundling ID compatibility for HIP.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack- \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack+ \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack- \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack+ \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc
-// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack+ \
+// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906 \
+// RUN:   -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack+ \
 // RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CONFLICT-TID
-// CONFLICT-TID: error: Cannot bundle inputs with conflicting targets: 'hip-amdgcn-amd-amdhsa--gfx906' and 'hip-amdgcn-amd-amdhsa--gfx906:xnack+'
+// CONFLICT-TID: error: Cannot bundle inputs with conflicting targets: 'hip-amdgpu9.06-amd-amdhsa--gfx906' and 'hip-amdgpu9.06-amd-amdhsa--gfx906:xnack+'
 
 //
 // Check extracting bundle entry with compatible target ID for HIP.
 //
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906 \
 // RUN:   -input=%t.tgt1 -output=%t.hip.bundle.bc
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack- \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack- \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack+ \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack+ \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 
-// RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack+ \
+// RUN: clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack+ \
 // RUN:   -input=%t.tgt1 -output=%t.hip.bundle.bc
-// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906:xnack- \
+// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906:xnack- \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle 2>&1 | FileCheck %s -check-prefix=NOXNACK
-// NOXNACK: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906:xnack-
-// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx906 \
+// NOXNACK: error: Can't find bundles for hip-amdgpu9.06-amd-amdhsa--gfx906:xnack-
+// RUN: not clang-offload-bundler -type=bc -targets=hip-amdgpu9.06-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.res.tgt1 -input=%t.hip.bundle.bc -unbundle 2>&1 | FileCheck %s -check-prefix=NOGFX906
-// NOGFX906: error: Can't find bundles for hip-amdgcn-amd-amdhsa--gfx906
+// NOGFX906: error: Can't find bundles for hip-amdgpu9.06-amd-amdhsa--gfx906
 
 //
 // Check hip and hipv4 are compatible as offload kind.
 //
-// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
-// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgpu9.0a-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgpu9.0a-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 
-// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgcn-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
-// RUN: clang-offload-bundler -type=o -targets=hip-amdgcn-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
+// RUN: clang-offload-bundler -type=o -targets=hipv4-amdgpu9.0a-amd-amdhsa--gfx90a -input=%t.tgt1 -output=%t.bundle3.o
+// RUN: clang-offload-bundler -type=o -targets=hip-amdgpu9.0a-amd-amdhsa--gfx90a:sramecc-:xnack+ -output=%t.res.tgt1 -input=%t.bundle3.o -unbundle
 // RUN: diff %t.tgt1 %t.res.tgt1
 
 //
 // Check archive unbundling
 //
 // Create few code object bundles and archive them to create an input archive
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.simple.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgcn-amd-amdhsa--gfx903 -input=%t.o -input=%t.tgt1 -output=%t.simple1.bundle
-// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx906 -input=%t.o -input=%t.tgt1 -output=%t.simple2.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgpu9.06-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.simple.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgpu-amd-amdhsa--gfx903 -input=%t.o -input=%t.tgt1 -output=%t.simple1.bundle
+// RUN: clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.06-amd-amdhsa--gfx906 -input=%t.o -input=%t.tgt1 -output=%t.simple2.bundle
 // RUN: llvm-ar cr %t.input-archive.a %t.simple.bundle %t.simple1.bundle %t.simple2.bundle
 
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a -output=%t-archive-gfx908-simple.a
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu9.06-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx908 -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a -output=%t-archive-gfx908-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906:xnack+ -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu9.06-amd-amdhsa--gfx906:xnack+ -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a
 // RUN: llvm-ar t %t-archive-gfx906-simple.a | FileCheck %s -check-prefix=GFX906
-// GFX906: simple-openmp-amdgcn-amd-amdhsa--gfx906
+// GFX906: simple-openmp-amdgpu9.06-amd-amdhsa--gfx906
 // RUN: llvm-ar t %t-archive-gfx908-simple.a | FileCheck %s -check-prefix=GFX908
 // GFX908-NOT: {{gfx906}}
-// RUN: not clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa--gfx906:sramecc+ -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bad.bundle 2>&1 | FileCheck %s -check-prefix=BADTARGETS
-// BADTARGETS: error: Cannot bundle inputs with conflicting targets: 'openmp-amdgcn-amd-amdhsa--gfx906' and 'openmp-amdgcn-amd-amdhsa--gfx906:sramecc+'
+// RUN: not clang-offload-bundler -type=o -targets=host-x86_64-unknown-linux-gnu,openmp-amdgpu9.06-amd-amdhsa--gfx906,openmp-amdgpu9.06-amd-amdhsa--gfx906:sramecc+ -input=%t.o -input=%t.tgt1 -input=%t.tgt2 -output=%t.bad.bundle 2>&1 | FileCheck %s -check-prefix=BADTARGETS
+// BADTARGETS: error: Cannot bundle inputs with conflicting targets: 'openmp-amdgpu9.06-amd-amdhsa--gfx906' and 'openmp-amdgpu9.06-amd-amdhsa--gfx906:sramecc+'
 
 // Check for error if no compatible code object is found in the heterogeneous archive library
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-incompatible.a 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLEARCHIVE
-// INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa--gfx803' in heterogeneous archive library
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu8.03-amd-amdhsa--gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-incompatible.a 2>&1 | FileCheck %s -check-prefix=INCOMPATIBLEARCHIVE
+// INCOMPATIBLEARCHIVE: error: no compatible code object found for the target 'openmp-amdgpu8.03-amd-amdhsa--gfx803' in heterogeneous archive library
 
 // Check creation of empty archive if allow-missing-bundles is present and no compatible code object is found in the heterogeneous archive library
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-empty.a -allow-missing-bundles
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu8.03-amd-amdhsa--gfx803 -input=%t.input-archive.a -output=%t-archive-gfx803-empty.a -allow-missing-bundles
 // RUN: cat %t-archive-gfx803-empty.a | FileCheck %s -check-prefix=EMPTYARCHIVE
 // EMPTYARCHIVE: !<arch>
 
 // Check compatibility of OpenMP code objects found in the heterogeneous archive library with HIP code objects of the target
-// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908 -input=%t.input-archive.a -output=%t-hip-archive-gfx906-simple.a -output=%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible
+// RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgpu9.06-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908 -input=%t.input-archive.a -output=%t-hip-archive-gfx906-simple.a -output=%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible
 // RUN: llvm-ar t %t-hip-archive-gfx906-simple.a | FileCheck %s -check-prefix=HIPOPENMPCOMPAT
-// HIPOPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa--gfx906
+// HIPOPENMPCOMPAT: simple-openmp-amdgpu9.06-amd-amdhsa--gfx906
 // RUN: llvm-ar t %t-hipv4-archive-gfx908-simple.a | FileCheck %s -check-prefix=HIPv4OPENMPCOMPAT
 // HIPv4OPENMPCOMPAT: simple-openmp-amdgcn-amd-amdhsa--gfx908
 
 // Check compatibility of HIP code objects found in the heterogeneous archive library with OpenMP code objects of the target
-// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906 \
+// RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu9.06-amd-amdhsa--gfx906 \
 // RUN:   -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible
 // RUN: llvm-ar t %t.dir/hip-openmp_906.a | FileCheck -check-prefix=OPENMPHIPCOMPAT %s
 // OPENMPHIPCOMPAT: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 
 // Check if a malformat bundle id can be detected and an error can be emitted.
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-WRONG-FORMAT
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu-amd-amdhsa -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-WRONG-FORMAT
 // ERROR-WRONG-FORMAT: error: Targets need to follow the format '<offload kind>-<target triple>', where '<target triple>' follows the format '<kind>-<arch>-<vendor>-<os>-<env>[-<target id>[:target features]]'.
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906 -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-NO-ENV
-// ERROR-NO-ENV: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa--'
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgpu-amd-amdhsa-gfx906 -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-NO-ENV
+// ERROR-NO-ENV: error: no compatible code object found for the target 'openmp-amdgpu-amd-amdhsa--'
 
 // Some code so that we can create a binary out of this file.
 int A = 0;

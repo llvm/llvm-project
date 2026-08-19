@@ -63,6 +63,12 @@ static ReductionOpsSet reductionLogicalSet{
 
 namespace Fortran::semantics {
 
+template <>
+void IterateOverMembers(
+    const AccClauseSet &set, std::function<void(llvm::acc::Clause)> visitor) {
+  set.IterateOverMembers(visitor);
+}
+
 static constexpr inline AccClauseSet
     computeConstructOnlyAllowedAfterDeviceTypeClauses{
         llvm::acc::Clause::ACCC_async, llvm::acc::Clause::ACCC_wait,
@@ -514,6 +520,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
     // Restriction - line 2669
     CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
         updateOnlyAllowedAfterDeviceTypeClauses);
+    // An update directive may not appear within a compute construct.
+    CheckNotInComputeConstruct();
     break;
   case llvm::acc::Directive::ACCD_init:
   case llvm::acc::Directive::ACCD_shutdown:

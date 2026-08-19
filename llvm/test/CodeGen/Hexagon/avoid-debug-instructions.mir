@@ -1,0 +1,50 @@
+# RUN: llc -mtriple=hexagon -run-pass prolog-epilog -o - %s | FileCheck %s
+
+## Check that the spill slot optimization in HexagonFrameLowering ignores debug
+## instructions. A DBG_VALUE referring to a spill slot must not prevent the
+## store/load pair from being replaced with register copies, otherwise the
+## generated code would differ between builds with and without debug info.
+
+# CHECK-LABEL: name: f
+# CHECK-NOT: S2_storeri_io
+# CHECK: [[TMP:\$r[0-9]+]] = COPY $r0
+# CHECK: DBG_VALUE
+# CHECK: $r0 = COPY killed [[TMP]]
+# CHECK-NOT: L2_loadri_io
+
+--- |
+  target triple = "hexagon-unknown-unknown-elf"
+
+  define i32 @f(i32 %a) !dbg !5 {
+  entry:
+    ret i32 %a
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = !{i32 7, !"Dwarf Version", i32 4}
+  !4 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !5 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{!4, !4}
+  !8 = !DILocalVariable(name: "a", scope: !5, file: !1, line: 1, type: !4)
+  !9 = !DILocation(line: 1, column: 1, scope: !5)
+...
+---
+name: f
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    liveins: $r0
+
+    S2_storeri_io %stack.0, 0, $r0 :: (store (s32) into %stack.0)
+    DBG_VALUE %stack.0, 0, !8, !DIExpression(), debug-location !9
+    $r0 = L2_loadri_io %stack.0, 0 :: (load (s32) from %stack.0)
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...

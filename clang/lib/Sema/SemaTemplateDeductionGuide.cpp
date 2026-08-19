@@ -28,10 +28,10 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -889,14 +889,15 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<TemplateArgument> DeducedArgs) {
 
   llvm::SmallBitVector ReferencedTemplateParams(TemplateParamsList->size());
-  SemaRef.MarkUsedTemplateParameters(
-      DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  SemaRef.MarkUsedTemplateParameters(DeducedArgs, /*OnlyDeduced=*/false,
+                                     TemplateParamsList->getDepth(),
+                                     ReferencedTemplateParams);
 
   auto MarkDefaultArgs = [&](auto *Param) {
     if (!Param->hasDefaultArgument())
       return;
     SemaRef.MarkUsedTemplateParameters(
-        Param->getDefaultArgument().getArgument(),
+        Param->getDefaultArgument().getArgument(), /*OnlyDeduced=*/false,
         TemplateParamsList->getDepth(), ReferencedTemplateParams);
   };
 
@@ -1606,6 +1607,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       AggregateDeductionCandidates[Hash] = GD;
       return GD;
     }
+    return nullptr;
   }
 
   if (CXXRecordDecl *DefRecord =

@@ -14,6 +14,7 @@
 #include "mlir-c/Support.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -79,11 +80,56 @@ void testOperationType(MlirContext ctx) {
   fprintf(stderr, "\n\n");
 }
 
+typedef struct {
+  intptr_t numEffects;
+  intptr_t numReads;
+  intptr_t numWrites;
+} MemoryEffectCallbackData;
+
+static void collectMemoryEffects(intptr_t numEffects,
+                                 MlirMemoryEffectInstance *effects,
+                                 void *userData) {
+  MemoryEffectCallbackData *data = (MemoryEffectCallbackData *)userData;
+  data->numEffects += numEffects;
+  MlirTypeID readID = mlirMemoryEffectGetEffectID(mlirMemoryEffectsReadGet());
+  MlirTypeID writeID = mlirMemoryEffectGetEffectID(mlirMemoryEffectsWriteGet());
+  for (intptr_t i = 0; i < numEffects; ++i) {
+    MlirTypeID effectID = mlirMemoryEffectGetEffectID(
+        mlirMemoryEffectInstanceGetEffect(effects[i]));
+    data->numReads += mlirTypeIDEqual(effectID, readID);
+    data->numWrites += mlirTypeIDEqual(effectID, writeID);
+  }
+}
+
+// CHECK-LABEL: testMemoryEffectHelpers
+void testMemoryEffectHelpers(void) {
+  fprintf(stderr, "testMemoryEffectHelpers\n");
+
+  MemoryEffectCallbackData modifies = {0};
+  mlirTransformModifiesPayload(collectMemoryEffects, &modifies);
+  // CHECK: modifies payload: 2 effects, 1 read, 1 write
+  fprintf(stderr,
+          "modifies payload: %" PRIdPTR " effects, %" PRIdPTR " read, %" PRIdPTR
+          " write\n",
+          modifies.numEffects, modifies.numReads, modifies.numWrites);
+
+  MemoryEffectCallbackData reads = {0};
+  mlirTransformOnlyReadsPayload(collectMemoryEffects, &reads);
+  // CHECK: only reads payload: 1 effects, 1 read, 0 write
+  fprintf(stderr,
+          "only reads payload: %" PRIdPTR " effects, %" PRIdPTR
+          " read, %" PRIdPTR " write\n",
+          reads.numEffects, reads.numReads, reads.numWrites);
+
+  fprintf(stderr, "\n\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__transform__(), ctx);
   testAnyOpType(ctx);
   testOperationType(ctx);
+  testMemoryEffectHelpers();
   mlirContextDestroy(ctx);
   return EXIT_SUCCESS;
 }

@@ -48,6 +48,15 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
             TargetTransformInfo::TargetCostKind CostKind, Type *ScalarTy,
             VectorType *VecTy);
 
+/// Returns the cost of a BlendedLoadVectorize node loading \p VecTy: two masked
+/// loads (one per candidate base), a xor to negate the false-lane mask and a
+/// select. The blend mask is a separate operand node, so its cost is counted
+/// there, not here.
+InstructionCost
+getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
+                   unsigned AddressSpace,
+                   TargetTransformInfo::TargetCostKind CostKind);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H

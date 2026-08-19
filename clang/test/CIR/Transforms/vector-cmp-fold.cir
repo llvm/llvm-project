@@ -292,3 +292,34 @@ module  {
   // CHECK-SAME: #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>]> : !cir.vector<4 x !cir.int<s, 1>>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !cir.int<s, 1>>
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @no_fold_cmp_vector_with_fenv() -> !cir.vector<4 x !s32i> {
+    %vec_1 = cir.const #cir.const_vector<[
+      #cir.fp<0x7FC00000> : !cir.float,
+      #cir.fp<2.000000e+00> : !cir.float,
+      #cir.fp<3.000000e+00> : !cir.float,
+      #cir.fp<4.000000e+00> : !cir.float
+    ]> : !cir.vector<4 x !cir.float>
+    %vec_2 = cir.const #cir.const_vector<[
+      #cir.fp<5.000000e+00> : !cir.float,
+      #cir.fp<6.000000e+00> : !cir.float,
+      #cir.fp<7.000000e+00> : !cir.float,
+      #cir.fp<8.000000e+00> : !cir.float
+    ]> : !cir.vector<4 x !cir.float>
+    %new_vec = cir.vec.cmp(lt, %vec_1, %vec_2) :
+        !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
+      fenv = #cir.fenv<strict_except = true>
+    }
+    cir.return %new_vec : !cir.vector<4 x !s32i>
+  }
+
+  // CHECK-LABEL: cir.func{{.*}} @no_fold_cmp_vector_with_fenv
+  // CHECK: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) :
+  // CHECK-SAME: !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CHECK-SAME: {fenv = #cir.fenv<strict_except = true>}
+}
