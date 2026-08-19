@@ -1642,6 +1642,13 @@ void clang::TextNodeDumper::VisitDependentScopeDeclRefExpr(
   dumpNestedNameSpecifier(Node->getQualifier());
 }
 
+void clang::TextNodeDumper::VisitDependentTemplateIdExpr(
+    const DependentTemplateIdExpr *Node) {
+  OS << (Node->isConceptReference() ? " concept" : " variable template");
+  OS << ' ';
+  dumpBareTemplateName(Node->getTemplateName());
+}
+
 void TextNodeDumper::VisitUnresolvedLookupExpr(
     const UnresolvedLookupExpr *Node) {
   OS << " (";
