@@ -144,7 +144,7 @@ protected:
       : name(name), file(f), symbolKind(k), referenced(!ctx.arg.gcSections),
         requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
         forceImport(false), canInline(false), traced(false), isStub(false),
-        flags(flags) {}
+        noReloc(false), flags(flags) {}
 
   StringRef name;
   InputFile *file;
@@ -186,6 +186,9 @@ public:
   // against them will produce address 0 (The table index representing
   // the null function pointer).
   bool isStub : 1;
+
+  // True if this symbol is not relative to __memory_base.
+  bool noReloc : 1;
 
   uint32_t flags;
 
