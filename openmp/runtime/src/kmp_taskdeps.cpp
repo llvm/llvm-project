@@ -3343,6 +3343,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
 //                                 &initial_regions[0], numregions);
 #endif
 
+#if ENABLE_LIBOMPTARGET
+  // Offer the graph's target-only subtrees to libomptarget before publishing
+  // it READY.  A replay then has libomptarget run each one a plugin claimed.
+  __kmp_taskgraph_transmit_to_target(gtid, taskgraph);
+#endif
+
   KMP_ATOMIC_ST_REL(&taskgraph->status, KMP_TDG_READY);
 
   return 0;

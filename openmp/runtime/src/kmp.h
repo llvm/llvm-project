@@ -1171,6 +1171,16 @@ __kmp_get_submemspace(omp_memspace_handle_t memspace, int num_resources,
 
 #if ENABLE_LIBOMPTARGET
 extern void __kmp_init_target_task();
+#if OMP_TASKGRAPH_EXPERIMENTAL
+// Offer each maximal subtree of the just-built taskgraph record that holds only
+// target constructs to libomptarget, as a subgraph of its own, and keep the
+// handle of each one a plugin claims on the subtree's root region.  No-op if
+// the libomptarget handoff ABI is unavailable.  Defined in kmp_tasking.cpp.
+struct kmp_taskgraph_record;
+extern void
+__kmp_taskgraph_transmit_to_target(kmp_int32 gtid,
+                                   struct kmp_taskgraph_record *rec);
+#endif
 #endif
 
 /* ------------------------------------------------------------------------ */
@@ -2812,6 +2822,10 @@ typedef struct kmp_taskgraph_region {
   // The exec descr the region is replayed through, once the exec descr array
   // has been built.
   struct kmp_taskgraph_exec_descr *exec_descr = nullptr;
+  // The libomptarget subgraph this region is the root of, if a plugin claimed
+  // the region (see __kmp_taskgraph_transmit_to_target).  A replay then runs
+  // the whole region as one step, on the device.
+  void *tgt_graph = nullptr;
   // The exec descrs this region resolves to when a dependency names it, i.e.
   // the descrs that must all complete before the region has.  Only set while
   // the enclosing IRREDUCIBLE region is being built, and only on its direct
@@ -2878,6 +2892,8 @@ typedef struct kmp_taskgraph_record {
   struct kmp_taskgraph_exec_descr *exec_descrs = nullptr;
   kmp_size_t num_exec_descrs = 0;
   void *taskgraph_args = nullptr;
+  // How many of the record's regions hold a libomptarget subgraph.
+  kmp_int32 num_tgt_subgraphs = 0;
   // We need a taskgroup structure to keep track of recorded tasks.  This is
   // set to TRUE if the user requested "nogroup" on the taskgraph directive
   // (then we can avoid blocking at the end of the taskgraph region on replay,

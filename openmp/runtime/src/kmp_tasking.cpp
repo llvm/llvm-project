@@ -61,6 +61,35 @@ static void (*tgt_target_data_update_nowait_mapper)(ident_t *, int64_t, int32_t,
                                                     int32_t, void *, int32_t,
                                                     void *);
 
+// Taskgraph handoff ABI (see offload/include/omptarget.h).
+static void *(*tgt_taskgraph_start)(int64_t, uintptr_t, size_t);
+static void (*tgt_taskgraph_start_parallel)(void *, int32_t);
+static void (*tgt_taskgraph_end_parallel)(void *);
+static void (*tgt_taskgraph_start_sequential)(void *, int32_t);
+static void (*tgt_taskgraph_end_sequential)(void *);
+static void (*tgt_taskgraph_start_exclusive)(void *, int32_t);
+static void (*tgt_taskgraph_end_exclusive)(void *);
+static void (*tgt_taskgraph_start_irreducible)(void *, int32_t, int32_t);
+static void (*tgt_taskgraph_end_irreducible)(void *);
+static void (*tgt_taskgraph_emit_edge)(void *, int32_t, int32_t);
+static void (*tgt_taskgraph_emit_target)(void *, int64_t, int32_t, int32_t,
+                                         void *, void *);
+static void (*tgt_taskgraph_emit_target_enter_data)(void *, int64_t, int32_t,
+                                                    void **, void **, int64_t *,
+                                                    int64_t *, void **,
+                                                    void **);
+static void (*tgt_taskgraph_emit_target_exit_data)(void *, int64_t, int32_t,
+                                                   void **, void **, int64_t *,
+                                                   int64_t *, void **, void **);
+static void (*tgt_taskgraph_emit_target_update)(void *, int64_t, int32_t,
+                                                void **, void **, int64_t *,
+                                                int64_t *, void **, void **);
+static size_t (*tgt_taskgraph_end)(void *);
+static int (*tgt_taskgraph_finalize)(void *);
+static void (*tgt_taskgraph_begin_replay)(void *);
+static int (*tgt_taskgraph_replay)(void *);
+static void (*tgt_taskgraph_destroy)(void *);
+
 // Deep-copies a kernel-arguments struct and the arrays it points at into a
 // caller-provided block, sizing that block when the destination is null (see
 // offload/include/omptarget.h).
@@ -69,6 +98,25 @@ static void (*tgt_taskgraph_dup_kernel_args)(void *, void *, size_t *);
 static void (*tgt_taskgraph_dup_data_args)(void *, int32_t, void ***, void ***,
                                            int64_t **, int64_t **, void ***,
                                            void ***, size_t *);
+
+#if OMP_TASKGRAPH_EXPERIMENTAL
+// True iff the full taskgraph handoff ABI resolved.  Checked once before
+// streaming a graph; if false, libomp keeps the host-only path.
+static bool __kmp_tgt_taskgraph_available() {
+  return tgt_taskgraph_start && tgt_taskgraph_start_parallel &&
+         tgt_taskgraph_end_parallel && tgt_taskgraph_start_sequential &&
+         tgt_taskgraph_end_sequential && tgt_taskgraph_start_exclusive &&
+         tgt_taskgraph_end_exclusive && tgt_taskgraph_emit_target &&
+         tgt_taskgraph_emit_target_enter_data &&
+         tgt_taskgraph_emit_target_exit_data &&
+         tgt_taskgraph_emit_target_update && tgt_taskgraph_end &&
+         tgt_taskgraph_finalize && tgt_taskgraph_begin_replay &&
+         tgt_taskgraph_replay && tgt_taskgraph_destroy &&
+         tgt_taskgraph_dup_kernel_args && tgt_taskgraph_dup_data_args &&
+         tgt_taskgraph_start_irreducible && tgt_taskgraph_end_irreducible &&
+         tgt_taskgraph_emit_edge;
+}
+#endif
 
 void __kmp_init_target_task() {
   *(void **)(&tgt_target_nowait_query) = KMP_DLSYM("__tgt_target_nowait_query");
@@ -85,6 +133,38 @@ void __kmp_init_target_task() {
       KMP_DLSYM("__tgt_target_data_end_nowait_mapper");
   *(void **)(&tgt_target_data_update_nowait_mapper) =
       KMP_DLSYM("__tgt_target_data_update_nowait_mapper");
+  *(void **)(&tgt_taskgraph_start) = KMP_DLSYM("__tgt_taskgraph_start");
+  *(void **)(&tgt_taskgraph_start_parallel) =
+      KMP_DLSYM("__tgt_taskgraph_start_parallel");
+  *(void **)(&tgt_taskgraph_end_parallel) =
+      KMP_DLSYM("__tgt_taskgraph_end_parallel");
+  *(void **)(&tgt_taskgraph_start_sequential) =
+      KMP_DLSYM("__tgt_taskgraph_start_sequential");
+  *(void **)(&tgt_taskgraph_end_sequential) =
+      KMP_DLSYM("__tgt_taskgraph_end_sequential");
+  *(void **)(&tgt_taskgraph_start_exclusive) =
+      KMP_DLSYM("__tgt_taskgraph_start_exclusive");
+  *(void **)(&tgt_taskgraph_end_exclusive) =
+      KMP_DLSYM("__tgt_taskgraph_end_exclusive");
+  *(void **)(&tgt_taskgraph_start_irreducible) =
+      KMP_DLSYM("__tgt_taskgraph_start_irreducible");
+  *(void **)(&tgt_taskgraph_end_irreducible) =
+      KMP_DLSYM("__tgt_taskgraph_end_irreducible");
+  *(void **)(&tgt_taskgraph_emit_edge) = KMP_DLSYM("__tgt_taskgraph_emit_edge");
+  *(void **)(&tgt_taskgraph_emit_target) =
+      KMP_DLSYM("__tgt_taskgraph_emit_target");
+  *(void **)(&tgt_taskgraph_emit_target_enter_data) =
+      KMP_DLSYM("__tgt_taskgraph_emit_target_enter_data");
+  *(void **)(&tgt_taskgraph_emit_target_exit_data) =
+      KMP_DLSYM("__tgt_taskgraph_emit_target_exit_data");
+  *(void **)(&tgt_taskgraph_emit_target_update) =
+      KMP_DLSYM("__tgt_taskgraph_emit_target_update");
+  *(void **)(&tgt_taskgraph_end) = KMP_DLSYM("__tgt_taskgraph_end");
+  *(void **)(&tgt_taskgraph_finalize) = KMP_DLSYM("__tgt_taskgraph_finalize");
+  *(void **)(&tgt_taskgraph_begin_replay) =
+      KMP_DLSYM("__tgt_taskgraph_begin_replay");
+  *(void **)(&tgt_taskgraph_replay) = KMP_DLSYM("__tgt_taskgraph_replay");
+  *(void **)(&tgt_taskgraph_destroy) = KMP_DLSYM("__tgt_taskgraph_destroy");
   *(void **)(&tgt_taskgraph_dup_kernel_args) =
       KMP_DLSYM("__tgt_taskgraph_dup_kernel_args");
   *(void **)(&tgt_taskgraph_dup_data_args) =
@@ -2236,11 +2316,19 @@ __kmp_taskgraph_irreducible_order(kmp_info_t *thread,
   return order;
 }
 
+// The type REGION is replayed as.  A region holding a libomptarget subgraph is
+// one step of the replay, however much it holds, and so is flattened like the
+// target construct it may well be.
+static enum kmp_taskgraph_region_type
+__kmp_taskgraph_exec_type(kmp_taskgraph_region_t *region) {
+  return region->tgt_graph ? TASKGRAPH_REGION_TARGET : region->type;
+}
+
 // The number of exit descrs REGION resolves to, i.e. the length of the pred
 // list __kmp_build_exec_descrs_1 returns for it.  A dependency on REGION has to
 // name every one of them.
 static kmp_int32 __kmp_count_region_exits(kmp_taskgraph_region_t *region) {
-  switch (region->type) {
+  switch (__kmp_taskgraph_exec_type(region)) {
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
@@ -2279,7 +2367,7 @@ static kmp_int32 __kmp_count_region_exits(kmp_taskgraph_region_t *region) {
 kmp_int32 __kmp_count_exec_descrs_1(kmp_taskgraph_region_t *region,
                                     kmp_int32 npreds, kmp_int32 &successors,
                                     kmp_int32 &descrs) {
-  switch (region->type) {
+  switch (__kmp_taskgraph_exec_type(region)) {
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
@@ -2533,7 +2621,7 @@ kmp_taskgraph_exec_descr_list_t *__kmp_build_exec_descrs_1(
       walk = walk->next;
     } while (walk != pred);
   };
-  switch (region->type) {
+  switch (__kmp_taskgraph_exec_type(region)) {
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
   case TASKGRAPH_REGION_ENTRY:
@@ -2711,7 +2799,7 @@ __kmp_build_exec_descrs(kmp_info_t *thread, kmp_taskgraph_region_t *region,
   return exec_descr_arr;
 }
 
-/// Reset, reparent and regroup the recorded task TASK and re-invoke it.
+/// Reset, reparent and regroup the recorded task of NODE and re-invoke it.
 
 static void __kmp_omp_tg_task(kmp_int32 gtid, kmp_taskgraph_node_t *node,
                               kmp_taskgroup_t *taskgroup,
@@ -2765,8 +2853,9 @@ void *__kmp_task_reduction_init(int gtid, int num, T *data);
 /// host addresses of mappings that originate on the stack, and refresh its
 /// by-value firstprivates.  What the helper is handed depends on the region
 /// type: the kernel-arguments blob for a kernel construct, the map arrays for
-/// a data construct.  The mask it returns is not needed: the host path
-/// re-issues from the refreshed arguments directly.
+/// a data construct.  The mask it returns is not needed: the construct is
+/// re-issued from the refreshed arguments directly, here or in a libomptarget
+/// subgraph.
 static void __kmp_taskgraph_relocate_target(kmp_taskgraph_target_node_t *target,
                                             void *taskgraph_args) {
   switch (target->kind) {
@@ -2831,6 +2920,73 @@ static void __kmp_taskgraph_exec_target(kmp_info_t *thread,
     break;
   }
 }
+
+/// Re-issue every target construct of REGION, a subtree that holds nothing
+/// else, one at a time in an order its dependences allow.
+static void __kmp_taskgraph_exec_targets(kmp_info_t *thread,
+                                         kmp_taskgraph_region_t *region) {
+  switch (region->type) {
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
+    __kmp_taskgraph_exec_target(thread, region);
+    return;
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_exec_targets(thread, region->inner.children[c]);
+    return;
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    kmp_taskgraph_region_t **order =
+        __kmp_taskgraph_irreducible_order(thread, region);
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_exec_targets(thread, order[c]);
+    __kmp_fast_free(thread, order);
+    return;
+  }
+  default:
+    KMP_DEBUG_ASSERT(false && "host work in a target subgraph");
+    return;
+  }
+}
+
+/// Run the libomptarget subgraph REGION holds, and wait for it.
+///
+/// A subgraph libomptarget declines to run on this replay -- for a mapping
+/// state its plan cannot express, say -- has issued nothing, so its target
+/// constructs are re-issued here instead, as they would be had no plugin
+/// claimed it.
+static void __kmp_taskgraph_run_subgraph(kmp_info_t *thread,
+                                         kmp_taskgraph_region_t *region) {
+  KMP_ASSERT(tgt_taskgraph_replay);
+  if (tgt_taskgraph_replay(region->tgt_graph) == 0 /* OFFLOAD_SUCCESS */)
+    return;
+  if (__kmp_taskgraph_trace())
+    fprintf(stderr, "Taskgraph subgraph %p replay declined by libomptarget\n",
+            region->tgt_graph);
+  __kmp_taskgraph_exec_targets(thread, region);
+}
+
+/// Begin a replay of every libomptarget subgraph in REGION, once the recorded
+/// nodes have been relocated: this is when each one takes the values of its
+/// firstprivates.
+static void __kmp_taskgraph_begin_subgraphs(kmp_taskgraph_region_t *region) {
+  if (region->tgt_graph) {
+    KMP_ASSERT(tgt_taskgraph_begin_replay);
+    tgt_taskgraph_begin_replay(region->tgt_graph);
+    return;
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_begin_subgraphs(region->inner.children[c]);
+    break;
+  default:
+    break;
+  }
+}
 #endif
 
 // Decrement DESCR's predecessor count; if it reaches zero, fire it.  TASKGROUP
@@ -2842,7 +2998,7 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
   if (npredecessors > 0)
     return;
 
-  switch (descr->region->type) {
+  switch (__kmp_taskgraph_exec_type(descr->region)) {
   case TASKGRAPH_REGION_NODE: {
     // Spawn the task; its successors are triggered later, on completion, by
     // __kmp_taskgraph_exec_descr_finish.
@@ -2883,16 +3039,22 @@ static void __kmp_taskgraph_exec_descr_start(kmp_int32 gtid, kmp_info_t *thread,
     break;
     // clang-format off
   KMP_TASKGRAPH_REGION_TARGET_CASES: {
-    // Replay a recorded target construct inline.  The libomptarget entry
-    // points used here are synchronous, so the successors are released as soon
-    // as the call returns -- as for a WAIT region, rather than from the
-    // task-completion hook a NODE region relies on.
+    // Replay a recorded target construct, or a subgraph of them, inline.  The
+    // libomptarget entry points used here are synchronous, so the successors
+    // are released as soon as the call returns -- as for a WAIT region, rather
+    // than from the task-completion hook a NODE region relies on.  A subgraph
+    // takes no mutexes: a target construct that needs any is never put in one.
 #if ENABLE_LIBOMPTARGET
-    if (descr->region->mutexset)
-      __kmp_taskgraph_acquire_locks(gtid, descr->region->owner, descr->region);
-    __kmp_taskgraph_exec_target(thread, descr->region);
-    if (descr->region->mutexset)
-      __kmp_taskgraph_release_locks(gtid, descr->region->owner, descr->region);
+    kmp_taskgraph_region_t *region = descr->region;
+    if (region->tgt_graph) {
+      __kmp_taskgraph_run_subgraph(thread, region);
+    } else {
+      if (region->mutexset)
+        __kmp_taskgraph_acquire_locks(gtid, region->owner, region);
+      __kmp_taskgraph_exec_target(thread, region);
+      if (region->mutexset)
+        __kmp_taskgraph_release_locks(gtid, region->owner, region);
+    }
     for (kmp_taskgraph_exec_descr_elem_t *s = descr->successors; s; s = s->next)
       __kmp_taskgraph_exec_descr_start(gtid, thread, s->exec_descr, taskgroup);
 #else
@@ -6284,6 +6446,7 @@ static void __kmp_taskgraph_reset(kmp_taskgraph_record_t *rec, kmp_int32 gtid,
   rec->exec_descrs = nullptr;
   rec->num_exec_descrs = 0;
   rec->taskgraph_args = nullptr;
+  rec->num_tgt_subgraphs = 0;
   rec->next = nullptr;
 }
 
@@ -6322,6 +6485,16 @@ __kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
   if (region->mutexset) {
     __kmp_fast_free(thread, region->mutexset);
   }
+#if ENABLE_LIBOMPTARGET
+  // libomptarget references (does not copy) the target payloads of the nodes
+  // in a subgraph, so the subgraph is torn down before __kmp_taskgraph_free
+  // frees them.
+  if (region->tgt_graph) {
+    KMP_ASSERT(tgt_taskgraph_destroy);
+    tgt_taskgraph_destroy(region->tgt_graph);
+    region->tgt_graph = nullptr;
+  }
+#endif
   switch (region->type) {
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
@@ -6638,6 +6811,10 @@ void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
     // different from the addresses seen at record time.
     record->taskgraph_args = args;
     __kmp_taskgraph_relocate_nodes(record);
+#if ENABLE_LIBOMPTARGET
+    if (record->num_tgt_subgraphs)
+      __kmp_taskgraph_begin_subgraphs(record->root);
+#endif
     __kmp_replay_taskgraph(gtid, current_taskdata, record, graph_id, taskgroup);
     __kmpc_end_taskgroup(loc_ref, gtid);
     __kmp_taskgraph_end_replay(gtid, record);
@@ -6890,6 +7067,235 @@ static void __kmp_taskgraph_record_target_data(
   target->u.data.arg_mappers = dup_arg_mappers;
 }
 
+// --------------------------------------------------------------------------
+// Taskgraph libomptarget support (transmission of target subgraphs)
+// --------------------------------------------------------------------------
+
+// True iff REGION is a subtree libomptarget can run on its own: one that holds
+// target constructs and nothing else.  A target construct that has to exclude
+// others through mutexinoutset is left out, as is a task reduction, since
+// libomp is what implements both.
+static bool __kmp_taskgraph_subtree_is_target(kmp_taskgraph_region_t *region) {
+  switch (region->type) {
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
+    return !region->mutexset;
+  case TASKGRAPH_REGION_PARALLEL:
+    if (region->reduce_input)
+      return false;
+    KMP_FALLTHROUGH();
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      if (!__kmp_taskgraph_subtree_is_target(region->inner.children[c]))
+        return false;
+    return region->inner.num_children > 0;
+  default:
+    return false;
+  }
+}
+
+// State threaded through the preorder emit walk.
+struct kmp_tg_emit_ctx {
+  void *graph;
+};
+
+// Emit one target / target-data leaf to libomptarget.
+static void __kmp_taskgraph_emit_target_leaf(kmp_tg_emit_ctx *ctx,
+                                             kmp_taskgraph_region_t *region) {
+  void *graph = ctx->graph;
+  kmp_taskgraph_target_node_t *t = region->task.node->target;
+  KMP_DEBUG_ASSERT(t);
+  switch (t->kind) {
+  case TASKGRAPH_REGION_TARGET:
+    tgt_taskgraph_emit_target(graph, t->device_id, t->u.kernel.num_teams,
+                              t->u.kernel.thread_limit, t->u.kernel.host_ptr,
+                              t->u.kernel.kernel_args);
+    break;
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:
+    tgt_taskgraph_emit_target_enter_data(
+        graph, t->device_id, t->u.data.arg_num, t->u.data.args_base,
+        t->u.data.args, (int64_t *)t->u.data.arg_sizes,
+        (int64_t *)t->u.data.arg_types, t->u.data.arg_names,
+        t->u.data.arg_mappers);
+    break;
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:
+    tgt_taskgraph_emit_target_exit_data(
+        graph, t->device_id, t->u.data.arg_num, t->u.data.args_base,
+        t->u.data.args, (int64_t *)t->u.data.arg_sizes,
+        (int64_t *)t->u.data.arg_types, t->u.data.arg_names,
+        t->u.data.arg_mappers);
+    break;
+  case TASKGRAPH_REGION_TARGET_UPDATE:
+    tgt_taskgraph_emit_target_update(
+        graph, t->device_id, t->u.data.arg_num, t->u.data.args_base,
+        t->u.data.args, (int64_t *)t->u.data.arg_sizes,
+        (int64_t *)t->u.data.arg_types, t->u.data.arg_names,
+        t->u.data.arg_mappers);
+    break;
+  default:
+    KMP_DEBUG_ASSERT(false && "non-target kind in target leaf emit");
+  }
+}
+
+// Count or emit the explicit dependence edges of an irreducible region,
+// addressing children by emission ordinal (their timestamp, pre-assigned by the
+// caller).  Returns the edge count so the caller can pass it to
+// start_irreducible before re-emitting.
+static kmp_int32 __kmp_taskgraph_irr_edges(kmp_tg_emit_ctx *ctx,
+                                           kmp_taskgraph_region_t *region,
+                                           bool emit) {
+  void *graph = ctx->graph;
+  kmp_int32 count = 0;
+  for (kmp_int32 c = 0; c < region->inner.num_children; c++) {
+    kmp_taskgraph_region_t *child = region->inner.children[c];
+    for (kmp_taskgraph_region_dep_t *dep = child->successors; dep;
+         dep = dep->next)
+      if (dep->region->parent == region) {
+        if (emit)
+          tgt_taskgraph_emit_edge(graph, c, dep->region->timestamp);
+        count++;
+      }
+  }
+  return count;
+}
+
+// Preorder traversal of a target-only subtree of the processed region tree,
+// streaming its structure and leaves to libomptarget.
+static void __kmp_taskgraph_emit_region(kmp_tg_emit_ctx *ctx,
+                                        kmp_taskgraph_region_t *region) {
+  void *graph = ctx->graph;
+  switch (region->type) {
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
+    __kmp_taskgraph_emit_target_leaf(ctx, region);
+    return;
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE: {
+    void (*open)(void *, int32_t) = nullptr;
+    void (*close)(void *) = nullptr;
+    switch (region->type) {
+    case TASKGRAPH_REGION_PARALLEL:
+      open = tgt_taskgraph_start_parallel;
+      close = tgt_taskgraph_end_parallel;
+      break;
+    case TASKGRAPH_REGION_EXCLUSIVE:
+      open = tgt_taskgraph_start_exclusive;
+      close = tgt_taskgraph_end_exclusive;
+      break;
+    default:
+      open = tgt_taskgraph_start_sequential;
+      close = tgt_taskgraph_end_sequential;
+      break;
+    }
+    open(graph, region->inner.num_children);
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_emit_region(ctx, region->inner.children[c]);
+    close(graph);
+    return;
+  }
+  case TASKGRAPH_REGION_IRREDUCIBLE: {
+    // Children are numbered by their timestamp field so explicit edges below
+    // can reference them by index into the children array.
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      region->inner.children[c]->timestamp = c;
+    // The children of an irreducible region are transmitted before the edges.
+    kmp_int32 edge_count =
+        __kmp_taskgraph_irr_edges(ctx, region, /*emit=*/false);
+    tgt_taskgraph_start_irreducible(graph, region->inner.num_children,
+                                    edge_count);
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_emit_region(ctx, region->inner.children[c]);
+    __kmp_taskgraph_irr_edges(ctx, region, /*emit=*/true);
+    tgt_taskgraph_end_irreducible(graph);
+    return;
+  }
+  default:
+    assert(false && "host work in a target subgraph");
+  }
+}
+
+// Offer the target-only subtree REGION of REC to libomptarget as a subgraph,
+// and keep the subgraph's handle on REGION if a plugin claims it.
+static void __kmp_taskgraph_transmit_subgraph(kmp_taskgraph_record_t *rec,
+                                              kmp_taskgraph_region_t *region) {
+  if (!__kmp_tgt_taskgraph_available()) {
+    if (__kmp_taskgraph_trace())
+      fprintf(stderr,
+              "Taskgraph %p has targets but the libomptarget handoff ABI is "
+              "unavailable; keeping host-only path\n",
+              rec);
+    return;
+  }
+
+  // Two-pass, single-block construction: the first pass streams the subgraph
+  // with ByteSize 0 so libomptarget only measures the size it needs; the
+  // identical second pass hands that size back so it can allocate one
+  // exactly-sized block that does not move during construction.
+
+  // Graph-level device id is the default device; per-node device ids are
+  // threaded through each emit call for later multi-device grouping.
+  void *graph = tgt_taskgraph_start(/*device_id=*/-1, rec->graph_id,
+                                    /*ByteSize=*/0);
+  if (!graph)
+    return;
+  kmp_tg_emit_ctx ctx = {graph};
+  __kmp_taskgraph_emit_region(&ctx, region);
+  size_t byte_size = tgt_taskgraph_end(graph);
+
+  graph = tgt_taskgraph_start(/*device_id=*/-1, rec->graph_id, byte_size);
+  if (!graph)
+    return;
+  ctx.graph = graph;
+  __kmp_taskgraph_emit_region(&ctx, region);
+  tgt_taskgraph_end(graph);
+
+  // If the default device's plugin will not take the subgraph, its target
+  // constructs are replayed one at a time like any others.
+  if (tgt_taskgraph_finalize(graph) != 0) {
+    tgt_taskgraph_destroy(graph);
+    if (__kmp_taskgraph_trace())
+      fprintf(stderr,
+              "Taskgraph %p subgraph at region %p was declined by the device "
+              "plugin\n",
+              rec, region);
+    return;
+  }
+
+  region->tgt_graph = graph;
+  rec->num_tgt_subgraphs++;
+  if (__kmp_taskgraph_trace())
+    fprintf(stderr,
+            "Transmitted taskgraph %p subgraph at region %p to libomptarget "
+            "(handle %p, %zu B)\n",
+            rec, region, graph, byte_size);
+}
+
+// Offer each maximal target-only subtree of REGION to libomptarget.
+static void __kmp_taskgraph_transmit_subtrees(kmp_taskgraph_record_t *rec,
+                                              kmp_taskgraph_region_t *region) {
+  if (__kmp_taskgraph_subtree_is_target(region)) {
+    __kmp_taskgraph_transmit_subgraph(rec, region);
+    return;
+  }
+  switch (region->type) {
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE:
+  case TASKGRAPH_REGION_IRREDUCIBLE:
+    for (kmp_int32 c = 0; c < region->inner.num_children; c++)
+      __kmp_taskgraph_transmit_subtrees(rec, region->inner.children[c]);
+    return;
+  default:
+    return;
+  }
+}
+
+void __kmp_taskgraph_transmit_to_target(kmp_int32 gtid,
+                                        kmp_taskgraph_record_t *rec) {
+  if (rec->root)
+    __kmp_taskgraph_transmit_subtrees(rec, rec->root);
+}
 #endif
 
 // Entry points for target constructs that should be recorded into a taskgraph,

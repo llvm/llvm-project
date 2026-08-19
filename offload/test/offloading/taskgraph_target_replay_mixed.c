@@ -8,8 +8,9 @@
 
 // A mixed host + target 'omp taskgraph', re-encountered several times.  A host
 // 'task' (depend out) runs before a 'target' kernel (depend in) each encounter.
-// On replay libomp runs the recorded host task and re-issues the target kernel
-// through the standard libomptarget launch path.
+// On replay libomp runs the host task itself and, once it has finished, has
+// libomptarget run the target kernel, a subgraph of its own -- or issues the
+// kernel itself if no plugin claimed the subgraph.
 // The dependency ordering (host then device) must be preserved every time.
 
 #include <stdio.h>
