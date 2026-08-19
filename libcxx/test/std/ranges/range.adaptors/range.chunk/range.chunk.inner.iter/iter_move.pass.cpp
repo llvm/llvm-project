@@ -35,11 +35,10 @@ constexpr bool test() {
       chunked =
           std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
               cpp17_input_iterator<int*>(vector.data()),
-              sentinel_wrapper<cpp17_input_iterator<int*>>(
-                  cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+              sentinel_wrapper<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
           std::views::chunk(2);
   assert(std::ranges::iter_move((*chunked.begin()).begin()) == 1);
-  
+
   return true;
 }
 

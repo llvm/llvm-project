@@ -30,8 +30,9 @@ constexpr bool test() {
   {
     // General
     {
-      static_assert(std::ranges::random_access_range<
-                    std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>);
+      static_assert(
+          std::ranges::random_access_range<
+              std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>);
 
       std::ranges::chunk_view<
           std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>
@@ -49,12 +50,11 @@ constexpr bool test() {
     {
       std::ranges::chunk_view<
           std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>
-          chunked(
-              std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
-                  random_access_iterator<int*>(vector.data()),
-                  sentinel_wrapper<random_access_iterator<int*>>(
-                      random_access_iterator<int*>(vector.data() + vector.size()))),
-              5);
+          chunked(std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
+                      random_access_iterator<int*>(vector.data()),
+                      sentinel_wrapper<random_access_iterator<int*>>(
+                          random_access_iterator<int*>(vector.data() + vector.size()))),
+                  5);
       assert(std::ranges::equal(chunked.begin()[2], std::vector{11, 12}));
     }
 
@@ -63,10 +63,10 @@ constexpr bool test() {
       std::ranges::chunk_view<
           std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>
           chunked(std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
-                     random_access_iterator<int*>(vector.data()),
-                     sentinel_wrapper<random_access_iterator<int*>>(
-                         random_access_iterator<int*>(vector.data() + vector.size()))),
-                 1);
+                      random_access_iterator<int*>(vector.data()),
+                      sentinel_wrapper<random_access_iterator<int*>>(
+                          random_access_iterator<int*>(vector.data() + vector.size()))),
+                  1);
       assert(std::ranges::equal(chunked.begin()[2], std::vector{3}));
     }
 
@@ -74,12 +74,11 @@ constexpr bool test() {
     {
       std::ranges::chunk_view<
           std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>
-          chunked(
-              std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
-                  random_access_iterator<int*>(vector.data()),
-                  sentinel_wrapper<random_access_iterator<int*>>(
-                      random_access_iterator<int*>(vector.data() + vector.size()))),
-              100);
+          chunked(std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
+                      random_access_iterator<int*>(vector.data()),
+                      sentinel_wrapper<random_access_iterator<int*>>(
+                          random_access_iterator<int*>(vector.data() + vector.size()))),
+                  100);
       assert(std::ranges::equal(chunked.begin()[0], std::vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));
     }
 
@@ -89,10 +88,10 @@ constexpr bool test() {
       std::ranges::chunk_view<
           std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>>
           chunked(std::ranges::subrange<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>(
-                        random_access_iterator<int*>(single_vector.data()),
-                        sentinel_wrapper<random_access_iterator<int*>>(
-                            random_access_iterator<int*>(single_vector.data() + single_vector.size()))),
-                    3);
+                      random_access_iterator<int*>(single_vector.data()),
+                      sentinel_wrapper<random_access_iterator<int*>>(
+                          random_access_iterator<int*>(single_vector.data() + single_vector.size()))),
+                  3);
       assert(std::ranges::equal(chunked.begin()[0], std::vector{42}));
     }
   }

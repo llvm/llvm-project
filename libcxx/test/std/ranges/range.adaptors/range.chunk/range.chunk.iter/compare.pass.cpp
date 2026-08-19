@@ -42,8 +42,7 @@ constexpr bool test() {
   {
     std::ranges::chunk_view<std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>> chunked(
         std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>(
-            random_access_iterator<int*>(vector.data()),
-            random_access_iterator<int*>(vector.data() + vector.size())),
+            random_access_iterator<int*>(vector.data()), random_access_iterator<int*>(vector.data() + vector.size())),
         3);
 
     assert(chunked.begin() == chunked.begin());
@@ -59,8 +58,7 @@ constexpr bool test() {
   {
     std::ranges::chunk_view<std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>> chunked(
         std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>(
-            random_access_iterator<int*>(vector.data()),
-            random_access_iterator<int*>(vector.data() + vector.size())),
+            random_access_iterator<int*>(vector.data()), random_access_iterator<int*>(vector.data() + vector.size())),
         3);
 
     assert(chunked.begin() < chunked.end());
@@ -76,10 +74,7 @@ constexpr bool test() {
   // Test `friend constexpr auto operator<=>(const iterator&, const iterator&)`
   {
     std::ranges::chunk_view<std::ranges::subrange<int*, int*>> chunked(
-        std::ranges::subrange<int*, int*>(
-            vector.data(),
-            vector.data() + vector.size()),
-        3);
+        std::ranges::subrange<int*, int*>(vector.data(), vector.data() + vector.size()), 3);
 
     assert((chunked.begin() <=> chunked.end()) == std::strong_ordering::less);
     assert((chunked.begin() <=> chunked.begin() + 1) == std::strong_ordering::less);
