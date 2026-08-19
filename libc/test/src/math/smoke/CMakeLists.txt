@@ -828,6 +828,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -998,6 +999,7 @@ add_fp_unittest(
     libc.src.math.lroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1095,6 +1097,7 @@ add_fp_unittest(
     libc.src.math.llroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3969,6 +3972,7 @@ add_fp_unittest(
     NearbyIntTest.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.float128
     libc.src.math.nearbyintf128
 )
 
@@ -5069,6 +5073,8 @@ add_fp_unittest(
     atan2f128_test.cpp
   DEPENDS
     libc.src.math.atan2f128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
