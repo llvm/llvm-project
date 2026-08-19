@@ -469,6 +469,17 @@ define i1 @icmp_ult_usub_sat_lhs_nonzero_constant(i64 %x) {
   ret i1 %cmp
 }
 
+define i1 @icmp_samesign_ult_usub_sat_lhs_nonzero_constant(i64 %x) {
+; CHECK-LABEL: define i1 @icmp_samesign_ult_usub_sat_lhs_nonzero_constant
+; CHECK-SAME: (i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sat = call i64 @llvm.usub.sat.i64(i64 %x, i64 10)
+  %cmp = icmp samesign ult i64 %sat, %x
+  ret i1 %cmp
+}
+
 define i1 @icmp_ne_usub_sat_lhs_nonzero_constant(i64 %x) {
 ; CHECK-LABEL: define i1 @icmp_ne_usub_sat_lhs_nonzero_constant
 ; CHECK-SAME: (i64 [[X:%.*]]) {
@@ -536,6 +547,29 @@ define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 10, i8 10>)
+  %cmp = icmp ult <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector_nonsplat(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ult_usub_sat_lhs_nonzero_constant_vector_nonsplat
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 1, i8 10>)
+  %cmp = icmp ult <2 x i8> %sat, %x
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @icmp_ult_usub_sat_lhs_zero_constant_vector(<2 x i8> %x) {
+; CHECK-LABEL: define <2 x i1> @icmp_ult_usub_sat_lhs_zero_constant_vector
+; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
+; CHECK-NEXT:    [[SAT:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[X]], <2 x i8> <i8 1, i8 0>)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[SAT]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %sat = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x, <2 x i8> <i8 1, i8 0>)
   %cmp = icmp ult <2 x i8> %sat, %x
   ret <2 x i1> %cmp
 }
