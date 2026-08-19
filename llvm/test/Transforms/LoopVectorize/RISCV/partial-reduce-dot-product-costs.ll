@@ -37,11 +37,12 @@ exit:
 
 ; i8 inputs into an i64 accumulator, both operands sign-extended (scale-8
 ; partial reduction). Costs the vdot4a* plus the extra i32->i64 widen and
-; accumulate.
+; accumulate; a fixed-length vector additionally needs a vslidedown to extract
+; the high i32 subvector.
 define i64 @dot_i64_ss(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'dot_i64_ss'
-; CHECK:  Cost of 3 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
-; CHECK:  Cost of 3 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
 ;
 entry:
   br label %loop
@@ -67,8 +68,8 @@ exit:
 ; Same as above but both operands zero-extended.
 define i64 @dot_i64_uu(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'dot_i64_uu'
-; CHECK:  Cost of 3 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
-; CHECK:  Cost of 3 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
+; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
+; CHECK:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
 ;
 entry:
   br label %loop
@@ -116,5 +117,96 @@ exit:
   ret i64 %add
 }
 
+; Scalable single-vector accumulator (nxv1i64): the i32 dot subvectors are a
+; fractional LMUL, so lowerPARTIAL_REDUCE_MLA widens to i64 first (vsext.vf2)
+; and reduces/accumulates with register-aligned i64 vadd.vv instead of a
+; vslidedown + vwadd.wv.
+define i64 @dot_i64_ss_scalable(ptr %a, ptr %b) {
+; CHECK-LABEL: 'dot_i64_ss_scalable'
+; CHECK:  Cost of 5 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+; CHECK:  Cost of 5 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %ga = getelementptr i8, ptr %a, i64 %iv
+  %la = load i8, ptr %ga, align 1
+  %ea = sext i8 %la to i32
+  %gb = getelementptr i8, ptr %b, i64 %iv
+  %lb = load i8, ptr %gb, align 1
+  %eb = sext i8 %lb to i32
+  %mul = mul i32 %ea, %eb
+  %conv = sext i32 %mul to i64
+  %add = add i64 %conv, %acc
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !llvm.loop !2
+exit:
+  ret i64 %add
+}
+
+; Same as above but both operands zero-extended.
+define i64 @dot_i64_uu_scalable(ptr %a, ptr %b) {
+; CHECK-LABEL: 'dot_i64_uu_scalable'
+; CHECK:  Cost of 5 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
+; CHECK:  Cost of 5 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> zext to i64), (ir<%lb> zext to i64))
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %ga = getelementptr i8, ptr %a, i64 %iv
+  %la = load i8, ptr %ga, align 1
+  %ea = zext i8 %la to i32
+  %gb = getelementptr i8, ptr %b, i64 %iv
+  %lb = load i8, ptr %gb, align 1
+  %eb = zext i8 %lb to i32
+  %mul = mul i32 %ea, %eb
+  %conv = zext i32 %mul to i64
+  %add = add i64 %conv, %acc
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !llvm.loop !2
+exit:
+  ret i64 %add
+}
+
+; Wider scalable accumulator (nxv2i64): the i32 dot subvectors are already
+; register-aligned (LMUL 1), so the sums are reduced in i32 (vadd.vv) and
+; accumulated with a single vwadd.wv, matching the fixed-length shape but
+; without the vslidedown.
+define i64 @dot_i64_ss_scalable_m2(ptr %a, ptr %b) {
+; CHECK-LABEL: 'dot_i64_ss_scalable_m2'
+; CHECK:  Cost of 5 for VF vscale x 16: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+; CHECK:  Cost of 5 for VF vscale x 16: EXPRESSION vp<[[VP8]]> = ir<%acc> + partial.reduce.add (mul (ir<%la> sext to i64), (ir<%lb> sext to i64))
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %add, %loop ]
+  %ga = getelementptr i8, ptr %a, i64 %iv
+  %la = load i8, ptr %ga, align 1
+  %ea = sext i8 %la to i32
+  %gb = getelementptr i8, ptr %b, i64 %iv
+  %lb = load i8, ptr %gb, align 1
+  %eb = sext i8 %lb to i32
+  %mul = mul i32 %ea, %eb
+  %conv = sext i32 %mul to i64
+  %add = add i64 %conv, %acc
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop, !llvm.loop !4
+exit:
+  ret i64 %add
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
+!2 = distinct !{!2, !1, !3}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = distinct !{!4, !5, !3}
+!5 = !{!"llvm.loop.vectorize.width", i32 16}

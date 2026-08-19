@@ -377,11 +377,54 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
       DotLT.first *
       getRISCVInstructionCost(RISCV::VDOT4A_VV, DotLT.second, CostKind);
 
-  // Account for the widening extend + accumulate needed for an i64 result.
+  // Account for reducing the i32 partial sums down to the i64 accumulator's
+  // element count and accumulating into it (see lowerPARTIAL_REDUCE_MLA), which
+  // has two shapes depending on the accumulator's LMUL.
   if (AccumType->isIntegerTy(64)) {
-    Type *AccTp = VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
-    std::pair<InstructionCost, MVT> AccLT = getTypeLegalizationCost(AccTp);
-    Cost += AccLT.first * 2;
+    LLVMContext &Ctx = AccumType->getContext();
+    Type *I32Ty = Type::getInt32Ty(Ctx);
+    ElementCount AccVF = VF.divideCoefficientBy(Ratio);
+    std::pair<InstructionCost, MVT> AccLT =
+        getTypeLegalizationCost(VectorType::get(AccumType, AccVF));
+
+    // When the i32 subvectors of a single-vector scalable accumulator are a
+    // fractional LMUL, extracting the high subvector would need a vslidedown,
+    // so instead the i32 dot result is widened to i64 first (vsext.vf2 /
+    // vzext.vf2) and then reduced and accumulated with register-aligned i64
+    // vadd.vv.
+    bool WidenFirst = false;
+    if (VF.isScalable() && AccLT.second.isScalableVector()) {
+      MVT NarrowMVT = AccLT.second.changeVectorElementType(MVT::i32);
+      WidenFirst =
+          RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(NarrowMVT))
+              .second;
+    }
+
+    if (WidenFirst) {
+      // The widened i64 dot result has VF/4 elements, i.e. twice the
+      // accumulator's element count, so the reduction plus the accumulate are
+      // two i64 vadd.vv.
+      std::pair<InstructionCost, MVT> WideLT = getTypeLegalizationCost(
+          VectorType::get(AccumType, VF.divideCoefficientBy(4)));
+      Cost +=
+          WideLT.first * getRISCVInstructionCost(RISCV::VSEXT_VF2,
+                                                 WideLT.second, CostKind) +
+          2 * AccLT.first *
+              getRISCVInstructionCost(RISCV::VADD_VV, AccLT.second, CostKind);
+    } else {
+      // Otherwise the scale-4 i32 sums are halved with a single i32 vadd.vv,
+      // then widened and added into the i64 result with a vwadd.wv.
+      std::pair<InstructionCost, MVT> RedLT =
+          getTypeLegalizationCost(VectorType::get(I32Ty, AccVF));
+      Cost += RedLT.first * getRISCVInstructionCost(RISCV::VADD_VV,
+                                                    RedLT.second, CostKind) +
+              AccLT.first * getRISCVInstructionCost(RISCV::VWADD_WV,
+                                                    AccLT.second, CostKind);
+      // Fixed-length vectors extract the high i32 subvector with a vslidedown.
+      if (VF.isFixed())
+        Cost += DotLT.first * getRISCVInstructionCost(RISCV::VSLIDEDOWN_VI,
+                                                      DotLT.second, CostKind);
+    }
   }
 
   return Cost;
