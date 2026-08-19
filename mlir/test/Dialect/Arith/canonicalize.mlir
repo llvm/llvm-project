@@ -1668,6 +1668,30 @@ func.func @truncFPConstantRounding() -> bf16 {
   return %0 : bf16
 }
 
+// f8E8M0FNU has no encoding for a negative value, so this conversion is not
+// lossless and is NOT folded. It used to fold, and printing the result of the
+// fold asserted in APFloat.
+// CHECK-LABEL: @truncFPConstantE8M0Negative
+//       CHECK:   arith.constant -2.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Negative() -> f8E8M0FNU {
+  %cst = arith.constant -2.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// It has no encoding for zero either: the 0x00 pattern is 2^-127. Folding used
+// to produce that value silently, while the expansion in ExpandOps.cpp reads
+// the same pattern back as 0.0.
+// CHECK-LABEL: @truncFPConstantE8M0Zero
+//       CHECK:   arith.constant 0.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Zero() -> f8E8M0FNU {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
 // CHECK-LABEL: @tripleAddAdd
 //       CHECK:   %[[cres:.+]] = arith.constant 59 : index
 //       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] : index
@@ -3103,11 +3127,11 @@ func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_addf(
-func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
+func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.addf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]], %arg0
   %c0 = arith.constant 0.0 : f32
   %c-0 = arith.constant -0.0 : f32
   %c1 = arith.constant 1.0 : f32
@@ -3115,24 +3139,26 @@ func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
   %1 = arith.addf %arg0, %c-0 : f32
   %2 = arith.addf %c-0, %arg0 : f32
   %3 = arith.addf %c1, %c1 : f32
-  return %0, %1, %2, %3 : f32, f32, f32, f32
+  %4 = arith.addf %c0, %arg0 fastmath<nsz> : f32
+  return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_subf(
-func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
+func.func @test_subf(%arg0 : f16) -> (f16, f16, f16, f16) {
   // CHECK-DAG:   %[[C1:.+]] = arith.constant -1.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant -0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.subf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]]
+  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]], %arg0
   %c0 = arith.constant 0.0 : f16
   %c-0 = arith.constant -0.0 : f16
   %c1 = arith.constant 1.0 : f16
   %0 = arith.subf %arg0, %c0 : f16
   %1 = arith.subf %arg0, %c-0 : f16
   %2 = arith.subf %c0, %c1 : f16
-  return %0, %1, %2 : f16, f16, f16
+  %3 = arith.subf %arg0, %c-0 fastmath<nsz> : f16
+  return %0, %1, %2, %3 : f16, f16, f16, f16
 }
 
 // CHECK-LABEL: @test_subf_negzero(
