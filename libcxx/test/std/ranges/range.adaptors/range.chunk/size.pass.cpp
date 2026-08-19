@@ -15,27 +15,34 @@
 
 #include <cassert>
 #include <ranges>
+#include <vector>
 
-#include "types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  int arr[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-
   // Test `chunk_view.size()` when V models only `input_range`
   {
-    static_assert(std::ranges::sized_range<std::ranges::chunk_view<input_span<int>>>);
-    static_assert(!std::ranges::sized_range<const std::ranges::chunk_view<input_span<int>>>);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    static_assert(std::ranges::sized_range<std::ranges::chunk_view<
+                      std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>>);
+    static_assert(!std::ranges::sized_range<const std::ranges::chunk_view<
+                      std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>>);
 
-    auto chunked = input_span<int>(arr, 12) | std::views::chunk(3);
+    auto chunked =
+        std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
+            cpp17_input_iterator<int*>(vector.data()),
+            sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+        std::views::chunk(3);
     assert(chunked.size() == 4);
   }
 
   // Test `chunk_view.size()` when V models `forward_range`
   {
-    static_assert(std::ranges::sized_range<std::ranges::chunk_view<std::ranges::ref_view<int[12]>>>);
-    static_assert(std::ranges::sized_range<const std::ranges::chunk_view<std::ranges::ref_view<int[12]>>>);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    static_assert(std::ranges::sized_range<std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>>>);
+    static_assert(std::ranges::sized_range<const std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>>>);
 
-    auto chunked = std::ranges::ref_view(arr) | std::views::chunk(3);
+    auto chunked = std::ranges::ref_view(vector) | std::views::chunk(3);
     assert(chunked.size() == 4);
     const auto& const_chunked = chunked;
     assert(const_chunked.size() == 4);
@@ -43,7 +50,8 @@ constexpr bool test() {
 
   // Test `chunk_view.size()` when the range is not fully divisible
   {
-    auto chunked = std::ranges::ref_view(arr) | std::views::chunk(5);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    auto chunked            = std::ranges::ref_view(vector) | std::views::chunk(5);
     assert(chunked.size() == 3);
   }
 
@@ -56,7 +64,8 @@ constexpr bool test() {
 
   // Test `chunk_view.size()` when chunk size is larger than the range
   {
-    auto chunked = std::ranges::ref_view(arr) | std::views::chunk(100);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    auto chunked            = std::ranges::ref_view(vector) | std::views::chunk(100);
     assert(chunked.size() == 1);
   }
 

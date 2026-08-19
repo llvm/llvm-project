@@ -16,15 +16,21 @@
 
 #include <cassert>
 #include <ranges>
+#include <vector>
 
-#include "../types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  int arr[] = {1, 2, 3, 4, 5, 6, 7, 8};
-
   // Test `size()` when the range is fully divisible by the chunk size.
   {
-    std::ranges::chunk_view<input_span<int>> chunked(input_span<int>(arr, 8), 4);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
+        chunked(
+            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+            4);
     auto outer = chunked.begin();
 
     assert((*outer).size() == 4);
@@ -34,7 +40,14 @@ constexpr bool test() {
 
   // Test `size()` when the last chunk is smaller than the chunk size.
   {
-    std::ranges::chunk_view<input_span<int>> chunked(input_span<int>(arr, 8), 3);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
+        chunked(
+            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+            3);
     auto outer = chunked.begin();
 
     assert((*outer).size() == 3);
@@ -46,7 +59,14 @@ constexpr bool test() {
 
   // Test `size()` after partially consuming the current chunk via the inner iterator.
   {
-    std::ranges::chunk_view<input_span<int>> chunked(input_span<int>(arr, 8), 3);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
+        chunked(
+            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+            3);
     auto outer = chunked.begin();
     auto inner = (*outer).begin();
 

@@ -19,21 +19,31 @@
 #include <vector>
 
 #include "test_convertible.h"
-#include "types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
-
   // Test `chunk_view(_View, range_difference_t<_View>)` when V models only `input_range`
   {
-    static_assert(!test_convertible<std::ranges::chunk_view<input_span<int>>, input_span<int>, std::ptrdiff_t>());
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    static_assert(!test_convertible<
+                  std::ranges::chunk_view<
+                      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>,
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>,
+                  std::ptrdiff_t>());
 
-    std::ranges::chunk_view<input_span<int>> chunked(input_span(vector.data(), 8), 3);
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked(std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                    cpp17_input_iterator<int*>(vector.data()),
+                    sentinel_wrapper<cpp17_input_iterator<int*>>(
+                        cpp17_input_iterator<int*>(vector.data() + vector.size()))),
+                3);
     assert(std::ranges::equal(*chunked.begin(), std::vector{1, 2, 3}));
   }
 
   // Test `chunk_view(_View, range_difference_t<_View>)` when V models `forward_range`
   {
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8};
     static_assert(!test_convertible<std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>>,
                                     std::ranges::ref_view<std::vector<int>>,
                                     std::ptrdiff_t>());

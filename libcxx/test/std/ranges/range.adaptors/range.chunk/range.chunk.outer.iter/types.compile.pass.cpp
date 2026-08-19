@@ -21,11 +21,24 @@
 #include <iterator>
 #include <ranges>
 
-#include "../types.h"
+#include "test_iterators.h"
 
-using OuterIterator = std::ranges::iterator_t<std::ranges::chunk_view<input_span<int>>>;
-
-static_assert(std::same_as<typename OuterIterator::iterator_concept, std::input_iterator_tag>);
-static_assert(std::same_as<typename OuterIterator::difference_type, std::ranges::range_difference_t<input_span<int>>>);
-static_assert(std::same_as<typename OuterIterator::value_type, std::iter_value_t<OuterIterator>>);
-static_assert(std::ranges::input_range<typename OuterIterator::value_type>);
+static_assert(std::same_as< typename std::ranges::iterator_t< std::ranges::chunk_view<
+                                std::ranges::subrange<cpp17_input_iterator<int*>,
+                                                      sentinel_wrapper<cpp17_input_iterator<int*>>>>>::iterator_concept,
+                            std::input_iterator_tag>);
+static_assert(
+    std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
+                     std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::
+                     difference_type,
+                 std::ranges::range_difference_t<
+                     std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
+static_assert(std::same_as<
+              typename std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::
+                  value_type,
+              std::iter_value_t<std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
+static_assert(
+    std::ranges::input_range< typename std::ranges::iterator_t<std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::value_type>);

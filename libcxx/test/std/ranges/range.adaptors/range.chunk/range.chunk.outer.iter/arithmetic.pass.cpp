@@ -32,7 +32,7 @@ constexpr bool test() {
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
         chunked =
-            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
+            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(  
                 cpp17_input_iterator<int*>(vector.data()),
                 sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
             std::views::chunk(3);
@@ -43,8 +43,9 @@ constexpr bool test() {
     auto it = chunked.begin();
     ++it;
     ++it;
-    assert(std::default_sentinel - it == 1);
-    assert(it - std::default_sentinel == -1);
+    assert(std::default_sentinel - it == 2);
+    assert(it - std::default_sentinel == -2);
+    ++it;
     ++it;
     assert(it == chunked.end());
     assert(std::default_sentinel - it == 0);

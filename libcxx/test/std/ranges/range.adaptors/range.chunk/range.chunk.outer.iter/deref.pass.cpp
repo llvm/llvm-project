@@ -20,29 +20,56 @@
 #include <ranges>
 #include <vector>
 
-#include "../types.h"
+#include "test_iterators.h"
 
 constexpr bool test() {
-  std::vector<int> vector                                = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  std::ranges::chunk_view<input_span<int>> input_chunked = input_span<int>(vector) | std::views::chunk(3);
-
   // Test `constexpr value_type outer_iterator::operator*() const`
   {
-    using OuterIterator = std::ranges::iterator_t<decltype(input_chunked)>;
-    static_assert(std::same_as<decltype(*input_chunked.begin()), typename OuterIterator::value_type>);
-    static_assert(std::ranges::input_range<typename OuterIterator::value_type>);
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked =
+            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sentinel_wrapper<cpp17_input_iterator<int*>>(
+                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+            std::views::chunk(3);
+
+    static_assert(
+        std::same_as<decltype(*chunked.begin()), typename std::ranges::iterator_t<decltype(chunked)>::value_type>);
+    static_assert(std::ranges::input_range<typename std::ranges::iterator_t<decltype(chunked)>::value_type>);
   }
 
   // Test `constexpr inner_iterator outer_iterator::value_type::begin() const noexcept`
   {
-    /*chunk_view::__outer_iterator::value_type*/ std::ranges::input_range auto inner = *input_chunked.begin();
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked =
+            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sentinel_wrapper<cpp17_input_iterator<int*>>(
+                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+            std::views::chunk(3);
+
+    /*chunk_view::__outer_iterator::value_type*/ std::ranges::input_range auto inner = *chunked.begin();
     assert(*inner.begin() == *vector.begin());
     static_assert(noexcept(inner.begin()));
   }
 
   // Test `constexpr default_sentinel_t outer_iterator::value_type::end() const noexcept`
   {
-    /*chunk_view::__outer_iterator::value_type*/ std::ranges::input_range auto inner = *input_chunked.begin();
+    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::ranges::chunk_view<
+        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
+        chunked =
+            std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>(
+                cpp17_input_iterator<int*>(vector.data()),
+                sentinel_wrapper<cpp17_input_iterator<int*>>(
+                    cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+            std::views::chunk(3);
+
+    /*chunk_view::__outer_iterator::value_type*/ std::ranges::input_range auto inner = *chunked.begin();
     [[maybe_unused]] std::same_as<std::default_sentinel_t> auto it                   = inner.end();
     static_assert(noexcept(inner.end()));
   }
