@@ -6350,8 +6350,7 @@ static void fillDependentAddressSpaceTypeLoc(
     for (const ParsedAttr &AL : *Attrs) {
       if (AL.getKind() != ParsedAttr::AT_AddressSpace)
         continue;
-      // Skip an attribute that did not produce a type: one diagnosed as
-      // invalid, or one whose argument is missing or is not an expression.
+      // Skip invalid or malformed attributes; they did not produce a type.
       if (AL.isInvalid() || AL.getNumArgs() != 1 || !AL.isArgExpr(0))
         continue;
       DASTL.setAttrNameLoc(AL.getLoc());
@@ -6429,9 +6428,8 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
       case TypeLoc::DependentAddressSpace: {
         auto TL = CurrTL.castAs<DependentAddressSpaceTypeLoc>();
         // An attribute written after the declarator-id appertains to the
-        // declared entity and is applied to the outermost type rather than
-        // to a chunk, so every attribute list of the declarator has to be
-        // searched.
+        // declared entity, not to a chunk, so every attribute list of the
+        // declarator has to be searched.
         fillDependentAddressSpaceTypeLoc(TL, {&D.getTypeObject(i).getAttrs(),
                                               &D.getAttributes(),
                                               &D.getDeclSpec().getAttributes(),

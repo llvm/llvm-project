@@ -143,4 +143,11 @@ void invalidOperand() {
   void *p [[clang::address_space(undeclared())]]; // expected-error {{use of undeclared identifier 'undeclared'}} \
                                                  // expected-warning {{applying attribute 'clang::address_space' to a declaration is deprecated; apply it to the type instead}}
 }
+
+template <int AS>
+void invalidFirst() {
+  // The type location is filled from the second attribute; the first one is
+  // malformed and produced no type.
+  void *v __attribute__((address_space)) __attribute__((address_space(AS))); // expected-error {{'address_space' attribute takes one argument}}
+}
 }
