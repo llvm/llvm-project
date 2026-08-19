@@ -1949,7 +1949,7 @@ add_header_library(
   HDRS
     llroundf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2063,7 +2063,7 @@ add_header_library(
   HDRS
     lroundf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
