@@ -25,7 +25,7 @@ define i32 @test_smin_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -92,7 +92,7 @@ define i32 @test_smax_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smax.i32(i32 [[MAX_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -164,7 +164,7 @@ define float @test_fmin_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = fcmp olt float [[RDX_NEXT]], [[TMP3]]
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = select i1 [[CMP_1]], float [[RDX_NEXT]], float [[TMP3]]
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -233,7 +233,7 @@ define float @test_fmax_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = fcmp ogt float [[RDX_NEXT]], [[TMP3]]
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = select i1 [[CMP_1]], float [[RDX_NEXT]], float [[TMP3]]
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -306,7 +306,7 @@ define float @test_fast_math_fmin_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = fcmp nnan ninf nsz olt float [[MIN_1]], [[TMP3]]
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = select nsz i1 [[CMP_1]], float [[MIN_1]], float [[TMP3]]
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -378,7 +378,7 @@ define float @test_fast_math_fmax_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[CMP_1:%.*]] = fcmp nnan ninf nsz ogt float [[MAX_1]], [[TMP3]]
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = select nsz i1 [[CMP_1]], float [[MAX_1]], float [[TMP3]]
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -452,7 +452,7 @@ define float @test_fast_math_fmin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call nsz float @llvm.minnum.f32(float [[MIN_1]], float [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -520,7 +520,7 @@ define float @test_fast_math_fmax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call nsz float @llvm.maxnum.f32(float [[MAX_1]], float [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -588,9 +588,9 @@ define <4 x float> @test_vector_fmax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_1]], <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x float> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -655,9 +655,9 @@ define <4 x float> @test_vector_fmin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_1]], <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x float> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -722,9 +722,9 @@ define <4 x i32> @test_vector_smax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[MAX_1]], <4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x i32> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -789,9 +789,9 @@ define <4 x i32> @test_vector_smin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[MIN_1]], <4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x i32> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -856,9 +856,9 @@ define <4 x i32> @test_vector_umax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[MAX_1]], <4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x i32> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -923,9 +923,9 @@ define <4 x i32> @test_vector_umin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[GEP_A_1]], align 16
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[MIN_1]], <4 x i32> [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi <4 x i32> [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
@@ -994,7 +994,7 @@ define i32 @test_smin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -1062,7 +1062,7 @@ define i32 @test_smax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smax.i32(i32 [[MAX_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -1130,7 +1130,7 @@ define i32 @test_umin_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.umin.i32(i32 [[MIN_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:
@@ -1198,7 +1198,7 @@ define i32 @test_umax_reduction_intrinsic(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.umax.i32(i32 [[MAX_1]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[EXIT_UNR_LCSSA]]:

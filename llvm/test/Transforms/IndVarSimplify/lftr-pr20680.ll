@@ -136,9 +136,8 @@ define void @f() {
 ; CHECK-NEXT:    store i32 [[INDVARS_IV]], ptr @c, align 4
 ; CHECK-NEXT:    br label [[FOR_INC13]]
 ; CHECK:       for.inc13:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND4:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND4]], label [[FOR_COND2_PREHEADER]], label [[FOR_END15:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    br i1 true, label [[FOR_COND2_PREHEADER]], label [[FOR_END15:%.*]]
 ; CHECK:       for.end15:
 ; CHECK-NEXT:    ret void
 ;

@@ -64,7 +64,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[ARRAYIDX2_7:%.*]] = getelementptr inbounds nuw <4 x float>, ptr [[DST]], i64 [[IV_NEXT_6]]
 ; APPLE-NEXT:    store <4 x float> [[TMP17]], ptr [[ARRAYIDX2_7]], align 16
 ; APPLE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
-; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; APPLE-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
@@ -131,7 +131,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds nuw <4 x float>, ptr [[DST]], i64 [[IV_NEXT_2]]
 ; CORTEXA55-NEXT:    store <4 x float> [[TMP9]], ptr [[ARRAYIDX2_3]], align 16
 ; CORTEXA55-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; CORTEXA55-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; CORTEXA55-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
 ; CORTEXA55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CORTEXA55-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; CORTEXA55:       [[EXIT_UNR_LCSSA]]:

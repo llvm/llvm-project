@@ -43,7 +43,7 @@ define dso_local void @complex_loop_unroll(i64 noundef %input_offset, i64 nounde
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nsw i64 [[INDVARS_IV_NEXT_5]], [[STEP]]
 ; CHECK-NEXT:    [[ADD_7]] = add i64 [[ADD_6]], [[INDVARS_IV_NEXT_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add nsw i64 [[INDVARS_IV_NEXT_6]], [[STEP]]
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label %[[FOR_BODY]], label %[[FOR_END14_UNR_LCSSA:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[FOR_END14_UNR_LCSSA]]:

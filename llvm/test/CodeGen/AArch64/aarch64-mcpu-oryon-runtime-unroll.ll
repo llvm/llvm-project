@@ -57,7 +57,7 @@ define void @foo(ptr %mat, ptr %sharr, ptr %barr, i16 %rows, i16 %dimout) #0 {
 ; UNROLLED:       [[FOR_INC_US_1]]:
 ; UNROLLED-NEXT:    [[TMP8]] = phi i8 [ [[TMP5]], %[[FOR_INC_US]] ], [ [[XOR30_US_1]], %[[IF_THEN_US_1]] ]
 ; UNROLLED-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; UNROLLED-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; UNROLLED-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; UNROLLED-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; UNROLLED-NEXT:    br i1 [[NITER_NCMP_1]], label %[[FOR_COND3_FOR_INC20_CRIT_EDGE_US_UNR_LCSSA:.*]], label %[[FOR_BODY8_US]]
 ; UNROLLED:       [[FOR_COND3_FOR_INC20_CRIT_EDGE_US_UNR_LCSSA]]:

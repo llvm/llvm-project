@@ -25,8 +25,8 @@ define i32 @foo(i32 %N) {
 ; EPILOG-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY_NEW]] ], [ [[INC_1:%.*]], [[WHILE_BODY]] ]
 ; EPILOG-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[WHILE_BODY]] ]
 ; EPILOG-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I]], 1
-; EPILOG-NEXT:    [[INC_1]] = add i32 [[I]], 2
-; EPILOG-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
+; EPILOG-NEXT:    [[INC_1]] = add nuw i32 [[I]], 2
+; EPILOG-NEXT:    [[NITER_NEXT_1]] = add nuw i32 [[NITER]], 2
 ; EPILOG-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; EPILOG-NEXT:    br i1 [[NITER_NCMP_1]], label [[WHILE_END_UNR_LCSSA:%.*]], label [[WHILE_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; EPILOG:       while.end.unr-lcssa:

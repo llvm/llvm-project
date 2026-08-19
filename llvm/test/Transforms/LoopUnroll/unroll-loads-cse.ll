@@ -33,7 +33,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(ptr %src, ptr no
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
@@ -113,7 +113,7 @@ define void @cse_different_load_types(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
@@ -272,7 +272,7 @@ define void @cse_atomic_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
@@ -350,7 +350,7 @@ define void @cse_load_may_be_clobbered(ptr %src, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:

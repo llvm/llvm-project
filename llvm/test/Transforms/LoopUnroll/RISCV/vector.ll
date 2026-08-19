@@ -81,7 +81,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; SIFIVE-NEXT:    [[ARRAYIDX2_7:%.*]] = getelementptr inbounds nuw <4 x float>, ptr [[DST]], i64 [[IV_NEXT_6]]
 ; SIFIVE-NEXT:    store <4 x float> [[TMP17]], ptr [[ARRAYIDX2_7]], align 16
 ; SIFIVE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
-; SIFIVE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; SIFIVE-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; SIFIVE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; SIFIVE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; SIFIVE:       [[EXIT_UNR_LCSSA]]:

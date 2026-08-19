@@ -49,8 +49,8 @@ define void @runtime_unroll_uniform_trip_count(ptr %out, ptr %in, i32 %n) {
 ; CHECK-NEXT:    %shfl.3 = call i32 @llvm.nvvm.shfl.down.i32(i32 %add.2, i32 1, i32 31)
 ; CHECK-NEXT:    %add.3 = add i32 %load.3, %shfl.3
 ; CHECK-NEXT:    store i32 %add.3, ptr %arrayidx.out.3, align 4
-; CHECK-NEXT:    %indvars.iv.next.3 = add i32 %indvars.iv, 4
-; CHECK-NEXT:    %niter.next.3 = add i32 %niter, 4
+; CHECK-NEXT:    %indvars.iv.next.3 = add nuw i32 %indvars.iv, 4
+; CHECK-NEXT:    %niter.next.3 = add nuw i32 %niter, 4
 ; CHECK-NEXT:    %niter.ncmp.3 = icmp eq i32 %niter.next.3, %unroll_iter
 ; CHECK-NEXT:    br i1 %niter.ncmp.3, label %for.end.unr-lcssa, label %for.body
 ; CHECK:       for.end.unr-lcssa:

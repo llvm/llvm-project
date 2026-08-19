@@ -24,7 +24,7 @@ define i32 @test(i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P1_SROA_5_0:%.*]] = phi i32 [ 1, [[TMP0:%.*]] ], [ [[V2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P1_SROA_0_0:%.*]] = phi i32 [ 0, [[TMP0]] ], [ [[V1_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[V1_INC]] = add i32 [[P1_SROA_0_0]], 1
+; CHECK-NEXT:    [[V1_INC]] = add nuw i32 [[P1_SROA_0_0]], 1
 ; CHECK-NEXT:    [[V2_NEXT]] = shl i32 [[P1_SROA_5_0]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[V1_INC]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LOOP]]

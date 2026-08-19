@@ -77,8 +77,8 @@ define amdgpu_kernel void @runtime_unroll_uniform_trip_count(ptr addrspace(1) no
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier() #4
 ; CHECK-NEXT:    %add.7 = add i32 %load.7, %add.6
 ; CHECK-NEXT:    store i32 %add.7, ptr addrspace(1) %arrayidx.out.7, align 4
-; CHECK-NEXT:    %indvars.iv.next.7 = add i32 %indvars.iv, 8
-; CHECK-NEXT:    %niter.next.7 = add i32 %niter, 8
+; CHECK-NEXT:    %indvars.iv.next.7 = add nuw i32 %indvars.iv, 8
+; CHECK-NEXT:    %niter.next.7 = add nuw i32 %niter, 8
 ; CHECK-NEXT:    %niter.ncmp.7 = icmp eq i32 %niter.next.7, %unroll_iter
 ; CHECK-NEXT:    br i1 %niter.ncmp.7, label %for.end.unr-lcssa, label %for.body
 ; CHECK:       for.end.unr-lcssa:

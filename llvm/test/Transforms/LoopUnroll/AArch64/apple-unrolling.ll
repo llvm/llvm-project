@@ -71,7 +71,7 @@ define void @small_load_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale) {
 ; APPLE-NEXT:    [[GEP_DST_7:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT_6]]
 ; APPLE-NEXT:    store float [[L_7]], ptr [[GEP_DST_7]], align 4
 ; APPLE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
-; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; APPLE-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
@@ -126,7 +126,7 @@ define void @small_load_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale) {
 ; OTHER-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT]]
 ; OTHER-NEXT:    store float [[L_1]], ptr [[GEP_DST_1]], align 4
 ; OTHER-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; OTHER-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; OTHER-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; OTHER-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; OTHER-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; OTHER:       [[EXIT_UNR_LCSSA]]:
@@ -194,7 +194,7 @@ define void @load_op_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale, float %k
 ; APPLE-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT]]
 ; APPLE-NEXT:    store float [[O_1]], ptr [[GEP_DST_1]], align 4
 ; APPLE-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; APPLE-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; APPLE-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; APPLE-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; APPLE-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
@@ -244,7 +244,7 @@ define void @load_op_store_loop(ptr %src, ptr %dst, i64 %N, i64 %scale, float %k
 ; OTHER-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV_NEXT]]
 ; OTHER-NEXT:    store float [[O_1]], ptr [[GEP_DST_1]], align 4
 ; OTHER-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
-; OTHER-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; OTHER-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; OTHER-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; OTHER-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; OTHER:       [[EXIT_UNR_LCSSA]]:
@@ -313,7 +313,7 @@ define void @load_op_store_loop_multiblock(ptr %src, ptr %dst, i64 %N, i64 %scal
 ; APPLE:       [[EXIT]]:
 ; APPLE-NEXT:    ret void
 ;
-; ; OTHER-LABEL: define void @load_op_store_loop_multiblock(
+; OTHER-LABEL: define void @load_op_store_loop_multiblock(
 ; OTHER-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[SCALE:%.*]], float [[K:%.*]]) #[[ATTR0]] {
 ; OTHER-NEXT:  [[ENTRY:.*]]:
 ; OTHER-NEXT:    br label %[[LOOP:.*]]
@@ -579,7 +579,7 @@ define void @early_continue_dep_on_load_large(ptr %p.1, ptr %p.2, i64 %N, i32 %x
 ; APPLE-NEXT:    br label %[[LOOP_LATCH_3]]
 ; APPLE:       [[LOOP_LATCH_3]]:
 ; APPLE-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; APPLE-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; APPLE-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
 ; APPLE-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; APPLE-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP_HEADER]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
@@ -1062,7 +1062,7 @@ define i32 @test_add_reduction_runtime(ptr %a, i64 noundef %n) {
 ; APPLE-NEXT:    [[TMP5:%.*]] = load i32, ptr [[GEP_A_3]], align 2
 ; APPLE-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_3]], [[TMP5]]
 ; APPLE-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; APPLE-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
+; APPLE-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i64 [[NITER]], 4
 ; APPLE-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; APPLE-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
@@ -1129,7 +1129,7 @@ define i32 @test_add_reduction_runtime(ptr %a, i64 noundef %n) {
 ; OTHER-NEXT:    [[TMP5:%.*]] = load i32, ptr [[GEP_A_3]], align 2
 ; OTHER-NEXT:    [[RDX_NEXT_3]] = add nuw nsw i32 [[RDX_NEXT_2]], [[TMP5]]
 ; OTHER-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
-; OTHER-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; OTHER-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
 ; OTHER-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; OTHER-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]]
 ; OTHER:       [[EXIT_UNR_LCSSA]]:

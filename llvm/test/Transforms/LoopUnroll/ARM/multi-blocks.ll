@@ -547,7 +547,7 @@ define void @test_four_blocks(ptr nocapture %Output, ptr nocapture readonly %Con
 ; CHECK:       for.inc.3:
 ; CHECK-NEXT:    [[TEMP_1_3]] = phi i32 [ [[ADD_3]], [[IF_THEN_3]] ], [ [[SUB13_3]], [[IF_ELSE_3]] ]
 ; CHECK-NEXT:    [[INC_3]] = add nuw i32 [[J_027]], 4
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw i32 [[NITER]], 4
 ; CHECK-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
