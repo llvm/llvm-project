@@ -388,6 +388,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion crash when instantiating a nested requirement with an invalid constraint. (#GH213575)
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
+- Fixed a crash when compiling C code with `-fsanitize=function` targeting the MSVC ABI, where a function returns an anonymous struct. (#GH215689)
 
 #### Bug Fixes to Compiler Builtins
 
