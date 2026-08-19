@@ -15486,7 +15486,8 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
 }
 
 template<typename Derived>
-ExprResult TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
+ExprResult
+TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
   bool ArgChanged = false;
   SmallVector<TypeSourceInfo *, 4> Args;
   for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I) {
