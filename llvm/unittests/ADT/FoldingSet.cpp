@@ -14,7 +14,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using testing::ElementsAre;
@@ -69,6 +68,10 @@ struct TrivialPair : public FoldingSetNode {
   void Profile(FoldingSetNodeID &ID) const {
     ID.AddInteger(Key);
     ID.AddInteger(Value);
+  }
+
+  bool operator==(const TrivialPair &RHS) const {
+    return Key == RHS.Key && Value == RHS.Value;
   }
 };
 
@@ -247,12 +250,7 @@ TEST(FoldingSetTest, Iterator) {
   Set.InsertNode(&T2);
   Set.InsertNode(&T3);
 
-  {
-    std::vector<const TrivialPair *> Elements;
-    for (const TrivialPair &Item : Set)
-      Elements.push_back(&Item);
-    EXPECT_THAT(Elements, UnorderedElementsAre(&T1, &T2, &T3));
-  }
+  EXPECT_THAT(Set, UnorderedElementsAre(T1, T2, T3));
 
   ASSERT_NE(Set.begin(), Set.end());
   auto It = Set.begin();
@@ -288,12 +286,7 @@ TEST(FoldingSetTest, FoldingSetVectorBasic) {
   EXPECT_THAT(Vec, testing::Not(IsEmpty()));
 
   // Verify deterministic iteration order matching insertion order.
-  {
-    std::vector<const TrivialPair *> Elements;
-    for (const TrivialPair &Item : Vec)
-      Elements.push_back(&Item);
-    EXPECT_THAT(Elements, ElementsAre(&T1, &T2, &T3));
-  }
+  EXPECT_THAT(Vec, ElementsAre(T1, T2, T3));
 
   Vec.clear();
   EXPECT_THAT(Vec, IsEmpty());
@@ -312,6 +305,10 @@ struct ContextualPair : public FoldingSetNode {
   void Profile(FoldingSetNodeID &ID, TestContext Context) const {
     ID.AddInteger(Key ^ Context.Value);
     ID.AddInteger(Value ^ Context.Value);
+  }
+
+  bool operator==(const ContextualPair &RHS) const {
+    return Key == RHS.Key && Value == RHS.Value;
   }
 };
 
@@ -341,23 +338,13 @@ TEST(FoldingSetTest, ContextualFoldingSetBasic) {
 
   EXPECT_EQ(&T2, Set.FindNodeOrInsertPos(ID2, InsertPos));
 
-  {
-    std::vector<const ContextualPair *> Elements;
-    for (const ContextualPair &Item : Set)
-      Elements.push_back(&Item);
-    EXPECT_THAT(Elements, UnorderedElementsAre(&T1, &T2));
-  }
+  EXPECT_THAT(Set, UnorderedElementsAre(T1, T2));
 
   EXPECT_TRUE(Set.RemoveNode(&T1));
   EXPECT_THAT(Set, SizeIs(1));
   EXPECT_FALSE(Set.RemoveNode(&T1));
 
-  {
-    std::vector<const ContextualPair *> Elements;
-    for (const ContextualPair &Item : Set)
-      Elements.push_back(&Item);
-    EXPECT_THAT(Elements, UnorderedElementsAre(&T2));
-  }
+  EXPECT_THAT(Set, UnorderedElementsAre(T2));
 
   Set.clear();
   EXPECT_THAT(Set, IsEmpty());
