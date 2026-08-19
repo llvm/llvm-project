@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -5917,7 +5918,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       Intrinsic::getInterleaveIntrinsicID(Factor);
 
   // Collect one extract for each deinterleaved field.
-  SmallVector<Instruction *, 8> CurrentInsts(Factor, nullptr);
+  SmallVector<Use *, 8> CurrentUses(Factor, nullptr);
   for (Use &U : Deinterleave->uses()) {
     if (U.getUser()->isDroppable())
       continue;
@@ -5927,35 +5928,24 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     unsigned Index = *Extract->idx_begin();
-    if (Index >= Factor || CurrentInsts[Index])
+    if (Index >= Factor || CurrentUses[Index])
       return false;
 
-    CurrentInsts[Index] = Extract;
+    CurrentUses[Index] = &U;
   }
 
-  struct ElementwiseStep {
-    SmallVector<Instruction *, 8> Insts;
-    unsigned ChainOperand;
-
-    ElementwiseStep(ArrayRef<Use *> Uses, unsigned ChainOperand)
-        : ChainOperand(ChainOperand) {
-      Insts.reserve(Uses.size());
-      for (Use *U : Uses)
-        Insts.push_back(cast<Instruction>(U->getUser()));
-    }
-  };
-
+  using ElementwiseStep = SmallVector<Use *, 8>;
   SmallVector<ElementwiseStep, 4> Steps;
   IntrinsicInst *Interleave = nullptr;
   unsigned NumVisited = 0;
 
-  auto getNumDataOperands = [](Instruction *Inst) {
+  auto GetNumDataOperands = [](Instruction *Inst) {
     if (auto *II = dyn_cast<IntrinsicInst>(Inst))
       return II->arg_size();
     return Inst->getNumOperands();
   };
 
-  auto isSupportedElementwise = [&](Instruction *Inst) {
+  auto IsSupportedElementwise = [&](Instruction *Inst) {
     auto *ResultTy = dyn_cast<VectorType>(Inst->getType());
     if (!ResultTy)
       return false;
@@ -5970,7 +5960,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     }
 
     // Reject operations that change the element-count.
-    for (unsigned Op = 0, E = getNumDataOperands(Inst); Op != E; ++Op) {
+    for (unsigned Op = 0, E = GetNumDataOperands(Inst); Op != E; ++Op) {
       auto *OperandTy = dyn_cast<VectorType>(Inst->getOperand(Op)->getType());
       if (OperandTy &&
           OperandTy->getElementCount() != ResultTy->getElementCount())
@@ -5984,28 +5974,27 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   // At each level, expect every chain to perform the same operation with the
   // preceding chain value at the same operand position, until they all reach
   // the matching interleave.
-  SmallVector<Use *, 8> CurrentUses(CurrentInsts.size());
   while (NumVisited + Factor <= MaxInstrsToScan) {
     NumVisited += Factor;
 
-    for (auto [Current, CurrentUse] : zip_equal(CurrentInsts, CurrentUses)) {
-      Use *U = Current->getSingleUndroppableUse();
-      auto *Next = U ? dyn_cast<Instruction>(U->getUser()) : nullptr;
+    for (Use *&CurrentUse : CurrentUses) {
+      Use *NextUse = CurrentUse->getUser()->getSingleUndroppableUse();
+      auto *Next =
+          NextUse ? dyn_cast<Instruction>(NextUse->getUser()) : nullptr;
       if (!Next)
         return false;
 
-      Current = Next;
-      CurrentUse = U;
+      CurrentUse = NextUse;
     }
 
     // Check whether every chain has reached the same interleave.
-    if (auto *II = dyn_cast<IntrinsicInst>(CurrentInsts.front());
+    if (auto *II = dyn_cast<IntrinsicInst>(CurrentUses.front()->getUser());
         II && II->getIntrinsicID() == InterleaveIID) {
       if (II->hasOperandBundles())
         return false;
 
       for (unsigned Index = 0; Index != Factor; ++Index)
-        if (CurrentInsts[Index] != II ||
+        if (CurrentUses[Index]->getUser() != II ||
             CurrentUses[Index]->getOperandNo() != Index)
           return false;
 
@@ -6013,47 +6002,39 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       break;
     }
 
-    ArrayRef<Use *> Uses = CurrentUses;
-    if (Uses.empty())
+    auto *FirstInst = cast<Instruction>(CurrentUses.front()->getUser());
+    if (!IsSupportedElementwise(FirstInst))
       return false;
 
-    Instruction *FirstInst = cast<Instruction>(Uses.front()->getUser());
-
-    if (!isSupportedElementwise(FirstInst))
-      return false;
-
-    unsigned ChainOperand = Uses.front()->getOperandNo();
-
-    if (!FirstInst || !isSupportedElementwise(FirstInst))
-      return false;
-
-    if (any_of(Uses.drop_front(), [&](Use *U) {
-          auto *Inst = dyn_cast<Instruction>(U->getUser());
-          return !Inst || U->getOperandNo() != ChainOperand ||
-                 !FirstInst->isSameOperationAs(Inst);
+    unsigned ChainOperand = CurrentUses.front()->getOperandNo();
+    if (any_of(CurrentUses, [&](Use *U) {
+          auto *Inst = cast<Instruction>(U->getUser());
+          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                       !FirstInst->isSameOperationAs(Inst));
         }))
       return false;
 
-    auto getSplatOrScalar = [](Value *V) {
+    auto GetSplatOrScalar = [](Value *V) {
       return isa<VectorType>(V->getType()) ? getSplatValue(V) : V;
     };
 
     // Non-chain operands must be either the same scalar or splats of that
     // scalar. This intentionally rejects differing poison/undef or non-splat
     // vector operands between chains.
-    for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
+    for (unsigned Op = 0, E = GetNumDataOperands(FirstInst); Op != E; ++Op) {
       if (Op == ChainOperand)
         continue;
 
-      Value *CommonValue = getSplatOrScalar(FirstInst->getOperand(Op));
-      if (!CommonValue || any_of(Uses.drop_front(), [&](Use *U) {
+      Value *CommonValue = GetSplatOrScalar(FirstInst->getOperand(Op));
+      if (!CommonValue || any_of(CurrentUses, [&](Use *U) {
             Instruction *Inst = cast<Instruction>(U->getUser());
-            return getSplatOrScalar(Inst->getOperand(Op)) != CommonValue;
+            return Inst != FirstInst &&
+                   GetSplatOrScalar(Inst->getOperand(Op)) != CommonValue;
           }))
         return false;
     }
 
-    Steps.emplace_back(Uses, ChainOperand);
+    Steps.push_back(CurrentUses);
   }
 
   if (!Interleave)
@@ -6064,7 +6045,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   ElementCount WideEC =
       cast<VectorType>(WideValue->getType())->getElementCount();
 
-  auto createWideInstruction = [&](Instruction *NarrowInst,
+  auto CreateWideInstruction = [&](Instruction *NarrowInst,
                                    ArrayRef<Value *> NewOperands,
                                    VectorType *WideResultTy) -> Value * {
     if (isa<BinaryOperator, UnaryOperator>(NarrowInst))
@@ -6087,19 +6068,20 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   };
 
   for (const ElementwiseStep &Step : Steps) {
-    Instruction *NarrowInst = Step.Insts.front();
+    Instruction *NarrowInst = cast<Instruction>(Step.front()->getUser());
+    unsigned ChainOperand = Step.front()->getOperandNo();
 
     Builder.SetInsertPoint(NarrowInst);
     Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
 
-    unsigned NumOperands = getNumDataOperands(NarrowInst);
+    unsigned NumOperands = GetNumDataOperands(NarrowInst);
     SmallVector<Value *, 4> NewOperands;
     NewOperands.reserve(NumOperands);
 
     for (unsigned Op = 0; Op != NumOperands; ++Op) {
       Value *Operand = NarrowInst->getOperand(Op);
 
-      if (Op == Step.ChainOperand)
+      if (Op == ChainOperand)
         Operand = WideValue;
       else if (isa<VectorType>(Operand->getType()))
         Operand = Builder.CreateVectorSplat(WideEC, getSplatValue(Operand));
@@ -6109,9 +6091,10 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     auto *WideResultTy =
         VectorType::get(NarrowInst->getType()->getScalarType(), WideEC);
     Value *NewValue =
-        createWideInstruction(NarrowInst, NewOperands, WideResultTy);
+        CreateWideInstruction(NarrowInst, NewOperands, WideResultTy);
 
-    SmallVector<Value *, 8> NarrowInsts(Step.Insts.begin(), Step.Insts.end());
+    SmallVector<Value *> NarrowInsts =
+        map_to_vector(Step, [](Use *U) { return cast<Value>(U->getUser()); });
     propagateIRFlags(NewValue, NarrowInsts);
 
     if (auto *NewInst = dyn_cast<Instruction>(NewValue))
