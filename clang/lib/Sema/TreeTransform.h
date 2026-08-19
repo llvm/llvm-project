@@ -16532,6 +16532,36 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
       T, E->getLParenLoc(), Args, E->getRParenLoc(), E->isListInitialization());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
+    DependentTemplateIdExpr *E) {
+
+  NestedNameSpecifierLoc Loc;
+  TemplateName Name = getDerived().TransformTemplateName(
+      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
+      E->getNameLoc());
+  if (Name.isNull())
+    return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+
+  assert(TD && "A dependent template id always refers to a template decl");
+
+  TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+  if (getDerived().TransformTemplateArguments(
+          E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
+    return ExprError();
+
+  CXXScopeSpec SS;
+
+  LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
+  R.addDecl(TD);
+  R.resolveKind();
+  return getDerived().RebuildTemplateIdExpr(
+      SS, /*Template Keyword=*/SourceLocation(), R,
+      /*RequiresADL=*/false, &TransArgs);
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXDependentScopeMemberExpr(
