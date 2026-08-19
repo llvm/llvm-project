@@ -74,6 +74,7 @@ Improvements and New Features
 - ``std::scoped_lock`` now carries Clang thread safety annotations when locking multiple mutexes, so
   ``-Wthread-safety`` no longer incorrectly reports the guarded data accessed inside the block as
   unprotected. This requires Clang 21 or later.
+- A bug using ``std::filesystem::remove_all`` on a read-only nested directory has been fixed.
 
 Deprecations and Removals
 -------------------------

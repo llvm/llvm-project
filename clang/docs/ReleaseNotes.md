@@ -1117,8 +1117,25 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   address of specializations of templated functions that have overloads for both
   host and device. (#GH199299)
 
+#### PowerPC Support
+
+- Added support for AMO load and store builtins.
+- Added DMF crypto builtins for extended mnemonics.
+- Added ISA Future (`-mcpu=future`) builtins for AES encrypt/decrypt/key-generation,
+  Post-Quantum Cryptography Acceleration (`vec_mulh`), Deeply Compressed Weights
+  (`vec_uncompress*`/`vec_unpack_*`), and Elliptic Curve Cryptography.
+- Updated DMR builtin names to remove the `_mma` infix.
+- Added early target feature validation for PowerPC builtins during semantic analysis.
+- Added support for the following PowerPC BCD (Binary-Coded Decimal) builtins
+  for POWER9 targets (requires including `bcd.h`):
+  `__builtin_bcdshift`, `__builtin_bcdshiftround`, `__builtin_bcdtruncate`,
+  `__builtin_bcdunsignedtruncate`, and `__builtin_bcdunsignedshift`.
+
 #### AIX Support
 
+- Implemented the `ifunc` attribute with Function Multi-Versioning (FMV) /
+  `target_clones` (cpu-only) support.
+- Added diagnosis of invalid feature strings on the `target` attribute.
 - The driver default for the linker flag `-bcdtors` now defaults to `mbr`
   (instead of `all`) which only extracts static init from archive members which
   would otherwise be referenced.
@@ -1132,6 +1149,25 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   The string is included in the final executable and loaded into memory at program runtime.
 - The driver relaxes the restrictions on the `OBJECT_MODE` environment
   variable and now silently accepts `32_64` and `any`.
+- Fixed a bug where the `OBJECT_MODE` environment variable could override an
+  explicitly specified `--target` triple. `--target` now takes precedence over
+  `OBJECT_MODE`, ensuring lit tests and other callers that specify an explicit
+  32-bit or 64-bit triple get the correct bit mode regardless of environment.
+- The driver's `-print-search-dirs` output now includes the AIX system library
+  paths (`/usr/lib` and `/lib`), matching GCC behavior and fixing build-tool
+  failures (Meson, CMake) that rely on this output to construct `blibpath`.
+  The `AddFilePathLibArgs()` override also prevents duplicate `-L` flags in
+  linker commands.
+- The `+modern-aix-as` target feature is now automatically enabled when
+  targeting AIX with the integrated assembler (the default, or
+  `-fintegrated-as`). This makes instruction aliases gated on `ModernAs`
+  (e.g. `mfsprg`) available without requiring manual
+  `-Xclang -target-feature -Xclang +modern-aix-as`. The feature is not
+  enabled when `-fno-integrated-as` is specified.
+- The compiler-rt build now detects the RPC XDR header (`tirpc/rpc/xdr.h`
+  on AIX, `rpc/xdr.h` elsewhere). A new `COMPILER_RT_REQUIRE_RPC_XDR_H`
+  CMake option (default `ON` on AIX, `OFF` elsewhere) turns a missing
+  header into a fatal configuration error with an actionable message.
 
 #### NetBSD Support
 
