@@ -33,6 +33,7 @@ class GenericOp;
 
 // Forward declaration needed by ElementwiseOpInterface.
 enum class ElementwiseKind : uint32_t;
+enum class ElementwiseArityGroup : uint32_t;
 
 namespace detail {
 /// Implementation of the method that check if given operands

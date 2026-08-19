@@ -622,10 +622,6 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
   let hasFolder = 1;
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
-      /// Get the arity enum corresponding to the kind of op, e.g. if arg is
-      /// `ElementwiseKind::add`, return `ElementwiseArityGroup::Binary`.
-      static ElementwiseArityGroup getArityGroup(ElementwiseKind n);
-
       /// Both user-specified and default indexing map will always depend on
       /// the current Op instance.
       static bool hasDynamicIndexingMaps() { return true; }
@@ -1318,6 +1314,11 @@ multiclass ElementwiseNamedOp<string mnemonic, string kind, int numRegionArgs,
     let extraClassDefinition = [{
       ElementwiseKind $cppClass::getElementwiseKind() {
         return ElementwiseKind::}] # kind # [{;
+      }
+      ElementwiseArityGroup $cppClass::getArityGroup() {
+        return ElementwiseArityGroup::}] #
+          !if(!eq(numRegionArgs, 2), "Unary",
+          !if(!eq(numRegionArgs, 3), "Binary", "Ternary")) # [{;
       }
       ParseResult $cppClass::parse(OpAsmParser &parser, OperationState &result) {
         return ::parseNamedStructuredOp(parser, result,
