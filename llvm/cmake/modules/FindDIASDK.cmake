@@ -20,16 +20,25 @@ if(NOT WIN32)
   return()
 endif()
 
-set(DIASDK_LOCATION_INFERRED FALSE)
+# Cached alongside MSVC_DIA_SDK_DIR: once the path is in the cache the branches
+# below no longer run, so a plain variable would read FALSE on every reconfigure
+# and describe a location nobody chose as one that was chosen deliberately.
+if(NOT DEFINED DIASDK_LOCATION_INFERRED)
+  set(DIASDK_LOCATION_INFERRED FALSE CACHE INTERNAL
+      "Whether MSVC_DIA_SDK_DIR was inferred from the environment")
+endif()
 
 if(LLVM_WINSYSROOT)
   set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
       "Path to the DIA SDK")
+  set(DIASDK_LOCATION_INFERRED FALSE CACHE INTERNAL
+      "Whether MSVC_DIA_SDK_DIR was inferred from the environment")
 elseif(NOT DEFINED MSVC_DIA_SDK_DIR)
   if(DEFINED ENV{VSINSTALLDIR})
     set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
         "Path to the DIA SDK")
-    set(DIASDK_LOCATION_INFERRED TRUE)
+    set(DIASDK_LOCATION_INFERRED TRUE CACHE INTERNAL
+        "Whether MSVC_DIA_SDK_DIR was inferred from the environment")
   else()
     message(STATUS "MSVC_DIA_SDK_DIR not set, and could not be inferred. DIA "
                    "SDK may not be found.")
