@@ -6366,6 +6366,8 @@ foreach dim = ["x", "y", "z"] in {
 // tcgen05.mma Helpers
 //
 
+defvar CollectorUsages = ["discard", "lastuse", "fill", "use"];
+
 class Tcgen05MMABase<bit IsSparse, string ASpace, string Kind, int CtaGroup,
                      string CollectorUsage, string CollectorUsageB = "discard"> :
         NVPTXInst<(outs), (ins), "?", []>,
@@ -6478,11 +6480,11 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
+        foreach collector_usage_a = CollectorUsages in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = CollectorUsages in {
                 def : Tcgen05MMAInst<sparse, space, kind, cta_group,
                                     collector_usage_a, collector_usage_b,
                                     scale_input_d, ashift>;
@@ -6615,11 +6617,11 @@ foreach sparse = [0, 1] in {
   foreach space = ["tensor", "shared"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach cta_group = [1, 2] in {
-        foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
+        foreach collector_usage_a = CollectorUsages in {
           foreach scale_input_d = !if(!or(!eq(kind, "f16"),
                                           !eq(kind, "tf32")), [0, 1], [0]) in {
             foreach ashift = !if(!eq(space, "tensor"), [0, 1], [0]) in {
-              foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+              foreach collector_usage_b = CollectorUsages in {
                 def :
                   Tcgen05MMADisableOutputLaneInst<sparse, space, kind, cta_group,
                                                   collector_usage_a, collector_usage_b,
@@ -6692,8 +6694,8 @@ foreach sparse = [0, 1] in {
     foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
       foreach scale_vec_size = ["", ".block16", ".block32"] in {
         foreach cta_group = [1, 2] in {
-          foreach collector_usage_a = ["fill", "use", "lastuse", "discard"] in {
-            foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+          foreach collector_usage_a = CollectorUsages in {
+            foreach collector_usage_b = CollectorUsages in {
               if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
                 def : Tcgen05MMABlockScaleInst<sparse, space, kind, cta_group,
                                                scale_vec_size, collector_usage_a,
@@ -6757,7 +6759,7 @@ foreach sparse = [0, 1] in {
   foreach space = ["shared", "tensor"] in {
     foreach kind = ["f16", "tf32", "f8f6f4", "i8", "ti16"] in {
       foreach collector_buffer_b = [0, 1, 2, 3] in {
-        foreach collector_usage_op = ["discard", "fill", "use", "lastuse"] in {
+        foreach collector_usage_op = CollectorUsages in {
           foreach zero_col_mask = [0, 1] in {
               def : Tcgen05MMAWSInst<sparse, space, kind, collector_buffer_b,
                                      collector_usage_op, zero_col_mask>;
@@ -6814,8 +6816,8 @@ class Tcgen05MMADecompressInst<string ASpace, string Kind, int CtaGroup,
 // tcgen05.mma decompress
 foreach space = ["tensor", "shared"] in {
   foreach cta_group = [1, 2] in {
-    foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
-      foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+    foreach collector_usage_a = CollectorUsages in {
+      foreach collector_usage_b = CollectorUsages in {
         def : Tcgen05MMADecompressInst<space, "f8f6f4", cta_group,
                                        collector_usage_a, collector_usage_b>;
       } // collector_usage_b
@@ -6829,11 +6831,11 @@ class Tcgen05MMADecompressDisableOutputLaneInst<string ASpace, string Kind,
                                                 string CollectorUsageB> :
     Tcgen05MMADecompressBase<ASpace, Kind, CtaGroup, CollectorUsageA,
                              CollectorUsageB> {
-  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode<0, // IsSparse
+  SDNode Opcode = Tcgen05MMADisableOutputLaneSDNode</*IsSparse=*/ 0,
                                                     ASpace, CtaGroup,
-                                                    0,  // IsScaleInputD
-                                                    0,  // IsAShift
-                                                    1>; // IsDecompressB
+                                                    /*IsScaleInputD=*/ 0,
+                                                    /*IsAShift=*/ 0,
+                                                    /*IsDecompressB=*/ 1>;
 
   // disable output lane
   int DisableOutputLaneVecSize = !mul(4, CtaGroup);
@@ -6872,8 +6874,8 @@ class Tcgen05MMADecompressDisableOutputLaneInst<string ASpace, string Kind,
 // tcgen05.mma decompress disable output lane
 foreach space = ["tensor", "shared"] in {
   foreach cta_group = [1, 2] in {
-    foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
-      foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+    foreach collector_usage_a = CollectorUsages in {
+      foreach collector_usage_b = CollectorUsages in {
         def : Tcgen05MMADecompressDisableOutputLaneInst<
                   space, "f8f6f4", cta_group, collector_usage_a,
                   collector_usage_b>;
@@ -6918,8 +6920,8 @@ class Tcgen05MMADecompressBlockScaleInst<string ASpace, string Kind,
 // tcgen05.mma decompress block_scale
 foreach space = ["tensor", "shared"] in {
   foreach cta_group = [1, 2] in {
-    foreach collector_usage_a = ["discard", "lastuse", "fill", "use"] in {
-      foreach collector_usage_b = ["discard", "lastuse", "fill", "use"] in {
+    foreach collector_usage_a = CollectorUsages in {
+      foreach collector_usage_b = CollectorUsages in {
         def : Tcgen05MMADecompressBlockScaleInst<
                   space, "mxf8f6f4", cta_group, collector_usage_a,
                   collector_usage_b, ".block32">;
