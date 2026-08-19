@@ -5348,8 +5348,6 @@ ResolveGDBBuiltinType(llvm::StringRef type_name) {
       "ieee_single", eEncodingIEEE754, eFormatFloat, 4);
   static const RegisterTypeBuiltin ieee_double_type(
       "ieee_double", eEncodingIEEE754, eFormatFloat, 8);
-  static const RegisterTypeBuiltin arm_fpa_ext_type(
-      "arm_fpa_ext", eEncodingIEEE754, eFormatFloat, 12);
   static const RegisterTypeBuiltin i387_ext_type("i387_ext", eEncodingIEEE754,
                                                  eFormatFloat, 10);
   static const RegisterTypeBuiltin bfloat16_type("bfloat16", eEncodingIEEE754,
@@ -5372,7 +5370,6 @@ ResolveGDBBuiltinType(llvm::StringRef type_name) {
       .Case("ieee_half", &ieee_half_type)
       .Case("ieee_single", &ieee_single_type)
       .Case("ieee_double", &ieee_double_type)
-      .Case("arm_fpa_ext", &arm_fpa_ext_type)
       .Case("i387_ext", &i387_ext_type)
       .Case("bfloat16", &bfloat16_type)
       .Default(nullptr);

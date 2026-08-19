@@ -333,17 +333,17 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             """\
             <reg name="half" regnum="0" bitsize="16" type="ieee_half"/>
             <reg name="bfloat" regnum="1" bitsize="16" type="bfloat16"/>
-            <reg name="fpa" regnum="2" bitsize="96" type="arm_fpa_ext"/>
+            <reg name="x87" regnum="2" bitsize="80" type="i387_ext"/>
             <reg name="pc" bitsize="64"/>""",
-            "0102" "0304" "05060708090a0b0c0d0e0f10" "0000000000000000",
+            "0102" "0304" "05060708090a0b0c0d0e" "0000000000000000",
         )
 
         frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         self.assertEqual(frame.FindRegister("half").GetData().uint8[:2], [1, 2])
         self.assertEqual(frame.FindRegister("bfloat").GetData().uint8[:2], [3, 4])
         self.assertEqual(
-            frame.FindRegister("fpa").GetData().uint8[:12],
-            list(range(5, 17)),
+            frame.FindRegister("x87").GetData().uint8[:10],
+            list(range(5, 15)),
         )
 
     @skipIfXmlSupportMissing
