@@ -3970,6 +3970,7 @@ add_fp_unittest(
     NearbyIntTest.h
   DEPENDS
     libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.float128
     libc.src.math.nearbyintf128
 )
 
