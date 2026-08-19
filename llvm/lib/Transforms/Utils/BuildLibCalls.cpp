@@ -335,8 +335,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Module *M, StringRef Name,
 
 bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
                                          const TargetLibraryInfo &TLI) {
-  LibFunc TheLibFunc;
-  if (!(TLI.getLibFunc(F, TheLibFunc) && TLI.has(TheLibFunc)))
+  LibFunc TheLibFunc = TLI.getLibFunc(F);
+  if (!TLI.has(TheLibFunc))
     return false;
 
   bool Changed = false;
@@ -1600,9 +1600,7 @@ bool llvm::isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
 
 bool llvm::isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
                               StringRef Name) {
-  LibFunc TheLibFunc;
-  return TLI->getLibFunc(Name, TheLibFunc) &&
-         isLibFuncEmittable(M, TLI, TheLibFunc);
+  return isLibFuncEmittable(M, TLI, TLI->getLibFunc(Name));
 }
 
 bool llvm::hasFloatFn(const Module *M, const TargetLibraryInfo *TLI, Type *Ty,
@@ -1947,10 +1945,8 @@ Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op, Name, NameBuffer);
 
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
-
-  return emitUnaryFloatFnCallHelper(Op, TheLibFunc, Name, B, Attrs, TLI);
+  return emitUnaryFloatFnCallHelper(Op, TLI->getLibFunc(Name), Name, B, Attrs,
+                                    TLI);
 }
 
 Value *llvm::emitUnaryFloatFnCall(Value *Op, const TargetLibraryInfo *TLI,
@@ -2000,10 +1996,8 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
   SmallString<20> NameBuffer;
   appendTypeSuffix(Op1, Name, NameBuffer);
 
-  LibFunc TheLibFunc;
-  TLI->getLibFunc(Name, TheLibFunc);
-
-  return emitBinaryFloatFnCallHelper(Op1, Op2, TheLibFunc, Name, B, Attrs, TLI);
+  return emitBinaryFloatFnCallHelper(Op1, Op2, TLI->getLibFunc(Name), Name, B,
+                                     Attrs, TLI);
 }
 
 Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,

@@ -2375,8 +2375,7 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (TLI->getLibFunc(*Fn) != Func)
     return nullptr;
 
   return Fn;

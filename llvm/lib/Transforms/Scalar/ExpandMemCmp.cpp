@@ -977,9 +977,8 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
   SmallVector<std::pair<CallInst *, LibFunc>, 8> MemCmpCalls;
   for (Instruction &I : instructions(F)) {
     if (auto *CI = dyn_cast<CallInst>(&I)) {
-      LibFunc Func;
-      if (TLI->getLibFunc(*CI, Func) &&
-          (Func == LibFunc_memcmp || Func == LibFunc_bcmp))
+      LibFunc Func = TLI->getLibFunc(*CI);
+      if (Func == LibFunc_memcmp || Func == LibFunc_bcmp)
         MemCmpCalls.push_back({CI, Func});
     }
   }

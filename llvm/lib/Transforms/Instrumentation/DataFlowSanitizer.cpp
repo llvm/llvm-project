@@ -3349,8 +3349,8 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   if (F == DFSF.DFS.DFSanVarargWrapperFn.getCallee()->stripPointerCasts())
     return;
 
-  LibFunc LF;
-  if (DFSF.TLI.getLibFunc(CB, LF)) {
+  LibFunc LF = DFSF.TLI.getLibFunc(CB);
+  if (LF != NotLibFunc) {
     // libatomic.a functions need to have special handling because there isn't
     // a good way to intercept them or compile the library with
     // instrumentation.

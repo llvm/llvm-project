@@ -291,11 +291,12 @@ void LibCallsShrinkWrap::checkCandidate(CallInst &CI) {
   if (!CI.use_empty())
     return;
 
-  LibFunc Func;
   Function *Callee = CI.getCalledFunction();
   if (!Callee)
     return;
-  if (!TLI.getLibFunc(*Callee, Func) || !TLI.has(Func))
+
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  if (!TLI.has(Func))
     return;
 
   if (CI.arg_empty())
@@ -485,11 +486,10 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
 
 // Perform the transformation to a single candidate.
 bool LibCallsShrinkWrap::perform(CallInst *CI) {
-  LibFunc Func;
   Function *Callee = CI->getCalledFunction();
   assert(Callee && "perform() should apply to a non-empty callee");
-  TLI.getLibFunc(*Callee, Func);
-  assert(Func && "perform() is not expecting an empty function");
+  LibFunc Func = TLI.getLibFunc(*Callee);
+  assert(Func != NotLibFunc && "perform() is not expecting an empty function");
 
   if (performCallDomainErrorOnly(CI, Func) || performCallRangeErrorOnly(CI, Func))
     return true;

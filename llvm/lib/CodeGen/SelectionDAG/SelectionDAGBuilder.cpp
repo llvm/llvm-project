@@ -9807,9 +9807,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // some reason.
     // This code should not handle libcalls that are already canonicalized to
     // intrinsics by the middle-end.
-    LibFunc Func;
-    if (!I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName() &&
-        LibInfo->getLibFunc(*F, Func) && LibInfo->hasOptimizedCodeGen(Func)) {
+    LibFunc Func = !I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName()
+                       ? LibInfo->getLibFunc(*F)
+                       : NotLibFunc;
+    if (LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {
       default: break;
       case LibFunc_bcmp:
