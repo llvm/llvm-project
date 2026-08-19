@@ -25,11 +25,13 @@
 #include "omptarget.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Casting.h"
 
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <new>
+#include <vector>
 
 namespace llvm {
 namespace omp {
@@ -251,6 +253,30 @@ struct TaskGraphTargetUpdateDataNode : TaskGraphTargetDataNode {
 };
 
 //===----------------------------------------------------------------------===//
+// libomptarget services available to a plugin while lowering a graph
+//===----------------------------------------------------------------------===//
+
+/// The two things a plugin needs from libomptarget to lower a recorded graph,
+/// passed as function pointers rather than called directly.
+///
+/// A plugin cannot name a libomptarget symbol: plugins are static archives
+/// linked into both libomptarget.so and LLVMOffload, so a direct call would
+/// leave LLVMOffload with an undefined reference.
+///
+/// Every DeviceId passed here is a concrete device: libomptarget normalizes
+/// OFFLOAD_DEVICE_DEFAULT away across the whole tree before a plugin sees it.
+struct TaskGraphServicesTy {
+  /// Resolve a recorded host function pointer to the plugin-side kernel object
+  /// (a GenericKernelTy *), or null if the device has no matching entry.
+  void *(*resolveKernel)(int64_t DeviceId, void *HostPtr) = nullptr;
+
+  /// The device address currently mapped for [HostBegin, HostBegin + Size) on
+  /// DeviceId, or null when that range is not present.
+  void *(*queryDevicePtr)(int64_t DeviceId, void *HostBegin,
+                          int64_t Size) = nullptr;
+};
+
+//===----------------------------------------------------------------------===//
 // Graph construction
 //===----------------------------------------------------------------------===//
 
@@ -271,6 +297,15 @@ struct TaskGraphTy {
   int32_t NumMutexes = 0;
   /// Accumulator for the number of required bytes during the first pass.
   size_t MeasuredBytes = 0;
+  /// Set to true if a plugin successfully claims the graph at finalize.
+  bool PluginOwned = false;
+
+  /// Filled in by libomptarget before the graph is offered to a plugin.
+  TaskGraphServicesTy Services;
+
+  /// Per-replay opaque libomp context for host-region callbacks.
+  void *HostCtx = nullptr;
+
   /// The single block used for storage of the whole tree and related metadata.
   char *Block = nullptr;
   /// The amount of the block used during the second pass.
@@ -278,6 +313,11 @@ struct TaskGraphTy {
   /// The root region, set once the graph has been fully received.
   TaskGraphRegion *Root = nullptr;
   BuildCursor Cursor;
+
+  /// Leaves in emission order.  Built once from the tree by ensureLeaves() and
+  /// reused by finalize / replay.
+  std::vector<TaskGraphNode *> Leaves;
+  bool LeavesBuilt = false;
 
   static size_t alignUp(size_t X, size_t A) { return (X + A - 1) & ~(A - 1); }
   bool building() const { return Block != nullptr; }
@@ -342,6 +382,23 @@ struct TaskGraphTy {
   }
 
   ~TaskGraphTy() { std::free(Block); }
+
+  /// Collect the tree's leaves in preorder, once.
+  void ensureLeaves() {
+    if (LeavesBuilt || !Root)
+      return;
+    collectLeavesInto(Root, Leaves);
+    LeavesBuilt = true;
+  }
+  static void collectLeavesInto(TaskGraphElement *E,
+                                std::vector<TaskGraphNode *> &Out) {
+    if (auto *R = llvm::dyn_cast<TaskGraphRegion>(E)) {
+      for (TaskGraphElement *C : R->children())
+        collectLeavesInto(C, Out);
+      return;
+    }
+    Out.push_back(llvm::cast<TaskGraphNode>(E));
+  }
 };
 
 } // namespace target

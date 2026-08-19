@@ -47,6 +47,8 @@ VERS1.0 {
     __tgt_taskgraph_emit_target_exit_data;
     __tgt_taskgraph_emit_target_update;
     __tgt_taskgraph_end;
+    __tgt_taskgraph_finalize;
+    __tgt_taskgraph_replay;
     __tgt_taskgraph_destroy;
     __tgt_taskgraph_dup_kernel_args;
     __tgt_taskgraph_dup_data_args;
