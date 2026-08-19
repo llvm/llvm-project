@@ -248,9 +248,17 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
+  struct ANDMaskResult {
+    int64_t Mask;
+    Register Reg;
+    unsigned RegIdx;
+  };
+
+  std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
+
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
-  bool tryFoldZeroHighBits(MachineInstr &MI) const;
+  bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -1855,26 +1863,72 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
-bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
-  if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
-      MI.getOpcode() != AMDGPU::V_AND_B32_e32)
+// Extract mask, register, and register operand index from an AND instruction.
+// Immediate can be in operand 1 or 2.
+std::optional<SIFoldOperandsImpl::ANDMaskResult>
+SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
+  unsigned Opc = AndMI.getOpcode();
+  if (Opc != AMDGPU::V_AND_B32_e64 && Opc != AMDGPU::V_AND_B32_e32 &&
+      Opc != AMDGPU::S_AND_B32)
+    return std::nullopt;
+
+  std::optional<int64_t> MaskImm =
+      TII->getImmOrMaterializedImm(AndMI.getOperand(1));
+  if (MaskImm && AndMI.getOperand(2).isReg())
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+
+  MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
+  if (MaskImm && AndMI.getOperand(1).isReg())
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+
+  return std::nullopt;
+}
+
+// Eliminate redundant 32-bit AND operations by detecting when ChildMI's mask
+// contains ParentMI's mask.
+//
+// For example:
+//   ParentMI: %1 = AND %0, 0x7fff
+//   ChildMI:  %2 = AND %1, 0xffff
+//
+// This also handles cases where ParentMI implicitly zeros high bits (e.g., f16
+// operations that write 16-bit results into 32-bit registers), making a
+// subsequent AND with 0xffff redundant.
+bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
+  // Ensure implicit defs (e.g., $scc) are not live.
+  if (!ChildMI.allImplicitDefsAreDead())
     return false;
 
-  std::optional<int64_t> Src0Imm =
-      TII->getImmOrMaterializedImm(MI.getOperand(1));
-  if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
+  std::optional<ANDMaskResult> ChildResult = getANDMaskRegOperand(ChildMI);
+  if (!ChildResult)
     return false;
 
-  Register Src1 = MI.getOperand(2).getReg();
-  MachineInstr *SrcDef = MRI->getVRegDef(Src1);
-  if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
+  MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
+
+  int64_t ParentMask = 0;
+  std::optional<ANDMaskResult> ParentResult = getANDMaskRegOperand(*ParentMI);
+  if (ParentResult) {
+    // Parent is an AND - extract its mask.
+    ParentMask = ParentResult->Mask;
+  } else if (ST->zeroesHigh16BitsOfDest(ParentMI->getOpcode())) {
+    // Parent instruction implicitly zeros high 16 bits.
+    ParentMask = 0xffff;
+  } else {
+    return false;
+  }
+
+  // Check if ChildMI is not redundant.
+  if ((ParentMask & ChildResult->Mask) != ParentMask)
     return false;
 
-  Register Dst = MI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, Src1);
-  if (!MI.getOperand(2).isKill())
-    MRI->clearKillFlags(Src1);
-  MI.eraseFromParent();
+  Register Dst = ChildMI.getOperand(0).getReg();
+  MRI->replaceRegWith(Dst, ChildResult->Reg);
+
+  // Clear kill flags if the register operand is not marked as kill.
+  if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
+    MRI->clearKillFlags(ChildResult->Reg);
+
+  ChildMI.eraseFromParent();
   return true;
 }
 
@@ -2906,7 +2960,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
         continue;
       }
 
-      if (tryFoldZeroHighBits(MI)) {
+      if (tryFoldRedundantAND(MI)) {
         Changed = true;
         continue;
       }
