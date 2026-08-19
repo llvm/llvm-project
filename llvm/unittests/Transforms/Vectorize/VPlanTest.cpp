@@ -2066,6 +2066,25 @@ TEST_F(VPUtilsTest, ReconstructSSACycle) {
   EXPECT_EQ(Phi2->getIncomingValueForBlock(VPBB1), Def1);
 }
 
+TEST_F(VPUtilsTest, ReconstructSSAUnreachableCycle) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
+
+  //     VPBB1     VPBB2 <-+
+  //                 |     |
+  //                 +-----+
+  VPBlockUtils::connectBlocks(VPBB2, VPBB2);
+
+  VPValue *C = Plan.getConstantInt(32, 1);
+  VPIRFlags AddFlags = VPIRFlags::getDefaultFlags(Instruction::Add);
+  auto *Def1 = new VPInstruction(Instruction::Add, {C, C}, AddFlags);
+  VPBB1->appendRecipe(Def1);
+
+  EXPECT_DEATH(vputils::reconstructSSA(VPBB2, {{VPBB1, Def1}}),
+               "VPlan without any entry node without predecessors");
+}
+
 TEST_F(VPUtilsTest, ReconstructSSADuplicatePredecessor) {
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB1 = Plan.getEntry();
