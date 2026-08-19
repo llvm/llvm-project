@@ -97,6 +97,8 @@ protected:
 
   void emitPrintf(const Module &Mod);
 
+  void emitGlobals(const Module &Mod);
+
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
   void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
