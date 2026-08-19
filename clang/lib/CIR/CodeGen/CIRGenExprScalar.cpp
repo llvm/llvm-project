@@ -948,8 +948,6 @@ public:
     // this function more, and although fixed point numbers are represented by
     // integers, we do not want to follow any logic that assumes they should be
     // treated as integers.
-    // TODO(leonardchan): When necessary, add another if statement checking for
-    // conversions to fixed point types from other types.
     if (srcType->isFixedPointType()) {
       if (dstType->isBooleanType()) {
         cir::BoolType boolTy = builder.getBoolTy();
@@ -964,10 +962,11 @@ public:
       llvm_unreachable("Unhandled scalar conversion from a fixed point type to "
                        "another type.");
     } else if (dstType->isFixedPointType()) {
-      if (srcType->isIntegerType() || srcType->isRealFloatingType())
+      if (srcType->isIntegerType() || srcType->isRealFloatingType()) {
         // This also includes converting booleans and enums to fixed point
         // types.
         return emitFixedPointConversion(src, srcType, dstType, cgf.getLoc(loc));
+      }
 
       llvm_unreachable("Unhandled scalar conversion to a fixed point type from "
                        "another type.");
@@ -2081,6 +2080,9 @@ struct FixedPointBuilder {
                      &losesInfo);
     (void)losesInfo;
 
+    cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
+    result = builder.createFMul(loc, result, fpConst);
+
     if (opTy != dstTy)
       result = builder.createFloatingCast(result, dstTy);
     return result;
@@ -2217,8 +2219,8 @@ private:
       }
 
       // Handle saturation.
-      bool lessIntBits = dstSema.getIntegralBits() < srcSema.getIntegralBits();
-      if (lessIntBits) {
+      bool fewerIntBits = dstSema.getIntegralBits() < srcSema.getIntegralBits();
+      if (fewerIntBits) {
         mlir::Value max = builder.getConstAPInt(
             loc, result.getType(),
             llvm::APFixedPoint::getMax(dstSema).getValue().extOrTrunc(
@@ -2231,7 +2233,7 @@ private:
 
       // Cannot overflow min to dest type if src is unsigned since all fixed
       // point types can cover the unsigned min of 0.
-      if (srcIsSigned && (lessIntBits || !dstIsSigned)) {
+      if (srcIsSigned && (fewerIntBits || !dstIsSigned)) {
         mlir::Value min = builder.getConstAPInt(
             loc, result.getType(),
             llvm::APFixedPoint::getMin(dstSema).getValue().extOrTrunc(
@@ -2269,16 +2271,20 @@ mlir::Value ScalarExprEmitter::emitFixedPointConversion(mlir::Value src,
                                                         QualType srcTy,
                                                         QualType dstTy,
                                                         mlir::Location loc) {
+  assert(srcTy->isFixedPointType() || dstTy->isFixedPointType());
+
   FixedPointBuilder fpBuilder(builder, loc);
   mlir::Value result;
-  if (srcTy->isRealFloatingType())
+  if (srcTy->isRealFloatingType()) {
+    assert(dstTy->isFixedPointType());
     result = fpBuilder.createFloatingToFixed(
         src, cgf.getContext().getFixedPointSemantics(dstTy));
-  else if (dstTy->isRealFloatingType())
+  } else if (dstTy->isRealFloatingType()) {
+    assert(srcTy->isFixedPointType());
     result = fpBuilder.createFixedToFloating(
         src, cgf.getContext().getFixedPointSemantics(srcTy),
         cgf.convertType(dstTy));
-  else {
+  } else {
     llvm::FixedPointSemantics srcFPSema =
         cgf.getContext().getFixedPointSemantics(srcTy);
     llvm::FixedPointSemantics dstFPSema =
@@ -2290,8 +2296,10 @@ mlir::Value ScalarExprEmitter::emitFixedPointConversion(mlir::Value src,
     else if (srcTy->isIntegerType())
       result =
           fpBuilder.createIntegerToFixed(src, srcFPSema.isSigned(), dstFPSema);
-    else
+    else {
+      assert(srcTy->isFixedPointType() && dstTy->isFixedPointType());
       result = fpBuilder.createFixedToFixed(src, srcFPSema, dstFPSema);
+    }
   }
   return result;
 }
