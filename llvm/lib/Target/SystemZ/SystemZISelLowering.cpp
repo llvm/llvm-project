@@ -7625,14 +7625,18 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
         break;
       // We're extracting the low part of one operand of the BUILD_VECTOR.
       Op = Op.getOperand(End / OpBytesPerElement - 1);
+      EVT ResIntVT = MVT::getIntegerVT(ResVT.getSizeInBits());
+      if (!isTypeLegal(ResIntVT))
+        break;
       if (!Op.getValueType().isInteger()) {
-        EVT VT = MVT::getIntegerVT(Op.getValueSizeInBits());
-        Op = DAG.getNode(ISD::BITCAST, DL, VT, Op);
+        EVT OpIntVT = MVT::getIntegerVT(Op.getValueSizeInBits());
+        if (!isTypeLegal(OpIntVT))
+          break;
+        Op = DAG.getNode(ISD::BITCAST, DL, OpIntVT, Op);
         DCI.AddToWorklist(Op.getNode());
       }
-      EVT VT = MVT::getIntegerVT(ResVT.getSizeInBits());
-      Op = DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
-      if (VT != ResVT) {
+      Op = DAG.getNode(ISD::TRUNCATE, DL, ResIntVT, Op);
+      if (ResIntVT != ResVT) {
         DCI.AddToWorklist(Op.getNode());
         Op = DAG.getNode(ISD::BITCAST, DL, ResVT, Op);
       }
