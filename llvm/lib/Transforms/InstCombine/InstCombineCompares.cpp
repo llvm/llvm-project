@@ -8539,8 +8539,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // Lower this FP comparison into an appropriate integer version of the
   // comparison.
-  auto *NewCmp =
-      new ICmpInst(Pred, X, ConstantInt::get(X->getType(), RHSInt));
+  auto *NewCmp = new ICmpInst(Pred, X, ConstantInt::get(X->getType(), RHSInt));
   if (LHSUnsigned && cast<PossiblyNonNegInst>(LHSI)->hasNonNeg() &&
       RHSInt.isSignBitClear())
     NewCmp->setSameSign();
