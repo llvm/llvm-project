@@ -5548,7 +5548,7 @@ private:
   OptimizationRemarkEmitter *ORE;
   /// Cached cost-model mode for this function
   /// Only use RecipThroughput currently
-  const TargetTransformInfo::TargetCostKind CostKind;
+  const TargetTransformInfo::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
