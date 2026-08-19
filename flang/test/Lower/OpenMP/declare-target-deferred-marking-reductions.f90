@@ -1,5 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | tco -test-gen | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-device %s -o - | tco -test-gen | FileCheck %s
 
 program main
     use, intrinsic ::  iso_c_binding
@@ -30,8 +30,7 @@ program main
     !$omp end target
  end program main
 
-!CHECK: func.func {{.*}} @myinit(!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: llvm.func @myinit(!llvm.ptr, !llvm.ptr)
 !CHECK-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}
-!CHECK-LABEL: func.func {{.*}} @mycombine(!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: llvm.func @mycombine(!llvm.ptr, !llvm.ptr)
 !CHECK-SAME: {{.*}}, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to), automap = false>{{.*}}
-
