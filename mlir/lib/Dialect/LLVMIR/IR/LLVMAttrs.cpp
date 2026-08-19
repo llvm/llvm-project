@@ -146,7 +146,9 @@ FunctionMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   StringRef name = metadataName.getValue();
   if (name.empty())
     return emitError() << "function_metadata entry name must not be empty";
-  if (name == "dbg" || name == "prof") {
+  // MDNodeAttr cannot represent the DISubprogram required for a function's
+  // !dbg attachment.
+  if (name == "dbg") {
     return emitError() << "reserved function_metadata entry '" << name
                        << "' must use a dedicated LLVM dialect representation";
   }
