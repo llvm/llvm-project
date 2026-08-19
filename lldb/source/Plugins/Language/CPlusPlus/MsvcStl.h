@@ -142,6 +142,11 @@ SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL vector iterators
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 

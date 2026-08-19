@@ -2039,6 +2039,10 @@ static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL tree iterator summary",
                 "^std::_Tree(_const)?_iterator<.+>(( )?&)?$", stl_summary_flags,
                 true);
+  AddCXXSynthetic(
+      cpp_category_sp, MsvcStlVectorIteratorSyntheticFrontEndCreator,
+      "MSVC STL vector iterator synthetic children",
+      "^std::_Vector(_const)?_iterator<.+>(( )?&)?$", stl_synth_flags, true);
 }
 
 static void LoadSystemFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

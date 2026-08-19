@@ -12,6 +12,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
+#include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -304,4 +305,12 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
     return false;
   }
   return true;
+}
+
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::MsvcStlVectorIteratorSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(valobj_sp,
+                                                          {ConstString("_Ptr")})
+                    : nullptr);
 }
