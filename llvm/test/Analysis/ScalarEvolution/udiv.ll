@@ -140,7 +140,7 @@ define void @get_or_create(i64 %n, ptr %p, ptr noalias %q) {
 ; CHECK-NEXT:    %j = phi i64 [ %aligned, %outer.header ], [ %j.next, %loop ]
 ; CHECK-NEXT:    --> {{\{\{}}0,+,16}<%outer.header>,+,4}<nuw><%loop> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %div = udiv i64 %iv, 4
-; CHECK-NEXT:    --> {({0,+,16}<%outer.header> /u 4),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}1,+,16}<%outer.header>,+,4}<%loop> /u 4) U: [0,4611686018427387904) S: [0,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 4
 ; CHECK-NEXT:    --> {{\{\{}}5,+,16}<%outer.header>,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
 ; CHECK-NEXT:    %j.next = add nuw i64 %j, 4

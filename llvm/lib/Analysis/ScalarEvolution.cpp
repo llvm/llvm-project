@@ -3573,7 +3573,9 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
                   getAddRecExpr(NewStart, Step, AR->getLoop(),
                                 NoWrap ? SCEV::FlagNW : SCEV::FlagAnyWrap);
               if (LHS != NewLHS)
-                return getUDivExpr(NewLHS, RHS);
+                if (auto *S = findExistingSCEVInCache(
+                        scUDivExpr, ArrayRef<SCEVUse>{NewLHS, RHS}))
+                  return S;
             }
           }
         }
