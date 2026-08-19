@@ -76,7 +76,7 @@ constexpr bool test() {
 
   {
     // Stride equal to range size.
-    auto view    = make_approximately_sized(std::views::iota(0, 3));
+    auto view    = make_approximately_sized(std::views::iota(0, 5));
     auto strided = view | std::views::stride(5);
     assert(strided.reserve_hint() == 1);
   }
