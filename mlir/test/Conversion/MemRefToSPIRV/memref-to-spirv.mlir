@@ -24,12 +24,12 @@ func.func @load_store_zero_rank_float(%arg0: memref<f32, #spirv.storage_class<St
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<f32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : f32
   %0 = memref.load %arg0[] : memref<f32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : f32
@@ -43,12 +43,12 @@ func.func @load_store_zero_rank_int(%arg0: memref<i32, #spirv.storage_class<Stor
   //  CHECK-DAG: [[ARG0:%.*]] = builtin.unrealized_conversion_cast %[[OARG0]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //  CHECK-DAG: [[ARG1:%.*]] = builtin.unrealized_conversion_cast %[[OARG1]] : memref<i32, #spirv.storage_class<StorageBuffer>> to !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0])>, StorageBuffer>
   //      CHECK: [[ZERO:%.*]] = spirv.Constant 0 : i32
-  //      CHECK: spirv.AccessChain [[ARG0]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG0]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Load "StorageBuffer" %{{.*}} : i32
   %0 = memref.load %arg0[] : memref<i32, #spirv.storage_class<StorageBuffer>>
-  //      CHECK: spirv.AccessChain [[ARG1]][
+  //      CHECK: spirv.InBoundsAccessChain [[ARG1]][
   // CHECK-SAME: [[ZERO]], [[ZERO]]
   // CHECK-SAME: ] :
   //      CHECK: spirv.Store "StorageBuffer" %{{.*}} : i32
@@ -231,7 +231,7 @@ func.func @static_linearized_index(
   // CHECK: %[[STRIDE:.+]] = spirv.Constant 4 : i32
   // CHECK: %[[OFFSET:.+]] = spirv.IMul %{{.*}}, %[[STRIDE]] {no_signed_wrap, no_unsigned_wrap} : i32
   // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_signed_wrap, no_unsigned_wrap} : i32
-  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
   %0 = memref.load %arg0[%row, %column] : memref<2x4xf32, #spirv.storage_class<StorageBuffer>>
   return %0 : f32
 }
@@ -247,7 +247,7 @@ func.func @unsigned_only_linearized_index(
   // CHECK-NOT: no_signed_wrap
   // CHECK: %[[LINEAR:.+]] = spirv.IAdd %{{.*}}, %[[OFFSET]] {no_unsigned_wrap} : i32
   // CHECK-NOT: no_signed_wrap
-  // CHECK: spirv.AccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
+  // CHECK: spirv.InBoundsAccessChain {{.*}}[%{{.*}}, %[[LINEAR]]]
   %0 = memref.load %arg0[%row, %column] : memref<2x1073741825xf32, #spirv.storage_class<StorageBuffer>>
   return %0 : f32
 }

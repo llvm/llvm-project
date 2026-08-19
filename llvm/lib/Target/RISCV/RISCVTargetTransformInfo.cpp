@@ -1714,7 +1714,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
   case Intrinsic::experimental_cttz_elts: {
-    if (getTLI()->shouldExpandCttzElements({}))
+    if (!ST->hasVInstructions())
       break;
     InstructionCost Cost = 0;
     Type *ArgTy = ICA.getArgTypes()[0];
