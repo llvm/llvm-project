@@ -17,10 +17,6 @@ class MachineCombinerPass : public RequiredPassInfoMixin<MachineCombinerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-
-  MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().setIsSSA();
-  }
 };
 
 } // namespace llvm
