@@ -1173,9 +1173,10 @@ static VPValue *reconstructSSAImpl(VPBasicBlock *VPBB,
   assert(VPBB->getNumPredecessors() && "Not all paths have def");
 
   if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
-    return reconstructSSAImpl(cast<VPBasicBlock>(Pred), Defs);
+    if (Pred != VPBB)
+      reconstructSSAImpl(cast<VPBasicBlock>(Pred), Defs);
 
-  // Multiple predecessors, create a join.
+  // Create a join over the predecessors.
   Type *Ty = Defs.begin()->second->getScalarType();
   auto *Phi = new VPPhi({}, {}, DebugLoc::getUnknown(), "", Ty);
   VPBB->insert(Phi, VPBB->getFirstNonPhi());
@@ -1188,7 +1189,8 @@ static VPValue *reconstructSSAImpl(VPBasicBlock *VPBB,
   if (all_equal(Phi->incoming_values())) {
     VPValue *Common = Phi->getIncomingValue(0);
     Phi->replaceAllUsesWith(Common);
-    Phi->eraseFromParent();
+    if (Phi->getNumUsers() == 0)
+      Phi->eraseFromParent();
     Defs[VPBB] = Common;
     return Common;
   }
