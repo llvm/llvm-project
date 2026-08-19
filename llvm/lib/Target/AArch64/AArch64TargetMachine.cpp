@@ -776,10 +776,10 @@ bool AArch64PassConfig::addIRTranslator() {
 void AArch64PassConfig::addPreLegalizeMachineIR() {
   if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
-    addPass(new Localizer());
+    addPass(new LocalizerLegacy());
   } else {
     addPass(createAArch64PreLegalizerCombiner());
-    addPass(new Localizer());
+    addPass(new LocalizerLegacy());
     if (EnableGISelLoadStoreOptPreLegal)
       addPass(new LoadStoreOptLegacy());
   }
