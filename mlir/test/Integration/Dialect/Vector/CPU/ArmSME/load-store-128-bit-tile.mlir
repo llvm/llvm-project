@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = test_load_store_zaq0
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
-// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -march=aarch64 -mattr=+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
 // DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
@@ -24,7 +24,7 @@ func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
   return
 }
 
-func.func @test_load_store_zaq0() {
+func.func @test_load_store_zaq0() attributes {llvm.arm_locally_streaming} {
   %c0 = arith.constant 0 : index
   %min_elts_q = arith.constant 1 : index
   %bytes_per_128_bit = arith.constant 16 : index

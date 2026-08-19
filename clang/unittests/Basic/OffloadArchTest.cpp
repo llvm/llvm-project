@@ -13,28 +13,38 @@ using namespace clang;
 
 static OffloadArch parse(llvm::StringRef S) { return StringToOffloadArch(S); }
 
-TEST(OffloadArchTest, VendorClassification) {
-  EXPECT_TRUE(IsNVIDIAOffloadArch(parse("sm_20")));
-  EXPECT_TRUE(IsNVIDIAOffloadArch(parse("sm_120a")));
-  EXPECT_FALSE(IsNVIDIAOffloadArch(parse("gfx600")));
+TEST(OffloadArchTest, TargetArchClassification) {
+  OffloadArch NV = parse("sm_120a");
+  EXPECT_TRUE(parse("sm_20").isNVPTX());
+  EXPECT_TRUE(NV.isNVPTX());
+  EXPECT_FALSE(NV.isAMDGPU());
 
-  EXPECT_FALSE(IsAMDOffloadArch(parse("sm_120a")));
-  EXPECT_TRUE(IsAMDOffloadArch(parse("gfx600")));
-  EXPECT_TRUE(IsAMDOffloadArch(parse("gfx1201")));
-  EXPECT_TRUE(IsAMDOffloadArch(parse("gfx12-generic")));
-  EXPECT_TRUE(IsAMDOffloadArch(parse("amdgcnspirv")));
-  EXPECT_FALSE(IsAMDOffloadArch(parse("graniterapids")));
+  EXPECT_TRUE(parse("gfx600").isAMDGPU());
+  EXPECT_TRUE(parse("gfx1201").isAMDGPU());
+  EXPECT_TRUE(parse("gfx12-generic").isAMDGPU());
+  EXPECT_FALSE(parse("gfx600").isNVPTX());
 
-  EXPECT_TRUE(IsIntelOffloadArch(parse("graniterapids")));
-  EXPECT_TRUE(IsIntelCPUOffloadArch(parse("graniterapids")));
-  EXPECT_FALSE(IsIntelGPUOffloadArch(parse("graniterapids")));
-  EXPECT_TRUE(IsIntelOffloadArch(parse("bmg_g21")));
-  EXPECT_FALSE(IsIntelCPUOffloadArch(parse("bmg_g21")));
-  EXPECT_TRUE(IsIntelGPUOffloadArch(parse("bmg_g21")));
+  OffloadArch SPIRV = parse("amdgcnspirv");
+  EXPECT_FALSE(SPIRV.isAMDGPU());
+  EXPECT_TRUE(SPIRV.isSPIRV());
 
-  EXPECT_FALSE(IsNVIDIAOffloadArch(parse("generic")));
-  EXPECT_FALSE(IsAMDOffloadArch(parse("generic")));
-  EXPECT_FALSE(IsIntelOffloadArch(parse("generic")));
+  OffloadArch IntelCPU = parse("graniterapids");
+  EXPECT_FALSE(IntelCPU.isAMDGPU());
+  EXPECT_FALSE(IntelCPU.isSPIRV());
+  EXPECT_TRUE(IntelCPU.isIntel());
+  EXPECT_TRUE(IntelCPU.isIntelCPU());
+  EXPECT_FALSE(IntelCPU.isIntelGPU());
+
+  OffloadArch IntelGPU = parse("bmg_g21");
+  EXPECT_TRUE(IntelGPU.isIntel());
+  EXPECT_FALSE(IntelGPU.isIntelCPU());
+  EXPECT_TRUE(IntelGPU.isIntelGPU());
+
+  OffloadArch Generic = parse("generic");
+  EXPECT_FALSE(Generic.isNVPTX());
+  EXPECT_FALSE(Generic.isAMDGPU());
+  EXPECT_FALSE(Generic.isSPIRV());
+  EXPECT_FALSE(Generic.isIntel());
 }
 
 TEST(OffloadArchTest, Unknown) {

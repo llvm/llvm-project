@@ -43,15 +43,15 @@ TEST_F(LlvmLibcUniStd, WriteFails) {
 }
 
 TEST_F(LlvmLibcUniStd, ReadFails) {
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::any_of;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
-#ifdef LIBC_TEST_UNDER_EMULATOR
-  // QEMU returns EFAULT instead of EBADF when reading into a nullptr.
   char buf[1];
   EXPECT_THAT(LIBC_NAMESPACE::read(-1, buf, 1), Fails<ssize_t>(EBADF));
-#else
-  EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1), Fails<ssize_t>(EBADF));
-#endif
   EXPECT_THAT(LIBC_NAMESPACE::read(0, reinterpret_cast<void *>(-1), 1),
               Fails<ssize_t>(EFAULT));
+  EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1),
+              Fails<ssize_t>(any_of(
+                  EBADF, EFAULT)) // Depending on what gets checked first.
+  );
 }

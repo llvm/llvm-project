@@ -83,6 +83,8 @@ public:
 
   bool hasFeature(StringRef Feature) const override;
 
+  bool setABI(const std::string &Name) override;
+
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic address space AS(0) is a superset of all the other address
     // spaces used by the backend target.
