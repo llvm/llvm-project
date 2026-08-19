@@ -50,7 +50,7 @@ define void @zext.nw.pre.inc() {
 ; CHECK-NEXT:    %i.inc = add i8 %i, -128
 ; CHECK-NEXT:    --> {127,+,-128}<%loop> U: [127,0) S: [127,0) Exits: -1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.sext = zext i8 %i to i16
-; CHECK-NEXT:    --> {255,+,-128}<nw><%loop> U: [127,256) S: [127,256) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (127 + (zext i8 {-128,+,-128}<nw><%loop> to i16))<nuw><nsw> U: [127,256) S: [127,383) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %counter.inc = add i8 %counter, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: 2 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.nw.pre.inc
@@ -278,7 +278,7 @@ define void @zext.nusw.backedge.guard(i8 %start) {
 ; CHECK-NEXT:    %i.next = add i8 %i, -1
 ; CHECK-NEXT:    --> {(-1 + %start),+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ext = zext i8 %i to i32
-; CHECK-NEXT:    --> (zext i8 {%start,+,-1}<%loop> to i32) U: [0,256) S: [0,256) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i8 %start to i32),+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.nusw.backedge.guard
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
@@ -306,7 +306,7 @@ define void @zext.count.down(i8 %n) mustprogress {
 ; CHECK-NEXT:    %i.next = add i8 %i, -1
 ; CHECK-NEXT:    --> {-2,+,-1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ext = zext i8 %i to i32
-; CHECK-NEXT:    --> {255,+,-1}<nw><%loop> U: [0,256) S: [0,256) Exits: (255 + (-1 * (zext i8 (-1 + (-1 * %n)) to i32))<nsw>)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (zext i8 {-1,+,-1}<nw><%loop> to i32) U: [0,256) S: [0,256) Exits: (zext i8 %n to i32) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.count.down
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
@@ -337,7 +337,7 @@ define void @zext.nuw.increment(i8 %n) mustprogress {
 ; CHECK-NEXT:    %j = add i8 %i, 1
 ; CHECK-NEXT:    --> {101,+,-1}<nw><%loop> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ext = zext i8 %j to i32
-; CHECK-NEXT:    --> {101,+,-1}<nw><%loop> U: [-154,102) S: [-154,102) Exits: (101 + (-1 * (zext i8 (100 + (-1 * %n)) to i32))<nsw>)<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {101,+,255}<nuw><%loop> U: [101,65127) S: [101,65127) Exits: (101 + (255 * (zext i8 (100 + (-1 * %n)) to i32))<nuw><nsw>)<nuw><nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.nuw.increment
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (100 + (-1 * %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
@@ -367,7 +367,7 @@ define void @zext.no.nuw.pre.inc() {
 ; CHECK-NEXT:    %i.next = add i8 %i, -128
 ; CHECK-NEXT:    --> {127,+,-128}<%loop> U: [127,0) S: [127,0) Exits: -1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ext = zext i8 %i to i32
-; CHECK-NEXT:    --> {255,+,-128}<nw><%loop> U: [127,256) S: [127,256) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {255,+,-128}<%loop> U: [127,256) S: [127,256) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.no.nuw.pre.inc
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 1
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1

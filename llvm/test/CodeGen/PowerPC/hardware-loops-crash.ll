@@ -24,22 +24,19 @@ define void @test() {
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i64(i64 51)
 ; CHECK-NEXT:    br label [[WHILE_COND25:%.*]]
 ; CHECK:       while.cond25:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[WHILE_COND25_PREHEADER]] ], [ [[INDVAR_NEXT:%.*]], [[LAND_RHS:%.*]] ]
-; CHECK-NEXT:    [[INDVARS_IV349:%.*]] = phi i64 [ [[INDVARS_IV_NEXT350:%.*]], [[LAND_RHS]] ], [ [[INDVARS_IV349_PH]], [[WHILE_COND25_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVARS_IV349:%.*]] = phi i64 [ [[INDVARS_IV_NEXT350:%.*]], [[LAND_RHS:%.*]] ], [ [[INDVARS_IV349_PH]], [[WHILE_COND25_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.loop.decrement.i64(i64 1)
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[LAND_RHS]], label [[WHILE_END187:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT350]] = add nsw i64 [[INDVARS_IV349]], -1
 ; CHECK-NEXT:    [[C_1:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[C_1]], label [[WHILE_COND25]], label [[WHILE_END:%.*]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[INDVAR_LCSSA1:%.*]] = phi i64 [ [[INDVAR]], [[LAND_RHS]] ]
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[WHILE_END187]], label [[WHILE_COND35_PREHEADER:%.*]]
 ; CHECK:       while.cond35.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVAR_LCSSA1]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 51
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[INDVARS_IV349]], 4294967295
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    call void @llvm.set.loop.iterations.i64(i64 [[TMP2]])
 ; CHECK-NEXT:    br label [[WHILE_COND35:%.*]]
 ; CHECK:       while.cond35:
