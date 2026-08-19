@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck -check-prefix=GFX9 %s
 //
 // Test op_sel/op_sel_hi
 //

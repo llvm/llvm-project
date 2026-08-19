@@ -440,6 +440,12 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         should invoke `generatePrivateDestroy` in the recipe's destroy region
         with the privatized value returned by this method.
 
+        Implementations that want certain ops to carry the correct variable name
+        post materialization should attach `getVarNamePlaceholder()` as the
+        `acc.var_name` attribute to those ops. `ACCRecipeMaterialization` will
+        replace the placeholder with the actual variable name when inlining the
+        recipe.
+
         If the return value is empty, it means that recipe body was not
         successfully generated.
       }],

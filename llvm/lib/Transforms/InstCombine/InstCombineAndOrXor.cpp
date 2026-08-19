@@ -1472,11 +1472,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
                         FMFSource::intersect(LHS, RHS));
   }
 
-  // This transform is not valid for a logical select.
-  if (!IsLogicalSelect &&
-      ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
-       (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO &&
-        !IsAnd))) {
+  if ((PredL == FCmpInst::FCMP_ORD && PredR == FCmpInst::FCMP_ORD && IsAnd) ||
+      (PredL == FCmpInst::FCMP_UNO && PredR == FCmpInst::FCMP_UNO && !IsAnd)) {
     if (LHS0->getType() != RHS0->getType())
       return nullptr;
 
@@ -1486,8 +1483,14 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // Ignore the constants because they are obviously not NANs:
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
-      return Builder.CreateFCmpFMF(PredL, LHS0, RHS0,
-                                   FMFSource::intersect(LHS, RHS));
+      Value *Y = RHS0;
+      FastMathFlags FMF = LHS->getFastMathFlags() & RHS->getFastMathFlags();
+      if (IsLogicalSelect) {
+        Y = Builder.CreateFreeze(Y, Y->getName() + ".fr");
+        FMF.setNoNaNs(false);
+        FMF.setNoInfs(false);
+      }
+      return Builder.CreateFCmpFMF(PredL, LHS0, Y, FMF);
     }
   }
 
@@ -4993,14 +4996,18 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
 static bool canFreelyInvert(InstCombiner &IC, Value *Op,
                             Instruction *IgnoredUser) {
   auto *I = dyn_cast<Instruction>(Op);
-  return I && IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
+  return I && I->getInsertionPointAfterDef() &&
+         IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
          IC.canFreelyInvertAllUsersOf(I, IgnoredUser);
 }
 
 static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
                            Instruction *IgnoredUser) {
   auto *I = cast<Instruction>(Op);
-  IC.Builder.SetInsertPoint(*I->getInsertionPointAfterDef());
+  auto InsertPt = I->getInsertionPointAfterDef();
+  assert(InsertPt &&
+         "freelyInvert requires an instruction with a valid insertion point");
+  IC.Builder.SetInsertPoint(*InsertPt);
   Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
   Op->replaceUsesWithIf(NotOp,
                         [NotOp](Use &U) { return U.getUser() != NotOp; });
@@ -5044,7 +5051,10 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
   Op0 = freelyInvert(*this, Op0, &I);
   Op1 = freelyInvert(*this, Op1, &I);
 
-  Builder.SetInsertPoint(*I.getInsertionPointAfterDef());
+  auto InsertPt = I.getInsertionPointAfterDef();
+  assert(InsertPt && "sinkNotIntoLogicalOp requires an instruction with a "
+                     "valid insertion point");
+  Builder.SetInsertPoint(*InsertPt);
   Value *NewLogicOp;
   if (IsBinaryOp) {
     NewLogicOp = Builder.CreateBinOp(NewOpc, Op0, Op1, I.getName() + ".not");

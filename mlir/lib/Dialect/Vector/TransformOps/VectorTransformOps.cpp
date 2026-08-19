@@ -183,6 +183,11 @@ void transform::ApplyLowerShapeCastPatternsOp::populatePatterns(
   vector::populateVectorShapeCastLoweringPatterns(patterns);
 }
 
+void transform::ApplyLowerStepPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorStepLoweringPatterns(patterns, getIndexBitwidth());
+}
+
 void transform::ApplyLowerTransferPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferLoweringPatterns(patterns,

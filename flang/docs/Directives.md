@@ -27,6 +27,12 @@ A list of non-standard directives supported by Flang
   When the dummy argument is not passed by descriptor (e.g., an assumed-size
   array in a BIND(C) interface), the base address is extracted from the actual
   argument's descriptor and passed as a raw pointer.
+  When the dummy argument is assumed-type (`TYPE(*)`) and passed by descriptor
+  to a `BIND(C)` procedure, (C) also disables the F2023 15.5.2.5 p2 checks
+  that would otherwise reject actual arguments whose derived type has type
+  parameters, type-bound procedures, or final procedures; this is intended for
+  `BIND(C)` interfaces where the implementation treats the argument as an opaque
+  CFI descriptor at the call site.
   The letter (P) ignores pointer and allocatable matching, so that one can pass
   an allocatable array to routine with pointer array argument and vice versa.
   The letter (M) disables matching of the actual argument's CUDA storage
@@ -162,12 +168,13 @@ to be performed by the compiler. The directives are always specified with the
 
 Some directives are associated with the following construct, for example loop
 directives. Directives on loops are used to specify additional transformation to
-be performed by the compiler like enabling vectorisation, unrolling, interchange
+be performed by the compiler like enabling vectorization, unrolling, interchange
 etc.
 
-Currently loop directives are not accepted in the presence of OpenMP or OpenACC
-constructs on the loop. This should be implemented as it is used in some
-applications.
+Loop directives in the presence of OpenACC loop are a work in progress and may be
+applied as a loop annotation attribute. OpenACC directives will take precedence 
+over general loop directives when "in conflict". Loop directives with OpenMP 
+constructs on the loop are not yet applied.
 
 ### Array Expressions
 It is to be decided whether loop directives should also be able to be associated

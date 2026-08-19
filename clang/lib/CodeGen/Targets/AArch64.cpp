@@ -1167,6 +1167,7 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
+  bool AllowHigherAlign = false;
   bool IsIndirect = false;
 
   if (getTarget().getTriple().isWindowsArm64EC()) {
@@ -1175,6 +1176,10 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
     uint64_t Width = getContext().getTypeSize(Ty);
     IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
   } else {
+    // E.g. __int128 when passed is aligned to 16 bytes, so it must be read
+    // with the same alignment.
+    AllowHigherAlign = true;
+
     // Composites larger than 16 bytes are passed by reference.
     if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
       IsIndirect = true;
@@ -1182,8 +1187,7 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false, Slot);
+                          CharUnits::fromQuantity(8), AllowHigherAlign, Slot);
 }
 
 static bool isStreamingCompatible(const FunctionDecl *F) {

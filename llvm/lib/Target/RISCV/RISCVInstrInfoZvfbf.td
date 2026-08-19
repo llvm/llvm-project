@@ -373,8 +373,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
 }
 
-defm PseudoVFSLIDE1UP_ALT   : VPseudoVSLD1_VF<"@earlyclobber $rd">;
-defm PseudoVFSLIDE1DOWN_ALT : VPseudoVSLD1_VF;
+defm PseudoVFSLIDE1UP_ALT   : VPseudoVSLD1_VF</*slidesUp=*/true, "@earlyclobber $rd">;
+defm PseudoVFSLIDE1DOWN_ALT : VPseudoVSLD1_VF</*slidesUp=*/false>;
 } // Predicates = [HasVInstructionsBF16], AltFmtType = IS_ALTFMT
 
 //===----------------------------------------------------------------------===//

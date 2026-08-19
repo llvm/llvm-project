@@ -30,7 +30,7 @@ end subroutine min_reduce
 ! CHECK-SAME: map_clauses(implicit, tofrom) capture(ByRef)
 ! CHECK-SAME: -> !fir.ref<f32> {name = "_QFmin_reduceEmin_val"}
 
-! CHECK: omp.target
+! CHECK: omp.target kernel_type(spmd)
 ! CHECK-SAME: map_entries({{.*}}%[[MIN_VAL_MAP]] -> %[[MIN_VAL_ARG:[[:alnum:]]+]]{{.*}})
 
 ! CHECK: %[[MIN_VAL_DEV:.*]]:2 = hlfir.declare %[[MIN_VAL_ARG]] {{.*}} "_QFmin_reduceEmin_val"
@@ -42,4 +42,4 @@ end subroutine min_reduce
 ! CHECK:       } {omp.composite}
 ! CHECK:     } {omp.composite}
 ! CHECK:   } {omp.composite}
-! CHECK: }
+! CHECK: } {omp.combined}

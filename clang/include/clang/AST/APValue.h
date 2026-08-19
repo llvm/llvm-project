@@ -297,7 +297,8 @@ private:
     APValue *Elts;
     unsigned NumBases;
     unsigned NumFields;
-    StructData(unsigned NumBases, unsigned NumFields);
+    unsigned NumVirtualBases;
+    StructData(unsigned NumBases, unsigned NumFields, unsigned NumVirtualBases);
     StructData(const StructData &) = delete;
     StructData &operator=(const StructData &) = delete;
     ~StructData();
@@ -336,11 +337,11 @@ public:
   APValue() : Kind(None), AllowConstexprUnknown(false) {}
   /// Creates an integer APValue holding the given value.
   explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
-    MakeInt(); setInt(std::move(I));
+    MakeInt(std::move(I));
   }
   /// Creates a float APValue holding the given value.
   explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
-    MakeFloat(); setFloat(std::move(F));
+    MakeFloat(std::move(F));
   }
   /// Creates a fixed-point APValue holding the given value.
   explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
@@ -418,9 +419,11 @@ public:
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
   /// \param NumMembers Number of members.
-  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+  /// \param NumVirtualBases Number of virtual bases.
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers,
+          unsigned NumVirtualBases = 0)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeStruct(NumBases, NumMembers);
+    MakeStruct(NumBases, NumMembers, NumVirtualBases);
   }
   /// Creates a new union APValue.
   /// \param ActiveDecl The FieldDecl of the active union member.
@@ -659,6 +662,10 @@ public:
     assert(isStruct() && "Invalid accessor");
     return ((const StructData *)(const char *)&Data)->NumFields;
   }
+  unsigned getStructNumVirtualBases() const {
+    assert(isStruct() && "Invalid accessor");
+    return ((const StructData *)(const char *)&Data)->NumVirtualBases;
+  }
   APValue &getStructBase(unsigned i) {
     assert(isStruct() && "Invalid accessor");
     assert(i < getStructNumBases() && "base class index OOB");
@@ -669,11 +676,20 @@ public:
     assert(i < getStructNumFields() && "field index OOB");
     return ((StructData *)(char *)&Data)->Elts[getStructNumBases() + i];
   }
+  APValue &getStructVirtualBase(unsigned i) {
+    assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumVirtualBases() && "virtual base class index OOB");
+    return ((StructData *)(char *)&Data)
+        ->Elts[getStructNumBases() + getStructNumFields() + i];
+  }
   const APValue &getStructBase(unsigned i) const {
     return const_cast<APValue*>(this)->getStructBase(i);
   }
   const APValue &getStructField(unsigned i) const {
     return const_cast<APValue*>(this)->getStructField(i);
+  }
+  const APValue &getStructVirtualBase(unsigned i) const {
+    return const_cast<APValue *>(this)->getStructVirtualBase(i);
   }
 
   const FieldDecl *getUnionField() const {
@@ -751,14 +767,24 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeInt() {
+  void MakeInt(const APSInt &I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)&Data) APSInt(1);
+    new ((void *)&Data) APSInt(std::move(I));
     Kind = Int;
   }
-  void MakeFloat() {
+  void MakeInt(APSInt &&I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) APFloat(0.0);
+    new ((void *)&Data) APSInt(std::move(I));
+    Kind = Int;
+  }
+  void MakeFloat(const APFloat &F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(F);
+    Kind = Float;
+  }
+  void MakeFloat(APFloat &&F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(std::move(F));
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {
@@ -788,9 +814,9 @@ private:
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
-  void MakeStruct(unsigned B, unsigned M) {
+  void MakeStruct(unsigned B, unsigned M, unsigned V) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) StructData(B, M);
+    new ((void *)(char *)&Data) StructData(B, M, V);
     Kind = Struct;
   }
   void MakeUnion() {

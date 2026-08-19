@@ -27,6 +27,7 @@ ModulePass *createSPIRVPushConstantAccessLegacyPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
 ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM);
+ModulePass *createSPIRVFinalizeShaderLinkagePass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();
@@ -49,7 +50,7 @@ void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
-void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
+void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
 void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
@@ -57,6 +58,7 @@ void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeImplicitBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
+void initializeSPIRVFinalizeShaderLinkageLegacyPass(PassRegistry &);
 void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);
 } // namespace llvm
 

@@ -1,6 +1,7 @@
 # RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
 # RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
 # RUN:   | FileCheck %s
+# REQUIRES: asserts
 
 # Some tests for Pressure Diffs of scheduling units. Each interesting register
 # class is used in a def-use sequence and the initial Pressure Diff of each SU
@@ -15,7 +16,7 @@
 
 # GR64Bit => GRX32Bit 2
 #
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      SU(0):   %0:gr64bit = LGHI 0
 # CHECK:        Pressure Diff      : GRX32Bit -2

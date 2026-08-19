@@ -19,8 +19,8 @@ int main() {
 
   // arr[0:0] doesn't create an actual mapping in the first directive.
   //
-  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] (0 bytes)
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target enter data map(alloc : arr[0 : 0])
 #pragma omp target exit data map(present, release : arr[0 : 0])
 

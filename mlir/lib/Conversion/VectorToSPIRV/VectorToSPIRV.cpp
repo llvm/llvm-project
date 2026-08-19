@@ -743,9 +743,9 @@ struct VectorLoadOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = loadOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, loadOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           loadOp, "failed to get memref element pointer");
@@ -809,9 +809,9 @@ struct VectorStoreOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = storeOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, storeOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
@@ -1024,8 +1024,11 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 
     Location loc = stepOp.getLoc();
     int64_t numElements = stepOp.getType().getNumElements();
-    auto intType =
-        rewriter.getIntegerType(typeConverter.getIndexTypeBitwidth());
+    // Use the element type; the type converter collapses size-1 vectors to
+    // scalars, so `dstType` may already be the scalar element type.
+    Type intType = isa<VectorType>(dstType)
+                       ? cast<VectorType>(dstType).getElementType()
+                       : dstType;
 
     // Input vectors of size 1 are converted to scalars by the type converter.
     // We just create a constant in this case.

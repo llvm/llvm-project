@@ -238,24 +238,16 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotr_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 6, 4, 28
-; CHECK-NEXT:    neg 4, 4
-; CHECK-NEXT:    clrlwi 5, 3, 16
 ; CHECK-NEXT:    clrlwi 4, 4, 28
-; CHECK-NEXT:    srw 5, 5, 6
-; CHECK-NEXT:    slw 3, 3, 4
-; CHECK-NEXT:    or 3, 5, 3
+; CHECK-NEXT:    rlwimi 3, 3, 16, 0, 15
+; CHECK-NEXT:    srw 3, 3, 4
 ; CHECK-NEXT:    blr
 ;
 ; FUTURE-LABEL: rotr_i16:
 ; FUTURE:       # %bb.0:
-; FUTURE-NEXT:    clrlwi 6, 4, 28
-; FUTURE-NEXT:    neg 4, 4
-; FUTURE-NEXT:    clrlwi 5, 3, 16
 ; FUTURE-NEXT:    clrlwi 4, 4, 28
-; FUTURE-NEXT:    srw 5, 5, 6
-; FUTURE-NEXT:    slw 3, 3, 4
-; FUTURE-NEXT:    or 3, 5, 3
+; FUTURE-NEXT:    rlwimi 3, 3, 16, 0, 15
+; FUTURE-NEXT:    srw 3, 3, 4
 ; FUTURE-NEXT:    blr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f

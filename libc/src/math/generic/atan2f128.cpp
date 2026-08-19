@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/atan2f128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, atan2f128, (float128 y, float128 x)) {
-  return math::atan2f128(y, x);
+  return cpp::bit_cast<float128>(
+      math::atan2f128(cpp::bit_cast<Float128>(y), cpp::bit_cast<Float128>(x)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

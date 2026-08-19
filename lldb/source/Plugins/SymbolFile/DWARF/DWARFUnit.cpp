@@ -724,11 +724,14 @@ DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
   DWARFDIE die = const_cast<DWARFUnit *>(this)->GetDIE(abs_die_offset);
   if (!die)
     return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+  if (die.Tag() != DW_TAG_base_type)
+    return llvm::createStringError(
+        "DW_OP_convert type DIE is not a DW_TAG_base_type");
   uint64_t encoding =
       die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
-  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
   if (!bit_size)
-    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
   if (!bit_size)
     return llvm::createStringError("unsupported type size");
   bool sign;

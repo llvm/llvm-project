@@ -9,6 +9,7 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
+// CHECK-NEXT: alpha.unix.PthreadLock:WarnOnLockOrderReversal = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-at-least-one-iteration = false
 // CHECK-NEXT: assume-controlled-environment = false
@@ -135,6 +136,7 @@
 // CHECK-NEXT: track-conditions = true
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = true
+// CHECK-NEXT: unix.DynamicMemoryModeling:ModelAllocationFailure = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
 // CHECK-NEXT: unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
 // CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false

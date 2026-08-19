@@ -10,7 +10,6 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
 #include "test/UnitTest/RoundingModeUtils.h"
-#undef LIBC_MATH_USE_SYSTEM_FENV
 
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -110,7 +109,7 @@ public:
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > 0) {
+        if (x > FloatType(0.0)) {
           ASSERT_EQ_ROUNDING_UPWARD(IntType(1), func(x));
           ASSERT_EQ_ROUNDING_DOWNWARD(IntType(0), func(x));
           ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));

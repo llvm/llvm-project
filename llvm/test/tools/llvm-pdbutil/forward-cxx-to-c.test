@@ -1,0 +1,89 @@
+# Test that we can resolve forward references from types with a unique name (from C++)
+# to types without a unique name (from C).
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --types %t.pdb | FileCheck %s
+
+# The forward reference from 0x1002 -> 0x1008 is important here.
+
+# CHECK:       0x1002 | LF_STRUCTURE [size = 48] `lua_State`
+# CHECK-NEXT:           unique name: `.?AUlua_State@@`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# CHECK-NEXT:           options: forward ref (-> 0x1008) | has unique name, sizeof 0
+# CHECK:       0x1004 | LF_STRUCTURE [size = 32] `lua_State`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# CHECK-NEXT:           options: forward ref (-> 0x1008), sizeof 0
+# CHECK:       0x1007 | LF_FIELDLIST [size = 20]
+# CHECK-NEXT:           - LF_MEMBER [name = `field`, Type = 0x0074 (int), offset = 0, attrs = public]
+# CHECK-NEXT:  0x1008 | LF_STRUCTURE [size = 32] `lua_State`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: 0x1007
+# CHECK-NEXT:           options: , sizeof 4
+
+---
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            lua_State
+        UniqueName:      '.?AUlua_State@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           65548
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference ]
+        FieldList:       0
+        Name:            lua_State
+        UniqueName:      ''
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4100
+        Attrs:           65548
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      4101
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            field
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None ]
+        FieldList:       4103
+        Name:            lua_State
+        UniqueName:      ''
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+...

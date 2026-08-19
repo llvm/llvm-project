@@ -36,7 +36,14 @@ TEST_F(LlvmLibcMincoreTest, UnalignedAddr) {
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_NE(addr, MAP_FAILED);
   EXPECT_EQ(reinterpret_cast<unsigned long>(addr) % page_size, 0ul);
+#ifdef LIBC_TEST_UNDER_EMULATOR
+  // QEMU user space emulation returns EFAULT instead of EINVAL because it
+  // validates the pointer parameters first.
+  unsigned char vec;
+  int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, &vec);
+#else
   int res = LIBC_NAMESPACE::mincore(static_cast<char *>(addr) + 1, 1, nullptr);
+#endif
   EXPECT_THAT(res, Fails(EINVAL, -1));
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, page_size), Succeeds());
 }

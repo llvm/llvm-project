@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/Attr.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/AttributeScopeInfo.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Tooling/Tooling.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -247,6 +250,26 @@ TEST(Attr, RegularKeywordAttribute) {
   auto Streaming = clang::ArmStreamingAttr::CreateImplicit(Ctx);
   EXPECT_EQ(Streaming->getSyntax(), clang::AttributeCommonInfo::AS_Keyword);
   ASSERT_TRUE(Streaming->isRegularKeywordAttribute());
+}
+
+// getAttributeSpellingListIndex() must not crash for an unknown *scoped*
+// attribute such as [[ns::foo]]. Such an attribute has no entry in the
+// generated spelling tables, and the name/scope string-switches used to compute
+// the index have no default case; the computation must short-circuit for an
+// unknown attribute and report the single no-spelling instead of falling off
+// the end.
+TEST(Attr, UnknownScopedAttributeSpellingIndex) {
+  auto AST = clang::tooling::buildASTFromCode("");
+  auto &Ctx = AST->getASTContext();
+  const clang::IdentifierInfo *Name = &Ctx.Idents.get("foo");
+  const clang::IdentifierInfo *Scope = &Ctx.Idents.get("ns");
+
+  clang::AttributeCommonInfo CI(
+      Name, clang::AttributeScopeInfo(Scope, clang::SourceLocation()),
+      clang::SourceRange(), clang::AttributeCommonInfo::Form::CXX11());
+
+  ASSERT_EQ(CI.getParsedKind(), clang::AttributeCommonInfo::UnknownAttribute);
+  EXPECT_EQ(CI.getAttributeSpellingListIndex(), 0u);
 }
 
 } // namespace

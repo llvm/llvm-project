@@ -281,8 +281,9 @@ def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
 
 def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
   let description = [{
-    OpenMP operations that can represent a single leaf of a composite OpenMP
-    construct.
+    OpenMP operations that can represent a single leaf of a compound OpenMP
+    construct, or one leaf of a combined construct or equivalent immediate
+    nesting of constructs.
   }];
 
   let cppNamespace = "::mlir::omp";
@@ -311,8 +312,48 @@ def ComposableOpInterface : OpInterface<"ComposableOpInterface"> {
         else
           $_op->removeDiscardableAttr("omp.composite");
       }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Check whether the operation is representing a non-innermost child leaf
+        of a combined OpenMP construct or an equivalent immediate nesting of
+        constructs.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isCombined",
+      (ins ), [{}], [{
+        return $_op->hasAttr("omp.combined");
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Mark the operation as a non-innermost child leaf of an OpenMP combined
+        construct or an equivalent immediate nesting of constructs.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"setCombined",
+      (ins "bool":$val), [{}], [{
+        if (val)
+          $_op->setDiscardableAttr("omp.combined", mlir::UnitAttr::get($_op->getContext()));
+        else
+          $_op->removeDiscardableAttr("omp.combined");
+      }]
     >
   ];
+
+  let extraClassDeclaration = [{
+    /// Follows the combined-composite chain of nested operations and returns
+    /// the deepest-nested one.
+    Operation *findCapturedOp();
+
+    /// Interface verifier implementation.
+    llvm::LogicalResult verifyImpl();
+  }];
+
+  let verify = [{
+    return ::llvm::cast<::mlir::omp::ComposableOpInterface>($_op).verifyImpl();
+  }];
+  let verifyWithRegions = 1;
 }
 
 def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
@@ -335,7 +376,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
            "mlir::omp::DeclareTargetCaptureClause":$captureClause,
-           "bool":$automap), [{}], [{
+           "bool":$automap, "bool":$implicit), [{}], [{
         $_op->setAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
@@ -343,7 +384,7 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
                           $_op->getContext(), captureClause),
-                      mlir::BoolAttr::get($_op->getContext(), automap)));
+                      automap, implicit));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -391,8 +432,19 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       (ins), [{}], [{
         if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
-            if (auto autoVal = dAttr.getAutomap())
-              return autoVal.getValue();
+            return dAttr.getAutomap();
+         return false;
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has been implicitly added.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isImplicitDeclareTarget",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            return dAttr.getImplicit();
          return false;
       }]>
   ];

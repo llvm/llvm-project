@@ -242,10 +242,10 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    std %f8, 208(%r15) # 8-byte Spill
 ; VECTOR-NEXT:    .cfi_offset %f8, -168
 ; VECTOR-NEXT:    vl %v0, 16(%r2), 3
+; VECTOR-NEXT:    mvc 176(16,%r15), 0(%r2) # 16-byte Folded Spill
 ; VECTOR-NEXT:    lgr %r13, %r3
 ; VECTOR-NEXT:    vst %v0, 192(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    vreph %v0, %v0, 7
-; VECTOR-NEXT:    mvc 176(16,%r15), 0(%r2) # 16-byte Folded Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -256,9 +256,9 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    cebr %f0, %f8
 ; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r11, 0
-; VECTOR-NEXT:    vreph %v0, %v0, 3
 ; VECTOR-NEXT:    lhi %r12, 0
 ; VECTOR-NEXT:    lochie %r11, -1
+; VECTOR-NEXT:    vreph %v0, %v0, 3
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -279,28 +279,28 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    cebr %f0, %f8
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r0, 0
-; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lochie %r0, -1
-; VECTOR-NEXT:    vlvgh %v1, %r0, 0
-; VECTOR-NEXT:    vreph %v0, %v0, 1
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3 # 16-byte Spill
-; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
-; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
-; VECTOR-NEXT:    ldr %f8, %f0
-; VECTOR-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vlvgh %v0, %r0, 0
+; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    vreph %v0, %v0, 1
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
+; VECTOR-NEXT:    ldr %f8, %f0
+; VECTOR-NEXT:    vl %v0, 176(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vreph %v0, %v0, 1
+; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
+; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    cebr %f0, %f8
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r0, 0
-; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lochie %r0, -1
-; VECTOR-NEXT:    vlvgh %v1, %r0, 1
+; VECTOR-NEXT:    vlvgh %v0, %r0, 1
+; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    vreph %v0, %v0, 2
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -309,13 +309,13 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    cebr %f0, %f8
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r0, 0
-; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lochie %r0, -1
-; VECTOR-NEXT:    vlvgh %v1, %r0, 2
+; VECTOR-NEXT:    vlvgh %v0, %r0, 2
+; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    vreph %v0, %v0, 4
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -324,13 +324,13 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    cebr %f0, %f8
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r0, 0
-; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lochie %r0, -1
-; VECTOR-NEXT:    vlvgh %v1, %r0, 4
+; VECTOR-NEXT:    vlvgh %v0, %r0, 4
+; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    vreph %v0, %v0, 5
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -339,13 +339,13 @@ define void @fun0(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    cebr %f0, %f8
-; VECTOR-NEXT:    vl %v1, 160(%r15), 3 # 16-byte Reload
+; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lhi %r0, 0
-; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    lochie %r0, -1
-; VECTOR-NEXT:    vlvgh %v1, %r0, 5
+; VECTOR-NEXT:    vlvgh %v0, %r0, 5
+; VECTOR-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
+; VECTOR-NEXT:    vl %v0, 192(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    vreph %v0, %v0, 6
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3 # 16-byte Spill
 ; VECTOR-NEXT:    # kill: def $f0h killed $f0h killed $v0
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f8, %f0
@@ -391,20 +391,20 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
 ; CHECK-NEXT:    .cfi_offset %f11, -192
-; CHECK-NEXT:    lgh %r0, 4(%r2)
 ; CHECK-NEXT:    lgh %r1, 2(%r2)
 ; CHECK-NEXT:    lgr %r13, %r3
 ; CHECK-NEXT:    lgh %r3, 0(%r2)
+; CHECK-NEXT:    lgh %r0, 4(%r2)
 ; CHECK-NEXT:    lgh %r2, 6(%r2)
-; CHECK-NEXT:    sllg %r0, %r0, 48
 ; CHECK-NEXT:    sllg %r1, %r1, 48
 ; CHECK-NEXT:    ldgr %f8, %r1
 ; CHECK-NEXT:    sllg %r1, %r3, 48
+; CHECK-NEXT:    ldgr %f11, %r1
+; CHECK-NEXT:    sllg %r1, %r2, 48
+; CHECK-NEXT:    sllg %r0, %r0, 48
+; CHECK-NEXT:    ldgr %f10, %r1
 ; CHECK-NEXT:    ldgr %f0, %r0
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h killed $f0d
-; CHECK-NEXT:    sllg %r0, %r2, 48
-; CHECK-NEXT:    ldgr %f11, %r1
-; CHECK-NEXT:    ldgr %f10, %r0
 ; CHECK-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; CHECK-NEXT:    ler %f9, %f0
 ; CHECK-NEXT:    ler %f0, %f11
@@ -429,15 +429,15 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; CHECK-NEXT:    brasl %r14, __truncsfhf2@PLT
 ; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
 ; CHECK-NEXT:    lgdr %r0, %f0
-; CHECK-NEXT:    lgdr %r1, %f9
+; CHECK-NEXT:    srlg %r0, %r0, 48
+; CHECK-NEXT:    sth %r0, 2(%r13)
+; CHECK-NEXT:    lgdr %r0, %f9
 ; CHECK-NEXT:    ld %f8, 184(%r15) # 8-byte Reload
 ; CHECK-NEXT:    ld %f9, 176(%r15) # 8-byte Reload
 ; CHECK-NEXT:    ld %f10, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    ld %f11, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    srlg %r0, %r0, 48
-; CHECK-NEXT:    srlg %r1, %r1, 48
-; CHECK-NEXT:    sth %r0, 2(%r13)
-; CHECK-NEXT:    sth %r1, 0(%r13)
+; CHECK-NEXT:    sth %r0, 0(%r13)
 ; CHECK-NEXT:    lmg %r13, %r15, 296(%r15)
 ; CHECK-NEXT:    br %r14
 ;
@@ -460,31 +460,31 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    vlreph %v0, 4(%r2)
 ; VECTOR-NEXT:    vlreph %v8, 2(%r2)
 ; VECTOR-NEXT:    vlreph %v11, 0(%r2)
-; VECTOR-NEXT:    vlreph %v10, 6(%r2)
+; VECTOR-NEXT:    vlreph %v9, 6(%r2)
 ; VECTOR-NEXT:    lgr %r13, %r3
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
-; VECTOR-NEXT:    ldr %f9, %f0
+; VECTOR-NEXT:    ldr %f10, %f0
 ; VECTOR-NEXT:    ldr %f0, %f11
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
-; VECTOR-NEXT:    cebr %f0, %f9
+; VECTOR-NEXT:    cebr %f0, %f10
 ; VECTOR-NEXT:    je .LBB1_2
 ; VECTOR-NEXT:  # %bb.1:
-; VECTOR-NEXT:    ldr %f0, %f9
+; VECTOR-NEXT:    ldr %f0, %f10
 ; VECTOR-NEXT:  .LBB1_2:
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    ldr %f9, %f0
-; VECTOR-NEXT:    ldr %f0, %f10
-; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
 ; VECTOR-NEXT:    ldr %f10, %f0
+; VECTOR-NEXT:    ldr %f0, %f9
+; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
+; VECTOR-NEXT:    ldr %f9, %f0
 ; VECTOR-NEXT:    ldr %f0, %f8
 ; VECTOR-NEXT:    brasl %r14, __extendhfsf2@PLT
-; VECTOR-NEXT:    cebr %f0, %f10
+; VECTOR-NEXT:    cebr %f0, %f9
 ; VECTOR-NEXT:    je .LBB1_4
 ; VECTOR-NEXT:  # %bb.3:
-; VECTOR-NEXT:    ldr %f0, %f10
+; VECTOR-NEXT:    ldr %f0, %f9
 ; VECTOR-NEXT:  .LBB1_4:
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
-; VECTOR-NEXT:    vsteh %v9, 0(%r13), 0
+; VECTOR-NEXT:    vsteh %v10, 0(%r13), 0
 ; VECTOR-NEXT:    ld %f8, 184(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    ld %f9, 176(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    ld %f10, 168(%r15) # 8-byte Reload

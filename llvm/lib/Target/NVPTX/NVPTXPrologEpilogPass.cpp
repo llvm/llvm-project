@@ -29,28 +29,14 @@ using namespace llvm;
 #define DEBUG_TYPE "nvptx-prolog-epilog"
 
 namespace {
-class NVPTXPrologEpilogPass : public MachineFunctionPass {
+class NVPTXPrologEpilog {
 public:
-  static char ID;
-  NVPTXPrologEpilogPass() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return "NVPTX Prolog Epilog Pass"; }
+  bool run(MachineFunction &MF);
 
 private:
   void calculateFrameObjectOffsets(MachineFunction &Fn);
 };
 } // end anonymous namespace
-
-MachineFunctionPass *llvm::createNVPTXPrologEpilogPass() {
-  return new NVPTXPrologEpilogPass();
-}
-
-char NVPTXPrologEpilogPass::ID = 0;
-
-INITIALIZE_PASS(NVPTXPrologEpilogPass, DEBUG_TYPE,
-                "NVPTX Prologue/Epilogue Insertion", false, false)
 
 static bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
                                         unsigned OpIdx) {
@@ -87,7 +73,7 @@ static bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
   return false;
 }
 
-bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
+bool NVPTXPrologEpilog::run(MachineFunction &MF) {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetFrameLowering &TFI = *STI.getFrameLowering();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
@@ -160,8 +146,7 @@ static inline void AdjustStackOffset(MachineFrameInfo &MFI, int FrameIdx,
   }
 }
 
-void
-NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
+void NVPTXPrologEpilog::calculateFrameObjectOffsets(MachineFunction &Fn) {
   const TargetFrameLowering &TFI = *Fn.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *RegInfo = Fn.getSubtarget().getRegisterInfo();
 
@@ -276,4 +261,40 @@ NVPTXPrologEpilogPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // Update frame info to pretend that this is part of the stack...
   int64_t StackSize = Offset - LocalAreaOffset;
   MFI.setStackSize(StackSize);
+}
+
+namespace {
+class NVPTXPrologEpilogLegacyPass : public MachineFunctionPass {
+public:
+  static char ID;
+  NVPTXPrologEpilogLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return NVPTXPrologEpilog().run(MF);
+  }
+
+  StringRef getPassName() const override { return "NVPTX Prolog Epilog Pass"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // end anonymous namespace
+
+char NVPTXPrologEpilogLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXPrologEpilogLegacyPass, DEBUG_TYPE,
+                "NVPTX Prologue/Epilogue Insertion", false, false)
+
+MachineFunctionPass *llvm::createNVPTXPrologEpilogLegacyPass() {
+  return new NVPTXPrologEpilogLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXPrologEpilogPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  if (!NVPTXPrologEpilog().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

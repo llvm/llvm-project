@@ -1,5 +1,6 @@
 ! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=51 %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
 !===============================================================================
 ! Target_Enter Simple
@@ -357,7 +358,7 @@ subroutine omp_target
    integer :: a(1024)
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}})
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target map(tofrom: a)
       !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
       !CHECK: %[[VAL_2:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -390,7 +391,7 @@ subroutine omp_target_depend
    !CHECK: %[[UBOUND_A:.*]] = arith.subi %c1024, %c1 : index
    !CHECK: %[[BOUNDS_A:.*]] = omp.map.bounds lower_bound(%[[LBOUND_A]] : index) upper_bound(%[[UBOUND_A]] : index) extent(%[[EXTENT_A]] : index) stride(%[[STRIDE_A]] : index) start_idx(%[[STRIDE_A]] : index)
    !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_A]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: omp.target kernel_type(generic) depend(taskdependin -> %[[A]]#0 : !fir.ref<!fir.array<1024xi32>>) map_entries(%[[MAP_A]] -> %[[BB0_ARG:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target map(tofrom: a) depend(in: a)
       a(1) = 10
       !CHECK: omp.terminator
@@ -410,7 +411,7 @@ subroutine omp_target_implicit
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_2]]) {uniq_name = "_QFomp_target_implicitEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
    integer :: a(1024)
    !CHECK: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(implicit, tofrom) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[VAL_4]] -> %[[VAL_6:.*]] : !fir.ref<!fir.array<1024xi32>>) {
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[VAL_6:.*]] : !fir.ref<!fir.array<1024xi32>>) {
    !$omp target
       !CHECK: %[[VAL_7:.*]] = arith.constant 1024 : index
       !CHECK: %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -433,8 +434,11 @@ end subroutine omp_target_implicit
 subroutine omp_target_implicit_nested
    integer::a, b
 
-   !CHECK-FPRIV: omp.target   map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %{{.*}} -> %[[ARG2:.*]] [map_idx=0], @{{.*}} %{{.*}} -> %[[ARG3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-NO-FPRIV: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-FPRIV: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[ARG0:.*]], %{{.*}} -> %[[ARG1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %{{.*}} -> %[[ARG2:.*]] [map_idx=0], @{{.*}} %{{.*}} -> %[[ARG3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
+      !CHECK-NO-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFomp_target_implicit_nestedEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK-NO-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFomp_target_implicit_nestedEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFomp_target_implicit_nestedEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG3]] {uniq_name = "_QFomp_target_implicit_nestedEb"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
@@ -479,7 +483,7 @@ subroutine omp_target_implicit_bounds(n)
    !CHECK: %[[VAL_14:.*]] = omp.map.bounds lower_bound(%c0{{.*}} : index) upper_bound(%[[UB]] : index) extent(%[[VAL_7]] : index) stride(%c1{{.*}} : index) start_idx(%c1{{.*}} : index)
    !CHECK: %[[VAL_15:.*]] = omp.map.info var_ptr(%[[VAL_10]]#1 : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(implicit, tofrom) capture(ByRef) bounds(%[[VAL_14]]) -> !fir.ref<!fir.array<?xi32>> {name = "a"}
    !CHECK: %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_COPY]] : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = ""}
-   !CHECK: omp.target map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[VAL_15]] -> %[[VAL_17:.*]], %[[VAL_16]] -> %[[VAL_18:.*]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) {
    !$omp target
       !CHECK: %[[VAL_19:.*]] = fir.load %[[VAL_18]] : !fir.ref<i32>
       !CHECK: %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
@@ -508,7 +512,7 @@ subroutine omp_target_thread_limit
    integer :: a
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
    !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
-   !CHECK: omp.target thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
+   !CHECK: omp.target kernel_type(generic) thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
    !$omp target map(tofrom: a) thread_limit(64)
       a = 10
    !CHECK: omp.terminator
@@ -582,7 +586,7 @@ subroutine omp_target_is_device_ptr
    !CHECK: %[[P_STORAGE:.*]] = omp.map.info {{.*}}{name = "p"}
    !CHECK: %[[P_IS:.*]] = omp.map.info {{.*}}{name = "p"}
    !CHECK: %[[ARR_MAP:.*]] = omp.map.info {{.*}}{name = "arr"}
-   !CHECK: omp.target is_device_ptr(%[[P_IS]] :
+   !CHECK: omp.target kernel_type(generic) is_device_ptr(%[[P_IS]] :
    !CHECK-SAME: has_device_addr(%[[P_STORAGE]] ->
    !CHECK-SAME: map_entries({{.*}}%[[ARR_MAP]] ->
    !$omp target is_device_ptr(p)
@@ -634,7 +638,7 @@ subroutine omp_target_parallel_do
    !CHECK: %[[SUB:.*]] = arith.subi %[[C1024]], %[[C1]] : index
    !CHECK: %[[BOUNDS:.*]] = omp.map.bounds   lower_bound(%[[C0]] : index) upper_bound(%[[SUB]] : index) extent(%[[C1024]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[VAL_0_DECL]]#1 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
-   !CHECK: omp.target   map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
+   !CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries(%[[MAP]] -> %[[ARG_0:.*]], %{{.*}} -> %{{.*}} : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>) {
       !CHECK: %[[VAL_0_DECL:.*]]:2 = hlfir.declare %[[ARG_0]](%{{.*}}) {uniq_name = "_QFomp_target_parallel_doEa"} : (!fir.ref<!fir.array<1024xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
       !CHECK: omp.parallel
       !$omp target parallel do map(tofrom: a)
@@ -670,12 +674,17 @@ subroutine target_unstructured
    integer :: i = 1
    !CHECK: %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
    integer :: j = 11
+   !CHECK-NO-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "i"}
+   !CHECK-NO-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<i32>, i32) map_clauses(implicit) capture(ByCopy) -> !fir.ref<i32> {name = "j"}
+   !CHECK-NO-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[VAL_6:.*]], %[[VAL_5]] -> %[[VAL_7:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
    !CHECK-FPRIV: %[[VAL_4:.*]] = omp.map.info var_ptr(%[[VAL_1]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
    !CHECK-FPRIV: %[[VAL_5:.*]] = omp.map.info var_ptr(%[[VAL_3]]#0 : !fir.ref<i32>, i32) map_clauses(to) capture(ByCopy) -> !fir.ref<i32>
-   !CHECK-FPRIV: omp.target map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
+   !CHECK-FPRIV: omp.target kernel_type(generic) map_entries(%[[VAL_4]] -> %[[ARG_0:.*]], %[[VAL_5]] -> %[[ARG_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) private(@{{.*}} %[[VAL_1]]#0 -> %[[ARG_2:.*]] [map_idx=0], @{{.*}} %[[VAL_3]]#0 -> %[[ARG_3:.*]] [map_idx=1] : !fir.ref<i32>, !fir.ref<i32>) {
    !$omp target
       !CHECK-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG_2]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       !CHECK-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG_3]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK-NO-FPRIV: %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFtarget_unstructuredEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+      !CHECK-NO-FPRIV: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFtarget_unstructuredEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
       !CHECK: ^bb1:
       do while (i <= j)
@@ -705,27 +714,27 @@ subroutine omp_target_device
   !$omp target device(dev32)
   !$omp end target
   ! CHECK: %[[DEV32:.*]] = fir.load %{{.*}} : !fir.ref<i32>
-  ! CHECK: omp.target device(%[[DEV32]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV32]] : i32)
 
   !$omp target device(dev64)
   !$omp end target
   ! CHECK: %[[DEV64:.*]] = fir.load %{{.*}} : !fir.ref<i64>
-  ! CHECK: omp.target device(%[[DEV64]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV64]] : i64)
 
   !$omp target device(dev16)
   !$omp end target
   ! CHECK: %[[DEV16:.*]] = fir.load %{{.*}} : !fir.ref<i16>
-  ! CHECK: omp.target device(%[[DEV16]] : i16)
+  ! CHECK: omp.target kernel_type(generic) device(%[[DEV16]] : i16)
 
   !$omp target device(2)
   !$omp end target
   ! CHECK: %[[C2:.*]] = arith.constant 2 : i32
-  ! CHECK: omp.target device(%[[C2]] : i32)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C2]] : i32)
 
   !$omp target device(5_8)
   !$omp end target
   ! CHECK: %[[C5:.*]] = arith.constant 5 : i64
-  ! CHECK: omp.target device(%[[C5]] : i64)
+  ! CHECK: omp.target kernel_type(generic) device(%[[C5]] : i64)
 
 end subroutine omp_target_device
 

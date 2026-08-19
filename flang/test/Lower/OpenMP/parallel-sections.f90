@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=50 %s -o - | FileCheck %s
 
 !===============================================================================
 ! Parallel sections construct

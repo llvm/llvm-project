@@ -29,6 +29,34 @@ namespace mlir {
 #include "mlir/Interfaces/ValueBoundsOpInterface.cpp.inc"
 } // namespace mlir
 
+bool ValueBoundsConstraintSet::isProvablyNonNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GE,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyNonPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LE,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GT,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
+bool ValueBoundsConstraintSet::isProvablyNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
+  return cstr.populateAndCompare(
+      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LT,
+      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
+}
+
 static Operation *getOwnerOfValue(Value value) {
   if (auto bbArg = dyn_cast<BlockArgument>(value))
     return bbArg.getOwner()->getParentOp();
@@ -820,9 +848,7 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
     return cstr.comparePos(lhsPos, cmp, rhsPos);
   };
   ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
-  lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
-  rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
-  return cstr.comparePos(lhsPos, cmp, rhsPos);
+  return cstr.populateAndCompare(lhs, cmp, rhs);
 }
 
 FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,

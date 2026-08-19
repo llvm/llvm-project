@@ -18,18 +18,18 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp0:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp0
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp0:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp0
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp0:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp0
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -61,29 +61,33 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp0
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp0
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp0
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp0
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp0
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp0
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autia1716
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -96,18 +100,18 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_b_key_frame
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp1:
 ; COMPAT-NEXT:   hint #27
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp1
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp1:
 ; V83A-NEXT:     pacibsp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp1
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp1:
 ; V9A-NEXT:      pacibsppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp1
 
 ; PAUTH-NEXT:    pacibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -139,29 +143,33 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp1
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp1
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #14
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp1
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp1
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autib1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp1
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp1
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autib171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autib1716
+; PAUTH-NEXT:    autib x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack_args
   musttail call swifttailcc void @callee_stack_args(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -173,18 +181,18 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp2:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp2
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp2:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp2
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp2:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp2
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -209,17 +217,17 @@ define swifttailcc void @tail_call_no_fpdiff_a_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:   adrp x16, .Ltmp2
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp2
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #29
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp2
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp2
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autiasp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autiasppc .Ltmp2
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autiasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -236,18 +244,18 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; CHECK-NEXT:    .cfi_b_key_frame
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp3:
 ; COMPAT-NEXT:   hint #27
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp3
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp3:
 ; V83A-NEXT:     pacibsp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp3
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp3:
 ; V9A-NEXT:      pacibsppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp3
 
 ; PAUTH-NEXT:    pacibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -272,17 +280,17 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:   adrp x16, .Ltmp3
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp3
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #31
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp3
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp3
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autibsp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autibsppc .Ltmp3
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -298,18 +306,18 @@ define swifttailcc void @indirect_tail_call_fpdiff_a_key(ptr swiftasync %ctx, pt
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp4:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp4
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp4:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp4
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp4:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp4
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -342,29 +350,33 @@ define swifttailcc void @indirect_tail_call_fpdiff_a_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp4
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp4
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #12
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp4
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp4
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autia1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp4
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp4
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autia171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autia1716
+; PAUTH-NEXT:    autia x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    br x8
   musttail call swifttailcc void %callee(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -377,18 +389,18 @@ define swifttailcc void @indirect_tail_call_fpdiff_b_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_b_key_frame
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp5:
 ; COMPAT-NEXT:   hint #27
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp5
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp5:
 ; V83A-NEXT:     pacibsp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp5
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp5:
 ; V9A-NEXT:      pacibsppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp5
 
 ; PAUTH-NEXT:    pacibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -421,29 +433,33 @@ define swifttailcc void @indirect_tail_call_fpdiff_b_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    add x16, sp, #16
-; CHECK-NEXT:    mov x17, x30
 
+; COMPAT-NEXT:   mov x17, x30
 ; COMPAT-NEXT:   adrp x15, .Ltmp5
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp5
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #14
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
+; COMPAT-NEXT:   mov x30, x17
 
+; V83A-NEXT:     mov x17, x30
 ; V83A-NEXT:     adrp x15, .Ltmp5
 ; V83A-NEXT:     add x15, x15, :lo12:.Ltmp5
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autib1716
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
+; V83A-NEXT:     mov x30, x17
 
+; V9A-NEXT:      mov x17, x30
 ; V9A-NEXT:      adrp x15, .Ltmp5
 ; V9A-NEXT:      add x15, x15, :lo12:.Ltmp5
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autib171615
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
+; V9A-NEXT:      mov x30, x17
 
-; PAUTH-NEXT:    autib1716
+; PAUTH-NEXT:    autib x30, x16
 ; PAUTH-NEXT:    .cfi_negate_ra_state
 
-; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    br x8
   musttail call swifttailcc void %callee(ptr swiftasync %ctx, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9)
   ret void
@@ -455,18 +471,18 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_a_key(ptr swiftasync %ctx,
 ; CHECK:       // %bb.0:
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp6:
 ; COMPAT-NEXT:   hint #25
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp6
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp6:
 ; V83A-NEXT:     paciasp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp6
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp6:
 ; V9A-NEXT:      paciasppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp6
 
 ; PAUTH-NEXT:    paciasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -491,17 +507,17 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_a_key(ptr swiftasync %ctx,
 ; COMPAT-NEXT:   adrp x16, .Ltmp6
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp6
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #29
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp6
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp6
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autiasp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autiasppc .Ltmp6
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autiasp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -518,18 +534,18 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_b_key(ptr swiftasync %ctx,
 ; CHECK-NEXT:    .cfi_b_key_frame
 
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT: .Ltmp7:
 ; COMPAT-NEXT:   hint #27
+; COMPAT-NEXT:   .cfi_set_ra_state 2, .Ltmp7
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp7:
 ; V83A-NEXT:     pacibsp
+; V83A-NEXT:     .cfi_set_ra_state 2, .Ltmp7
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:    .Ltmp7:
 ; V9A-NEXT:      pacibsppc
+; V9A-NEXT:      .cfi_set_ra_state 2, .Ltmp7
 
 ; PAUTH-NEXT:    pacibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state
@@ -554,17 +570,17 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_b_key(ptr swiftasync %ctx,
 ; COMPAT-NEXT:   adrp x16, .Ltmp7
 ; COMPAT-NEXT:   add x16, x16, :lo12:.Ltmp7
 ; COMPAT-NEXT:   hint #39
-; COMPAT-NEXT:   .cfi_negate_ra_state_with_pc
 ; COMPAT-NEXT:   hint #31
+; COMPAT-NEXT:   .cfi_set_ra_state 0, 0
 
 ; V83A-NEXT:     adrp x16, .Ltmp7
 ; V83A-NEXT:     add x16, x16, :lo12:.Ltmp7
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:     autibsp
+; V83A-NEXT:     .cfi_set_ra_state 0, 0
 
-; V9A-NEXT:      .cfi_negate_ra_state_with_pc
 ; V9A-NEXT:      autibsppc .Ltmp7
+; V9A-NEXT:      .cfi_set_ra_state 0, 0
 
 ; PAUTH-NEXT:    autibsp
 ; PAUTH-NEXT:    .cfi_negate_ra_state

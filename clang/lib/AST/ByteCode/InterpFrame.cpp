@@ -50,7 +50,8 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
 
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      new (localBlock(Local.Offset)) Block(S.EvalID, Local.Desc);
+      new (localBlock(Local.Offset))
+          Block(S.EvalID, Local.Desc, Block::InlineDescMD);
       // Note that we are NOT calling invokeCtor() here, since that is done
       // via the InitScope op.
       new (localInlineDesc(Local.Offset)) InlineDescriptor(Local.Desc);
@@ -160,7 +161,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     return;
 
   const ASTContext &ASTCtx = S.getASTContext();
-  const Expr *CallExpr = Caller->getExpr(getRetPC());
+  const Expr *CallExpr = Caller->getExpr(getRetOpPC());
   const FunctionDecl *F = getCallee();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
@@ -217,7 +218,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
-    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+    if (SourceRange NullRange = S.getRange({}); NullRange.isValid())
       return NullRange;
     return S.EvalLocation;
   }
@@ -227,7 +228,8 @@ SourceRange InterpFrame::getCallRange() const {
     if (!C->RetPC)
       continue;
     SourceRange CallRange =
-        S.getRange(C->Caller->Func, C->RetPC - sizeof(uintptr_t));
+        C->Caller->Func->getSource(C->getRetOpPC() - sizeof(uintptr_t))
+            .getRange();
     if (CallRange.isValid())
       return CallRange;
   }
@@ -277,38 +279,50 @@ static bool funcHasUsableBody(const Function *F) {
 }
 
 SourceInfo InterpFrame::getSource(CodePtr PC) const {
+  if (!Func)
+    return S.getSource(PC);
+
   // Implicitly created functions don't have any code we could point at,
   // so return the call site.
   if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getSource(RetPC);
+    return Caller->getSource(getRetOpPC());
 
   // Similarly, if the resulting source location is invalid anyway,
   // point to the caller instead.
-  SourceInfo Result = S.getSource(Func, PC);
+  SourceInfo Result = Func->getSource(PC);
   if (Result.getLoc().isInvalid() && Caller)
-    return Caller->getSource(RetPC);
+    return Caller->getSource(getRetOpPC());
+
   return Result;
 }
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(RetPC);
+  if (!Func)
+    return S.getExpr(PC);
 
-  return S.getExpr(Func, PC);
+  if (!funcHasUsableBody(Func) && Caller)
+    return Caller->getExpr(getRetOpPC());
+
+  return Func->getSource(PC).asExpr();
 }
 
 SourceLocation InterpFrame::getLocation(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getLocation(RetPC);
+  if (!Func)
+    return S.getLocation(PC);
+  if (!funcHasUsableBody(Func) && Caller)
+    return Caller->getLocation(getRetOpPC());
 
-  return S.getLocation(Func, PC);
+  return Func->getSource(PC).getLoc();
 }
 
 SourceRange InterpFrame::getRange(CodePtr PC) const {
-  if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getRange(RetPC);
+  if (!Func)
+    return S.getRange(PC);
 
-  return S.getRange(Func, PC);
+  if (!funcHasUsableBody(Func) && Caller)
+    return Caller->getRange(getRetOpPC());
+
+  return Func->getSource(PC).getRange();
 }
 
 bool InterpFrame::isStdFunction() const {

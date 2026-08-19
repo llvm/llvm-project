@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu11.00-- -S -verify=expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef int int4 __attribute__((ext_vector_type(4)));

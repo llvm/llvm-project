@@ -402,6 +402,8 @@ int main(int argc, char **argv) {
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);
+      // Make the test more reliable on Windows.
+      fflush(stdout);
     }
   }
 

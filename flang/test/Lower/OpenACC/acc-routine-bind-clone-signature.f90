@@ -19,7 +19,9 @@ subroutine s_bind_clone(n, x)
   end do
 end subroutine
 
+! CHECK: acc.routine @[[ACLEAR_SEQ_ROUTINE:.*]] func(@_QPaclear_seq) seq
+! CHECK: acc.routine @{{.*}} func(@_QPaclear) bind(@_QPaclear_seq) seq
 ! The decorated routine's signature (assumed-shape array descriptor):
 ! CHECK: func.func private @_QPaclear(!fir.box<!fir.array<?xf32>>
 ! The bind target is declared with the same type, proving the clone:
-! CHECK: func.func private @_QPaclear_seq(!fir.box<!fir.array<?xf32>>)
+! CHECK: func.func private @_QPaclear_seq(!fir.box<!fir.array<?xf32>>) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_SEQ_ROUTINE]]]>}

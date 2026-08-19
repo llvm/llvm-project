@@ -11,6 +11,7 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
+#include "MSVC.h"
 #include "clang/Driver/CudaInstallationDetector.h"
 #include "clang/Driver/LazyDetector.h"
 #include "clang/Driver/RocmInstallationDetector.h"
@@ -117,6 +118,7 @@ private:
   std::string TripleDirName;
   mutable std::unique_ptr<tools::gcc::Preprocessor> Preprocessor;
   mutable std::unique_ptr<tools::gcc::Compiler> Compiler;
+  mutable std::unique_ptr<tools::ARM64XObjcopy> Objcopy;
   void findGccLibDir(const llvm::Triple &LiteralTriple);
 
   bool NativeLLVMSupport;

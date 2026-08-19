@@ -57,6 +57,7 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitStmtExpr(const StmtExpr *SE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -65,7 +66,8 @@ private:
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginList *Dst, OriginList *Src, bool Kill,
+            const CFGBlock *Block = nullptr);
 
   /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
   ///
