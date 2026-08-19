@@ -74,7 +74,8 @@ class GCNBreakLoadClusterDepsImpl {
   Register renameRegister(Register FromReg, Register ToReg, Register RenameReg);
   bool
   findReplaceRegisterOperand(MachineInstr &MI, unsigned OpNum,
-                             const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs);
+                             const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs,
+                             bool MIMustBeKiller = false);
   bool isVGPRLoad(MachineInstr &MI) const {
     return MI.mayLoad() && MI.getOperand(0).isReg() &&
            TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
@@ -161,7 +162,7 @@ Register GCNBreakLoadClusterDepsImpl::renameRegister(Register FromReg,
 
 bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     MachineInstr &MI, unsigned OpNum,
-    const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs) {
+    const bitset<AMDGPU::NUM_TARGET_REGS> &BannedRegs, bool MIMustBeKiller) {
   MachineBasicBlock& MBB = *MI.getParent();
   MachineInstr *DefToRename = nullptr, *KillerIns = nullptr;
   Register OldReg = MI.getOperand(OpNum).getReg();
@@ -237,7 +238,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     }
   }
 
-  if (!DefToRename)
+  if (!DefToRename || MIMustBeKiller && KillerIns != &MI)
     return false;
 
   // Now, perform the rename between (DefToRename, KillerIns)
@@ -390,7 +391,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       assert(OpNum != VecLoadIns.getNumExplicitOperands() &&
              "There should be a conflicting register operand.  Where is it?");
       bitset<AMDGPU::NUM_TARGET_REGS> SelfBannedRegs = BannedRegs | InsDefs;
-      if (!findReplaceRegisterOperand(VecLoadIns, OpNum, SelfBannedRegs))
+      if (!findReplaceRegisterOperand(VecLoadIns, OpNum, SelfBannedRegs, true))
         break;
       
       tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
