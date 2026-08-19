@@ -11,7 +11,6 @@
 // <ranges>
 
 //   V models forward_range:
-
 //     using iterator_category = ...;
 //     using iterator_concept = ...;
 //     using value_type = decltype(views::take(subrange(current_, end_), n_));
