@@ -6518,27 +6518,30 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 static void printOptimizedVPlan(VPlan &) {}
 
 #ifndef NDEBUG
-/// Cross-check the probabilities vputils::computeBlockProbabilities computes
-/// for the blocks of the loop region of \p Plan against the frequencies \p BFI
-/// computed for the corresponding blocks of \p OrigLoop.
+/// Cross-check the execution probabilities computed by
+/// vputils::computeExecutionProbabilities for the blocks of the loop region of
+/// \p Plan against the frequencies \p BFI computed for the corresponding blocks
+/// of \p OrigLoop.
 /// FIXME: Temporary verification aid, to be removed.
-static bool verifyBlockProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
-                                             LoopInfo *LI,
-                                             BlockFrequencyInfo &BFI) {
-
-  // The verification is limited inner loops where the latch is the only exiting
-  // block and there are no extra VPBBs not mapped to IR BBs (when tailfolding).
+static bool verifyExecutionProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
+                                                 LoopInfo *LI,
+                                                 BlockFrequencyInfo &BFI) {
+  // The verification is limited to inner loops where the latch is the only
+  // exiting block and there are no extra VPBBs not mapped to IR BBs (when
+  // tail folding).
   if (Plan.isOuterLoop() ||
       OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
       Plan.hasTailFolded())
     return true;
 
   // Visit the blocks of the loop region in the same order as
-  // introduceMasksAndLinearize does.
+  // introduceMasksAndLinearize does. Both traversals are reverse post-orders of
+  // the same CFG, so they visit corresponding blocks at the same index.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion()->getEntryBasicBlock());
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
-  assert(Blocks.size() == OrigLoop->getNumBlocks());
+  assert(Blocks.size() == OrigLoop->getNumBlocks() &&
+         "loop region and original loop must have the same blocks");
 
   LoopBlocksRPO OrigRPO(OrigLoop);
   OrigRPO.perform(LI);
@@ -6550,13 +6553,13 @@ static bool verifyBlockProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
   // BFI's fixed-point mass propagation rounds per edge, losing up to 1 ULP per
   // block on the path from the header.
   uint64_t Tolerance =
-      Blocks.size() + BranchProbability::getDenominator() / HeaderFreq;
+      Blocks.size() + VPExecutionProbability::getDenominator() / HeaderFreq;
 
-  DenseMap<const VPBasicBlock *, BranchProbability> Probabilities =
-      vputils::computeBlockProbabilities(Blocks);
+  DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities =
+      vputils::computeExecutionProbabilities(Blocks);
   for (const auto &[VPBB, BB] :
        zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
-    BranchProbability Computed = Probabilities.lookup(VPBB);
+    VPExecutionProbability Computed = Probabilities.lookup(VPBB);
     // Currently VPlan-based probabilities are only computed when all blocks
     // have branch-weights.
     if (Computed.isUnknown())
@@ -6565,8 +6568,9 @@ static bool verifyBlockProbabilitiesMatchBFI(VPlan &Plan, Loop *OrigLoop,
     // Clamp the frequency to the header's; it may exceed it slightly due to
     // BFI's rounding.
     uint64_t Freq = BFI.getBlockFreq(BB).getFrequency();
-    BranchProbability Expected = BranchProbability::getBranchProbability(
-        std::min(Freq, HeaderFreq), HeaderFreq);
+    VPExecutionProbability Expected =
+        VPExecutionProbability::getBranchProbability(std::min(Freq, HeaderFreq),
+                                                     HeaderFreq);
     if (AbsoluteDifference(Computed.getNumerator(), Expected.getNumerator()) <=
         Tolerance)
       continue;
@@ -6665,8 +6669,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (CM.foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
-  assert(verifyBlockProbabilitiesMatchBFI(*VPlan0, OrigLoop, LI, CM.getBFI()) &&
-         "block probabilities do not match the original loop's frequencies");
+  assert(verifyExecutionProbabilitiesMatchBFI(*VPlan0, OrigLoop, LI,
+                                              CM.getBFI()) &&
+         "execution probabilities do not match the loop's frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   return VPlan0;
@@ -6883,7 +6888,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  RUN_VPLAN_PASS(VPlanTransforms::dropBranchWeightsFromUnguardedRecipes, *Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::dropUnguardedExecutionProbabilities, *Plan);
   RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
 

@@ -25,6 +25,8 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
+#include <numeric>
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -674,6 +676,22 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   return New;
 }
 
+/// Converts the probability \p Prob with which a block is entered to the branch
+/// weights of the conditional branch guarding it, or returns nullptr if \p Prob
+/// is unknown.
+static MDNode *convertProbabilityToBranchWeights(VPExecutionProbability Prob,
+                                                 LLVMContext &Ctx) {
+  if (Prob.isUnknown())
+    return nullptr;
+
+  // Use the numerators of Prob and its complement as weights and reduce them
+  // via gcd to keep them small.
+  uint32_t Taken = Prob.getNumerator();
+  uint32_t NotTaken = Prob.getCompl().getNumerator();
+  uint32_t GCD = std::gcd(Taken, NotTaken);
+  return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
+}
+
 /// Convert recipes in region blocks to operate on a single lane 0.
 /// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
 /// converted into BranchOnCond, PredInstPhi recipes are replaced by scalar phi
@@ -723,11 +741,13 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
-        // Carry the branch weights describing how often the predicated block
-        // is entered onto the generated conditional branch.
-        Builder.createNaryOp(VPInstruction::BranchOnCond,
-                             {BranchOnMask->getOperand(0)},
-                             /*Inst=*/nullptr, {}, *BranchOnMask, OldDL);
+        // Turn the probability with which the predicated block is entered into
+        // branch weights on the generated conditional branch.
+        auto *BOC = Builder.createNaryOp(VPInstruction::BranchOnCond,
+                                         {BranchOnMask->getOperand(0)}, OldDL);
+        if (MDNode *Weights = convertProbabilityToBranchWeights(
+                BranchOnMask->getExecutionProbability(), Plan.getContext()))
+          BOC->setMetadata(LLVMContext::MD_prof, Weights);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);

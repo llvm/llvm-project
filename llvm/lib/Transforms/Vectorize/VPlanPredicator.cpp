@@ -19,8 +19,6 @@
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/IR/MDBuilder.h"
-#include <numeric>
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -113,23 +111,6 @@ public:
   void convertPhisToBlends(VPBasicBlock *VPBB);
 };
 } // namespace
-
-/// Returns the branch weights describing how often a block executing with
-/// probability \p Prob is entered, or nullptr if \p Prob carries no useful
-/// information, i.e. the block is never or always executed, or its probability
-/// is unknown.
-static MDNode *getWeightsForProbability(BranchProbability Prob,
-                                        LLVMContext &Ctx) {
-  if (Prob.isUnknown() || Prob.isZero() || Prob.isOne())
-    return nullptr;
-
-  // Use the numerators of Prob and its complement as weights and reduce them
-  // via gcd to keep them small.
-  uint32_t Taken = Prob.getNumerator();
-  uint32_t NotTaken = Prob.getCompl().getNumerator();
-  uint32_t GCD = std::gcd(Taken, NotTaken);
-  return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
-}
 
 VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
                                       const VPBasicBlock *Dst) {
@@ -425,8 +406,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
       Header);
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
-  DenseMap<const VPBasicBlock *, BranchProbability> Probabilities =
-      vputils::computeBlockProbabilities(Blocks);
+  DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities =
+      vputils::computeExecutionProbabilities(Blocks);
 
   VPPredicator Predicator(Plan);
   for (VPBasicBlock *VPBB : Blocks) {
@@ -440,16 +421,16 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
     if (!BlockMask)
       continue;
 
-    // Mask all VPInstructions in the block and propagate execution
-    // probabilities to them.
-    MDNode *Weights =
-        getWeightsForProbability(Probabilities.lookup(VPBB), Plan.getContext());
+    // Mask all VPInstructions in the block and record the probability with
+    // which the masked recipes execute.
+    VPExecutionProbability Prob = Probabilities.lookup(VPBB);
     for (VPRecipeBase &R : *VPBB) {
-      if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-        VPI->addMask(BlockMask);
-        if (Weights && VPI->isMasked())
-          VPI->setMetadata(LLVMContext::MD_prof, Weights);
-      }
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI)
+        continue;
+      VPI->addMask(BlockMask);
+      if (VPI->isMasked())
+        VPI->setExecutionProbability(Prob, Plan.getContext());
     }
   }
 

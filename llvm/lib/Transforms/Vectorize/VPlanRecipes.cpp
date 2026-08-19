@@ -35,6 +35,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -2128,8 +2129,40 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
+  assert(getExecutionProbability().isUnknown() &&
+         "VPlan-internal metadata must not be propagated to IR");
   for (const auto &[Kind, Node] : Metadata)
     I.setMetadata(Kind, Node);
+}
+
+void VPIRMetadata::setExecutionProbability(VPExecutionProbability Prob,
+                                           LLVMContext &Ctx) {
+  // A recipe that never or always executes needs no annotation.
+  if (Prob.isUnknown() || Prob.isZero() || Prob.isOne())
+    return;
+  // The numerator is relative to BranchProbability's fixed denominator and is
+  // less than it, as probability one has been excluded above.
+  Constant *Numerator =
+      ConstantInt::get(Type::getInt32Ty(Ctx), Prob.getNumerator());
+  setMetadata(Ctx.getMDKindID(ExecutionProbabilityMDName),
+              MDNode::get(Ctx, {ConstantAsMetadata::get(Numerator)}));
+}
+
+VPExecutionProbability VPIRMetadata::getExecutionProbability() const {
+  if (Metadata.empty())
+    return VPExecutionProbability::getUnknown();
+  MDNode *Node = getMetadata(getMDKindID(ExecutionProbabilityMDName));
+  if (!Node)
+    return VPExecutionProbability::getUnknown();
+  return VPExecutionProbability::getRaw(
+      mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue());
+}
+
+void VPIRMetadata::clearExecutionProbability() {
+  if (Metadata.empty())
+    return;
+  unsigned ID = getMDKindID(ExecutionProbabilityMDName);
+  erase_if(Metadata, [ID](const auto &P) { return P.first == ID; });
 }
 
 void VPIRMetadata::intersect(const VPIRMetadata &Other) {
@@ -2158,14 +2191,21 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
            "Unexpected unnamed metadata kind");
     O << "!" << MDNames[Kind] << " ";
+    // Print the values of branch weights, which are more informative than the
+    // ID of the metadata node holding them.
     SmallVector<uint32_t> Weights;
     if (Kind == LLVMContext::MD_prof && extractBranchWeights(Node, Weights)) {
       O << "{";
       interleaveComma(Weights, O);
       O << "}";
-      return;
+    } else if (MDNames[Kind] == ExecutionProbabilityMDName) {
+      // Print execution probabilities as percentages, which is precise enough
+      // to relate them to the block frequencies of the original loop.
+      O << format("%.2f%%", 100.0 * getExecutionProbability().getNumerator() /
+                                VPExecutionProbability::getDenominator());
+    } else {
+      Node->printAsOperand(O, M);
     }
-    Node->printAsOperand(O, M);
   });
   O << ")";
 }

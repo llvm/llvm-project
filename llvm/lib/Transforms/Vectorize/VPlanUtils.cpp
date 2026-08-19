@@ -1069,17 +1069,16 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
   if (Successors.size() == 1)
     return {{cast<VPBasicBlock>(Successors[0]), BranchProbability::getOne()}};
 
+  // Take the branch weights off the terminator. Without usable weights all
+  // successors have unknown probability; zero the weights, so the accumulation
+  // below still visits each of them.
   SmallVector<uint32_t> Weights;
-  uint64_t Total = 0;
   auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
-  if (Term &&
-      extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) &&
-      Weights.size() == Successors.size())
-    Total = sum_of(Weights, uint64_t(0));
-  // Without usable weights all successors have unknown probability. Zero the
-  // weights, so the accumulation below still visits each of them.
-  if (Total == 0)
+  if (!Term ||
+      !extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) ||
+      Weights.size() != Successors.size())
     Weights.assign(Successors.size(), 0);
+  uint64_t Total = sum_of(Weights, uint64_t(0));
 
   SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
   for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
@@ -1094,52 +1093,40 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
   });
 }
 
-DenseMap<const VPBasicBlock *, BranchProbability>
-vputils::computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
+DenseMap<const VPBasicBlock *, VPExecutionProbability>
+vputils::computeExecutionProbabilities(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
   // Push each block's probability along its outgoing edges, accumulating it in
   // the successors. Blocks is in reverse post-order and the blocks form a DAG
   // (the backedge of a loop region is implicit), so all incoming edges of a
   // block have contributed by the time it is visited and its probability is
   // final.
-  DenseMap<const VPBasicBlock *, BranchProbability> Probabilities;
+  DenseMap<const VPBasicBlock *, VPExecutionProbability> Probabilities;
   Probabilities.reserve(Blocks.size());
   // The header (first block) always executes.
-  Probabilities[Blocks.front()] = BranchProbability::getOne();
+  Probabilities[Blocks.front()] = VPExecutionProbability::getOne();
   for (VPBasicBlock *VPBB : Blocks.drop_front())
-    Probabilities[VPBB] = BranchProbability::getZero();
+    Probabilities[VPBB] = VPExecutionProbability::getZero();
 
   for (VPBasicBlock *VPBB : Blocks) {
-    BranchProbability SrcProb = Probabilities.at(VPBB);
+    VPExecutionProbability SrcProb = Probabilities.at(VPBB);
     for (auto [Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      BranchProbability &SuccProb = Probabilities.at(Succ);
+      VPExecutionProbability &SuccProb = Probabilities.at(Succ);
       // An unknown edge or predecessor poisons the successor: its probability
       // is only known if all edges on paths reaching it carry branch weights.
       if (SrcProb.isUnknown() || EdgeProb.isUnknown() || SuccProb.isUnknown()) {
-        SuccProb = BranchProbability::getUnknown();
+        SuccProb = VPExecutionProbability::getUnknown();
         continue;
       }
-      BranchProbability Contribution = SrcProb * EdgeProb;
+      VPExecutionProbability Contribution = SrcProb * EdgeProb;
       // Force to the lowest possible probability if the product gets rounded to
       // zero, to keep reachable blocks distinguishable from unreachable ones.
       if (Contribution.isZero() && !SrcProb.isZero() && !EdgeProb.isZero())
-        Contribution = BranchProbability::getRaw(1);
+        Contribution = VPExecutionProbability::getRaw(1);
       SuccProb += Contribution;
     }
   }
   return Probabilities;
-}
-
-BranchProbability
-vputils::getRegionEntryProbability(const VPRegionBlock *Region) {
-  const VPBranchOnMaskRecipe *Guard = Region->getEntryBranchOnMask();
-  SmallVector<uint32_t, 2> Weights;
-  if (!extractBranchWeights(Guard->getMetadata(LLVMContext::MD_prof), Weights))
-    return BranchProbability::getUnknown();
-  // The weights are {Taken, NotTaken}: the region is entered if the branch on
-  // the guarding mask is taken.
-  return BranchProbability::getBranchProbability(Weights[0],
-                                                 sum_of(Weights, uint64_t(0)));
 }
 
 VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,

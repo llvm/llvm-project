@@ -4,8 +4,8 @@
 ; RUN:     -vplan-print-after=introduceMasksAndLinearize -disable-output %s 2>&1 \
 ; RUN:   | FileCheck --check-prefix=VPLAN %s
 
-; Check that the branch weights VPlan puts on the masked recipes of a block
-; describe the same execution probability BlockFrequencyInfo computes for the
+; Check that the execution probabilities VPlan records on the masked recipes of
+; a block match the block frequencies BlockFrequencyInfo computes for the
 ; corresponding block of the original scalar loop.
 
 define void @single_pred(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
@@ -34,7 +34,7 @@ define void @single_pred(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!prof {1, 3})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -97,20 +97,20 @@ define void @two_preds(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noali
 ; VPLAN-NEXT:    else:
 ; VPLAN-NEXT:      EMIT vp<[[NOT_C0:%.+]]> = not ir<%c.0>
 ; VPLAN-NEXT:      EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.c>, vp<[[NOT_C0]]> (!prof {3, 1})
-; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100>, vp<[[NOT_C0]]> (!prof {3, 1})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.c>, vp<[[NOT_C0]]> (!vplan.execution.probability 75.00%)
+; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100>, vp<[[NOT_C0]]> (!vplan.execution.probability 75.00%)
 ; VPLAN-NEXT:    Successor(s): then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!prof {1, 3})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, ir<%c.0> (!vplan.execution.probability 25.00%)
 ; VPLAN-NEXT:    Successor(s): merge
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    merge:
 ; VPLAN-NEXT:      EMIT vp<[[AND:%.+]]> = logical-and vp<[[NOT_C0]]>, ir<%c.1>
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = or vp<[[AND]]>, ir<%c.0>
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[MASK]]> (!prof {1, 1})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, vp<[[MASK]]> (!vplan.execution.probability 50.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -178,14 +178,14 @@ define void @nested_ifs(ptr noalias %a, ptr noalias %b, ptr noalias %idx) {
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.0:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0> (!prof {1, 3})
-; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<100>, ir<%c.0> (!prof {1, 3})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.b>, ir<%c.0> (!vplan.execution.probability 25.00%)
+; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<100>, ir<%c.0> (!vplan.execution.probability 25.00%)
 ; VPLAN-NEXT:    Successor(s): if.1
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.1:
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = logical-and ir<%c.0>, ir<%c.1>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, vp<[[MASK]]> (!prof {1, 7})
+; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 12.50%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -256,17 +256,17 @@ define void @switch_common_dest(ptr noalias %a, ptr noalias %b, ptr noalias %c, 
 ; VPLAN-NEXT:      EMIT vp<[[ANY:%.+]]> = or vp<[[C0_OR_C1]]>, vp<[[C2]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[ANY]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<2>, ir<%gep.b>, vp<[[C2]]> (!prof {1, 7})
+; VPLAN-NEXT:      EMIT store ir<2>, ir<%gep.b>, vp<[[C2]]> (!vplan.execution.probability 12.50%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!prof {3, 5})
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 37.50%)
 ; VPLAN-NEXT:    Successor(s): default
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    default:
 ; VPLAN-NEXT:      EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.c>, vp<[[DEFAULT]]> (!prof {1, 1})
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.c>, vp<[[DEFAULT]]> (!vplan.execution.probability 50.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -341,12 +341,12 @@ define void @switch_common_dest_weight_sum_not_a_power_of_two(ptr noalias %a, pt
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[C0_OR_C1]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!prof {1431655765, 715827883})
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 66.67%)
 ; VPLAN-NEXT:    Successor(s): default
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    default:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!prof {715827883, 1431655765})
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!vplan.execution.probability 33.33%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -414,12 +414,12 @@ define void @switch_common_dest_almost_always_taken(ptr noalias %a, ptr noalias 
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[C0_OR_C1]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!prof {2147483647, 1})
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.probability 100.00%)
 ; VPLAN-NEXT:    Successor(s): default
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    default:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!prof {1, 2147483647})
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, vp<[[DEFAULT]]> (!vplan.execution.probability 0.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -485,7 +485,7 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    mid:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!prof {1, 2147483647})
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 0.00%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
@@ -500,7 +500,7 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!prof {1, 2147483647})
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 0.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:
@@ -569,7 +569,7 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    mid:
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!prof {1, 2147483647})
+; VPLAN-NEXT:      EMIT store ir<0>, ir<%gep.b>, ir<%c> (!vplan.execution.probability 0.00%)
 ; VPLAN-NEXT:    Successor(s): if.then
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
@@ -577,7 +577,7 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
-; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!prof {1, 2147483647})
+; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.probability 0.00%)
 ; VPLAN-NEXT:    Successor(s): latch
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    latch:

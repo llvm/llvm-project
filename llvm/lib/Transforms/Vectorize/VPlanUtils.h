@@ -227,13 +227,8 @@ VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
 /// executes. \p Blocks must be in reverse post-order. The probability of a
 /// block is the accumulated probability of its incoming edges, or unknown if
 /// any edge on a path reaching it lacks branch weights.
-DenseMap<const VPBasicBlock *, BranchProbability>
-computeBlockProbabilities(ArrayRef<VPBasicBlock *> Blocks);
-
-/// Returns the probability of entering replicate region \p Region, taken from
-/// the branch weights recorded on its guarding branch-on-mask, or unknown if it
-/// carries none.
-BranchProbability getRegionEntryProbability(const VPRegionBlock *Region);
+DenseMap<const VPBasicBlock *, VPExecutionProbability>
+computeExecutionProbabilities(ArrayRef<VPBasicBlock *> Blocks);
 
 namespace detail {
 

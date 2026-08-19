@@ -38,6 +38,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include <cassert>
@@ -72,6 +73,10 @@ class LoopVectorizationCostModel;
 struct VPCostContext;
 
 using VPlanPtr = std::unique_ptr<VPlan>;
+
+/// The probability with which a block or recipe executes, relative to the entry
+/// of the loop region, which always executes.
+using VPExecutionProbability = BranchProbability;
 
 /// \enum UncountableExitStyle
 /// Different methods of handling early exits.
@@ -1178,6 +1183,19 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
+  /// Name of the VPlan-internal metadata kind recording the probability with
+  /// which a recipe executes; see setExecutionProbability.
+  static constexpr StringLiteral ExecutionProbabilityMDName =
+      "vplan.execution.probability";
+
+  /// Returns the ID of the metadata kind named \p Kind. Any attached node
+  /// provides the context the IDs are assigned in, as all nodes belong to the
+  /// context of the VPlan's function.
+  unsigned getMDKindID(StringRef Kind) const {
+    assert(!Metadata.empty() && "no node to take the context from");
+    return Metadata.front().second->getContext().getMDKindID(Kind);
+  }
+
 public:
   VPIRMetadata() = default;
 
@@ -1185,6 +1203,8 @@ public:
   /// \p I.
   VPIRMetadata(Instruction &I) {
     getMetadataToPropagate(&I, Metadata);
+    // Retain the branch weights of terminators. They are used to compute the
+    // probabilities with which the blocks of the original loop execute.
     if (I.isTerminator())
       if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
         Metadata.emplace_back(LLVMContext::MD_prof, BW);
@@ -1215,17 +1235,23 @@ public:
   /// nodes that are common to both.
   void intersect(const VPIRMetadata &MD);
 
-  /// Remove metadata of kind \p Kind, if present.
-  void eraseMetadata(unsigned Kind) {
-    erase_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
-  }
-
   /// Get metadata of kind \p Kind. Returns nullptr if not found.
   MDNode *getMetadata(unsigned Kind) const {
     auto It =
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+  /// Record that the recipe executes with probability \p Prob, relative to the
+  /// entry of the loop region.
+  void setExecutionProbability(VPExecutionProbability Prob, LLVMContext &Ctx);
+
+  /// Returns the probability recorded by setExecutionProbability, or an unknown
+  /// probability if none has been recorded.
+  VPExecutionProbability getExecutionProbability() const;
+
+  /// Drop the probability recorded by setExecutionProbability, if any.
+  void clearExecutionProbability();
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
