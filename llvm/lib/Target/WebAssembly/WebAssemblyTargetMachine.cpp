@@ -526,7 +526,7 @@ void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
   }
 }
 bool WebAssemblyPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

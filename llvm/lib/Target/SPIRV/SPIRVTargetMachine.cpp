@@ -263,7 +263,7 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
 
 // Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   addPass(createSPIRVPostLegalizerPass());
   return false;
 }

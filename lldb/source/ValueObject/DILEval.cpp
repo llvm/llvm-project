@@ -1966,6 +1966,39 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
                                               node.GetLocation());
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ConditionalNode &node) {
+  auto cond_or_err = EvaluateAndDereference(node.GetCondition());
+  if (!cond_or_err)
+    return cond_or_err;
+  lldb::ValueObjectSP condition = *cond_or_err;
+
+  CompilerType cond_type = condition->GetCompilerType();
+  if (!cond_type.IsContextuallyConvertibleToBool()) {
+    std::string errMsg = llvm::formatv(
+        "value of type {0} is not contextually convertible to 'bool'",
+        cond_type.TypeDescription());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                node.GetLocation());
+  }
+  // Note: DIL evaluates only the operand chosen by the condition,
+  // and doesn't check the type or evaluate the other operand.
+  auto value_or_err = condition->GetValueAsBool();
+  if (value_or_err) {
+    if (*value_or_err) {
+      auto true_or_err = EvaluateAndDereference(node.GetTrueOperand());
+      if (!true_or_err)
+        return true_or_err;
+      return *true_or_err;
+    }
+    auto false_or_err = EvaluateAndDereference(node.GetFalseOperand());
+    if (!false_or_err)
+      return false_or_err;
+    return *false_or_err;
+  }
+  return value_or_err.takeError();
+}
+
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const SizeOfNode &node) {
   CompilerType typearg = node.GetTypeArg();
   Scalar size;
