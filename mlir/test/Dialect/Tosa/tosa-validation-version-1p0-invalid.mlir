@@ -284,7 +284,7 @@ func.func @test_block_scaled_concat(%arg0: tensor<13x21x32x!tosa.block_scaled<BL
 
 // -----
 func.func @test_block_scaled_dim(%arg0: tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) {
-  // expected-error@+1 {{'tosa.dim' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3] profiles/extensions to be specified in the target environment}}
+  // expected-error@+1 {{'tosa.dim' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires all of [mx_common, mx_fp8e4m3, shape] profiles/extensions to be specified in the target environment}}
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<13x21x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> !tosa.shape<1>
   return
 }
