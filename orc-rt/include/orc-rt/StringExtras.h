@@ -70,6 +70,14 @@ public:
     T Value;
   };
 
+  /// A string field to be padded to a fixed width (see ljust / rjust).
+  struct Justified {
+    std::string_view Str;
+    std::size_t Width;
+    char Fill;
+    bool Left;
+  };
+
   StringOutputStream &operator<<(char C) {
     S.push_back(C);
     return *this;
@@ -111,6 +119,16 @@ public:
     return *this;
   }
 
+  StringOutputStream &operator<<(Justified J) {
+    std::size_t Pad = J.Str.size() < J.Width ? J.Width - J.Str.size() : 0;
+    if (!J.Left)
+      S.append(Pad, J.Fill);
+    S.append(J.Str);
+    if (J.Left)
+      S.append(Pad, J.Fill);
+    return *this;
+  }
+
   /// Access the accumulated string (mirrors std::ostringstream::str()).
   const std::string &str() const & { return S; }
   std::string str() && { return std::move(S); }
@@ -138,6 +156,22 @@ template <typename T> StringOutputStream::HexFmt<T> hex(T Value) {
                 "hex() is for integers; pointers already print in hex by "
                 "default, and bool is not a numeric value");
   return {Value};
+}
+
+/// Wrap Str so StringOutputStream prints it left-justified in a field of the
+/// given width, padded on the right with Fill. Strings wider than Width are
+/// printed in full (never truncated).
+inline StringOutputStream::Justified ljust(std::string_view Str,
+                                           std::size_t Width, char Fill = ' ') {
+  return {Str, Width, Fill, /*Left=*/true};
+}
+
+/// Wrap Str so StringOutputStream prints it right-justified in a field of the
+/// given width, padded on the left with Fill. Strings wider than Width are
+/// printed in full (never truncated).
+inline StringOutputStream::Justified rjust(std::string_view Str,
+                                           std::size_t Width, char Fill = ' ') {
+  return {Str, Width, Fill, /*Left=*/false};
 }
 
 } // namespace orc_rt
