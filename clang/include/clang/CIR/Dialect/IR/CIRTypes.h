@@ -38,6 +38,22 @@ struct UnionTypeStorage;
 
 bool isValidFundamentalIntWidth(unsigned width);
 
+/// Whether a member of this kind holds data for argument passing.
+inline bool holdsDataForABI(RecordMemberKind kind) {
+  return kind == RecordMemberKind::Data || kind == RecordMemberKind::BitField;
+}
+
+/// Whether a member of this kind is a bit-field access unit holding data.  The
+/// compiler chooses an access unit's width, so the member can be narrower than
+/// the declared type of the bit-fields it holds.  A true answer does not mean
+/// the member holds a bit-field: a union's base subobject takes this mark when
+/// any variant is an access unit, whatever its own storage type came from.  A
+/// unit holding only unnamed bit-fields is `empty` instead, and is told apart
+/// from the rest of `empty` by occupying bytes.
+inline bool isBitFieldAccessUnit(RecordMemberKind kind) {
+  return kind == RecordMemberKind::BitField;
+}
+
 /// Returns true if the type is a CIR sized type.
 ///
 /// Types are sized if they implement SizedTypeInterface and
