@@ -3735,22 +3735,19 @@ OpFoldResult LLVM::ConstantOp::fold(FoldAdaptor) { return getValue(); }
 void AtomicRMWOp::build(OpBuilder &builder, OperationState &state,
                         AtomicBinOp binOp, Value ptr, Value val,
                         AtomicOrdering ordering, StringRef syncscope,
-                        unsigned alignment, bool isVolatile) {
+                        unsigned alignment, bool isVolatile,
+                        bool ignoreDenormalMode) {
   build(builder, state, val.getType(), binOp, ptr, val, ordering,
         !syncscope.empty() ? builder.getStringAttr(syncscope) : nullptr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
+        ignoreDenormalMode,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 LogicalResult AtomicRMWOp::verify() {
   auto valType = getVal().getType();
-  if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
-      getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
-      getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum ||
-      getBinOp() == AtomicBinOp::fminimumnum ||
-      getBinOp() == AtomicBinOp::fmaximumnum) {
+  if (isFloatingPointOperation()) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -3772,6 +3769,10 @@ LogicalResult AtomicRMWOp::verify() {
         intBitWidth != 64)
       return emitOpError("expected LLVM IR integer type");
   }
+
+  if (getIgnoreDenormalMode() && !isFloatingPointOperation())
+    return emitOpError(
+        "expected floating-point operation with 'ignore_denormal_mode'");
 
   if (static_cast<unsigned>(getOrdering()) <
       static_cast<unsigned>(AtomicOrdering::monotonic))

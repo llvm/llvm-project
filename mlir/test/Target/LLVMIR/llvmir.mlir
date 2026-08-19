@@ -1663,6 +1663,8 @@ llvm.func @atomicrmw(
   // CHECK-SAME:  syncscope("singlethread")
   // CHECK-SAME:  align 8
   %27 = llvm.atomicrmw volatile udec_wrap %i32_ptr, %i32 syncscope("singlethread") monotonic {alignment = 8 : i64} : !llvm.ptr, i32
+  // CHECK: atomicrmw fadd ptr %{{.*}}, float %{{.*}} monotonic, align 4, !atomic.ignore.denormal.mode !{{[0-9]+}}
+  %28 = llvm.atomicrmw ignore_denormal_mode fadd %f32_ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 

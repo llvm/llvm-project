@@ -485,8 +485,12 @@ define void @atomic_rmw(ptr %ptr1, i32 %val1, ptr %ptr2, float %val2) {
   ; CHECK-SAME:  syncscope("singlethread")
   ; CHECK-SAME:  {alignment = 8 : i64}
   %22 = atomicrmw volatile udec_wrap ptr %ptr1, i32 %val1 syncscope("singlethread") acquire, align 8
+  ; CHECK:  llvm.atomicrmw ignore_denormal_mode fadd %[[PTR2]], %[[VAL2]] acquire
+  %23 = atomicrmw fadd ptr %ptr2, float %val2 acquire, !atomic.ignore.denormal.mode !0
   ret void
 }
+
+!0 = !{}
 
 ; // -----
 

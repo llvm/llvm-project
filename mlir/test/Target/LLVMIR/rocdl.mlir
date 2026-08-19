@@ -1962,11 +1962,9 @@ llvm.func @rocdl_4_bit_floats(
 llvm.func @rocdl_atomic_attrs(%ptr: !llvm.ptr<1>, %data: f32) {
   // CHECK-LABEL: @rocdl_atomic_attrs
   // CHECK: atomicrmw
-  // CHECK-SAME: !atomic.ignore.denormal.mode
   // CHECK-SAME: !amdgpu.no.fine.grained.memory
   // CHECK-SAME: !amdgpu.no.remote.memory
   llvm.atomicrmw fadd %ptr, %data monotonic {
-    rocdl.ignore_denormal_mode,
     rocdl.no_fine_grained_memory,
     rocdl.no_remote_memory} : !llvm.ptr<1>, f32
   llvm.return
