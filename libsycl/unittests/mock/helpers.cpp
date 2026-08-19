@@ -66,8 +66,8 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olGetPlatformInfoSize)
       .WillByDefault([](ol_platform_handle_t Platform,
-                            ol_platform_info_t PropName,
-                            size_t *PropSizeRet) -> ol_result_t {
+                        ol_platform_info_t PropName,
+                        size_t *PropSizeRet) -> ol_result_t {
         EXPECT_NE(Platform, nullptr);
         EXPECT_NE(PropSizeRet, nullptr);
 
@@ -162,7 +162,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olCreateContext)
       .WillByDefault([](size_t NumDevices, ol_device_handle_t *Devices,
-                            ol_context_handle_t *Context) -> ol_result_t {
+                        ol_context_handle_t *Context) -> ol_result_t {
         EXPECT_GT(NumDevices, 0);
         EXPECT_NE(Devices, nullptr);
         EXPECT_NE(Context, nullptr);
@@ -187,8 +187,8 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olCreateProgram)
       .WillByDefault([](ol_device_handle_t Device, const void *ProgData,
-                            size_t ProgDataSize,
-                            ol_program_handle_t *Program) -> ol_result_t {
+                        size_t ProgDataSize,
+                        ol_program_handle_t *Program) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);
@@ -200,7 +200,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olIsValidBinary)
       .WillByDefault([](ol_device_handle_t Device, const void *ProgData,
-                            size_t ProgDataSize, bool *Valid) -> ol_result_t {
+                        size_t ProgDataSize, bool *Valid) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(ProgData, nullptr);
         EXPECT_GT(ProgDataSize, 0);
@@ -211,8 +211,8 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olGetSymbol)
       .WillByDefault([](ol_program_handle_t Program, const char *Name,
-                            ol_symbol_kind_t Kind,
-                            ol_symbol_handle_t *Symbol) -> ol_result_t {
+                        ol_symbol_kind_t Kind,
+                        ol_symbol_handle_t *Symbol) -> ol_result_t {
         EXPECT_NE(Program, nullptr);
         EXPECT_NE(Name, nullptr);
         std::ignore = Kind;
@@ -223,9 +223,8 @@ void mock::MockLiboffload::initDefault() {
       });
 
   ON_CALL(*this, olCreateQueue)
-      .WillByDefault([](ol_context_handle_t Context,
-                            ol_device_handle_t Device,
-                            ol_queue_handle_t *Queue) -> ol_result_t {
+      .WillByDefault([](ol_context_handle_t Context, ol_device_handle_t Device,
+                        ol_queue_handle_t *Queue) -> ol_result_t {
         std::ignore = Context;
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Queue, nullptr);
@@ -251,7 +250,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olWaitEvents)
       .WillByDefault([](ol_queue_handle_t Queue, ol_event_handle_t *Events,
-                            size_t NumEvents) -> ol_result_t {
+                        size_t NumEvents) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_NE(Events, nullptr);
         for (size_t I = 0; I < NumEvents; ++I) {
@@ -262,7 +261,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olCreateEvent)
       .WillByDefault([](ol_queue_handle_t Queue, ol_event_flags_t Flags,
-                            ol_event_handle_t *Event) -> ol_result_t {
+                        ol_event_handle_t *Event) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         std::ignore = Flags;
         EXPECT_NE(Event, nullptr);
@@ -273,11 +272,11 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olLaunchKernel)
       .WillByDefault([](ol_queue_handle_t Queue, ol_device_handle_t Device,
-                            ol_symbol_handle_t Kernel,
-                            const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                            const ol_kernel_launch_prop_t *Properties,
-                            size_t NumArgs, void **ArgPtrs,
-                            const size_t *ArgSizes) -> ol_result_t {
+                        ol_symbol_handle_t Kernel,
+                        const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                        const ol_kernel_launch_prop_t *Properties,
+                        size_t NumArgs, void **ArgPtrs,
+                        const size_t *ArgSizes) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Kernel, nullptr);
@@ -299,9 +298,9 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olMemcpy)
       .WillByDefault([](ol_queue_handle_t Queue, void *DstPtr,
-                            ol_device_handle_t DstDevice, const void *SrcPtr,
-                            ol_device_handle_t SrcDevice,
-                            size_t Size) -> ol_result_t {
+                        ol_device_handle_t DstDevice, const void *SrcPtr,
+                        ol_device_handle_t SrcDevice,
+                        size_t Size) -> ol_result_t {
         EXPECT_NE(Queue, nullptr);
         EXPECT_NE(DstPtr, nullptr);
         EXPECT_NE(DstDevice, nullptr);
@@ -330,7 +329,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olMemAlloc)
       .WillByDefault([](ol_device_handle_t Device, ol_alloc_type_t Type,
-                            size_t Size, void **AllocationOut) -> ol_result_t {
+                        size_t Size, void **AllocationOut) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_NE(Type, OL_ALLOC_TYPE_HOST);
         EXPECT_GT(Size, 0);
@@ -341,7 +340,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olMemAllocHost)
       .WillByDefault([](ol_device_handle_t Device, size_t Size,
-                            void **AllocationOut) -> ol_result_t {
+                        void **AllocationOut) -> ol_result_t {
         EXPECT_NE(Device, nullptr);
         EXPECT_GT(Size, 0);
         EXPECT_NE(AllocationOut, nullptr);
