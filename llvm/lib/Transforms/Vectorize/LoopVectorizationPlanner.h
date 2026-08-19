@@ -381,7 +381,7 @@ public:
       if (MinEC == 1)
         return VScale;
       // TODO: Move this optimization into createOverflowingOp directly.
-      else if (isPowerOf2_32(MinEC)) {
+      if (isPowerOf2_32(MinEC)) {
         VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
         return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
                                    {true, false});
