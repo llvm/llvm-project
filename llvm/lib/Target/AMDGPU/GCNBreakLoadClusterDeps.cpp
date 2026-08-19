@@ -238,7 +238,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     }
   }
 
-  if (!DefToRename || MIMustBeKiller && KillerIns != &MI)
+  if (!DefToRename || (MIMustBeKiller && KillerIns != &MI))
     return false;
 
   // Now, perform the rename between (DefToRename, KillerIns)
