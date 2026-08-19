@@ -110,8 +110,7 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
 
 void Sinker::sinkRegion(Region *region) {
   // Initialize the work queue with all the ops in the region, including
-  // nested regions. Seed from all operations so that uses in non-entry and
-  // nested blocks trigger sinking.
+  // nested regions.
   std::vector<Operation *> stack;
   region->walk([&](Operation *op) { stack.push_back(op); });
 
