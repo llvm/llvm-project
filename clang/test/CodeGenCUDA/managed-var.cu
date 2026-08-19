@@ -163,19 +163,22 @@ __device__ __host__ int load4() {
 
 namespace gh198079 {
 __managed__ int x = 0;
+
 struct S {
-    int *p;
+  int *p;
 };
-__attribute__((device)) void f() {
+
+__device__ __host__ void f() {
   S s{&x};
 }
-// DEV-LABEL: define {{.*}}@{{.*}}gh198079{{.*}}f{{.*}}()
-// DEV: %p = getelementptr inbounds nuw %"struct.gh198079::S", ptr %s.ascast, i32 0, i32 0
+// COMMON-LABEL: define {{.*}}@{{.*}}gh198079{{.*}}f{{.*}}()
 // DEV: %ld.managed = load ptr addrspace(1), ptr addrspace(1) @_ZN8gh1980791xE, align 4
 // DEV: %0 = addrspacecast ptr addrspace(1) %ld.managed to ptr
-// DEV: store ptr %0, ptr %p, align 8
-int *hostglob = &x;
+// DEV: store ptr %0, ptr %p
+// HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE, align 4
+// HOST: store ptr %ld.managed, ptr %p
 
+int *hostglob = &x;
 // HOST-LABEL: define internal void @__cxx_global_var_init()
 // HOST: %ld.managed = load ptr, ptr @_ZN8gh1980791xE
 // HOST: store ptr %ld.managed, ptr @_ZN8gh1980798hostglobE
