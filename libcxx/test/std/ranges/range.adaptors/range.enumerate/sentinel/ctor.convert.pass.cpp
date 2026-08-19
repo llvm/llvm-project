@@ -80,7 +80,7 @@ constexpr void test_SFINAE() {
   }
   {
     std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto sent1 = v.end();
+    auto sent1                                       = v.end();
     std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
 
     static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
