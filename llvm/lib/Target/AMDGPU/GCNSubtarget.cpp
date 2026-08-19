@@ -53,6 +53,18 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
+static cl::opt<unsigned>
+    StressVGPRLimit("amdgpu-stress-vgpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit VGPRs to N arch registers"));
+
+static cl::opt<unsigned>
+    StressAGPRLimit("amdgpu-stress-agpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit AGPRs to N registers"));
+
+static cl::opt<unsigned>
+    StressSGPRLimit("amdgpu-stress-sgpr", cl::Hidden, cl::init(0),
+                    cl::desc("Limit SGPRs to N registers"));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
@@ -571,6 +583,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
       MaxNumSGPRs = Requested;
   }
 
+  // Stress test: override SGPR limit.
+  if (StressSGPRLimit.getNumOccurrences())
+    MaxNumSGPRs = StressSGPRLimit;
+
   if (hasSGPRInitBug())
     MaxNumSGPRs = AMDGPU::IsaInfo::FIXED_NUM_SGPRS_FOR_INIT_BUG;
 
@@ -630,16 +646,10 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
-  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
-  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
-  return getBaseMaxNumVGPRs(
-      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
-          getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
+  auto [VGPRs, AGPRs] = getMaxNumVectorRegs(F);
+  // On gfx90a+ VGPRs and AGPRs share a unified register file.
+  // On gfx908 they are independent, so only VGPRs count toward the budget.
+  return hasGFX90AInsts() ? VGPRs + AGPRs : VGPRs;
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
@@ -648,7 +658,16 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
 
 std::pair<unsigned, unsigned>
 GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
-  const unsigned MaxVectorRegs = getMaxNumVGPRs(F);
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is removed.
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
+
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  const unsigned MaxVectorRegs = getBaseMaxNumVGPRs(
+      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
+          getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
@@ -699,6 +718,12 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     // On gfx908 the number of AGPRs always equals the number of VGPRs.
     MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
   }
+
+  // Stress test: override VGPR/AGPR limits.
+  if (StressVGPRLimit.getNumOccurrences())
+    MaxNumVGPRs = StressVGPRLimit;
+  if (StressAGPRLimit.getNumOccurrences())
+    MaxNumAGPRs = StressAGPRLimit;
 
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);
 }
