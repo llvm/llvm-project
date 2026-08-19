@@ -615,6 +615,8 @@ public:
   mlir::Value VisitUnaryPreInc(const UnaryOperator *e) {
     return VisitUnaryPrePostIncDec(e);
   }
+
+  mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value, QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
     if (cgf.getLangOpts().OpenMP)
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
@@ -727,8 +729,7 @@ public:
         return {};
       }
     } else if (type->isFixedPointType()) {
-      cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fixed point");
-      return {};
+      value = emitFixedPointIncDec(e, value, type);
     } else {
       assert(type->castAs<ObjCObjectPointerType>());
       cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec ObjectiveC pointer");
@@ -1103,6 +1104,8 @@ public:
   mlir::Value emitXor(const BinOpInfo &ops);
   mlir::Value emitOr(const BinOpInfo &ops);
 
+  mlir::Value emitFixedPointBinOp(const BinOpInfo &ops);
+
   LValue emitCompoundAssignLValue(
       const CompoundAssignOperator *e,
       mlir::Value (ScalarExprEmitter::*f)(const BinOpInfo &),
@@ -1157,32 +1160,31 @@ public:
   HANDLEBINOP(Or)
 #undef HANDLEBINOP
 
+  cir::CmpOpKind clangCmpToCIRCmp(clang::BinaryOperatorKind clangCmp) {
+    switch (clangCmp) {
+    case BO_LT:
+      return cir::CmpOpKind::lt;
+    case BO_GT:
+      return cir::CmpOpKind::gt;
+    case BO_LE:
+      return cir::CmpOpKind::le;
+    case BO_GE:
+      return cir::CmpOpKind::ge;
+    case BO_EQ:
+      return cir::CmpOpKind::eq;
+    case BO_NE:
+      return cir::CmpOpKind::ne;
+    default:
+      llvm_unreachable("unsupported comparison kind for cir.cmp");
+    }
+  }
+
   mlir::Value emitCmp(const BinaryOperator *e) {
     ignoreResultAssign = false;
     const mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Value result;
     QualType lhsTy = e->getLHS()->getType();
     QualType rhsTy = e->getRHS()->getType();
-
-    auto clangCmpToCIRCmp =
-        [](clang::BinaryOperatorKind clangCmp) -> cir::CmpOpKind {
-      switch (clangCmp) {
-      case BO_LT:
-        return cir::CmpOpKind::lt;
-      case BO_GT:
-        return cir::CmpOpKind::gt;
-      case BO_LE:
-        return cir::CmpOpKind::le;
-      case BO_GE:
-        return cir::CmpOpKind::ge;
-      case BO_EQ:
-        return cir::CmpOpKind::eq;
-      case BO_NE:
-        return cir::CmpOpKind::ne;
-      default:
-        llvm_unreachable("unsupported comparison kind for cir.cmp");
-      }
-    };
 
     cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
@@ -1209,9 +1211,7 @@ public:
                                          boInfo.lhs, boInfo.rhs);
         }
       } else if (boInfo.isFixedPointOp()) {
-        assert(!cir::MissingFeatures::fixedPointType());
-        cgf.cgm.errorNYI(loc, "fixed point comparisons");
-        result = builder.getBool(false, loc);
+        result = emitFixedPointBinOp(boInfo);
       } else {
         // integers and pointers
         if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
@@ -2168,6 +2168,168 @@ struct FixedPointBuilder {
     return convert(src, srcSema, dstSema, /*dstIsInteger=*/false);
   }
 
+  mlir::Value createAdd(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs,
+                        const llvm::FixedPointSemantics &rhsSema) {
+    auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
+    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
+
+    mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
+    mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
+
+    mlir::Value result;
+    if (commonSema.isSaturated()) {
+      result = builder.emitIntrinsicCallOp(
+          loc, useSigned ? "sadd.sat" : "uadd.sat", wideLhs.getType(),
+          mlir::ValueRange{wideLhs, wideRhs});
+    } else {
+      result = builder.createAdd(loc, wideLhs, wideRhs);
+    }
+
+    return createFixedToFixed(result, commonSema,
+                              lhsSema.getCommonSemantics(rhsSema));
+  }
+
+  mlir::Value createSub(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs,
+                        const llvm::FixedPointSemantics &rhsSema) {
+    auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
+    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
+
+    mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
+    mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
+
+    mlir::Value result;
+    if (commonSema.isSaturated()) {
+      result = builder.emitIntrinsicCallOp(
+          loc, useSigned ? "ssub.sat" : "usub.sat", wideLhs.getType(),
+          mlir::ValueRange{wideLhs, wideRhs});
+    } else {
+      result = builder.createSub(loc, wideLhs, wideRhs);
+    }
+
+    // Subtraction can end up below 0 for padded unsigned operations, so emit
+    // an extra clamp in that case.
+    if (commonSema.isSaturated() && commonSema.hasUnsignedPadding()) {
+      mlir::Value zero = builder.getNullValue(result.getType(), loc);
+      mlir::Value ltZero =
+          builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
+      result = builder.createSelect(loc, ltZero, zero, result);
+    }
+
+    return createFixedToFixed(result, commonSema,
+                              lhsSema.getCommonSemantics(rhsSema));
+  }
+
+  mlir::Value createMul(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs,
+                        const llvm::FixedPointSemantics &rhsSema) {
+    auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
+    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
+
+    mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
+    mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
+
+    llvm::SmallString<13> intrinId;
+    cir::ConstantOp scale;
+
+    if (useSigned) {
+      intrinId = "smul.fix";
+      scale = builder.getSInt32(commonSema.getScale(), loc);
+    } else {
+      intrinId = "umul.fix";
+      scale = builder.getUInt32(commonSema.getScale(), loc);
+    }
+
+    if (commonSema.isSaturated())
+      intrinId += ".sat";
+
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, intrinId, wideLhs.getType(),
+                                    mlir::ValueRange{wideLhs, wideRhs, scale});
+
+    return createFixedToFixed(result, commonSema,
+                              lhsSema.getCommonSemantics(rhsSema));
+  }
+
+  mlir::Value createDiv(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs,
+                        const llvm::FixedPointSemantics &rhsSema) {
+    auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
+    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
+
+    mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
+    mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
+
+    llvm::SmallString<13> intrinId;
+    cir::ConstantOp scale;
+
+    if (useSigned) {
+      intrinId = "sdiv.fix";
+      scale = builder.getSInt32(commonSema.getScale(), loc);
+    } else {
+      intrinId = "udiv.fix";
+      scale = builder.getUInt32(commonSema.getScale(), loc);
+    }
+
+    if (commonSema.isSaturated())
+      intrinId += ".sat";
+
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, intrinId, wideLhs.getType(),
+                                    mlir::ValueRange{wideLhs, wideRhs, scale});
+
+    return createFixedToFixed(result, commonSema,
+                              lhsSema.getCommonSemantics(rhsSema));
+  }
+
+  mlir::Value createCmp(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs,
+                        const llvm::FixedPointSemantics &rhsSema,
+                        cir::CmpOpKind kind) {
+    auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
+
+    mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
+    mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
+
+    return builder.createCompare(loc, kind, wideLhs, wideRhs);
+  }
+
+  mlir::Value createShl(mlir::Value lhs,
+                        const llvm::FixedPointSemantics &lhsSema,
+                        mlir::Value rhs) {
+    mlir::Value result;
+    if (lhsSema.isSaturated()) {
+      // We have to cast the RHS to the matching int type, but we have to do so
+      // through unsigned so we can ensure we get zext.
+      auto rhsIntTy = mlir::cast<cir::IntType>(rhs.getType());
+      auto rhsUnsignedTy = cir::IntType::get(builder.getContext(), rhsIntTy.getWidth(), /*isSigned=*/false);
+
+      mlir::Value rhsUnsigned =
+          builder.createCast(cir::CastKind::integral, rhs, rhsUnsignedTy);
+      mlir::Value rhsResized = builder.createCast(cir::CastKind::integral,
+                                                  rhsUnsigned, lhs.getType());
+
+      bool useSigned = lhsSema.isSigned() || lhsSema.hasUnsignedPadding();
+      result = builder.emitIntrinsicCallOp(
+          loc, useSigned ? "sshl.sat" : "ushl.sat", lhs.getType(),
+          mlir::ValueRange{lhs, rhsResized});
+    } else {
+      result = builder.createShiftLeft(loc, lhs, rhs);
+    }
+
+    return result;
+  }
+
+  mlir::Value createShr(mlir::Value lhs, mlir::Value rhs) {
+    return builder.createShiftRight(loc, lhs, rhs);
+  }
+
 private:
   mlir::Value convert(mlir::Value src, const llvm::FixedPointSemantics &srcSema,
                       const llvm::FixedPointSemantics &dstSema,
@@ -2263,11 +2425,56 @@ private:
     assert(accommodating && "no float type for semantics?");
     return accommodating;
   }
+  /// Get the common semantic for two semantics, with the added imposition that
+  /// saturated padded types retain the padding bit.
+  llvm::FixedPointSemantics
+  getCommonBinopSemantic(const llvm::FixedPointSemantics &lhsSema,
+                         const llvm::FixedPointSemantics &rhsSema) {
+    auto c = lhsSema.getCommonSemantics(rhsSema);
+    bool bothPadded =
+        lhsSema.hasUnsignedPadding() && rhsSema.hasUnsignedPadding();
+    return llvm::FixedPointSemantics(
+        c.getWidth() + static_cast<unsigned>(bothPadded && c.isSaturated()),
+        c.getScale(), c.isSigned(), c.isSaturated(), bothPadded);
+  }
 
   CIRGenBuilderTy &builder;
   mlir::Location loc;
 };
 } // namespace
+
+mlir::Value ScalarExprEmitter::emitFixedPointIncDec(const UnaryOperator *e,
+                                                    mlir::Value value,
+                                                    QualType type) {
+  // Fixed-point types are tricky. In some cases, it isn't possible to
+  // represent a 1 or a -1 in the type at all. Piggyback off of
+  // EmitFixedPointBinOp to avoid having to reimplement saturation.
+  BinOpInfo info;
+  info.loc = e->getSourceRange();
+  info.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
+  info.e = e;
+  info.compType = info.fullType = e->getType();
+  info.opcode = e->isIncrementOp() ? BO_Add : BO_Sub;
+  info.lhs = value;
+  info.rhs = builder.getConstInt(cgf.getLoc(info.loc), value.getType(), 1);
+  // If the type is signed, it's better to represent this as +(-1) or -(-1),
+  // since -1 is guaranteed to be representable.
+  // FIXME(cir): This is a carry-over from Classic codegen, we should probably
+  // figure out if ++ -> -(-1) and -- -> +(-1) is REALLY what we want? For now
+  // we are just doing what classic does here.
+  if (type->isSignedFixedPointType()) {
+    info.opcode = e->isIncrementOp() ? BO_Sub : BO_Add;
+    info.rhs = builder.createNeg(cgf.getLoc(info.loc), info.rhs);
+  }
+  // Now, convert from our invented integer literal to the type of the unary
+  // op. This will upscale and saturate if necessary. This value can become
+  // undef in some cases.
+  FixedPointBuilder fpbuilder(builder, cgf.getLoc(info.loc));
+  auto dstSema = cgf.getContext().getFixedPointSemantics(info.fullType);
+  info.rhs =
+      fpbuilder.createIntegerToFixed(info.rhs, /*srcIsSigned=*/true, dstSema);
+  return emitFixedPointBinOp(info);
+}
 
 mlir::Value ScalarExprEmitter::emitFixedPointConversion(mlir::Value src,
                                                         QualType srcTy,
@@ -2340,11 +2547,8 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
     return builder.createFMul(loc, ops.lhs, ops.rhs);
   }
 
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return nullptr;
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   return cir::MulOp::create(builder, cgf.getLoc(ops.loc),
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
@@ -2355,6 +2559,10 @@ mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
     return builder.createFDiv(loc, ops.lhs, ops.rhs);
   }
+
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
+
   return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
                             ops.lhs, ops.rhs);
 }
@@ -2366,6 +2574,100 @@ mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
   }
   return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
                             ops.lhs, ops.rhs);
+}
+
+mlir::Value ScalarExprEmitter::emitFixedPointBinOp(const BinOpInfo &ops) {
+  // This is either a binary operation where at least one of the operands is
+  // a fixed-point type, or a unary operation where the operand is a fixed-point
+  // type. The result type of a binary operation is determined by
+  // Sema::handleFixedPointConversions().
+  QualType resultTy = ops.compType;
+  QualType lhsTy, rhsTy;
+  if (const auto *binOp = dyn_cast<BinaryOperator>(ops.e)) {
+    rhsTy = binOp->getRHS()->getType();
+    if (const auto *cao = dyn_cast<CompoundAssignOperator>(binOp)) {
+      // For compound assignment, the effective type of the LHS at this point
+      // is the computation LHS type, not the actual LHS type, and the final
+      // result type is not the type of the expression but rather the
+      // computation result type.
+      lhsTy = cao->getComputationLHSType();
+      resultTy = cao->getComputationResultType();
+    } else
+      lhsTy = binOp->getLHS()->getType();
+  } else if (const auto *unOp = dyn_cast<UnaryOperator>(ops.e)) {
+    lhsTy = unOp->getSubExpr()->getType();
+    rhsTy = unOp->getSubExpr()->getType();
+  }
+  ASTContext &ctx = cgf.getContext();
+  mlir::Value lhs = ops.lhs;
+  mlir::Value rhs = ops.rhs;
+
+  auto lhsFixedSema = ctx.getFixedPointSemantics(lhsTy);
+  auto rhsFixedSema = ctx.getFixedPointSemantics(rhsTy);
+  auto resultFixedSema = ctx.getFixedPointSemantics(resultTy);
+  auto commonFixedSema = lhsFixedSema.getCommonSemantics(rhsFixedSema);
+
+  // Perform the actual operation.
+  mlir::Value result;
+  FixedPointBuilder fpbuilder(builder, cgf.getLoc(ops.loc));
+  switch (ops.opcode) {
+  case BO_AddAssign:
+  case BO_Add:
+    result = fpbuilder.createAdd(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_SubAssign:
+  case BO_Sub:
+    result = fpbuilder.createSub(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_MulAssign:
+  case BO_Mul:
+    result = fpbuilder.createMul(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_DivAssign:
+  case BO_Div:
+    result = fpbuilder.createDiv(lhs, lhsFixedSema, rhs, rhsFixedSema);
+    break;
+  case BO_ShlAssign:
+  case BO_Shl:
+    result = fpbuilder.createShl(lhs, lhsFixedSema, rhs);
+    break;
+  case BO_ShrAssign:
+  case BO_Shr:
+    result = fpbuilder.createShr(lhs, rhs);
+    break;
+  case BO_LT:
+  case BO_GT:
+  case BO_LE:
+  case BO_GE:
+  case BO_EQ:
+  case BO_NE:
+    return fpbuilder.createCmp(lhs, lhsFixedSema, rhs, rhsFixedSema,
+                               clangCmpToCIRCmp(ops.opcode));
+  case BO_Cmp:
+  case BO_LAnd:
+  case BO_LOr:
+    llvm_unreachable("Found unimplemented fixed point binary operation");
+  case BO_PtrMemD:
+  case BO_PtrMemI:
+  case BO_Rem:
+  case BO_Xor:
+  case BO_And:
+  case BO_Or:
+  case BO_Assign:
+  case BO_RemAssign:
+  case BO_AndAssign:
+  case BO_XorAssign:
+  case BO_OrAssign:
+  case BO_Comma:
+    llvm_unreachable(
+        "Found unsupported binary operation for fixed point types.");
+  }
+
+  bool isShift = BinaryOperator::isShiftOp(ops.opcode) ||
+                 BinaryOperator::isShiftAssignOp(ops.opcode);
+  // Convert to the result type.
+  return fpbuilder.createFixedToFixed(
+      result, isShift ? lhsFixedSema : commonFixedSema, resultFixedSema);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
@@ -2411,11 +2713,8 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
 
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   return builder.createAdd(loc, ops.lhs, ops.rhs);
 }
@@ -2463,11 +2762,8 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
 
-    if (ops.isFixedPointOp()) {
-      assert(!cir::MissingFeatures::fixedPointType());
-      cgf.cgm.errorNYI("fixed point");
-      return {};
-    }
+    if (ops.isFixedPointOp())
+      return emitFixedPointBinOp(ops);
 
     return builder.createSub(loc, ops.lhs, ops.rhs);
   }
@@ -2492,11 +2788,9 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
+
 
   // CIR accepts shift between different types, meaning nothing special
   // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
@@ -2524,11 +2818,8 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
-  if (ops.isFixedPointOp()) {
-    assert(!cir::MissingFeatures::fixedPointType());
-    cgf.cgm.errorNYI("fixed point");
-    return {};
-  }
+  if (ops.isFixedPointOp())
+    return emitFixedPointBinOp(ops);
 
   // CIR accepts shift between different types, meaning nothing special
   // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
