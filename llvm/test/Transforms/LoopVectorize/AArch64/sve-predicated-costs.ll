@@ -76,7 +76,7 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C2]], i64 0

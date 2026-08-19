@@ -521,10 +521,6 @@ public:
     return true;
   }
 
-  /// Return true if the @llvm.experimental.cttz.elts intrinsic should be
-  /// expanded using generic code in SelectionDAGBuilder.
-  virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
-
   /// Return the minimum number of bits required to hold the maximum possible
   /// number of trailing zero vector elements.
   unsigned getBitWidthForCttzElements(EVT RetVT, ElementCount EC,

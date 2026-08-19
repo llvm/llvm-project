@@ -30,7 +30,7 @@ struct Outer {
 // Middle's tail padding.
 
 // CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {data !rec_Base, data !s8i}>
-// CIR: !rec_Outer = !cir.struct<"Outer" padded {data !rec_Middle2Ebase, data !s8i, pad !cir.array<!u8i x 2>}>
+// CIR: !rec_Outer = !cir.struct<"Outer" {data !rec_Middle2Ebase, data !s8i, pad !cir.array<!u8i x 2>}>
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
@@ -192,8 +192,8 @@ OuterUnionPadAfterStorage oupas;
 // CIR-NUA-DAG: !rec_OuterUnionPad = !cir.struct<"OuterUnionPad" {data !rec_UnionWithPadding2Ebase, data !cir.bool}>
 // CIR-NUA-DAG: !rec_FinalUnionWithPadding2Ebase = !cir.struct<"FinalUnionWithPadding.base" {data !u8i}>
 // CIR-NUA-DAG: !rec_OuterFinalUnionPad = !cir.struct<"OuterFinalUnionPad" {data !rec_FinalUnionWithPadding2Ebase, data !cir.bool}>
-// CIR-NUA-DAG: !rec_TailBig = !cir.struct<"TailBig" packed padded {data !s16i, data !cir.array<!s8i x 5>, pad !u8i}>
-// CIR-NUA-DAG: !rec_UnionPadAfterStorage2Ebase = !cir.struct<"UnionPadAfterStorage.base" packed padded {data !s32i, pad !cir.array<!u8i x 3>}>
+// CIR-NUA-DAG: !rec_TailBig = !cir.struct<"TailBig" packed {data !s16i, data !cir.array<!s8i x 5>, pad !u8i}>
+// CIR-NUA-DAG: !rec_UnionPadAfterStorage2Ebase = !cir.struct<"UnionPadAfterStorage.base" packed {data !s32i, pad !cir.array<!u8i x 3>}>
 // CIR-NUA-DAG: !rec_OuterUnionPadAfterStorage = !cir.struct<"OuterUnionPadAfterStorage" {data !rec_UnionPadAfterStorage2Ebase, data !cir.bool}>
 // CIR-NUA-DAG: cir.global external @ou = #cir.zero : !rec_OuterUnion
 // CIR-NUA-DAG: cir.global external @of = #cir.zero : !rec_OuterFinal
