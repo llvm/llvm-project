@@ -1235,16 +1235,16 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
   case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
-    return MakeFAdd(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmNearestTiesToEven,
+    return MakeFAdd(Intrinsic::nvvm_fadd_sat_ftz, APFloat::rmNearestTiesToEven,
                     BuiltinID, E, *this);
   case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
-    return MakeFAdd(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardZero,
+    return MakeFAdd(Intrinsic::nvvm_fadd_sat_ftz, APFloat::rmTowardZero,
                     BuiltinID, E, *this);
   case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
-    return MakeFAdd(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardNegative,
+    return MakeFAdd(Intrinsic::nvvm_fadd_sat_ftz, APFloat::rmTowardNegative,
                     BuiltinID, E, *this);
   case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
-    return MakeFAdd(Intrinsic::nvvm_fadd_ftz_sat, APFloat::rmTowardPositive,
+    return MakeFAdd(Intrinsic::nvvm_fadd_sat_ftz, APFloat::rmTowardPositive,
                     BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:

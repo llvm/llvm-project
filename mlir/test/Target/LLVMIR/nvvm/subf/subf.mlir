@@ -12,7 +12,7 @@ llvm.func @fsub_f16_f16(%a : f16, %b : f16) -> f16 {
   // CHECK-NEXT: %9 = fneg half %8
   // CHECK-NEXT: %10 = call half @llvm.nvvm.fadd.sat.f16(half %8, half %9, /* rnd=rn */ i32 1)
   // CHECK-NEXT: %11 = fneg half %10
-  // CHECK-NEXT: %12 = call half @llvm.nvvm.fadd.ftz.sat.f16(half %10, half %11, /* rnd=rn */ i32 1)
+  // CHECK-NEXT: %12 = call half @llvm.nvvm.fadd.sat.ftz.f16(half %10, half %11, /* rnd=rn */ i32 1)
   // CHECK-NEXT: ret half %12
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : f16
@@ -49,7 +49,7 @@ llvm.func @fsub_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: %9 = fneg float %8
   // CHECK-NEXT: %10 = call float @llvm.nvvm.fadd.ftz.f32(float %8, float %9, /* rnd=rn */ i32 1)
   // CHECK-NEXT: %11 = fneg float %10
-  // CHECK-NEXT: %12 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %10, float %11, /* rnd=rn */ i32 1)
+  // CHECK-NEXT: %12 = call float @llvm.nvvm.fadd.sat.ftz.f32(float %10, float %11, /* rnd=rn */ i32 1)
   // CHECK-NEXT: %13 = fneg float %12
   // CHECK-NEXT: %14 = call float @llvm.nvvm.fadd.f32(float %12, float %13, /* rnd=rm */ i32 3)
   // CHECK-NEXT: %15 = fneg float %14
@@ -57,7 +57,7 @@ llvm.func @fsub_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: %17 = fneg float %16
   // CHECK-NEXT: %18 = call float @llvm.nvvm.fadd.ftz.f32(float %16, float %17, /* rnd=rm */ i32 3)
   // CHECK-NEXT: %19 = fneg float %18
-  // CHECK-NEXT: %20 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %18, float %19, /* rnd=rm */ i32 3)
+  // CHECK-NEXT: %20 = call float @llvm.nvvm.fadd.sat.ftz.f32(float %18, float %19, /* rnd=rm */ i32 3)
   // CHECK-NEXT: %21 = fneg float %20
   // CHECK-NEXT: %22 = call float @llvm.nvvm.fadd.f32(float %20, float %21, /* rnd=rp */ i32 2)
   // CHECK-NEXT: %23 = fneg float %22
@@ -65,7 +65,7 @@ llvm.func @fsub_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: %25 = fneg float %24
   // CHECK-NEXT: %26 = call float @llvm.nvvm.fadd.ftz.f32(float %24, float %25, /* rnd=rp */ i32 2)
   // CHECK-NEXT: %27 = fneg float %26
-  // CHECK-NEXT: %28 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %26, float %27, /* rnd=rp */ i32 2)
+  // CHECK-NEXT: %28 = call float @llvm.nvvm.fadd.sat.ftz.f32(float %26, float %27, /* rnd=rp */ i32 2)
   // CHECK-NEXT: %29 = fneg float %28
   // CHECK-NEXT: %30 = call float @llvm.nvvm.fadd.f32(float %28, float %29, /* rnd=rz */ i32 0)
   // CHECK-NEXT: %31 = fneg float %30
@@ -73,7 +73,7 @@ llvm.func @fsub_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: %33 = fneg float %32
   // CHECK-NEXT: %34 = call float @llvm.nvvm.fadd.ftz.f32(float %32, float %33, /* rnd=rz */ i32 0)
   // CHECK-NEXT: %35 = fneg float %34
-  // CHECK-NEXT: %36 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %34, float %35, /* rnd=rz */ i32 0)
+  // CHECK-NEXT: %36 = call float @llvm.nvvm.fadd.sat.ftz.f32(float %34, float %35, /* rnd=rz */ i32 0)
   // CHECK-NEXT: ret float %36
   // CHECK-NEXT: }
   %f1 = nvvm.subf %a, %b : f32

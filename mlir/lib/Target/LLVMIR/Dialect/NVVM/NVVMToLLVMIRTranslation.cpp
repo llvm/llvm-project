@@ -487,7 +487,7 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
 
   static constexpr llvm::Intrinsic::ID addIDs[2][2] = {
       {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
-      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
+      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_sat_ftz}};
 
   static constexpr llvm::RoundingMode roundingModes[5] = {
       llvm::RoundingMode::NearestTiesToEven,

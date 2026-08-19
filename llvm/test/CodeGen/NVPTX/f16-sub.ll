@@ -112,7 +112,7 @@ define half @sub_rn_ftz_sat_f16(half %a, half %b) {
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; CHECK-NEXT:    ret;
   %1 = fneg half %b
-  %res = call half @llvm.nvvm.fadd.ftz.sat.f16(half %a, half %1, i32 1)
+  %res = call half @llvm.nvvm.fadd.sat.ftz.f16(half %a, half %1, i32 1)
   ret half %res
 }
 
@@ -128,6 +128,6 @@ define <2 x half> @sub_rn_ftz_sat_f16x2(<2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %1 = fneg <2 x half> %b
-  %res = call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16(<2 x half> %a, <2 x half> %1, i32 1)
+  %res = call <2 x half> @llvm.nvvm.fadd.sat.ftz.v2f16(<2 x half> %a, <2 x half> %1, i32 1)
   ret <2 x half> %res
 }

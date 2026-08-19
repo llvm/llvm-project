@@ -1437,7 +1437,7 @@ getNVVMFAddUpgrade(StringRef Modifiers) {
                           .Case("", Intrinsic::nvvm_fadd)
                           .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
                           .Case(".sat", Intrinsic::nvvm_fadd_sat)
-                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
+                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_sat_ftz)
                           .Default(Intrinsic::not_intrinsic);
   if (IID == Intrinsic::not_intrinsic)
     return std::nullopt;
@@ -2019,7 +2019,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       // Upgrade the FP add intrinsics, which are overloaded on the operand type
       // and take the rounding mode as an operand:
       // llvm.nvvm.add.<rnd>{.ftz}{.sat}.<type> =>
-      //     llvm.nvvm.fadd{.ftz}{.sat}.<mangled type>
+      //     llvm.nvvm.fadd{.sat}{.ftz}.<mangled type>
       // The extra operand means these are expanded in UpgradeIntrinsicCall.
       if (Name.starts_with("add.")) {
         auto [Base, TypeSuffix] = Name.rsplit('.');

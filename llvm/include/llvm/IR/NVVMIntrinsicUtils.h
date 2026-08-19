@@ -614,7 +614,7 @@ inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
 inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_fadd_ftz:
-  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fadd_sat_ftz:
     return true;
 
   case Intrinsic::nvvm_fadd:
@@ -627,7 +627,7 @@ inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
 inline bool FAddShouldSaturate(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::nvvm_fadd_sat:
-  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fadd_sat_ftz:
     return true;
 
   case Intrinsic::nvvm_fadd:
