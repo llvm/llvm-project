@@ -20,6 +20,8 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
@@ -31,11 +33,11 @@ using namespace AMDGPU;
 
 namespace {
 
-class AMDGPURegBankSelect : public MachineFunctionPass {
+class AMDGPURegBankSelectLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankSelect() : MachineFunctionPass(ID) {}
+  AMDGPURegBankSelectLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -59,20 +61,20 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                       "AMDGPU Register Bank Select", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
-INITIALIZE_PASS_END(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                     "AMDGPU Register Bank Select", false, false)
 
-char AMDGPURegBankSelect::ID = 0;
+char AMDGPURegBankSelectLegacy::ID = 0;
 
-char &llvm::AMDGPURegBankSelectID = AMDGPURegBankSelect::ID;
+char &llvm::AMDGPURegBankSelectLegacyID = AMDGPURegBankSelectLegacy::ID;
 
-FunctionPass *llvm::createAMDGPURegBankSelectPass() {
-  return new AMDGPURegBankSelect();
+FunctionPass *llvm::createAMDGPURegBankSelectLegacyPass() {
+  return new AMDGPURegBankSelectLegacy();
 }
 
 class RegBankSelectHelper {
@@ -197,15 +199,9 @@ static Register getVReg(MachineOperand &Op) {
   return Reg;
 }
 
-bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
-
+static bool runRegBankSelect(MachineFunction &MF, GISelCSEInfo &CSEInfo,
+                             const MachineUniformityInfo &MUI) {
   // Setup the instruction builder with CSE.
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
   GISelObserverWrapper Observer;
   Observer.addObserver(&CSEInfo);
 
@@ -217,8 +213,6 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   RAIIMFObserverInstaller MFObserverInstaller(MF, Observer);
 
   IntrinsicLaneMaskAnalyzer ILMA(MF);
-  MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
   MachineRegisterInfo &MRI = *B.getMRI();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegisterInfo(),
@@ -288,4 +282,36 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+bool AMDGPURegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
+  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
+  const MachineUniformityInfo &MUI =
+      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+
+  return runRegBankSelect(MF, CSEInfo, MUI);
+}
+
+PreservedAnalyses
+AMDGPURegBankSelectPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (MF.getProperties().hasFailedISel())
+    return PreservedAnalyses::all();
+
+  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
+  const MachineUniformityInfo &MUI =
+      MFAM.getResult<MachineUniformityAnalysis>(MF);
+
+  if (!runRegBankSelect(MF, *CSEInfo, MUI))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
 }
