@@ -9393,11 +9393,11 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_fputil_fenv_impl",
+        ":__support_fputil_float128",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_uint128",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -13569,6 +13569,7 @@ libc_math_function(
 libc_math_function(
     name = "sqrtf128",
     additional_deps = [
+        ":__support_cpp_bit",
         ":__support_math_sqrtf128",
     ],
 )
