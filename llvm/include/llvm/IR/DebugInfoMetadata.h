@@ -2681,9 +2681,10 @@ class DILayerLoc : public MDNode {
   }
   ~DILayerLoc() { dropAllReferences(); }
 
-  static DILayerLoc *getImpl(LLVMContext &Context, MDString *Kind,
-                             Metadata *File, unsigned Line, unsigned Column,
-                             StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DILayerLoc *getImpl(LLVMContext &Context, MDString *Kind,
+                                      Metadata *File, unsigned Line,
+                                      unsigned Column, StorageType Storage,
+                                      bool ShouldCreate = true);
 
   TempDILayerLoc cloneImpl() const {
     return getTemporary(getContext(), getRawKind(), getRawFile(), getLine(),
@@ -2738,9 +2739,10 @@ class DILayerLocList : public MDNode {
   void setHash(unsigned Hash) { SubclassData32 = Hash; }
   void recalculateHash();
 
-  static DILayerLocList *getImpl(LLVMContext &Context,
-                                 ArrayRef<Metadata *> Layers,
-                                 StorageType Storage, bool ShouldCreate = true);
+  LLVM_ABI static DILayerLocList *getImpl(LLVMContext &Context,
+                                          ArrayRef<Metadata *> Layers,
+                                          StorageType Storage,
+                                          bool ShouldCreate = true);
 
   TempDILayerLocList cloneImpl() const {
     return getTemporary(getContext(), SmallVector<Metadata *, 4>(operands()));
