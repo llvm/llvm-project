@@ -10,7 +10,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Endian.h"
-#include <wtypes.h>
 
 using namespace llvm;
 using namespace llvm::codeview;
