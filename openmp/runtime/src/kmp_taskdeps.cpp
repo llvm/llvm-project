@@ -908,7 +908,7 @@ void __kmp_taskgraph_release_locks(kmp_int32 gtid,
 /// otherwise.  Return number of mutex dependencies in *N_MTXS.
 static bool __kmp_filter_aliased_deps(kmp_int32 ndeps,
                                       kmp_depend_info_t *dep_list,
-                                      kmp_task_t *task, int *n_mtxs) {
+                                      bool can_hold_mutexes, int *n_mtxs) {
   *n_mtxs = 0;
 
   // Filter deps in dep_list
@@ -931,7 +931,7 @@ static bool __kmp_filter_aliased_deps(kmp_int32 ndeps,
       }
       if (dep_list[i].flag == KMP_DEP_MTX) {
         // limit number of mtx deps to MAX_MTX_DEPS per node
-        if (*n_mtxs < MAX_MTX_DEPS && task != NULL) {
+        if (*n_mtxs < MAX_MTX_DEPS && can_hold_mutexes) {
           ++(*n_mtxs);
         } else {
           dep_list[i].flag = KMP_DEP_OUT; // downgrade mutexinoutset to inout
@@ -1371,9 +1371,15 @@ static void __kmp_taskgraph_region_doms(kmp_taskgraph_region_t **order,
 }
 
 static bool __kmp_taskgraph_region_mutex_p(kmp_taskgraph_region_t *reg) {
-  if (reg->type == TASKGRAPH_REGION_NODE)
+  switch (reg->type) {
+  case TASKGRAPH_REGION_NODE:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
+    // Only a leaf holds locks of its own; a container's set is the union it
+    // gathers from these, and says nothing about exclusion between siblings.
     return reg->mutexset != nullptr;
-  return false;
+  default:
+    return false;
+  }
 }
 
 // This function collapses graph regions with forms like this:
@@ -2418,9 +2424,10 @@ static void __kmp_taskgraph_gather_mutex_sets(kmp_info_t *thread,
   case TASKGRAPH_REGION_ENTRY:
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_WAIT:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
   case TASKGRAPH_REGION_NODE:
-    // A task node already carries its recorded set membership, and has no
-    // children to recurse into.
+    // A leaf already carries the set membership recorded for its node, whether
+    // it is a task or a target, and none of these has children to recurse into.
     return;
   // Every kind of container folds the same way: what its members hold between
   // them does not depend on how it orders them, only on which of them there
@@ -2472,6 +2479,7 @@ static void __kmp_taskgraph_find_exclusive_regions(
   case TASKGRAPH_REGION_EXIT:
   case TASKGRAPH_REGION_NODE:
   case TASKGRAPH_REGION_WAIT:
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
     break;
   case TASKGRAPH_REGION_SEQUENTIAL:
   case TASKGRAPH_REGION_PARALLEL:
@@ -2649,6 +2657,7 @@ __kmp_taskgraph_strip_mutex_sets(kmp_info_t *thread,
   case TASKGRAPH_REGION_WAIT:
     assert(!region->mutexset);
     break;
+  KMP_TASKGRAPH_REGION_TARGET_CASES:
   case TASKGRAPH_REGION_NODE:
     if (region->mutexset) {
       if (in_exclusive) {
@@ -2721,6 +2730,14 @@ __kmp_taskgraph_region_type_name(kmp_taskgraph_region_type type) {
     return "node";
   case TASKGRAPH_REGION_WAIT:
     return "wait";
+  case TASKGRAPH_REGION_TARGET:
+    return "target";
+  case TASKGRAPH_REGION_TARGET_ENTER_DATA:
+    return "target enter data";
+  case TASKGRAPH_REGION_TARGET_EXIT_DATA:
+    return "target exit data";
+  case TASKGRAPH_REGION_TARGET_UPDATE:
+    return "target update";
   case TASKGRAPH_REGION_PARALLEL:
     return "parallel";
   case TASKGRAPH_REGION_EXCLUSIVE:
@@ -2744,7 +2761,9 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
             __kmp_taskgraph_region_type_name(region->type));
     break;
   case TASKGRAPH_REGION_NODE:
-  case TASKGRAPH_REGION_WAIT: {
+  case TASKGRAPH_REGION_WAIT:
+    // clang-format off
+  KMP_TASKGRAPH_REGION_TARGET_CASES: {
     char set_membership[40];
     if (region->mutexset)
       sprintf(set_membership, " [sets: 0x%llx]",
@@ -2756,6 +2775,7 @@ static void __kmp_dump_taskgraph_regions(FILE *f,
             set_membership);
     break;
   }
+  // clang-format on
   default: {
     char set_membership[40];
     if (region->mutexset)
@@ -3095,8 +3115,9 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
     int n_mtxs = 0;
     bool dep_all;
 
-    dep_all = __kmp_filter_aliased_deps(nodes[i].ndeps, nodes[i].dep_list,
-                                        nodes[i].task, &n_mtxs);
+    dep_all = __kmp_filter_aliased_deps(
+        nodes[i].ndeps, nodes[i].dep_list,
+        nodes[i].task != nullptr || nodes[i].target != nullptr, &n_mtxs);
     kmp_depnode_t *node = &all_depnodes[i];
     __kmp_init_node(node, /*on_stack=*/false);
     node->dn.task = nodes[i].task;
@@ -3123,8 +3144,12 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
   kmp_taskgraph_region_t *cfg_barrier = nullptr;
 
   for (kmp_int32 i = 0; i < numnodes; i++) {
+    // Target nodes have a null `task` (they would otherwise look like a
+    // taskwait); their region type comes from the recorded target kind.
     initial_regions[i].type =
-        nodes[i].task ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT;
+        nodes[i].target
+            ? nodes[i].target->kind
+            : (nodes[i].task ? TASKGRAPH_REGION_NODE : TASKGRAPH_REGION_WAIT);
     initial_regions[i].task.node = &nodes[i];
     initial_regions[i].parent = nullptr;
     if (i < numnodes - 1) {
@@ -3172,7 +3197,9 @@ kmp_int32 __kmp_build_taskgraph(kmp_int32 gtid,
           initial_regions[i].predecessors);
     }
     // If we find a post-taskloop WAIT or an undeferred task, record it as a
-    // barrier.
+    // barrier.  For the undeferred case, this is what makes e.g. "target enter
+    // data", "target", "target exit data" execute in sequence within a
+    // taskgraph.
     if (is_taskgroup_marker || nodes[i].undeferred)
       cfg_barrier = &initial_regions[i];
   }
@@ -3341,7 +3368,7 @@ static bool __kmp_check_deps(kmp_int32 gtid, kmp_depnode_t *node,
                 "dep_barrier=%d .\n",
                 gtid, taskdata, ndeps, ndeps_noalias, dep_barrier));
 
-  dep_all = __kmp_filter_aliased_deps(ndeps, dep_list, task, &n_mtxs);
+  dep_all = __kmp_filter_aliased_deps(ndeps, dep_list, task != NULL, &n_mtxs);
 
   // doesn't need to be atomic as no other thread is going to be accessing this
   // node just yet.

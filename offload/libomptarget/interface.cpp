@@ -25,11 +25,13 @@
 #include "Utils/ExponentialBackoff.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -671,4 +673,177 @@ EXTERN void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr) {
   if (!TargetPtr)
     return const_cast<void *>(HostPtr);
   return TargetPtr;
+}
+
+EXTERN void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src,
+                                            size_t *AllocSize) {
+  // Deep-copy a kernel-arguments blob into a single caller-provided block, so
+  // that libomp can capture a target launch without knowing the layout of
+  // KernelArgsTy or of the six argument arrays hanging off it.  Called twice:
+  // once with a null Dst to compute the size of the block (returned in
+  // AllocSize), then again to fill a block of that size.
+  bool SizeOnly = (Dst == nullptr);
+  KernelArgsTy *KernArgs = static_cast<KernelArgsTy *>(Src);
+  size_t N = KernArgs->NumArgs;
+  // ArgNames and ArgMappers are optional; a launch with neither debug names nor
+  // user-defined mappers leaves them null.  The copy has to preserve that, or
+  // every argument would appear to carry a mapper (pointing at uninitialized
+  // bytes of the block).  Both passes read the same blob, so both agree on
+  // whether the arrays are there.
+  const bool HasNames = KernArgs->ArgNames != nullptr;
+  const bool HasMappers = KernArgs->ArgMappers != nullptr;
+  if (SizeOnly) {
+    size_t Total = 0;
+    auto CountAligned = [&](size_t Size, size_t Align) {
+      Total = llvm::alignTo(Total, Align) + Size;
+    };
+    CountAligned(sizeof(KernelArgsTy), alignof(KernelArgsTy));
+    // ArgBasePtrs
+    CountAligned(N * sizeof(void *), alignof(void *));
+    // ArgPtrs
+    CountAligned(N * sizeof(void *), alignof(void *));
+    // ArgSizes
+    CountAligned(N * sizeof(uint64_t), alignof(uint64_t));
+    // ArgTypes
+    CountAligned(N * sizeof(uint64_t), alignof(uint64_t));
+    // ArgNames
+    if (HasNames)
+      CountAligned(N * sizeof(void *), alignof(void *));
+    // ArgMappers
+    if (HasMappers)
+      CountAligned(N * sizeof(void *), alignof(void *));
+    *AllocSize = Total;
+  } else {
+    size_t Allocated = 0;
+    auto BumpAllocDup = [&](size_t Size, size_t Align,
+                            void *Src = nullptr) -> void * {
+      size_t ThisBlockIdx = llvm::alignTo(Allocated, Align);
+      char *Block = &(static_cast<char *>(Dst))[ThisBlockIdx];
+      Allocated = ThisBlockIdx + Size;
+      if (Src)
+        std::memcpy(Block, Src, Size);
+      return Block;
+    };
+    auto *DupArgs = static_cast<KernelArgsTy *>(
+        BumpAllocDup(sizeof(KernelArgsTy), alignof(KernelArgsTy), Src));
+    DupArgs->ArgBasePtrs = static_cast<void **>(BumpAllocDup(
+        N * sizeof(void *), alignof(void *), KernArgs->ArgBasePtrs));
+    DupArgs->ArgPtrs = static_cast<void **>(
+        BumpAllocDup(N * sizeof(void *), alignof(void *), KernArgs->ArgPtrs));
+    DupArgs->ArgSizes = static_cast<int64_t *>(BumpAllocDup(
+        N * sizeof(int64_t), alignof(uint64_t), KernArgs->ArgSizes));
+    DupArgs->ArgTypes = static_cast<int64_t *>(BumpAllocDup(
+        N * sizeof(int64_t), alignof(uint64_t), KernArgs->ArgTypes));
+    DupArgs->ArgNames =
+        HasNames ? static_cast<void **>(BumpAllocDup(
+                       N * sizeof(void *), alignof(void *), KernArgs->ArgNames))
+                 : nullptr;
+    DupArgs->ArgMappers =
+        HasMappers
+            ? static_cast<void **>(BumpAllocDup(
+                  N * sizeof(void *), alignof(void *), KernArgs->ArgMappers))
+            : nullptr;
+    assert(Allocated == *AllocSize);
+  }
+}
+
+EXTERN void __tgt_taskgraph_dup_data_args(void *Dst, int32_t ArgNum,
+                                          void ***ArgsBase, void ***Args,
+                                          int64_t **ArgSizes,
+                                          int64_t **ArgTypes, void ***ArgNames,
+                                          void ***ArgMappers,
+                                          size_t *AllocSize) {
+  // Deep-copy the map arrays of a target data construct into a single
+  // caller-provided block, so that libomp can capture one without knowing what
+  // an element of them means.  Called twice, as
+  // __tgt_taskgraph_dup_kernel_args is: once with a null Dst to compute the
+  // size of the block (returned in AllocSize), then again to fill a block of
+  // that size, which is when the in-out array parameters are repointed into it.
+  bool SizeOnly = (Dst == nullptr);
+  size_t N = ArgNum;
+  // Copying the arrays is not enough on its own for a non-contiguous update.
+  // Its args[i] is a pointer to a stride descriptor rather than to mapped
+  // data, and clang emits that descriptor into the encountering function's
+  // frame, so a copy of the pointer dangles as soon as the recording encounter
+  // returns.  The descriptors are copied into the same block and the copied
+  // args[i] repointed at them, which also puts them beyond the reach of
+  // relocation for good: they are runtime-owned from here on and, being pure
+  // offsets, counts and strides, have nothing frame-dependent left in them to
+  // rewrite.  arg_sizes[i] is the dimension count for such an entry, not a
+  // byte size.
+  auto NonContigDims = [&](size_t Idx) -> size_t {
+    return ((*ArgTypes)[Idx] & OMP_TGT_MAPTYPE_NON_CONTIG)
+               ? (size_t)(*ArgSizes)[Idx]
+               : 0;
+  };
+  // ArgNames and ArgMappers are optional; a construct with neither debug names
+  // nor user-defined mappers leaves them null, and the copy has to preserve
+  // that rather than hand back pointers to uninitialized bytes of the block.
+  // Both calls are given the same arrays, so both agree on whether they are
+  // there.
+  const bool HasNames = *ArgNames != nullptr;
+  const bool HasMappers = *ArgMappers != nullptr;
+  if (SizeOnly) {
+    size_t Total = 0;
+    auto CountAligned = [&](size_t Size, size_t Align) {
+      Total = llvm::alignTo(Total, Align) + Size;
+    };
+    // ArgsBase
+    CountAligned(N * sizeof(void *), alignof(void *));
+    // Args
+    CountAligned(N * sizeof(void *), alignof(void *));
+    // ArgSizes
+    CountAligned(N * sizeof(int64_t), alignof(int64_t));
+    // ArgTypes
+    CountAligned(N * sizeof(int64_t), alignof(int64_t));
+    if (HasNames)
+      CountAligned(N * sizeof(void *), alignof(void *));
+    if (HasMappers)
+      CountAligned(N * sizeof(void *), alignof(void *));
+    // One descriptor array per non-contiguous entry.
+    for (size_t I = 0; I < N; I++)
+      if (size_t Dims = NonContigDims(I))
+        CountAligned(Dims * sizeof(__tgt_target_non_contig),
+                     alignof(__tgt_target_non_contig));
+    *AllocSize = Total;
+    return;
+  }
+
+  size_t Allocated = 0;
+  auto BumpAllocDup = [&](size_t Size, size_t Align, void *Src) -> void * {
+    size_t ThisBlockIdx = llvm::alignTo(Allocated, Align);
+    char *Block = &(static_cast<char *>(Dst))[ThisBlockIdx];
+    Allocated = ThisBlockIdx + Size;
+    if (Src)
+      std::memcpy(Block, Src, Size);
+    return Block;
+  };
+  auto *DupArgsBase = static_cast<void **>(
+      BumpAllocDup(N * sizeof(void *), alignof(void *), *ArgsBase));
+  auto *DupArgs = static_cast<void **>(
+      BumpAllocDup(N * sizeof(void *), alignof(void *), *Args));
+  auto *DupArgSizes = static_cast<int64_t *>(
+      BumpAllocDup(N * sizeof(int64_t), alignof(int64_t), *ArgSizes));
+  auto *DupArgTypes = static_cast<int64_t *>(
+      BumpAllocDup(N * sizeof(int64_t), alignof(int64_t), *ArgTypes));
+  auto *DupArgNames =
+      HasNames ? static_cast<void **>(BumpAllocDup(N * sizeof(void *),
+                                                   alignof(void *), *ArgNames))
+               : nullptr;
+  auto *DupArgMappers =
+      HasMappers ? static_cast<void **>(BumpAllocDup(
+                       N * sizeof(void *), alignof(void *), *ArgMappers))
+                 : nullptr;
+  for (size_t I = 0; I < N; I++)
+    if (size_t Dims = NonContigDims(I))
+      DupArgs[I] = BumpAllocDup(Dims * sizeof(__tgt_target_non_contig),
+                                alignof(__tgt_target_non_contig), (*Args)[I]);
+  assert(Allocated == *AllocSize);
+
+  *ArgsBase = DupArgsBase;
+  *Args = DupArgs;
+  *ArgSizes = DupArgSizes;
+  *ArgTypes = DupArgTypes;
+  *ArgNames = DupArgNames;
+  *ArgMappers = DupArgMappers;
 }

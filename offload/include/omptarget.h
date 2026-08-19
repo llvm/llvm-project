@@ -462,6 +462,20 @@ void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // code for details.
 void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
 
+/// Duplicate kernel args at capture time.  Uses a two-pass measure/allocate
+/// strategy.  Used so libomp doesn't have to understand kernel arg layout.
+void __tgt_taskgraph_dup_kernel_args(void *Dst, void *Src, size_t *AllocSize);
+
+/// Duplicate the map arrays of a target data construct at capture time.
+///
+/// This is here mainly for symmetry with __tgt_taskgraph_dup_kernel_args, and
+/// is called in the same two-pass manner.  In this case both sides already know
+/// the data layout though.
+void __tgt_taskgraph_dup_data_args(void *Dst, int32_t ArgNum, void ***ArgsBase,
+                                   void ***Args, int64_t **ArgSizes,
+                                   int64_t **ArgTypes, void ***ArgNames,
+                                   void ***ArgMappers, size_t *AllocSize);
+
 #ifdef __cplusplus
 }
 #endif
