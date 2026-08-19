@@ -14,6 +14,7 @@
 #include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Process.h"
@@ -41,22 +42,16 @@ static uint64_t getTimestampMillis() {
 #endif
 }
 
-#ifdef _WIN32
-// Write to files opened with OF_Append may not be guaranteed to be atomic
-// on Windows. Both openLogFile and writeLineToFD are noops on Windows.
 static int openLogFile(StringRef Path) {
+#ifdef _WIN32
+  // Logging is always disabled on Windows. openLogFile implements this policy
+  // by never returning a valid FD, so the logger and the LogLines it creates
+  // stay dormant (FD == -1). The reason is that writes to files opened with
+  // OF_Append are not guaranteed atomic on Windows. If a use case arises we'll
+  // need a different strategy to write LogLines atomically.
   (void)Path;
   return -1;
-}
-
-static bool writeLineToFD(int FD, const char *Data, size_t Size) {
-  (void)FD, (void)Data, (void)Size;
-  return false;
-}
-
 #else
-
-static int openLogFile(StringRef Path) {
   int FD = -1;
   std::error_code EC = llvm::sys::fs::openFileForWrite(
       Path, FD, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::OF_Append);
@@ -66,17 +61,21 @@ static int openLogFile(StringRef Path) {
     return -1;
   }
   return FD;
+#endif
 }
 
 // Writes the whole line into an FD that is opened with OF_Append.
 // This function only does one write (up to retry due to interrupts), and the
 // single write is blocking and atomic on POSIX systems.
 static bool writeLineToFD(int FD, const char *Data, size_t Size) {
+#ifdef _WIN32
+  (void)FD, (void)Data, (void)Size;
+  llvm_unreachable("dependency scanning logging is unsupported on Windows");
+#else
   ssize_t Written = llvm::sys::RetryAfterSignal(-1, write, FD, Data, Size);
   return Written >= 0 && (static_cast<size_t>(Written) == Size);
-}
-
 #endif
+}
 
 LogLine::LogLine(int FD, std::atomic<uint64_t> *DroppedLines)
     : FormattingOS(Buffer), FD(FD), DroppedLines(DroppedLines) {
@@ -106,16 +105,19 @@ LogLine::~LogLine() {
     DroppedLines->fetch_add(1, std::memory_order_relaxed);
 }
 
-void AtomicLineLogger::setFD(StringRef Path) {
-  LogPath = Path.str();
-  FD.store(openLogFile(Path), std::memory_order_release);
+void AtomicLineLogger::initialize(StringRef LogFilePath) {
+  int NewFD = openLogFile(LogFilePath);
+  if (NewFD == -1)
+    return;
+  LogPath = LogFilePath.str();
+  FD.store(NewFD, std::memory_order_relaxed);
   log() << "logging_start";
 }
 
 AtomicLineLogger::AtomicLineLogger(StringRef LogFilePath) {
   if (LogFilePath.empty())
     return;
-  setFD(LogFilePath);
+  initialize(LogFilePath);
 }
 
 void AtomicLineLogger::enable(StringRef LogFilePath) {
@@ -131,11 +133,7 @@ void AtomicLineLogger::enable(StringRef LogFilePath) {
     return;
   }
 
-  int NewFD = openLogFile(LogFilePath);
-  if (NewFD == -1)
-    return;
-  setFD(LogFilePath);
-  return;
+  initialize(LogFilePath);
 }
 
 LogLine AtomicLineLogger::log() {

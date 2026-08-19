@@ -67,7 +67,7 @@ class AtomicLineLogger {
   std::mutex EnableMtx;
   bool WarnedConflict = false;
 
-  void setFD(StringRef Path);
+  void initialize(StringRef LogFilePath);
 
 public:
   AtomicLineLogger() {}
