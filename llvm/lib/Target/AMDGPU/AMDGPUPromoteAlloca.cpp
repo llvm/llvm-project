@@ -894,8 +894,7 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
 
 /// Peel nested aggregates down to a single uniform element type, multiplying
 /// NumElems by the element count of each layer peeled.
-static Type *peelAggregateToElementType(Type *Ty, const DataLayout &DL,
-                                        uint64_t &NumElems) {
+static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
   while (true) {
     if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
       NumElems *= ArrayTy->getNumElements();
@@ -904,22 +903,11 @@ static Type *peelAggregateToElementType(Type *Ty, const DataLayout &DL,
     }
 
     auto *StructTy = dyn_cast<StructType>(Ty);
-    if (!StructTy || StructTy->getNumElements() == 0)
-      break;
-
-    Type *FieldTy = StructTy->getElementType(0);
-    if (!all_of(StructTy->elements(),
-                [FieldTy](Type *T) { return T == FieldTy; }))
-      break;
-
-    // Reject any struct whose fields are not laid out back-to-back, since
-    // flattening would move elements relative to the alloca's byte offsets.
-    if (DL.getTypeAllocSize(StructTy) !=
-        StructTy->getNumElements() * DL.getTypeAllocSize(FieldTy))
+    if (!StructTy || !StructTy->containsHomogeneousTypes())
       break;
 
     NumElems *= StructTy->getNumElements();
-    Ty = FieldTy;
+    Ty = StructTy->getElementType(0);
   }
 
   return Ty;
@@ -935,7 +923,7 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
   if (AllocaTy->isAggregateType()) {
     uint64_t NumElems = 1;
-    Type *ElemTy = peelAggregateToElementType(AllocaTy, DL, NumElems);
+    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
