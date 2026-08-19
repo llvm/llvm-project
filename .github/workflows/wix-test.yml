@@ -8,6 +8,7 @@ jobs:
       - shell: bash
         run: |
           dotnet tool install --global wix
+          choco install wixtoolset
           echo "int main(int argc, char **argv) { }" > test.c
           echo "cmake_minimum_required(VERSION 3.20.0)" > CMakeLists.txt
           echo "add_executable(test test.c)" >> CMakeLists.txt
