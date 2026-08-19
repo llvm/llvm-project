@@ -29,7 +29,7 @@ template <>
 inline constexpr bool std::ranges::enable_view<InputRangeNotDerivedFrom> = true;
 
 // Test two separate properties:
-// 1. Whether `chunk_view<View>` can be formed.
+// 1. Whether the type `chunk_view<View>` can be formed.
 // 2. Whether a well-formed `chunk_view<View>` can be constructed.
 template <class View>
 concept CanFormChunkView = requires { typename std::ranges::chunk_view<View>; };
