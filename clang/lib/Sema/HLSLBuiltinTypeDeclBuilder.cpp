@@ -1612,12 +1612,14 @@ BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
       .finalize();
 
   // T Load(int3 location, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
       .addParam("Location", LocationTy)
       .addParam("Offset", OffsetTy)
       .callBuiltin("__builtin_hlsl_resource_load_level", ReturnType, PH::Handle,
                    PH::_0, PH::_1)
       .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
@@ -1644,13 +1646,15 @@ BuiltinTypeDeclBuilder::addTextureLoadMSMethods(ResourceDimension Dim,
       .finalize();
 
   // T Load(int2 location, int sampleIndex, int2 offset)
-  return BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
+  BuiltinTypeMethodBuilder(*this, "Load", ReturnType)
       .addParam("Location", LocationTy)
       .addParam("SampleIndex", IntTy)
       .addParam("Offset", OffsetTy)
       .callBuiltin("__builtin_hlsl_resource_load_ms", ReturnType, PH::Handle,
                    PH::_0, PH::_1, PH::_2)
       .finalize();
+
+  return *this;
 }
 
 BuiltinTypeDeclBuilder &
