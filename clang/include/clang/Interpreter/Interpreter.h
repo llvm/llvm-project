@@ -48,6 +48,8 @@ class IncrementalDeviceParser;
 
 enum class OffloadType { CUDA, HIP };
 
+enum class OffloadType { CUDA, HIP };
+
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
   using DriverCompilationFn = llvm::Error(const driver::Compilation &);
