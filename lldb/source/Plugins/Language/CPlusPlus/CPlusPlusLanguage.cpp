@@ -1770,6 +1770,13 @@ static bool GenericExpectedSummaryProvider(ValueObject &valobj, Stream &stream,
   return false;
 }
 
+static bool GenericValarraySummaryProvider(ValueObject &valobj, Stream &stream,
+                                           const TypeSummaryOptions &options) {
+  if (!IsMsvcStlValarray(valobj))
+    return false;
+  return ContainerSizeSummaryProvider(valobj, stream, options);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)
@@ -2021,8 +2028,8 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSynthetic(cpp_category_sp, GenericValarraySyntheticFrontEndCreator,
                   "MSVC STL std::valarray synthetic children",
-                  "^std::valarray<.+>(( )?&)?$", stl_synth_flags, true);
-  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                  "^std::valarray<.+>(( )?&)?$", stl_deref_flags, true);
+  AddCXXSummary(cpp_category_sp, GenericValarraySummaryProvider,
                 "MSVC STL std::valarray summary provider",
                 "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
 
@@ -2044,12 +2051,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_code summary provider",
-                "std::error_code",
-                eTypeOptionHideChildren | eTypeOptionHideValue);
+                "std::error_code", stl_summary_flags);
   AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_condition summary provider",
-                "std::error_condition",
-                eTypeOptionHideChildren | eTypeOptionHideValue);
+                "std::error_condition", stl_summary_flags);
 
   AddCXXSummary(cpp_category_sp, MsvcStlFilesystemPathSummaryProvider,
                 "MSVC STL/libstdc++ std::filesystem::path summary provider",
@@ -2083,6 +2088,21 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   add_chrono_duration("std::chrono::weeks", "weeks");
   add_chrono_duration("std::chrono::months", "months");
   add_chrono_duration("std::chrono::years", "years");
+  AddCXXSummary(
+      cpp_category_sp,
+      [](ValueObject &valobj, Stream &stream,
+         const TypeSummaryOptions &options) {
+        return GenericChronoDurationSummaryProvider(valobj, stream, options,
+                                                    nullptr);
+      },
+      "MSVC STL std::chrono::duration summary provider",
+      "^std::chrono::duration<.+>$",
+      TypeSummaryImpl::Flags()
+          .SetCascades(true)
+          .SetDontShowChildren(false)
+          .SetDontShowValue(false)
+          .SetHideItemNames(false),
+      true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

@@ -41,6 +41,9 @@ class TestDataFormatterStdQueue(TestBase):
         self.check_variable("q1")
         self.check_variable("q2")
 
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         """Test that std::queue is displayed correctly"""

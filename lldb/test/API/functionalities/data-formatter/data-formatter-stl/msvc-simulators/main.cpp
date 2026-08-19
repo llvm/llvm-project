@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <wchar.h>
 
 namespace std {
 
@@ -66,6 +67,7 @@ public:
 
 template <class T> class valarray {
 public:
+  valarray() : _Myptr(nullptr), _Mysize(0) {}
   valarray(T *ptr, size_t size) : _Myptr(ptr), _Mysize(size) {}
   T *_Myptr;
   size_t _Mysize;
@@ -77,6 +79,16 @@ public:
   expected(const E &error, bool) : _Unexpected(error), _Has_value(false) {}
   union {
     T _Value;
+    E _Unexpected;
+  };
+  bool _Has_value;
+};
+
+template <class E> class expected<void, E> {
+public:
+  expected() : _Has_value(true) {}
+  expected(const E &error, bool) : _Unexpected(error), _Has_value(false) {}
+  union {
     E _Unexpected;
   };
   bool _Has_value;
@@ -94,10 +106,21 @@ struct error_code {
   const void *_Mycat;
 };
 
+struct error_condition {
+  int _Myval;
+  const void *_Mycat;
+};
+
 template <class T> class _Vector_iterator {
 public:
   explicit _Vector_iterator(T *ptr) : _Ptr(ptr) {}
   T *_Ptr;
+};
+
+template <class T> class _Vector_const_iterator {
+public:
+  explicit _Vector_const_iterator(const T *ptr) : _Ptr(ptr) {}
+  const T *_Ptr;
 };
 
 namespace chrono {
@@ -107,11 +130,17 @@ struct nanoseconds {
 struct seconds {
   long long _MyRep;
 };
+
+template <class Rep, class Period = void> class duration {
+public:
+  explicit duration(Rep r) : _MyRep(r) {}
+  Rep _MyRep;
+};
 } // namespace chrono
 
 namespace filesystem {
 struct path {
-  const char *_Text;
+  const wchar_t *_Text;
 };
 } // namespace filesystem
 
@@ -121,6 +150,10 @@ int main() {
   std::bitset<0> empty_bitset;
   std::bitset<13> small_bitset;
   small_bitset._Array[0] = 0b00011111111100UL; // bits 2..9 set
+
+  std::bitset<70> large_bitset;
+  large_bitset._Array[0] = 1UL; // bit 0
+  large_bitset._Array[1] = 1UL; // bit 32 or 64 depending on unsigned long
 
   int init_vals[] = {1, 2, 3, 4, 5};
   std::initializer_list<int> ili(init_vals, init_vals + 5);
@@ -133,21 +166,29 @@ int main() {
 
   int va_vals[] = {1, 12, 123, 1234};
   std::valarray<int> va(va_vals, 4);
+  std::valarray<int> va_empty;
+  std::valarray<int> &va_ref = va;
 
   std::expected<int, const char *> ok(7);
   std::expected<int, const char *> err("boom", true);
+  std::expected<void, int> void_ok;
+  std::expected<void, int> void_err(11, true);
 
-  std::source_location loc{6, 1, "main.cpp", "int main()"};
+  std::source_location loc{6, 1, "main.cpp", "int __cdecl main(void)"};
   std::source_location loc_empty{0, 0, "", ""};
 
   std::chrono::nanoseconds ns{1};
   std::chrono::seconds s{1234};
+  std::chrono::duration<long long> custom_dur{42};
 
   std::error_code ec{2, nullptr};
-  std::filesystem::path p{"C:\\tmp\\file.txt"};
+  std::error_condition econd{7, nullptr};
+  const wchar_t path_text[] = L"C:\\tmp\\file.txt";
+  std::filesystem::path p{path_text};
 
   int item = 3;
   std::_Vector_iterator<int> it(&item);
+  std::_Vector_const_iterator<int> cit(&item);
 
   return 0; // break here
 }

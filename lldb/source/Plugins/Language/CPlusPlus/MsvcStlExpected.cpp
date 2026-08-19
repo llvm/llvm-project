@@ -16,6 +16,30 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 namespace {
+
+/// `_Value` / `_Unexpected` live in an anonymous union. Direct
+/// GetChildMemberWithName from the class works on DWARF; PDB often needs the
+/// same parent/index walk GenericOptional uses for `_Value`.
+ValueObjectSP GetExpectedUnionMember(ValueObject &ns, const char *name) {
+  if (ValueObjectSP direct = ns.GetChildMemberWithName(name))
+    return direct;
+
+  ValueObjectSP has_sp = ns.GetChildMemberWithName("_Has_value");
+  if (!has_sp)
+    return {};
+  ValueObject *parent = has_sp->GetParent();
+  if (!parent)
+    return {};
+  ValueObjectSP first_sp = parent->GetChildAtIndex(0);
+  if (!first_sp)
+    return {};
+  if (ValueObjectSP nested = first_sp->GetChildMemberWithName(name))
+    return nested;
+  if (first_sp->GetName() == name)
+    return first_sp;
+  return {};
+}
+
 class MsvcStlExpectedFrontend : public SyntheticChildrenFrontEnd {
 public:
   MsvcStlExpectedFrontend(ValueObject &valobj)
@@ -25,8 +49,14 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    if (name == "Value" || name == "Unexpected" || name == "$$dereference$$")
+    if (!m_engaged)
+      return llvm::createStringErrorV("type has no child named '{0}'", name);
+    if (m_has_value) {
+      if (name == "Value" || name == "$$dereference$$")
+        return 0;
+    } else if (name == "Unexpected") {
       return 0;
+    }
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -43,12 +73,12 @@ public:
       return {};
 
     if (m_has_value) {
-      if (ValueObjectSP val_sp = ns->GetChildMemberWithName("_Value"))
+      if (ValueObjectSP val_sp = GetExpectedUnionMember(*ns, "_Value"))
         return val_sp->Clone("Value");
       return {};
     }
 
-    if (ValueObjectSP err_sp = ns->GetChildMemberWithName("_Unexpected"))
+    if (ValueObjectSP err_sp = GetExpectedUnionMember(*ns, "_Unexpected"))
       return err_sp->Clone("Unexpected");
     return {};
   }
@@ -67,9 +97,9 @@ public:
     m_has_value = has_sp->GetValueAsUnsigned(0) != 0;
     // expected<void, E> has no value child when engaged.
     if (m_has_value)
-      m_engaged = ns->GetChildMemberWithName("_Value") != nullptr;
+      m_engaged = GetExpectedUnionMember(*ns, "_Value") != nullptr;
     else
-      m_engaged = ns->GetChildMemberWithName("_Unexpected") != nullptr;
+      m_engaged = GetExpectedUnionMember(*ns, "_Unexpected") != nullptr;
     return lldb::ChildCacheState::eRefetch;
   }
 
@@ -81,8 +111,7 @@ private:
 
 bool formatters::IsMsvcStlExpected(ValueObject &valobj) {
   if (auto valobj_sp = valobj.GetNonSyntheticValue())
-    return valobj_sp->GetChildMemberWithName("_Has_value") != nullptr &&
-           valobj_sp->GetChildMemberWithName("_Unexpected") != nullptr;
+    return valobj_sp->GetChildMemberWithName("_Has_value") != nullptr;
   return false;
 }
 

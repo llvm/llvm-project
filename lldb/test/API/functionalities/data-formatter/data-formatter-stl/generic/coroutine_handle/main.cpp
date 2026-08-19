@@ -13,6 +13,12 @@
 #define HAS_CPP_COROUTINES 1
 #endif
 
+// MSVC STL (the un-flagged default for the msvcstl test category).
+#if !defined(USE_LIBSTDCPP) && !defined(USE_LIBCPP)
+#include <coroutine>
+#define HAS_CPP_COROUTINES 1
+#endif
+
 bool is_implementation_supported() {
 #ifdef HAS_CPP_COROUTINES
   return true;

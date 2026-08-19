@@ -405,7 +405,9 @@ bool lldb_private::formatters::GenericChronoDurationSummaryProvider(
   if (!rep)
     return false;
 
-  stream << rep << ' ' << unit;
+  stream << rep;
+  if (unit && unit[0] != '\0')
+    stream << ' ' << unit;
   return true;
 }
 

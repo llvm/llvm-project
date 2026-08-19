@@ -432,11 +432,24 @@ class StdChronoDataFormatterTestCase(TestBase):
             ],
         )
 
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_not_stolen_by_msvc(self):
+        """libstdc++ chrono typedefs must not get an MSVC `_MyRep` summary."""
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        lldbutil.run_to_source_breakpoint(
+            self, "break after durations", lldb.SBFileSpec("main.cpp", False)
+        )
+        ns = self.frame().FindVariable("ns")
+        self.assertTrue(ns.IsValid())
+        summary = ns.GetSummary() or ""
+        self.assertNotIn("1 ns", summary)
+        self.expect("frame variable ns", matching=False, substrs=["= 1 ns"])
+
     @add_test_categories(["msvcstl"])
     def test_msvcstl_durations(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.cpp", False)
+            self, "break after durations", lldb.SBFileSpec("main.cpp", False)
         )
         self.expect("frame variable ns", substrs=["ns = 1 ns"])
         self.expect("frame variable us", substrs=["us = 12 µs"])

@@ -52,21 +52,27 @@ public:
     m_count = 0;
     m_element_size = 0;
 
-    CompilerType type = m_backend.GetCompilerType();
-    if (type.GetNumTemplateArguments() == 0)
+    ValueObjectSP start = m_backend.GetChildMemberWithName("_Myptr");
+    ValueObjectSP size_sp = m_backend.GetChildMemberWithName("_Mysize");
+    if (!start || !size_sp)
       return ChildCacheState::eRefetch;
 
-    m_element_type = type.GetTypeTemplateArgument(0);
+    // Prefer the pointer's pointee type: template arguments are missing on
+    // references unless the frontend asked for a dereference, and PDB may
+    // omit them entirely.
+    m_element_type = start->GetCompilerType().GetPointeeType();
+    if (!m_element_type.IsValid()) {
+      CompilerType type = m_backend.GetCompilerType().GetNonReferenceType();
+      m_element_type = type.GetTypeTemplateArgument(0);
+    }
+    if (!m_element_type.IsValid())
+      return ChildCacheState::eRefetch;
+
     if (std::optional<uint64_t> size =
             llvm::expectedToOptional(m_element_type.GetByteSize(nullptr)))
       m_element_size = *size;
 
     if (m_element_size == 0)
-      return ChildCacheState::eRefetch;
-
-    ValueObjectSP start = m_backend.GetChildMemberWithName("_Myptr");
-    ValueObjectSP size_sp = m_backend.GetChildMemberWithName("_Mysize");
-    if (!start || !size_sp)
       return ChildCacheState::eRefetch;
 
     m_start = start.get();
