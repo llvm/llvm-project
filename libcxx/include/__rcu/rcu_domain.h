@@ -47,7 +47,10 @@ class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
   template <class _Tp, class _Dp = default_delete<_Tp>>
   _LIBCPP_HIDE_FROM_ABI void __rcu_retire_hidden_friend(_Tp* __tp, _Dp __deleter, rcu_domain& __dom) {
     auto* __node        = new __rcu_node();
-    __node->__callback_ = [__tp, __deleter = std::move(__deleter)]() mutable { __deleter(__tp); };
+    __node->__callback_ = [__tp, __node, __deleter = std::move(__deleter)]() mutable {
+      __deleter(__tp);
+      delete __node;
+    };
     __dom.__retire(__node);
   }
 
