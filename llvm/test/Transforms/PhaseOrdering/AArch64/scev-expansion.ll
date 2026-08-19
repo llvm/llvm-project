@@ -29,16 +29,13 @@ define void @test(i64 %R, i64 %C, ptr %Ax) {
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], %[[INNER_HEADER_OUTER_LATCH_CRIT_EDGE:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[ROW:%.*]] = getelementptr [16 x i8], ptr [[AX]], i64 [[OUTER_IV]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[INNER_LATCH_PREHEADER:.*]], label %[[VECTOR_SCEVCHECK:.*]]
-; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[OUTER_IV]], 4
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[AX]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[SCEVGEP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ROW]], i64 [[MUL_RESULT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP1]], [[ROW]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[INNER_LATCH_PREHEADER]], label %[[VECTOR_BODY:.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[TMP4]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label %[[INNER_LATCH_PREHEADER:.*]], label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [16 x i8], ptr [[ROW]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [16 x i8], ptr [[ROW]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 16
@@ -64,7 +61,7 @@ define void @test(i64 %R, i64 %C, ptr %Ax) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[INNER_HEADER_OUTER_LATCH_CRIT_EDGE]], label %[[INNER_LATCH_PREHEADER]]
 ; CHECK:       [[INNER_LATCH_PREHEADER]]:
-; CHECK-NEXT:    [[INNER_IV2_PH:%.*]] = phi i64 [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[OUTER_HEADER]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[INNER_IV2_PH:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi i64 [ [[INNER_IV_NEXT:%.*]], %[[INNER_LATCH]] ], [ [[INNER_IV2_PH]], %[[INNER_LATCH_PREHEADER]] ]
