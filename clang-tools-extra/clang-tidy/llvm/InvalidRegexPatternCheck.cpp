@@ -15,14 +15,13 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::llvm_check {
 
 void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
-  // main matcher
   auto IsConstllvmStringRef = qualType(
       isConstQualified(), hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                               cxxRecordDecl(hasName("::llvm::StringRef"))))));
   auto IsConstStdString = qualType(
       isConstQualified(), hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                               cxxRecordDecl(hasName("::std::basic_string"))))));
-  auto GetStringLit = ignoringImplicit(stringLiteral().bind("stringLiteral"));
+  auto GetStringLiteral = ignoringImplicit(stringLiteral().bind("stringLiteral"));
   auto GetStringLiteralFromObject =
       ignoringImplicit(cxxConstructExpr(hasAnyArgument(GetStringLit)));
   auto IsConstCharPtr = pointerType(pointee(builtinType(), isConstQualified()));
@@ -67,9 +66,10 @@ void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FlagEnum =
       Result.Nodes.getNodeAs<EnumConstantDecl>("regexFlagEnum");
   unsigned int Flag = llvm::Regex::RegexFlags::NoFlags;
-  if (FlagInt)
+  if (const auto *FlagInt = Result.Nodes.getNodeAs<IntegerLiteral>("regexFlagsInt"))
     Flag = FlagInt->getValue().getZExtValue();
-  if (FlagEnum)
+  if (const auto *FlagEnum =
+      Result.Nodes.getNodeAs<EnumConstantDecl>("regexFlagEnum"))
     Flag = FlagEnum->getInitVal().getZExtValue();
   const llvm::Regex TestRegex(DetectedPattern->getString(), Flag);
   std::string RegexError;
