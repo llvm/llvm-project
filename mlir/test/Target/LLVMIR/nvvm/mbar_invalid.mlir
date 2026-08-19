@@ -136,3 +136,27 @@ llvm.func @mbarrier_try_wait_with_timelimit(%barrier: !llvm.ptr<3>, %phase: i32,
   llvm.return
 }
 
+
+// -----
+
+llvm.func @mbarrier_arrive_multicast_shared_cta(%barrier: !llvm.ptr<3>, %mc: i32) {
+  // expected-error @below {{multicast is only supported for mbarrier in shared_cluster space}}
+  nvvm.mbarrier.arrive %barrier multicast = %mc : !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_expect_tx_multicast_shared_cta(%barrier: !llvm.ptr<3>, %tx: i32, %mc: i32) {
+  // expected-error @below {{multicast is only supported for mbarrier in shared_cluster space}}
+  nvvm.mbarrier.expect_tx %barrier, %tx multicast = %mc : !llvm.ptr<3>, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_arrive_expect_tx_multicast_predicate(%barrier: !llvm.ptr<3>, %tx: i32, %mc: i32, %pred: i1) {
+  // expected-error @below {{multicast is not supported when using predicate}}
+  nvvm.mbarrier.arrive.expect_tx %barrier, %tx multicast = %mc, predicate = %pred : !llvm.ptr<3>, i32, i32, i1
+  llvm.return
+}

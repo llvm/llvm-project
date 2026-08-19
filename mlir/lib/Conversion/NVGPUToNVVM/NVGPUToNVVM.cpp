@@ -846,8 +846,8 @@ struct NVGPUMBarrierInitLowering
     Value barrier = getMbarrierPtr(b, mbarrierType, adaptor.getBarriers(),
                                    adaptor.getMbarId(), rewriter);
     Value count = truncToI32(b, adaptor.getCount());
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(op, barrier, count,
-                                                      adaptor.getPredicate());
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierInitOp>(
+        op, barrier, count, /*layout=*/nullptr, adaptor.getPredicate());
     return success();
   }
 };
@@ -863,7 +863,8 @@ struct NVGPUMBarrierArriveLowering
     Value barrier =
         getMbarrierPtr(b, op.getBarriers().getType(), adaptor.getBarriers(),
                        adaptor.getMbarId(), rewriter);
-    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(op, barrier);
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveOp>(
+        op, barrier, /*count=*/Value(), /*multicast=*/Value());
     return success();
   }
 };
@@ -922,6 +923,7 @@ struct NVGPUMBarrierArriveExpectTxLowering
     Value txcount = truncToI32(b, adaptor.getTxcount());
     NVVM::MBarrierArriveExpectTxOp::create(
         rewriter, op->getLoc(), barrier, txcount, // barrier and txcount
+        Value(),                                  // no multicast mask
         NVVM::MemScopeKind::CTA,                  // default scope is CTA
         false,                                    // relaxed-semantics is false
         adaptor.getPredicate());

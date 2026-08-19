@@ -58,14 +58,14 @@ llvm.func @mbarrier_arrive_drop_shared(%barrier: !llvm.ptr<3>, %count : i32) {
 
 llvm.func @mbarrier_arrive_drop_shared_cluster(%barrier: !llvm.ptr<7>, %count : i32) {
   // CHECK-LABEL: define void @mbarrier_arrive_drop_shared_cluster(ptr addrspace(7) %0, i32 %1) {
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1)
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %0, i32 %1, i32 0, i1 false)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   nvvm.mbarrier.arrive_drop %barrier : !llvm.ptr<7>

@@ -2157,8 +2157,22 @@ foreach is_shared = [true, false] in {
   }
 }
 
+def int_nvvm_mbarrier_init_layout :
+  DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, // mbar
+                              llvm_i32_ty,        // count
+                              llvm_i32_ty],       // layout
+                        [IntrConvergent, IntrNoCallback, ImmArg<ArgIndex<2>>,
+                          Range<ArgIndex<2>, 0, 2>]>;
+
 def int_nvvm_mbarrier_pending_count : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i32_ty], [llvm_i64_ty]>;
+
+def int_nvvm_mbarrier_check_layout :
+    DefaultAttrsIntrinsic<[llvm_i1_ty],
+                          [llvm_shared_ptr_ty, // mbar
+                           llvm_i32_ty],       // layout
+                          [IntrReadMem, IntrNoCallback, ImmArg<ArgIndex<1>>,
+                           Range<ArgIndex<1>, 0, 2>]>;
 
 // mbarrier.{expect_tx/complete_tx}
 foreach op = ["expect_tx", "complete_tx"] in {
@@ -2167,10 +2181,15 @@ foreach op = ["expect_tx", "complete_tx"] in {
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
+      defvar multicast = !eq(space, "space_cluster");
 
+      defvar args_ty = !listconcat([mbar_addr_ty, // mbar
+                                    llvm_i32_ty], // tx-count
+                                    !if(multicast, [llvm_i32_ty, llvm_i1_ty], []<LLVMType>));
       def int_nvvm_mbarrier_ # suffix :
-          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          Intrinsic<[], args_ty,
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      !if(multicast, [ImmArg<ArgIndex<3>>], []))>;
     } // space
   } // scope
 } // op
@@ -2184,19 +2203,28 @@ foreach op = ["arrive", "arrive_expect_tx",
       defvar suffix = StrJoin<"_", [scope, space]>.ret;
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
-      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
-                        llvm_i32_ty]; // tx-count
+      defvar args_ty = !listconcat([mbar_addr_ty,  // mbar_address_ptr
+                                    llvm_i32_ty],  // count
+                                    !if(!eq(space, "space_cluster"),
+                                        [llvm_i32_ty,    // multicast
+                                         llvm_i1_ty],
+                                         []<LLVMType>));
 
       // mbarriers in shared_cluster space cannot return any value.
       defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
                               [llvm_i64_ty], []<LLVMType>);
 
+      // Only the cluster-space intrinsics take the multicast selector.
+      defvar mc_props = !if(!eq(space, "space_cluster"),
+                            [ImmArg<ArgIndex<3>>], []<IntrinsicProperty>);
+
       def int_nvvm_mbarrier_ # op # "_" # suffix:
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrNoCallback]>;
+                    !listconcat([IntrConvergent, IntrNoCallback], mc_props)>;
       def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+                    !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                                mc_props)>;
     } // space
   } // scope
 } // op

@@ -1282,6 +1282,19 @@ let Predicates = [SM80] in {
             [(set i32:$res, (int_nvvm_mbarrier_pending_count i64:$state))]>;
 }
 
+let Predicates = [PTX93, SM90] in {
+  def MBARRIER_INIT_LAYOUT :
+      NVPTXInst<(outs), (ins ADDR:$addr, B32:$count, B32:$layout),
+                "mbarrier.init.layout::v${layout}.shared.b64 [$addr], $count;",
+                [(int_nvvm_mbarrier_init_layout addr:$addr, i32:$count, i32:$layout)]>;
+
+  def MBARRIER_CHECK_LAYOUT_SHARED :
+      NVPTXInst<(outs B1:$res), (ins ADDR:$addr, B32:$layout),
+                "mbarrier.check_layout.layout::v${layout}.shared.b64 $res, [$addr];",
+                [(set i1:$res,
+                  (int_nvvm_mbarrier_check_layout addr:$addr, i32:$layout))]>;
+}
+
 class MBAR_UTIL<string op, string scope,
                 string space = "", string sem = "",
                 bit tl = 0, bit parity = 0> {
@@ -1345,10 +1358,27 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
-      def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
-                           Requires<[PTX80, SM90]>;
+      defvar multicast = !eq(space, "space_cluster");
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+      if multicast then {
+        def mbar_ # suffix : BasicNVPTXInst<(outs),
+                             (ins ADDR:$addr, B32:$tx_count),
+                             asm_str,
+                             [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
+                             Requires<[PTX80, SM90]>;
+        def mbar_ # suffix # _MC :
+              NVPTXInst<(outs),
+                        (ins ADDR:$addr, B32:$tx_count, MULTICAST32:$mc),
+                        !subst(".b64", "${mc:multicast}.b64", asm_str)
+                        # " [$addr], $tx_count, $mc;",
+                        [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+              Requires<[hasRubinFamilySupport]>;
+      } else {
+        def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
+                             asm_str,
+                             [(intr addr:$addr, i32:$tx_count)]>,
+                             Requires<[PTX80, SM90]>;
+      }
     } // space
   } // scope
 } // op
@@ -1374,16 +1404,23 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
              asm_cta # " $state, [$addr], $tx_count;",
              [(set i64:$state, (intr_cta addr:$addr, i32:$tx_count))]>,
              Requires<pred>;
-  def _CLUSTER : NVPTXInst<(outs),
-                 (ins ADDR:$addr, B32:$tx_count),
+
+  def _CLUSTER : NVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+
+  def _CLUSTER_MC : NVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count, MULTICAST32:$mc),
+                    !subst(".b64", "${mc:multicast}.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
+
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
   foreach scope = ["scope_cta", "scope_cluster"] in {
-    defvar suffix = !subst(".", "_", op) # scope;
+    defvar suffix = !subst(".", "_", op) # "_" # scope;
     defm mbar_ # suffix # _release : MBAR_ARR_INTR<op, scope, "", [PTX80, SM90]>;
     defm mbar_ # suffix # _relaxed : MBAR_ARR_INTR<op, scope, "relaxed", [PTX86, SM90]>;
   } // scope

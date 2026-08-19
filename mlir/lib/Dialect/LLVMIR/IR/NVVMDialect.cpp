@@ -255,7 +255,8 @@ LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
 
 static LogicalResult verifyMBarrierArriveLikeOp(Operation *op, Value addr,
                                                 NVVM::MemScopeKind scope,
-                                                Value retVal = nullptr) {
+                                                Value retVal = nullptr,
+                                                Value multicast = nullptr) {
   if (scope != NVVM::MemScopeKind::CTA && scope != NVVM::MemScopeKind::CLUSTER)
     return op->emitError("mbarrier scope must be either CTA or Cluster");
 
@@ -265,17 +266,22 @@ static LogicalResult verifyMBarrierArriveLikeOp(Operation *op, Value addr,
     return op->emitError(
         "mbarrier in shared_cluster space cannot return any value");
 
+  // Only the *.space.cluster instructions encode a multicast mask.
+  if (multicast && !isSharedCluster)
+    return op->emitError(
+        "multicast is only supported for mbarrier in shared_cluster space");
+
   return success();
 }
 
 LogicalResult MBarrierArriveOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
-                                    getRes());
+                                    getRes(), getMulticast());
 }
 
 LogicalResult MBarrierArriveDropOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
-                                    getRes());
+                                    getRes(), getMulticast());
 }
 
 LogicalResult MBarrierArriveExpectTxOp::verify() {
@@ -296,14 +302,18 @@ LogicalResult MBarrierArriveExpectTxOp::verify() {
     if (getRelaxed() == true)
       return emitError("mbarrier with relaxed semantics is not supported when "
                        "using predicate");
+
+    if (getMulticast())
+      return emitError(
+          "multicast is not supported when using predicate");
   }
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
-                                    getRes());
+                                    getRes(), getMulticast());
 }
 
 LogicalResult MBarrierArriveDropExpectTxOp::verify() {
   return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
-                                    getRes());
+                                    getRes(), getMulticast());
 }
 
 //===----------------------------------------------------------------------===//
@@ -383,11 +393,13 @@ bool MBarrierArriveDropExpectTxOp::isCompatibleReturnTypes(TypeRange l,
 }
 
 LogicalResult MBarrierExpectTxOp::verify() {
-  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    /*retVal=*/nullptr, getMulticast());
 }
 
 LogicalResult MBarrierCompleteTxOp::verify() {
-  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope());
+  return verifyMBarrierArriveLikeOp(getOperation(), getAddr(), getScope(),
+                                    /*retVal=*/nullptr, getMulticast());
 }
 
 LogicalResult MBarrierTestWaitOp::verify() {
@@ -3398,9 +3410,12 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  bool isShared = isPtrInSharedCTASpace(getAddr());
-  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-                  : std::string("mbarrier.init.b64 [%0], %1;");
+  std::string space = isPtrInSharedCTASpace(getAddr()) ? ".shared" : "";
+  std::string layout =
+      getLayout() ? llvm::formatv(".layout::v{0}", *getLayout()).str() : "";
+
+  return llvm::formatv("mbarrier.init{0}{1}.b64 [%0], %1;", layout, space)
+      .str();
 }
 
 std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
@@ -3727,16 +3742,23 @@ PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared ? llvm::Intrinsic::nvvm_mbarrier_init_shared
-                                    : llvm::Intrinsic::nvvm_mbarrier_init;
+  llvm::Value *mbar = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *count = mt.lookupValue(thisOp.getCount());
 
-  // Fill the Intrinsic Args
-  llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getAddr()));
-  args.push_back(mt.lookupValue(thisOp.getCount()));
+  // Only mbarrier.init.layout carries a layout, and it exists for shared::cta
+  // only, so a generic pointer has to be cast before it can be passed along.
+  if (std::optional<uint32_t> layout = thisOp.getLayout()) {
+    if (isPtrInGenericSpace(thisOp.getAddr()))
+      mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
-  return {id, std::move(args)};
+    return {llvm::Intrinsic::nvvm_mbarrier_init_layout,
+            {mbar, count, builder.getInt32(*layout)}};
+  }
+
+  llvm::Intrinsic::ID id = isPtrInSharedCTASpace(thisOp.getAddr())
+                               ? llvm::Intrinsic::nvvm_mbarrier_init_shared
+                               : llvm::Intrinsic::nvvm_mbarrier_init;
+  return {id, {mbar, count}};
 }
 
 mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
@@ -3748,6 +3770,30 @@ mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
                                : llvm::Intrinsic::nvvm_mbarrier_inval;
 
   return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair MBarrierCheckLayoutOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierCheckLayoutOp>(op);
+
+  return {llvm::Intrinsic::nvvm_mbarrier_check_layout,
+          {mt.lookupValue(thisOp.getAddr()),
+           builder.getInt32(thisOp.getLayout())}};
+}
+
+/// The mbarrier *.space.cluster intrinsics take two trailing operands that the
+/// *.space.cta ones do not: a multicast mask and an immediate flag selecting
+/// the multicast form of the instruction. When no mask is given, request the
+/// non-multicast form; the mask is then unused, so any value will do.
+static void appendMBarrierMulticastArgs(
+    llvm::SmallVectorImpl<llvm::Value *> &args, Value multicast,
+    bool isClusterSpace, LLVM::ModuleTranslation &mt,
+    llvm::IRBuilderBase &builder) {
+  if (!isClusterSpace)
+    return;
+
+  args.push_back(multicast ? mt.lookupValue(multicast) : builder.getInt32(0));
+  args.push_back(builder.getInt1(static_cast<bool>(multicast)));
 }
 
 mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
@@ -3770,6 +3816,8 @@ mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
 
   return {IDs[index], std::move(args)};
 }
@@ -3794,6 +3842,8 @@ mlir::NVVM::IDArgPair MBarrierCompleteTxOp::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(mt.lookupValue(thisOp.getAddr()));
   args.push_back(mt.lookupValue(thisOp.getTxcount()));
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
 
   return {IDs[index], std::move(args)};
 }
@@ -3840,7 +3890,11 @@ mlir::NVVM::IDArgPair MBarrierArriveOp::getIntrinsicIDAndArgs(
   llvm::Value *count =
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
-  return {id, {mbar, count}};
+
+  llvm::SmallVector<llvm::Value *> args{mbar, count};
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
@@ -3881,7 +3935,10 @@ mlir::NVVM::IDArgPair MBarrierArriveDropOp::getIntrinsicIDAndArgs(
       hasCount ? mt.lookupValue(thisOp.getCount())
                : llvm::ConstantInt::get(llvm::Type::getInt32Ty(ctx), 1);
 
-  return {id, {mbar, count}};
+  llvm::SmallVector<llvm::Value *> args{mbar, count};
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
+  return {id, std::move(args)};
 }
 
 bool MBarrierArriveExpectTxOp::getAsmValues(
@@ -3928,7 +3985,10 @@ mlir::NVVM::IDArgPair MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
-  return {id, {mbar, txcount}};
+  llvm::SmallVector<llvm::Value *> args{mbar, txcount};
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
@@ -3962,7 +4022,10 @@ mlir::NVVM::IDArgPair MBarrierArriveDropExpectTxOp::getIntrinsicIDAndArgs(
   if (needCast)
     mbar = castPtrToAddrSpace(builder, mbar, NVVMMemorySpace::Shared);
 
-  return {id, {mbar, txcount}};
+  llvm::SmallVector<llvm::Value *> args{mbar, txcount};
+  appendMBarrierMulticastArgs(args, thisOp.getMulticast(), isClusterSpace, mt,
+                              builder);
+  return {id, std::move(args)};
 }
 
 mlir::NVVM::IDArgPair MBarrierArriveNocompleteOp::getIntrinsicIDAndArgs(

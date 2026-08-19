@@ -682,3 +682,44 @@ define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
   %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
   ret void
 }
+
+declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7), i32)
+declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7), i32)
+
+; The *.space.cluster mbarrier intrinsics gained a multicast mask and a flag
+; selecting the multicast form; older IR upgrades to the non-multicast form.
+define void @nvvm_mbarrier_space_cluster_multicast(ptr addrspace(7) %mbar, i32 %count) {
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+; CHECK: call void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count, i32 0, i1 false)
+  call void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %count)
+  ret void
+}
+
+declare i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3), i32)
+declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3), i32)
+
+; The space.cta variants are unchanged: no multicast operands are appended and
+; mbarrier.arrive still returns the i64 state.
+define void @nvvm_mbarrier_space_cta_not_upgraded(ptr addrspace(3) %mbar, i32 %count) {
+; CHECK: call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %mbar, i32 %count)
+; CHECK: call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %mbar, i32 %count)
+  %r = call i64 @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %mbar, i32 %count)
+  call void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %mbar, i32 %count)
+  ret void
+}
