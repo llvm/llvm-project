@@ -1280,8 +1280,10 @@ static const SCEV *getUnsignedOverflowLimitForStep(const SCEV *Step,
                                                    ICmpInst::Predicate *Pred,
                                                    ScalarEvolution *SE) {
   unsigned BitWidth = SE->getTypeSizeInBits(Step->getType());
-  *Pred = ICmpInst::ICMP_ULT;
+  if (!SE->isKnownPositive(Step))
+    return nullptr;
 
+  *Pred = ICmpInst::ICMP_ULT;
   return SE->getConstant(APInt::getMinValue(BitWidth) -
                          SE->getUnsignedRangeMax(Step));
 }
@@ -5153,14 +5155,14 @@ ScalarEvolution::proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   if (AR->hasNoSignedWrap())
     return Result;
 
-  if (!AR->isAffine())
+  const SCEV *Step;
+  if (!match(AR, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
     return Result;
 
   // This function can be expensive, only try to prove NSW once per AddRec.
   if (!SignedWrapViaInductionTried.insert(AR).second)
     return Result;
 
-  const SCEV *Step = AR->getStepRecurrence(*this);
   const Loop *L = AR->getLoop();
 
   // Check whether the backedge-taken count is SCEVCouldNotCompute.
@@ -5206,15 +5208,14 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   if (AR->hasNoUnsignedWrap())
     return Result;
 
-  if (!AR->isAffine())
+  const SCEV *Step;
+  if (!match(AR, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
     return Result;
 
   // This function can be expensive, only try to prove NUW once per AddRec.
   if (!UnsignedWrapViaInductionTried.insert(AR).second)
     return Result;
 
-  const SCEV *Step = AR->getStepRecurrence(*this);
-  unsigned BitWidth = getTypeSizeInBits(AR->getType());
   const Loop *L = AR->getLoop();
 
   // Check whether the backedge-taken count is SCEVCouldNotCompute.
@@ -5243,13 +5244,13 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   // addrec is safe. Also, if the entry is guarded by a comparison with the
   // start value and the backedge is guarded by a comparison with the post-inc
   // value, the addrec is safe.
-  if (isKnownPositive(Step)) {
-    const SCEV *N = getConstant(APInt::getMinValue(BitWidth) -
-                                getUnsignedRangeMax(Step));
-    if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT, AR, N) ||
-        isKnownOnEveryIteration(ICmpInst::ICMP_ULT, AR, N)) {
-      Result = setFlags(Result, SCEV::FlagNUW);
-    }
+  ICmpInst::Predicate Pred;
+  const SCEV *OverflowLimit =
+      getUnsignedOverflowLimitForStep(Step, &Pred, this);
+  if (OverflowLimit &&
+      (isLoopBackedgeGuardedByCond(L, Pred, AR, OverflowLimit) ||
+       isKnownOnEveryIteration(Pred, AR, OverflowLimit))) {
+    Result = setFlags(Result, SCEV::FlagNUW);
   }
 
   return Result;
