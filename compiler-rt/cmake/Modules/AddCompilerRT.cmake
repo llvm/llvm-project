@@ -1,7 +1,8 @@
 include(ExternalProject)
+include(AddLLVM)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
-include(LLVMVersion OPTIONAL)
+include(LLVMVersion)
 
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
@@ -28,61 +29,33 @@ endfunction()
 function(add_compiler_rt_windows_version_resource_file OUT_VAR RESOURCE_VAR name)
   set(sources ${ARGN})
   if(MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    set(resource_file)
-    foreach(candidate_resource_file IN ITEMS
-        "${LLVM_SOURCE_DIR}/resources/windows_version_resource.rc"
-        "${LLVM_MAIN_SRC_DIR}/resources/windows_version_resource.rc"
-        "${LLVM_MAIN_SRC_DIR}/llvm/resources/windows_version_resource.rc")
-      if(EXISTS "${candidate_resource_file}")
-        set(resource_file "${candidate_resource_file}")
-        break()
-      endif()
-    endforeach()
-
-    if(resource_file)
-      set(target_resource_file
-        "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
-      configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
-      list(APPEND sources "${target_resource_file}")
-      source_group("Resource Files" "${target_resource_file}")
-      set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
-    endif()
+    set(resource_file
+      "${COMPILER_RT_SOURCE_DIR}/resources/windows_version_resource.rc")
+    set(target_resource_file
+      "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
+    configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
+    list(APPEND sources "${target_resource_file}")
+    source_group("Resource Files" "${target_resource_file}")
+    set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
   endif()
   set(${OUT_VAR} ${sources} PARENT_SCOPE)
 endfunction()
 
 function(set_compiler_rt_windows_version_resource_properties name resource_file)
-  if(DEFINED LLVM_VERSION_MAJOR)
-    set(version_major ${LLVM_VERSION_MAJOR})
-  else()
-    set(version_major 0)
-  endif()
-  if(DEFINED LLVM_VERSION_MINOR)
-    set(version_minor ${LLVM_VERSION_MINOR})
-  else()
-    set(version_minor 0)
-  endif()
-  if(DEFINED LLVM_VERSION_PATCH)
-    set(version_patchlevel ${LLVM_VERSION_PATCH})
-  else()
-    set(version_patchlevel 0)
-  endif()
-
   if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
     set(version_string "${PACKAGE_VERSION}")
   else()
     set(version_string
-      "${version_major}.${version_minor}.${version_patchlevel}${LLVM_VERSION_SUFFIX}")
+      "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
   endif()
 
   set_windows_version_resource_properties(${name} ${resource_file}
-    VERSION_MAJOR ${version_major}
-    VERSION_MINOR ${version_minor}
-    VERSION_PATCHLEVEL ${version_patchlevel}
+    VERSION_MAJOR ${LLVM_VERSION_MAJOR}
+    VERSION_MINOR ${LLVM_VERSION_MINOR}
+    VERSION_PATCHLEVEL ${LLVM_VERSION_PATCH}
     VERSION_STRING "${version_string}"
     PRODUCT_NAME "compiler-rt")
 endfunction()
-
 
 # Tries to add an "object library" target for a given list of OSs and/or
 # architectures with name "<name>.<arch>" for non-Darwin platforms if
