@@ -123,3 +123,67 @@ define i8 @udiv_mul_by_factor_not_nuw(i8 %x, i8 %y) {
   %div = udiv i8 %mul, %y
   ret i8 %div
 }
+
+declare i1 @cond()
+
+define void @get_or_create(i64 %n, ptr %p, ptr noalias %q) {
+; CHECK-LABEL: 'get_or_create'
+; CHECK-NEXT:  Classifying expressions for: @get_or_create
+; CHECK-NEXT:    %k = phi i64 [ 0, %entry ], [ %k.next, %outer.latch ]
+; CHECK-NEXT:    --> {0,+,1}<%outer.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.header: Computable, %loop: Invariant }
+; CHECK-NEXT:    %aligned = shl i64 %k, 4
+; CHECK-NEXT:    --> {0,+,16}<%outer.header> U: [0,-15) S: [-9223372036854775808,9223372036854775793) Exits: <<Unknown>> LoopDispositions: { %outer.header: Computable, %loop: Invariant }
+; CHECK-NEXT:    %start = add i64 %aligned, 1
+; CHECK-NEXT:    --> {1,+,16}<%outer.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.header: Computable, %loop: Invariant }
+; CHECK-NEXT:    %iv = phi i64 [ %start, %outer.header ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {{\{\{}}1,+,16}<%outer.header>,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %j = phi i64 [ %aligned, %outer.header ], [ %j.next, %loop ]
+; CHECK-NEXT:    --> {{\{\{}}0,+,16}<%outer.header>,+,4}<nuw><%loop> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %div = udiv i64 %iv, 4
+; CHECK-NEXT:    --> {({0,+,16}<%outer.header> /u 4),+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 4
+; CHECK-NEXT:    --> {{\{\{}}5,+,16}<%outer.header>,+,4}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %j.next = add nuw i64 %j, 4
+; CHECK-NEXT:    --> {{\{\{}}4,+,16}<%outer.header>,+,4}<nw><%loop> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %c = call i1 @cond()
+; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant, %outer.header: Variant }
+; CHECK-NEXT:    %k.next = add i64 %k, 1
+; CHECK-NEXT:    --> {1,+,1}<%outer.header> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.header: Computable, %loop: Invariant }
+; CHECK-NEXT:    %ec = call i1 @cond()
+; CHECK-NEXT:    --> %ec U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.header: Variant, %loop: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @get_or_create
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %outer.header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %outer.header: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %outer.header: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %k = phi i64 [ 0, %entry ], [ %k.next, %outer.latch ]
+  %aligned = shl i64 %k, 4
+  %start = add i64 %aligned, 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %outer.header ], [ %iv.next, %loop ]
+  %j = phi i64 [ %aligned, %outer.header ], [ %j.next, %loop ]
+  %div = udiv i64 %iv, 4
+  store volatile i64 %div, ptr %p
+  store volatile i64 %j, ptr %q
+  %iv.next = add i64 %iv, 4
+  %j.next = add nuw i64 %j, 4
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %outer.latch
+
+outer.latch:
+  %k.next = add i64 %k, 1
+  %ec = call i1 @cond()
+  br i1 %ec, label %outer.header, label %exit
+
+exit:
+  ret void
+}
