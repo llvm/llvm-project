@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: DIVERGENT: %divergentval
 ; CHECK-NOT: DIVERGENT: %uniformval
@@ -9,8 +9,5 @@ define void @test() {
   ret void
 }
 
-declare i32 @normalfunc() #0
-declare i32 @alwaysuniformfunc() #1
-
-attributes #0 = { nounwind }
-attributes #1 = { alwaysuniform nounwind }
+declare i32 @normalfunc() nounwind
+declare i32 @alwaysuniformfunc() alwaysuniform nounwind
