@@ -5,6 +5,14 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt -passes=loop-vectorize -S %s | FileCheck %s
 
+; A zero estimated trip count means the outer loop is estimated not to be
+; entered.  It must not be used to scale the cost of the memory checks hoisted
+; out of it: that would divide by zero.  Check that the fallback trip count of 2
+; is used instead.
+; RUN: opt -passes=loop-vectorize -disable-output -debug-only=loop-vectorize %s \
+; RUN:   2>&1 | FileCheck %s -check-prefix=COST
+; REQUIRES: asserts
+
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -13,6 +21,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: vector.memcheck:
 ; CHECK: vector.body:
 ; CHECK: inner:
+
+; COST: We expect runtime memory checks to be hoisted out of the outer loop. Cost reduced from 3 to 1
 
 define void @test(ptr addrspace(1) %p, i32 %n) {
 entry:
