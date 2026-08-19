@@ -1,4 +1,4 @@
-//===-- Implementation header for roundf128 ---------------------*- C++ -*-===//
+//===-- Unittests for roundf128 -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_ROUNDF128_H
-#define LLVM_LIBC_SRC_MATH_ROUNDF128_H
+#include "RoundTest.h"
 
 #include "src/__support/FPUtil/float128.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h"
-
-namespace LIBC_NAMESPACE_DECL {
+#include "src/math/roundf128.h"
 
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
 using float128 = LIBC_NAMESPACE::fputil::Float128;
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-float128 roundf128(float128 x);
-
-} // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_MATH_ROUNDF128_H
+LIST_ROUND_TESTS(float128, LIBC_NAMESPACE::roundf128)

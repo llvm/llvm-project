@@ -50741,10 +50741,24 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
 
   // If the result is only read back as scalar extracts, scalarization computes
-  // just the demanded lanes.
-  if (all_of(N->users(), [](const SDNode *U) {
-        return U->getOpcode() == ISD::EXTRACT_VECTOR_ELT;
-      }))
+  // just the demanded lanes. Keep the vector operation when every lane is
+  // extracted, which occurs when non-power-of-two vectors are returned.
+  APInt ExtractedElts = APInt::getZero(VT.getVectorNumElements());
+  bool OnlyExtracts = true;
+  for (const SDNode *U : N->users()) {
+    if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+      OnlyExtracts = false;
+      break;
+    }
+    auto *Idx = dyn_cast<ConstantSDNode>(U->getOperand(1));
+    if (!Idx)
+      continue;
+    const APInt &IdxVal = Idx->getAPIntValue();
+    if (IdxVal.uge(VT.getVectorNumElements()))
+      continue;
+    ExtractedElts.setBit(IdxVal.getZExtValue());
+  }
+  if (OnlyExtracts && !ExtractedElts.isAllOnes())
     return SDValue();
 
   // Magic multiply lowers constant divisors cheaper than a divide.
