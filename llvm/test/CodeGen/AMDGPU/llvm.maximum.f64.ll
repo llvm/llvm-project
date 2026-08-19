@@ -2681,8 +2681,7 @@ define <16 x double> @v_maximum_v16f64(<16 x double> %src0, <16 x double> %src1)
 ; GFX950-NEXT:    s_nop 1
 ; GFX950-NEXT:    v_cndmask_b32_e64 v30, v0, 0, vcc
 ; GFX950-NEXT:    v_cndmask_b32_e32 v31, v1, v2, vcc
-; GFX950-NEXT:    v_mov_b32_e32 v0, v58
-; GFX950-NEXT:    v_mov_b32_e32 v1, v59
+; GFX950-NEXT:    v_mov_b64_e32 v[0:1], v[58:59]
 ; GFX950-NEXT:    v_mov_b32_e32 v2, v60
 ; GFX950-NEXT:    v_accvgpr_read_b32 v60, a12 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v59, a11 ; Reload Reuse

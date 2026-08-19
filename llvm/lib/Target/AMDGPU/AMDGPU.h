@@ -212,6 +212,9 @@ extern char &AMDGPUNextUseAnalysisLegacyID;
 void initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(PassRegistry &);
 extern char &AMDGPUNextUseAnalysisPrinterLegacyID;
 
+void initializeSIMergeVGPRCopiesLegacyPass(PassRegistry &);
+extern char &SIMergeVGPRCopiesID;
+
 void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);
 extern char &SILowerWWMCopiesLegacyID;
 

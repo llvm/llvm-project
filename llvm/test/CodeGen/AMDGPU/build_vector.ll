@@ -312,8 +312,7 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX942-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX942-NEXT:    v_mov_b32_e32 v2, s2
-; GFX942-NEXT:    v_mov_b32_e32 v3, s3
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:

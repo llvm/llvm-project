@@ -40,16 +40,11 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:    s_add_u32 s16, s16, quux@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, quux@rel32@hi+12
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v2, v6
-; CHECK-NEXT:    v_mov_b32_e32 v3, v7
-; CHECK-NEXT:    v_mov_b32_e32 v4, v8
-; CHECK-NEXT:    v_mov_b32_e32 v5, v9
-; CHECK-NEXT:    v_mov_b32_e32 v6, v10
-; CHECK-NEXT:    v_mov_b32_e32 v7, v11
-; CHECK-NEXT:    v_mov_b32_e32 v8, v12
-; CHECK-NEXT:    v_mov_b32_e32 v9, v13
-; CHECK-NEXT:    v_mov_b32_e32 v10, v14
-; CHECK-NEXT:    v_mov_b32_e32 v11, v15
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[6:7], v[6:7] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[4:5], v[8:9], v[8:9] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[6:7], v[10:11], v[10:11] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[8:9], v[12:13], v[12:13] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[10:11], v[14:15], v[14:15] op_sel:[0,1]
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
 ; CHECK-NEXT:  .LBB0_5: ; %bb9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

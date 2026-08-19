@@ -132,8 +132,7 @@ define <2 x float> @fneg_v2f32_s(<2 x float> inreg %first) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    s_xor_b32 s1, s1, 0x80000000
 ; GFX950-SDAG-NEXT:    s_xor_b32 s0, s0, 0x80000000
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: fneg_v2f32_s:
@@ -191,8 +190,7 @@ define <2 x float> @fabs_v2f32_s(<2 x float> inreg %first) {
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    s_bitset0_b32 s0, 31
 ; GFX950-SDAG-NEXT:    s_bitset0_b32 s1, 31
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: fabs_v2f32_s:
@@ -256,8 +254,7 @@ define <2 x float> @fneg_fabs_v2f32_s(<2 x float> inreg %first) {
 ; GFX950-SDAG-NEXT:    s_bitset0_b32 s0, 31
 ; GFX950-SDAG-NEXT:    s_xor_b32 s1, s1, 0x80000000
 ; GFX950-SDAG-NEXT:    s_xor_b32 s0, s0, 0x80000000
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX950-GISEL-LABEL: fneg_fabs_v2f32_s:

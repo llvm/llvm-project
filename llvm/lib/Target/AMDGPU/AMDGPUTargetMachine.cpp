@@ -60,6 +60,7 @@
 #include "SILowerWWMCopies.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIMergeVGPRCopies.h"
 #include "SIOptimizeExecMasking.h"
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
@@ -681,6 +682,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
+  initializeSIMergeVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -2006,6 +2008,8 @@ void GCNPassConfig::addPreSched2() {
 void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
+  if (getOptLevel() > CodeGenOptLevel::None)
+    addPass(&SIMergeVGPRCopiesID);
   addPass(createSIMemoryLegalizerPass());
   addPass(createSIInsertWaitcntsPass());
 
@@ -2713,6 +2717,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
     addMachineFunctionPass(GCNCreateVOPDPass(), PMW);
   }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addMachineFunctionPass(SIMergeVGPRCopiesPass(), PMW);
 
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
