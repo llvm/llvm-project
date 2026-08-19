@@ -8,7 +8,7 @@ end
 
 subroutine f03(x)
   integer :: x(10)
-!ERROR: 'expectation' modifier cannot occur multiple times
+!ERROR: 'present-modifier' modifier cannot occur multiple times
   !$omp target update from(present, present: x)
 end
 

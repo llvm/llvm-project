@@ -13,7 +13,7 @@ define void @epilogue_vectorization_fix_scalar_resume_values(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[REM]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[REM]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[REM]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[REM]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -77,7 +77,7 @@ define void @epilogue_main_loop_dead(ptr %dst, i32 %width, ptr %src) {
 ; CHECK:       [[VEC_EPILOG_PH1]]:
 ; CHECK-NEXT:    br i1 true, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF1:%.*]] = urem i64 [[TMP2]], 32
+; CHECK-NEXT:    [[N_MOD_VF1:%.*]] = and i64 [[TMP2]], 31
 ; CHECK-NEXT:    [[N_VEC1:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF1]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[N_VEC1]] to i32
@@ -103,7 +103,7 @@ define void @epilogue_main_loop_dead(ptr %dst, i32 %width, ptr %src) {
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC1]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VEC_EPILOG_PH1]] ]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
@@ -123,12 +123,12 @@ define void @epilogue_main_loop_dead(ptr %dst, i32 %width, ptr %src) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi ptr [ [[TMP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP13]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[DST]], %[[VECTOR_MEMCHECK1]] ], [ [[DST]], %[[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL13:%.*]] = phi i32 [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[WIDTH]], %[[VECTOR_MEMCHECK1]] ], [ [[WIDTH]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi ptr [ [[TMP7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP13]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[DST]], %[[VECTOR_MEMCHECK1]] ], [ [[DST]], %[[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i32 [ [[TMP8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[WIDTH]], %[[VECTOR_MEMCHECK1]] ], [ [[WIDTH]], %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
-; CHECK-NEXT:    [[D:%.*]] = phi ptr [ [[D_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL12]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[W:%.*]] = phi i32 [ [[W_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL13]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[D:%.*]] = phi ptr [ [[D_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL11]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[W:%.*]] = phi i32 [ [[W_NEXT:%.*]], %[[LOOP1]] ], [ [[BC_RESUME_VAL12]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[SRC]], align 1
 ; CHECK-NEXT:    store i8 [[V]], ptr [[D]], align 1
 ; CHECK-NEXT:    [[D_NEXT]] = getelementptr i8, ptr [[D]], i64 1

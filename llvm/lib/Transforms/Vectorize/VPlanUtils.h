@@ -101,7 +101,9 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
           Rep->getOperand(Rep->getNumOperandsWithoutMask() - 1));
   if (const auto *VPI = dyn_cast<VPInstruction>(R)) {
     if (VPI->getOpcode() == Instruction::Call)
-      return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
+      // The callee is the last operand, excluding the mask if masked.
+      return GetCalleeIntrinsic(
+          VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     if (VPI->getOpcode() == VPInstruction::Intrinsic) {
       return cast<VPConstantInt>(VPI->getOperand(VPI->getNumOperands() - 1))
           ->getZExtValue();
@@ -180,6 +182,11 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Finds the incoming alias-mask within the vector preheader.
 VPValue *findIncomingAliasMask(const VPlan &Plan);
+
+/// Returns the (early exiting block, exit block) pairs of \p Plan, i.e. all
+/// edges to an exit block that do not come from \p MiddleVPBB.
+SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
+getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 
 /// Create a scalar-iv-steps recipe over \p Plan's canonical IV for an
 /// induction of \p Kind with \p InductionOpcode / \p FPBinOp, start value \p
@@ -379,12 +386,11 @@ public:
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
 
-    // We need to first create an iterator range over (const) BlocktTy & instead
-    // of (const) BlockTy * for filter_range to work properly.
-    auto Mapped =
-        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
-    auto Filter = make_filter_range(
-        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
+    // We need the pointee range over (const) BlocktTy & instead of (const)
+    // BlockTy * for filter_range to work properly.
+    auto Filter =
+        make_filter_range(make_pointee_range(Range),
+                          [](BaseTy &Block) { return isa<BlockTy>(&Block); });
     return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
       return cast<BlockTy>(&Block);
     });

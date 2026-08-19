@@ -19,17 +19,17 @@ entry:
 }
 declare void @llvm.ppc.fence()
 
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: motion:%bb.0 entry
 ; LOG: ExitSU: FENCE implicit-def dead $rm
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: motion:%bb.0 entry
 ; LOG: ExitSU: FENCE implicit-def dead $rm
 ;
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: motion:%bb.0 entry
 ; LOG: ExitSU: FENCE implicit-def dead $rm
-; LOG: ***** MI Scheduling *****
+; LOG: Current Schedule Region
 ; LOG-NEXT: motion:%bb.0 entry
 ; LOG: ExitSU: FENCE implicit-def dead $rm
 define double @motion(double %a, double %b, double %c, double %d) {

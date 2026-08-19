@@ -1302,15 +1302,15 @@ define void @not_optimized_range_check_unsigned2(ptr %pred, i32 %N) {
 ; CHECK-NEXT:    %N.off = add i32 %N, -1
 ; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: %pred LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @not_optimized_range_check_unsigned2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:

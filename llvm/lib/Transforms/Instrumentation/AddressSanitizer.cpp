@@ -852,7 +852,7 @@ struct AddressSanitizer {
   void instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
                      InterestingMemoryOperand &O, bool UseCalls,
                      const DataLayout &DL, RuntimeCallInserter &RTCI);
-  void instrumentPointerComparisonOrSubtraction(Instruction *I,
+  bool instrumentPointerComparisonOrSubtraction(Instruction *I,
                                                 RuntimeCallInserter &RTCI);
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
                          Value *Addr, MaybeAlign Alignment,
@@ -1654,7 +1654,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
 }
 
 static bool isPointerOperand(Value *V) {
-  return V->getType()->isPointerTy() || isa<PtrToIntInst>(V);
+  return V->getType()->isPointerTy() || isa<PtrToIntInst, PtrToAddrInst>(V);
 }
 
 // This is a rough heuristic; it may cause both false positives and
@@ -1698,16 +1698,38 @@ bool AddressSanitizer::GlobalIsLinkerInitialized(GlobalVariable *G) {
   return true;
 }
 
-void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
+bool AddressSanitizer::instrumentPointerComparisonOrSubtraction(
     Instruction *I, RuntimeCallInserter &RTCI) {
   IRBuilder<> IRB(I);
   FunctionCallee F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
-  for (Value *&i : Param) {
-    if (i->getType()->isPointerTy())
-      i = IRB.CreatePointerCast(i, IntptrTy);
+
+  if (const auto *Ty = Param[0]->getType(); Ty->isVectorTy()) {
+    const auto *VTy = dyn_cast<FixedVectorType>(Ty);
+    // TODO: Add support for scalable vectors if possible.
+    if (!VTy)
+      return false;
+
+    assert(Param[0]->getType() == Param[1]->getType() &&
+           "invalid vector pointer pair instrumentation operands");
+    for (unsigned Index = 0, NumElements = VTy->getNumElements();
+         Index != NumElements; ++Index) {
+      Value *ScalarParam[2] = {
+          IRB.CreatePointerCast(
+              IRB.CreateExtractElement(Param[0], IRB.getInt32(Index)),
+              IntptrTy),
+          IRB.CreatePointerCast(
+              IRB.CreateExtractElement(Param[1], IRB.getInt32(Index)),
+              IntptrTy)};
+      RTCI.createRuntimeCall(IRB, F, ScalarParam);
+    }
+    return true;
   }
+
+  for (Value *&P : Param)
+    P = IRB.CreatePointerCast(P, IntptrTy);
   RTCI.createRuntimeCall(IRB, F, Param);
+  return true;
 }
 
 static void doInstrumentAddress(AddressSanitizer *Pass, Instruction *I,
@@ -3225,8 +3247,7 @@ bool AddressSanitizer::instrumentFunction(Function &F,
   }
 
   for (auto *Inst : PointerComparisonsOrSubtracts) {
-    instrumentPointerComparisonOrSubtraction(Inst, RTCI);
-    FunctionModified = true;
+    FunctionModified |= instrumentPointerComparisonOrSubtraction(Inst, RTCI);
   }
 
   if (ChangedStack || !NoReturnCalls.empty())
@@ -3734,6 +3755,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
     replaceDbgDeclare(AI, LocalStackBaseAlloca, DIB, DIExprFlags, Desc.Offset);
     Value *NewAllocaPtr = IRB.CreatePtrAdd(
         LocalStackBase, ConstantInt::get(IntptrTy, Desc.Offset));
+    if (NewAllocaPtr->getType() != AI->getType())
+      NewAllocaPtr = IRB.CreateAddrSpaceCast(NewAllocaPtr, AI->getType());
     AI->replaceAllUsesWith(NewAllocaPtr);
     NewAllocaPtrs.push_back(NewAllocaPtr);
   }

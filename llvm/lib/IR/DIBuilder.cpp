@@ -17,7 +17,6 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include <optional>
 
@@ -1152,7 +1151,7 @@ DILexicalBlock *DIBuilder::createLexicalBlock(DIScope *Scope, DIFile *File,
                                      File, Line, Col);
 }
 
-DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     BasicBlock *InsertAtEnd) {
   // If this block already has a terminator then insert this record before
@@ -1163,7 +1162,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     : InsertAtEnd->end());
 }
 
-DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+DbgRecord *DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                       DILocalVariable *SrcVar,
                                       DIExpression *ValExpr, Value *Addr,
                                       DIExpression *AddrExpr,
@@ -1181,20 +1180,7 @@ DbgInstPtr DIBuilder::insertDbgAssign(Instruction *LinkedInstr, Value *Val,
   return DVR;
 }
 
-/// Initialize IRBuilder for inserting dbg.declare and dbg.value intrinsics.
-/// This abstracts over the various ways to specify an insert position.
-static void initIRBuilder(IRBuilder<> &Builder, const DILocation *DL,
-                          InsertPosition InsertPt) {
-  Builder.SetInsertPoint(InsertPt.getBasicBlock(), InsertPt);
-  Builder.SetCurrentDebugLocation(DL);
-}
-
-static Value *getDbgIntrinsicValueImpl(LLVMContext &VMContext, Value *V) {
-  assert(V && "no value passed to dbg intrinsic");
-  return MetadataAsValue::get(VMContext, ValueAsMetadata::get(V));
-}
-
-DbgInstPtr DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
+DbgRecord *DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
                                      DIExpression *Expr, const DILocation *DL,
                                      InsertPosition InsertPt) {
   DbgVariableRecord *DVR =
@@ -1203,7 +1189,7 @@ DbgInstPtr DIBuilder::insertDbgValue(Value *Val, DILocalVariable *VarInfo,
   return DVR;
 }
 
-DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+DbgRecord *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                     DIExpression *Expr, const DILocation *DL,
                                     InsertPosition InsertPt) {
   assert(VarInfo && "empty or invalid DILocalVariable* passed to dbg.declare");
@@ -1218,7 +1204,7 @@ DbgInstPtr DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
   return DVR;
 }
 
-DbgInstPtr DIBuilder::insertDeclareValue(Value *Storage,
+DbgRecord *DIBuilder::insertDeclareValue(Value *Storage,
                                          DILocalVariable *VarInfo,
                                          DIExpression *Expr,
                                          const DILocation *DL,
@@ -1248,32 +1234,7 @@ void DIBuilder::insertDbgVariableRecord(DbgVariableRecord *DVR,
   BB->insertDbgRecordBefore(DVR, InsertPt);
 }
 
-Instruction *DIBuilder::insertDbgIntrinsic(llvm::Function *IntrinsicFn,
-                                           Value *V, DILocalVariable *VarInfo,
-                                           DIExpression *Expr,
-                                           const DILocation *DL,
-                                           InsertPosition InsertPt) {
-  assert(IntrinsicFn && "must pass a non-null intrinsic function");
-  assert(V && "must pass a value to a dbg intrinsic");
-  assert(VarInfo &&
-         "empty or invalid DILocalVariable* passed to debug intrinsic");
-  assert(DL && "Expected debug loc");
-  assert(DL->getScope()->getSubprogram() ==
-             VarInfo->getScope()->getSubprogram() &&
-         "Expected matching subprograms");
-
-  trackIfUnresolved(VarInfo);
-  trackIfUnresolved(Expr);
-  Value *Args[] = {getDbgIntrinsicValueImpl(VMContext, V),
-                   MetadataAsValue::get(VMContext, VarInfo),
-                   MetadataAsValue::get(VMContext, Expr)};
-
-  IRBuilder<> B(DL->getContext());
-  initIRBuilder(B, DL, InsertPt);
-  return B.CreateCall(IntrinsicFn, Args);
-}
-
-DbgInstPtr DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
+DbgRecord *DIBuilder::insertLabel(DILabel *LabelInfo, const DILocation *DL,
                                   InsertPosition InsertPt) {
   assert(LabelInfo && "empty or invalid DILabel* passed to dbg.label");
   assert(DL && "Expected debug loc");

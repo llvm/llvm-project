@@ -127,7 +127,7 @@ Design Documents
    PCHInternals
    ItaniumMangleAbiTags
    ControlFlowIntegrityDesign
-   HardwareAssistedAddressSanitizerDesign.rst
+   HardwareAssistedAddressSanitizerDesign
    ConstantInterpreter
    LLVMExceptionHandlingCodeGen
 

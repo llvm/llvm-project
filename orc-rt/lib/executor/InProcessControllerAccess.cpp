@@ -181,7 +181,7 @@ void InProcessControllerAccess::connect(BootstrapInfo BI) {
     // C->Disconnect(C) then it might have acquired responsibility for calling
     // InProcessControllerAccess::onDisconnect. In this case control may return
     // from disconnect below early, potentially causing us to return from
-    // 'connect' before notifyDisconnect is called. This may lead to confusing
+    // 'connect' before notifyDisconnected is called. This may lead to confusing
     // logs (since reportError will log error but connect will appear to
     // succeed), however onDisconnect will still be called eventually, and the
     // Session will detach as if the remote had initiated the action after a
@@ -215,7 +215,7 @@ void InProcessControllerAccess::callController(
 }
 
 void InProcessControllerAccess::sendWrapperResult(
-    uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
+    WrapperFunctionBuffer ResultBytes, uint64_t CallId) {
   assert(C && "sendWrapperResult called before connect");
   if (C->EnterMessageScope(C)) {
     C->ReturnWrapperResult(C->IPEPC, CallId, ResultBytes.release());
@@ -240,13 +240,13 @@ void InProcessControllerAccess::doDisconnect() {
   for (auto &[_, H] : ToDrain)
     failPendingControllerCall(std::move(H));
 
-  notifyDisconnected();
+  notifyDisconnected(Error::success());
 }
 
 void InProcessControllerAccess::callWrapper(
     uint64_t CallId, void *Fn, orc_rt_WrapperFunctionBuffer ArgBytes) {
-  handleWrapperCall(CallId, reinterpret_cast<orc_rt_WrapperFunction>(Fn),
-                    WrapperFunctionBuffer(ArgBytes));
+  handleWrapperCall(reinterpret_cast<orc_rt_WrapperFunction>(Fn),
+                    WrapperFunctionBuffer(ArgBytes), CallId);
 }
 
 void InProcessControllerAccess::callWrapperEntry(
