@@ -44,7 +44,7 @@ def int_dx_resource_handlefromheap
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
           [llvm_i32_ty, llvm_i1_ty],
-          [IntrNoMem]>;
+          [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
