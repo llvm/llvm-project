@@ -443,6 +443,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed a crash when aggregate class template argument deduction was attempted
+  on an alias template after error recovery, for example after a missing
+  include. Clang now fails deduction instead of treating the alias as a class
+  template.
+
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.

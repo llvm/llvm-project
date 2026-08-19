@@ -1607,10 +1607,15 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       AggregateDeductionCandidates[Hash] = GD;
       return GD;
     }
+    // Failed alias synthesis must not fall through: the templated decl is a
+    // TypeAliasDecl, not a CXXRecordDecl.
+    return nullptr;
   }
 
-  if (CXXRecordDecl *DefRecord =
-          cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
+  auto *RD = dyn_cast_or_null<CXXRecordDecl>(Template->getTemplatedDecl());
+  if (!RD)
+    return nullptr;
+  if (CXXRecordDecl *DefRecord = RD->getDefinition()) {
     if (TemplateDecl *DescribedTemplate =
             DefRecord->getDescribedClassTemplate())
       Template = DescribedTemplate;
