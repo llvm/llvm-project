@@ -134,7 +134,7 @@ func.func @cvt_float_f32_to_e8m0_rz(%in : vector<8xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f8x2
   // CHECK-SAME: rnd = <rz>
   // CHECK-SAME: : i16(f8E8M0FNU)
-  %out = nvgpu.truncf %in {rnd = #nvvm.fp_rnd_mode<rz>}
+  %out = nvgpu.truncf %in <{rnd = #nvvm.fp_rnd_mode<rz>}>
       : vector<8xf32> to vector<8xf8E8M0FNU>
   return
 }
@@ -145,7 +145,7 @@ func.func @cvt_float_f32_to_e8m0_rp(%in : vector<8xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f8x2
   // CHECK-SAME: rnd = <rp>
   // CHECK-SAME: : i16(f8E8M0FNU)
-  %out = nvgpu.truncf %in {rnd = #nvvm.fp_rnd_mode<rp>}
+  %out = nvgpu.truncf %in <{rnd = #nvvm.fp_rnd_mode<rp>}>
       : vector<8xf32> to vector<8xf8E8M0FNU>
   return
 }
@@ -287,7 +287,7 @@ func.func @fptrunc_f64_to_f8(%arg0: vector<4xf64>) -> vector<4xf8E4M3FN> {
 func.func @fptrunc_f32_to_f8_satfinite(%in : vector<8xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f8x2
   // CHECK-SAME: sat = <satfinite>
-  %out = nvgpu.truncf %in {sat = #nvvm.sat_mode<satfinite>}
+  %out = nvgpu.truncf %in <{sat = #nvvm.sat_mode<satfinite>}>
       : vector<8xf32> to vector<8xf8E4M3FN>
   return
 }
@@ -296,7 +296,7 @@ func.func @fptrunc_f32_to_f8_satfinite(%in : vector<8xf32>) {
 func.func @fptrunc_f32_to_f16_relu(%in : vector<4xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f16x2
   // CHECK-SAME: relu
-  %out = nvgpu.truncf %in {relu = true}
+  %out = nvgpu.truncf %in <{relu = true}>
       : vector<4xf32> to vector<4xf16>
   return
 }
@@ -323,7 +323,7 @@ func.func @fptrunc_f32_to_f16_default_sat(%in : vector<4xf32>) {
 func.func @fptrunc_f32_to_f16_explicit_none(%in : vector<4xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f16x2
   // CHECK-NOT: satfinite
-  %out = nvgpu.truncf %in {sat = #nvvm.sat_mode<none>}
+  %out = nvgpu.truncf %in <{sat = #nvvm.sat_mode<none>}>
       : vector<4xf32> to vector<4xf16>
   return
 }
@@ -334,7 +334,7 @@ func.func @fptrunc_f32_to_f16_explicit_none(%in : vector<4xf32>) {
 func.func @fptrunc_f32_to_f16_rs(%in : vector<4xf32>, %rbits : i32) {
   // CHECK: nvvm.convert.f32x2.to.f16x2
   // CHECK-SAME: rnd = <rs>
-  %out = nvgpu.truncf %in, %rbits {rnd = #nvvm.fp_rnd_mode<rs>}
+  %out = nvgpu.truncf %in, %rbits <{rnd = #nvvm.fp_rnd_mode<rs>}>
       : vector<4xf32> to vector<4xf16>
   return
 }
@@ -343,7 +343,7 @@ func.func @fptrunc_f32_to_f16_rs(%in : vector<4xf32>, %rbits : i32) {
 func.func @fptrunc_f32_to_bf16_rs(%in : vector<4xf32>, %rbits : i32) {
   // CHECK: nvvm.convert.f32x2.to.bf16x2
   // CHECK-SAME: rnd = <rs>
-  %out = nvgpu.truncf %in, %rbits {rnd = #nvvm.fp_rnd_mode<rs>}
+  %out = nvgpu.truncf %in, %rbits <{rnd = #nvvm.fp_rnd_mode<rs>}>
       : vector<4xf32> to vector<4xbf16>
   return
 }
@@ -352,7 +352,7 @@ func.func @fptrunc_f32_to_bf16_rs(%in : vector<4xf32>, %rbits : i32) {
 func.func @fptrunc_f32_to_f16_rz(%in : vector<4xf32>) {
   // CHECK: nvvm.convert.f32x2.to.f16x2
   // CHECK-SAME: rnd = <rz>
-  %out = nvgpu.truncf %in {rnd = #nvvm.fp_rnd_mode<rz>}
+  %out = nvgpu.truncf %in <{rnd = #nvvm.fp_rnd_mode<rz>}>
       : vector<4xf32> to vector<4xf16>
   return
 }
@@ -361,7 +361,7 @@ func.func @fptrunc_f32_to_f16_rz(%in : vector<4xf32>) {
 func.func @fptrunc_f32_to_bf16_rz(%in : vector<4xf32>) {
   // CHECK: nvvm.convert.f32x2.to.bf16x2
   // CHECK-SAME: rnd = <rz>
-  %out = nvgpu.truncf %in {rnd = #nvvm.fp_rnd_mode<rz>}
+  %out = nvgpu.truncf %in <{rnd = #nvvm.fp_rnd_mode<rz>}>
       : vector<4xf32> to vector<4xbf16>
   return
 }

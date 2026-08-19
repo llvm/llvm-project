@@ -725,6 +725,7 @@ add_entrypoint_object(
   HDRS
     ../roundf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.roundf128
 )
 
@@ -4041,6 +4042,7 @@ add_entrypoint_object(
     ../atan2f128.h
   DEPENDS
     libc.src.__support.math.atan2f128
+    libc.src.__support.CPP.bit
 )
 
 add_entrypoint_object(

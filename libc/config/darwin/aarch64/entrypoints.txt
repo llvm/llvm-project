@@ -179,6 +179,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2f128
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -367,6 +368,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundevenf
     libc.src.math.roundevenl
     libc.src.math.roundf
+    libc.src.math.roundf128
     libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
@@ -553,7 +555,6 @@ endif()
 if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
-    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.copysignf128
     libc.src.math.daddf128
@@ -606,7 +607,6 @@ if(LIBC_TYPES_HAS_NATIVE_FLOAT128)
     libc.src.math.remquof128
     libc.src.math.rintf128
     libc.src.math.roundevenf128
-    libc.src.math.roundf128
     libc.src.math.scalblnf128
     libc.src.math.scalbnf128
     libc.src.math.setpayloadf128
