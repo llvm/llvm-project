@@ -284,16 +284,10 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
-      # This is copied from https://github.com/actions/runner-images/blob/main/images/windows/scripts/build/Install-Wix.ps1
     - name: Install Wix (Windows ARM64)
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
       run: |
-        Install-ChocoPackage wixtoolset -ArgumentList "--force"
-        Update-Environment
-        $currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
-        $newPath = $currentPath + ";$(Join-Path -Path $env:WIX -ChildPath "bin")"
-        [Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
-        Update-Environment
+        dotnet tool install --global wix
         Get-ChildItem -Path C:\ -Filter candle.exe -Recurse -ErrorAction SilentlyContinue
 
     - name: Build Windows
