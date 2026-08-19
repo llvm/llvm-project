@@ -894,7 +894,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                            ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
-        EVT LoadVT = TLI.getRegisterType(SrcVT.getSimpleVT());
+        EVT LoadVT =
+            TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
              TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
@@ -921,7 +922,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
         if (SVT == MVT::f16 || SVT == MVT::bf16) {
           EVT ISrcVT = SrcVT.changeTypeToInteger();
           EVT IDestVT = DestVT.changeTypeToInteger();
-          EVT ILoadVT = TLI.getRegisterType(IDestVT.getSimpleVT());
+          EVT ILoadVT =
+              TLI.getRegisterType(*DAG.getContext(), IDestVT.getSimpleVT());
 
           SDValue Result = DAG.getExtLoad(ISD::ZEXTLOAD, dl, ILoadVT, Chain,
                                           Ptr, ISrcVT, LD->getMemOperand());
@@ -1646,7 +1648,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
 
   auto &DataLayout = DAG.getDataLayout();
   // Store the float to memory, then load the sign part out as an integer.
-  MVT LoadTy = TLI.getRegisterType(MVT::i8);
+  MVT LoadTy = TLI.getRegisterType(*DAG.getContext(), MVT::i8);
   // First create a temporary that is aligned for both the load and store.
   SDValue StackPtr = DAG.CreateStackTemporary(FloatVT, LoadTy);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
@@ -5893,6 +5895,18 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1.getValue(1));
     break;
   case ISD::FMA:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(1));
+      Tmp3 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(2));
+      SDValue Result = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3,
+                                   Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Result,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(2));

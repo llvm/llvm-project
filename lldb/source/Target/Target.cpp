@@ -6020,12 +6020,15 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() {
-  Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return m_private_mutex;
+TargetAPIMutex Target::GetAPIMutex() {
+  return TargetAPIMutex(shared_from_this());
+}
 
-  return m_mutex;
+std::recursive_mutex *Target::GetAPIMutexForCurrentPolicy() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.capabilities.can_bypass_target_api_mutex)
+    return nullptr;
+  return policy.view == Policy::View::Private ? &m_private_mutex : &m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.

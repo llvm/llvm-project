@@ -9731,8 +9731,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+  bool HasPassthru = !mi_match(Passthru, MRI, m_GImplicitDef());
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);

@@ -391,6 +391,9 @@ bool SIFoldOperandsImpl::frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
 ///   => %vgpr = V_ADD_U32 x, frameindex
 bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
     Register DstReg, Register SrcReg, MachineInstr &MI) const {
+  if (!SrcReg.isVirtual())
+    return false;
+
   if (TRI->isVGPR(*MRI, DstReg) && TRI->isSGPRReg(*MRI, SrcReg) &&
       MRI->hasOneNonDBGUse(SrcReg)) {
     MachineInstr *Def = MRI->getVRegDef(SrcReg);

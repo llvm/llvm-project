@@ -72,6 +72,7 @@ class CCValAssign;
 enum class ComplexDeinterleavingOperation;
 enum class ComplexDeinterleavingRotation;
 class Constant;
+enum class ExceptionHandling : int;
 class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
@@ -519,10 +520,6 @@ public:
                                            bool IsScalable) const {
     return true;
   }
-
-  /// Return true if the @llvm.experimental.cttz.elts intrinsic should be
-  /// expanded using generic code in SelectionDAGBuilder.
-  virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
 
   /// Return the minimum number of bits required to hold the maximum possible
   /// number of trailing zero vector elements.
@@ -1230,7 +1227,23 @@ public:
   unsigned getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
                                   EVT &IntermediateVT,
                                   unsigned &NumIntermediates,
-                                  MVT &RegisterVT) const;
+                                  MVT &RegisterVT) const {
+    return getVectorTypeBreakdownImpl(Context, VT, IntermediateVT,
+                                      NumIntermediates, RegisterVT,
+                                      /*ForCallingConv=*/false);
+  }
+
+  /// Return true if fixed-length, non-power-of-two vectors should be broken
+  /// down into legal vector parts instead of scalars for internal values.
+  virtual bool preferVectorizedNonPowerOfTwoTypeBreakdown() const {
+    return false;
+  }
+
+  bool shouldUseDynamicVectorTypeBreakdown(EVT VT, bool ForCallingConv) const {
+    return preferVectorizedNonPowerOfTwoTypeBreakdown() && !ForCallingConv &&
+           VT.isFixedLengthVector() &&
+           !isPowerOf2_32(VT.getVectorNumElements());
+  }
 
   /// Certain targets such as MIPS require that some types such as vectors are
   /// always broken down into scalars in some contexts. This occurs even if the
@@ -1238,8 +1251,9 @@ public:
   virtual unsigned getVectorTypeBreakdownForCallingConv(
       LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
       unsigned &NumIntermediates, MVT &RegisterVT) const {
-    return getVectorTypeBreakdown(Context, VT, IntermediateVT, NumIntermediates,
-                                  RegisterVT);
+    return getVectorTypeBreakdownImpl(Context, VT, IntermediateVT,
+                                      NumIntermediates, RegisterVT,
+                                      /*ForCallingConv=*/true);
   }
 
   struct IntrinsicInfo {
@@ -1848,27 +1862,8 @@ public:
   virtual Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const;
 
   /// Return the type of registers that this ValueType will eventually require.
-  MVT getRegisterType(MVT VT) const {
-    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
-    return RegisterTypeForVT[VT.SimpleTy];
-  }
-
-  /// Return the type of registers that this ValueType will eventually require.
   MVT getRegisterType(LLVMContext &Context, EVT VT) const {
-    if (VT.isSimple())
-      return getRegisterType(VT.getSimpleVT());
-    if (VT.isVector()) {
-      EVT VT1;
-      MVT RegisterVT;
-      unsigned NumIntermediates;
-      (void)getVectorTypeBreakdown(Context, VT, VT1,
-                                   NumIntermediates, RegisterVT);
-      return RegisterVT;
-    }
-    if (VT.isInteger()) {
-      return getRegisterType(Context, getTypeToTransformTo(Context, VT));
-    }
-    llvm_unreachable("Unsupported extended type!");
+    return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/false);
   }
 
   /// Return the number of registers that this ValueType will eventually
@@ -1885,23 +1880,7 @@ public:
   virtual unsigned
   getNumRegisters(LLVMContext &Context, EVT VT,
                   std::optional<MVT> RegisterVT = std::nullopt) const {
-    if (VT.isSimple()) {
-      assert((unsigned)VT.getSimpleVT().SimpleTy <
-             std::size(NumRegistersForVT));
-      return NumRegistersForVT[VT.getSimpleVT().SimpleTy];
-    }
-    if (VT.isVector()) {
-      EVT VT1;
-      MVT VT2;
-      unsigned NumIntermediates;
-      return getVectorTypeBreakdown(Context, VT, VT1, NumIntermediates, VT2);
-    }
-    if (VT.isInteger()) {
-      unsigned BitWidth = VT.getSizeInBits();
-      unsigned RegWidth = getRegisterType(Context, VT).getSizeInBits();
-      return (BitWidth + RegWidth - 1) / RegWidth;
-    }
-    llvm_unreachable("Unsupported extended type!");
+    return getNumRegistersImpl(Context, VT, /*ForCallingConv=*/false);
   }
 
   /// Certain combinations of ABIs, Targets and features require that types
@@ -1909,7 +1888,7 @@ public:
   /// For MIPS all vector types must be passed through the integer register set.
   virtual MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                             CallingConv::ID CC, EVT VT) const {
-    return getRegisterType(Context, VT);
+    return getRegisterTypeImpl(Context, VT, /*ForCallingConv=*/true);
   }
 
   /// Certain targets require unusual breakdowns of certain types. For MIPS,
@@ -1918,7 +1897,7 @@ public:
   virtual unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                                  CallingConv::ID CC,
                                                  EVT VT) const {
-    return getNumRegisters(Context, VT);
+    return getNumRegistersImpl(Context, VT, /*ForCallingConv=*/true);
   }
 
   /// Certain targets have context sensitive alignment requirements, where one
@@ -2149,14 +2128,16 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   virtual Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const {
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const {
     return Register();
   }
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   virtual Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const {
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const {
     return Register();
   }
 
@@ -3277,6 +3258,12 @@ public:
     return isZExtFree(Val.getValueType(), VT2);
   }
 
+  /// Return true is an anyext is free from FromTy to ToTy. Usually true for
+  /// scalar types when not trying to pack elements into vector lanes.
+  virtual bool isAnyExtFree(EVT FromTy, EVT ToTy) const {
+    return !FromTy.isVector();
+  }
+
   /// Return true if sign-extension from FromTy to ToTy is cheaper than
   /// zero-extension.
   virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {
@@ -3971,6 +3958,66 @@ private:
            "Table isn't big enough!");
     unsigned Ty = (unsigned)VT.SimpleTy;
     return (LegalizeAction)((IndexedModeActions[Ty][IdxMode] >> Shift) & 0xf);
+  }
+
+  unsigned getVectorTypeBreakdownImpl(LLVMContext &Context, EVT VT,
+                                      EVT &IntermediateVT,
+                                      unsigned &NumIntermediates,
+                                      MVT &RegisterVT,
+                                      bool ForCallingConv) const;
+
+  unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
+                                     unsigned &NumIntermediates,
+                                     MVT &RegisterVT);
+
+  /// Return the type of registers that this ValueType will eventually require.
+  MVT getCachedRegisterType(MVT VT) const {
+    assert((unsigned)VT.SimpleTy < std::size(RegisterTypeForVT));
+    return RegisterTypeForVT[VT.SimpleTy];
+  }
+
+  MVT getRegisterTypeImpl(LLVMContext &Context, EVT VT,
+                          bool ForCallingConv) const {
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv))
+      return getCachedRegisterType(VT.getSimpleVT());
+    if (VT.isVector()) {
+      EVT VT1;
+      MVT RegisterVT;
+      unsigned NumIntermediates;
+      (void)getVectorTypeBreakdownImpl(Context, VT, VT1, NumIntermediates,
+                                       RegisterVT, ForCallingConv);
+      return RegisterVT;
+    }
+    if (VT.isInteger()) {
+      return getRegisterTypeImpl(Context, getTypeToTransformTo(Context, VT),
+                                 ForCallingConv);
+    }
+    llvm_unreachable("Unsupported extended type!");
+  }
+
+  unsigned getNumRegistersImpl(LLVMContext &Context, EVT VT,
+                               bool ForCallingConv) const {
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv)) {
+      assert((unsigned)VT.getSimpleVT().SimpleTy <
+             std::size(NumRegistersForVT));
+      return NumRegistersForVT[VT.getSimpleVT().SimpleTy];
+    }
+    if (VT.isVector()) {
+      EVT VT1;
+      MVT VT2;
+      unsigned NumIntermediates;
+      return getVectorTypeBreakdownImpl(Context, VT, VT1, NumIntermediates, VT2,
+                                        ForCallingConv);
+    }
+    if (VT.isInteger()) {
+      unsigned BitWidth = VT.getSizeInBits();
+      unsigned RegWidth =
+          getRegisterTypeImpl(Context, VT, ForCallingConv).getSizeInBits();
+      return (BitWidth + RegWidth - 1) / RegWidth;
+    }
+    llvm_unreachable("Unsupported extended type!");
   }
 
 protected:
@@ -5204,7 +5251,7 @@ public:
   /// necessary information.
   virtual EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                        ISD::NodeType /*ExtendKind*/) const {
-    EVT MinVT = getRegisterType(MVT::i32);
+    EVT MinVT = getRegisterType(Context, MVT::i32);
     return VT.bitsLT(MinVT) ? MinVT : VT;
   }
 

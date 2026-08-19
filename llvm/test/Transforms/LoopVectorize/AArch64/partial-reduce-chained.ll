@@ -1426,7 +1426,7 @@ define i32 @chained_partial_reduce_add_sub_ext_mul(ptr %a, ptr %b, ptr %c, i64 %
 ; CHECK-SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-SVE:       vector.ph:
 ; CHECK-SVE-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP5]], 4
-; CHECK-SVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP8]], 1
+; CHECK-SVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP5]], 5
 ; CHECK-SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-SVE-NEXT:    br label [[VECTOR_BODY:%.*]]
