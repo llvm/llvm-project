@@ -361,6 +361,8 @@ uint8_t elf::getMipsFpAbiFlag(Ctx &ctx, InputFile *file, uint8_t oldFlag,
 template <class ELFT> static bool isN32Abi(const InputFile &f) {
   if (auto *ef = dyn_cast<ELFFileBase>(&f))
     return ef->template getObj<ELFT>().getHeader().e_flags & EF_MIPS_ABI2;
+  if (auto *bc = dyn_cast<BitcodeFile>(&f))
+    return bc->triple.isABIN32();
   return false;
 }
 

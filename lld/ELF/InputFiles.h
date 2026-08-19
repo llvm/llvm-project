@@ -19,6 +19,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 struct DILineInfo;
@@ -331,6 +332,8 @@ public:
   void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;
   std::vector<bool> keptComdats;
+
+  llvm::Triple triple;
 };
 
 // .so file.
