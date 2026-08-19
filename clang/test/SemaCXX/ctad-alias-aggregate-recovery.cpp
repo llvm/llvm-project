@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
 
-// Aggregate CTAD for an alias template after error recovery must not crash.
-// DeclareAggregateDeductionGuideFromInitList used to fall through and
-// llvm::cast the alias's TypeAliasDecl to CXXRecordDecl.
+// A prior fatal diagnostic makes InstantiatingTemplate invalid, so alias
+// aggregate-guide synthesis returns null. The old code then llvm::cast a
+// TypeAliasDecl to CXXRecordDecl. That SIGSEGVs on clang 22.1.8. Rel+Asserts
+// trunk may not crash: the cast is UB and can be optimized into a null return.
 
 template <class T> struct S {
   T v;
