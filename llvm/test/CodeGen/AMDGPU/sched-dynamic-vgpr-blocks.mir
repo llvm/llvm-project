@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=machine-scheduler -o - %s | FileCheck %s
-# RUN: %if asserts %{ llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=machine-scheduler -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=machine-scheduler -amdgpu-stress-vgpr=18 -o - %s | FileCheck %s
+# RUN: %if asserts %{ llc -mtriple=amdgpu12.00 -run-pass=machine-scheduler -amdgpu-stress-vgpr=18 -debug-only=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
 
 # In dynamic VGPR mode we don't want to waste VGPR blocks, so we revert any
 # schedule that increases the number of blocks we need to allocate. The
@@ -7,12 +7,12 @@
 # increase the pressure in the region from 5 to 17 VGPRs, i.e. from one block of
 # 16 to 2. This should trigger the code that performs the revert based on the
 # number of VGPR blocks.
-# The amdgpu-num-vgpr attribute is only there to keep the test small (the
+# The -amdgpu-stress-vgpr flag is only there to keep the test small (the
 # scheduler bails out early for regions that stay well below the VGPR limit).
 
 --- |
   define amdgpu_cs void @dvgpr_blocks() #0 { ret void }
-  attributes #0 = { "amdgpu-dynamic-vgpr-block-size" = "16" "amdgpu-num-vgpr" = "18" }
+  attributes #0 = { "amdgpu-dynamic-vgpr-block-size"="16" }
 ...
 ---
 # DEBUG: Region register pressure: VGPRs: 5
