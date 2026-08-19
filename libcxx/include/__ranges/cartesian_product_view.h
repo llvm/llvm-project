@@ -467,7 +467,7 @@ struct __fn {
   template <class... _Ranges>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ranges&&... __rs)
       -> decltype(cartesian_product_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)) {
-    return cartesian_product_view<all_t<_Ranges>...>(std::forward<_Ranges>(__rs)...);
+    return cartesian_product_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...);
   }
 };
 } // namespace __cartesian_product
