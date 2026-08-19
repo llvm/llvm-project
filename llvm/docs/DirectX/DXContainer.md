@@ -712,15 +712,13 @@ of this document.
   - 12
   - Many
 * - Root Parameter
-  - Root Constants: 12
-
-    Root Descriptor Version 1.0: 8
-
-    Root Descriptor Version 1.1: 12
-
-    Descriptors Tables Version 1.0: 20
-
-    Descriptors Tables Version 1.1: 24
+  - | Root Parameter Type | Size |
+    | --- | --- |
+    | Root Constants | 12 |
+    | Root Descriptor Version 1.0 | 8 |
+    | Root Descriptor Version 1.1 | 12 |
+    | Descriptors Tables Version 1.0 | 20 |
+    | Descriptors Tables Version 1.1 | 24 |
   - Many
 * - Static Samplers
   - 52
