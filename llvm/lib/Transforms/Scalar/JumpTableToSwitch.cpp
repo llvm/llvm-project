@@ -220,7 +220,7 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
       return *MaybeGUID;
 
     return Function::getGUIDAssumingExternalLinkage(
-        getIRPGOFuncName(Fct, InLTO));
+        getIRPGOObjectName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {

@@ -1768,7 +1768,7 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
-  const std::string PGOVTableName = getPGOName(*GV);
+  const std::string PGOVTableName = getIRPGOObjectName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
   uint32_t VTableSizeVal = GV->getGlobalSize(M.getDataLayout());
