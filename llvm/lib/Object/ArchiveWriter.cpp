@@ -680,6 +680,8 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
       }
     }
 
+    assert((!isZOSArchive(Kind) || M.Symbols.size() == M.SymbolAttrs.size()) &&
+           "Incorrect number of symbol attributes!");
     for (size_t I = 0, E = M.Symbols.size(); I != E; ++I) {
       if (isBSDLike(Kind))
         printNBits(Out, Kind, M.Symbols[I]);
