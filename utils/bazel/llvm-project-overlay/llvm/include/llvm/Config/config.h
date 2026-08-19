@@ -56,11 +56,11 @@
 
 /* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
    don't. */
-#define HAVE_DECL_FE_ALL_EXCEPT 1
+/* HAVE_DECL_FE_ALL_EXCEPT defined in Bazel */
 
 /* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
    don't. */
-#define HAVE_DECL_FE_INEXACT 1
+/* HAVE_DECL_FE_INEXACT defined in Bazel */
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */

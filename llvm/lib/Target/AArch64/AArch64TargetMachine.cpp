@@ -769,7 +769,7 @@ bool AArch64PassConfig::addInstSelector() {
 }
 
 bool AArch64PassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -786,7 +786,7 @@ void AArch64PassConfig::addPreLegalizeMachineIR() {
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

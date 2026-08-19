@@ -20,12 +20,21 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LibcallLoweringInfo.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
@@ -48,7 +57,6 @@ class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
 class MachineRegisterInfo;
-class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class TargetPassConfig;
@@ -63,13 +71,26 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class LLVM_ABI IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslatorLegacy : public MachineFunctionPass {
 public:
   static char ID;
+  IRTranslatorLegacy(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
+
+  StringRef getPassName() const override { return "IRTranslator"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
+  CodeGenOptLevel OptLevel;
+};
+
+class IRTranslatorImpl {
   /// Interface used to lower the everything related to calls.
   const CallLowering *CLI = nullptr;
+
+  SSPLayoutInfo *SPInfo = nullptr;
 
   /// This class contains the mapping between the Values to vreg related data.
   class ValueToVRegInfo {
@@ -623,9 +644,6 @@ private:
 
   const DataLayout *DL = nullptr;
 
-  /// Current target configuration. Controls how the pass handles errors.
-  const TargetPassConfig *TPC = nullptr;
-
   CodeGenOptLevel OptLevel;
 
   /// Current optimization remark emitter. Used to report failures.
@@ -653,7 +671,7 @@ private:
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {
   public:
-    GISelSwitchLowering(IRTranslator *irt, FunctionLoweringInfo &funcinfo)
+    GISelSwitchLowering(IRTranslatorImpl *irt, FunctionLoweringInfo &funcinfo)
         : SwitchLowering(funcinfo), IRT(irt) {
       assert(irt && "irt is null!");
     }
@@ -667,7 +685,7 @@ private:
     ~GISelSwitchLowering() override = default;
 
   private:
-    IRTranslator *IRT;
+    IRTranslatorImpl *IRT;
   };
 
   std::unique_ptr<GISelSwitchLowering> SL;
@@ -784,11 +802,8 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  IRTranslator(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);
-
-  StringRef getPassName() const override { return "IRTranslator"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  IRTranslatorImpl(CodeGenOptLevel OptLevel = CodeGenOptLevel::None)
+      : OptLevel(OptLevel) {}
 
   // Algo:
   //   CallLowering = MF.subtarget.getCallLowering()
@@ -802,7 +817,25 @@ public:
   //       if (!translate(MIRBuilder, inst, ValToVReg, ConstantToSequence))
   //         reportFatalUsageError("Don't know how to translate input");
   //   finalize()
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<GISelCSEInfo *()> GetCSEInfo,
+                            bool ShouldSkipOpts,
+                            function_ref<AAResults *()> GetAAResults,
+                            function_ref<BranchProbabilityInfo *()> GetBPI,
+                            function_ref<AssumptionCache *()> GetAC,
+                            TargetLibraryInfo *LibraryInfo,
+                            const LibcallLoweringInfo *LibcallInfo,
+                            SSPLayoutInfo *StackProtectorInfo);
+};
+
+class IRTranslatorPass : public RequiredPassInfoMixin<IRTranslatorPass> {
+  CodeGenOptLevel OptLevel;
+
+public:
+  IRTranslatorPass(CodeGenOptLevel OptLevel) : OptLevel(OptLevel) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

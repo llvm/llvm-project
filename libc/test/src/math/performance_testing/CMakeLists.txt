@@ -66,7 +66,7 @@ function(add_perf_binary target_name)
 
   set(link_libraries ${link_object_files})
   foreach(lib IN LISTS PERF_LINK_LIBRARIES)
-    list(APPEND link_libraries ${lib}.unit)
+    list(APPEND link_libraries ${lib})
   endforeach()
   target_link_libraries(
     ${fq_target_name}
