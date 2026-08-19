@@ -138,6 +138,9 @@ class TestSwiftPlaygrounds(TestBase):
         self.expect('settings set target.swift-framework-search-paths "%s"' %
                     self.getBuildDir())
 
+    def TraceOn(self):
+        return True
+
     def execute_code(self, input_file, expect_error=False):
         contents = "syntax error"
         with open(input_file, 'r') as contents_file:
