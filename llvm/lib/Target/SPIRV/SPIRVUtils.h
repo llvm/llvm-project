@@ -246,6 +246,7 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Function:
     return 0;
   case SPIRV::StorageClass::CrossWorkgroup:
+  case SPIRV::StorageClass::PhysicalStorageBufferEXT:
     return 1;
   case SPIRV::StorageClass::UniformConstant:
     return 2;
@@ -374,9 +375,16 @@ inline bool isUntypedPointerTy(const Type *T) {
   return T && T->getTypeID() == Type::PointerTyID;
 }
 
-// True if this is an instance of PointerType or TypedPointerType.
+// True if this is an instance of TargetExtType representing spirv.$TypedPointerType.
+inline bool isTargetExtPointerTy(const Type *T) {
+  if (!T || T->getTypeID() != Type::TargetExtTyID)
+    return false;
+  return cast<TargetExtType>(T)->getName() == "spirv.$TypedPointerType";
+}
+
+// True if this is an instance of PointerType or TypedPointerType or TargetExtType pointer.
 inline bool isPointerTy(const Type *T) {
-  return isUntypedPointerTy(T) || isTypedPointerTy(T);
+  return isUntypedPointerTy(T) || isTypedPointerTy(T) || isTargetExtPointerTy(T);
 }
 
 // True if this is a vector whose element type is an (untyped) PointerType.
@@ -386,12 +394,15 @@ inline bool isUntypedPointerVectorTy(const Type *T) {
 }
 
 // Get the address space of this pointer or pointer vector type for instances of
-// PointerType or TypedPointerType.
+// PointerType, TypedPointerType, or TargetExtType pointer.
 inline unsigned getPointerAddressSpace(const Type *T) {
   Type *SubT = T->getScalarType();
-  return SubT->getTypeID() == Type::PointerTyID
-             ? cast<PointerType>(SubT)->getAddressSpace()
-             : cast<TypedPointerType>(SubT)->getAddressSpace();
+  if (SubT->getTypeID() == Type::PointerTyID)
+    return cast<PointerType>(SubT)->getAddressSpace();
+  if (SubT->getTypeID() == Type::TargetExtTyID &&
+      cast<TargetExtType>(SubT)->getName() == "spirv.$TypedPointerType")
+    return cast<TargetExtType>(SubT)->getIntParameter(0);
+  return cast<TypedPointerType>(SubT)->getAddressSpace();
 }
 
 // Return true if the Argument is decorated with a pointee type

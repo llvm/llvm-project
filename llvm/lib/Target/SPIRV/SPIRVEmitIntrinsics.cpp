@@ -938,6 +938,21 @@ Type *SPIRVEmitIntrinsicsImpl::getGEPType(GetElementPtrInst *Ref) {
     return getGEPTypeLogical(Ref);
   }
 
+  // For structs whose sole field is a pointer, derive the GEP element type
+  // from the first field directly. This handles any struct-wrapped pointer
+  // (e.g. VulkanBuffer descriptors, PhysicalStorageBuffer wrappers) without
+  // relying on LDC-specific struct naming conventions.
+  if (auto *STy = dyn_cast<StructType>(SrcTy)) {
+    if (STy->getNumElements() == 1) {
+      Type *FieldTy = STy->getElementType(0);
+      if (FieldTy->isPointerTy() && Ref->getNumIndices() > 1) {
+        return getTypedPointerWrapper(
+            Ref->getResultElementType(),
+            getPointerAddressSpace(Ref->getResultElementType()));
+      }
+    }
+  }
+
   Type *Ty = nullptr;
   // TODO: not sure if GetElementPtrInst::getTypeAtIndex() does anything
   // useful here
@@ -3626,6 +3641,18 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
+
+  for (auto &I : instructions(Func)) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II || II->getIntrinsicID() != Intrinsic::spv_assign_ptr_type)
+      continue;
+    Value *Arg = II->getOperand(0);
+    MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
+    Type *ElemTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
+    GR->addDeducedElementType(Arg, ElemTy);
+    GR->addDeducedElementType(II, ElemTy);
+    GR->addAssignPtrTypeInstr(Arg, II);
+  }
 
   if (!CurrF)
     HaveFunPtrs =

@@ -124,6 +124,9 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
 }
 
 bool SPIRVSubtarget::canUseExtension(SPIRV::Extension::Extension E) const {
+  if (isShader() && (E == SPIRV::Extension::SPV_KHR_physical_storage_buffer ||
+                     E == SPIRV::Extension::SPV_EXT_physical_storage_buffer))
+    return true;
   return AvailableExtensions.contains(E);
 }
 

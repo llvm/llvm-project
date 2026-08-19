@@ -2226,7 +2226,13 @@ void SPIRVGlobalRegistry::buildMemAliasingOpDecorate(
 }
 void SPIRVGlobalRegistry::replaceAllUsesWith(Value *Old, Value *New,
                                              bool DeleteOld) {
-  Old->replaceAllUsesWith(New);
+  if (Old->getType() == New->getType()) {
+    Old->replaceAllUsesWith(New);
+  } else {
+    llvm::SmallVector<llvm::User *, 8> LocalUsers(Old->users());
+    for (llvm::User *U : LocalUsers)
+      U->replaceUsesOfWith(Old, New);
+  }
   updateIfExistDeducedElementType(Old, New, DeleteOld);
   updateIfExistAssignPtrTypeInstr(Old, New, DeleteOld);
 }

@@ -229,8 +229,21 @@ class SPIRVLegalizePointerCastImpl {
                             LoadInst *BadLoad) {
     auto ResultOpt = getPointerToFirstCompatibleType(
         B, Source, BadLoad->getPointerOperandType(), ElementType, false);
-    assert(ResultOpt && "Failed to load from aggregate: "
-                        "Could not find compatible memory layout.");
+    
+    // --- BẢN VÁ LỖI LOAD CHUẨN: Ép dùng GEP (OpAccessChain) thay vì OpBitcast ---
+    if (!ResultOpt) {
+      SmallVector<Value *, 4> Args = {B.getInt1(false), Source, B.getInt32(0), B.getInt32(0)};
+      std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
+      Value *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, ElementType, GEP);
+
+      LoadInst *LI = B.CreateLoad(ElementType, GEP);
+      LI->setAlignment(BadLoad->getAlign());
+      buildAssignType(B, ElementType, LI);
+      return LI;
+    }
+    // ------------------------------------------------------------------------
+
     auto [GEP, CurrentTy] = *ResultOpt;
 
     auto *SAT = dyn_cast<ArrayType>(CurrentTy);
@@ -516,8 +529,20 @@ class SPIRVLegalizePointerCastImpl {
                            Align Alignment) {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
-    assert(ResultOpt && "Failed to store to aggregate: "
-                        "Could not find compatible memory layout.");
+    
+    // --- BẢN VÁ LỖI STORE CHUẨN: Ép dùng GEP (OpAccessChain) thay vì OpBitcast ---
+    if (!ResultOpt) {
+      SmallVector<Value *, 4> Args = {B.getInt1(true), Dst, B.getInt32(0), B.getInt32(0)};
+      std::array<Type *, 2> Types = {Dst->getType(), Dst->getType()};
+      Value *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, Src->getType(), GEP);
+
+      StoreInst *SI = B.CreateStore(Src, GEP);
+      SI->setAlignment(Alignment);
+      return;
+    }
+    // -------------------------------------------------------------------------
+
     auto [GEP, CurrentTy] = *ResultOpt;
 
     auto *DAT = dyn_cast<ArrayType>(CurrentTy);

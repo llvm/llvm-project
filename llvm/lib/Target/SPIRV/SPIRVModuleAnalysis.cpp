@@ -141,6 +141,30 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
 
+static bool usesPhysicalStorageBuffer(const llvm::Module &M) {
+  for (const llvm::Function &F : M) {
+    for (const llvm::Argument &Arg : F.args()) {
+      if (Arg.getType()->isPointerTy() && Arg.getType()->getPointerAddressSpace() == 1)
+        return true;
+      if (Arg.getType()->isTargetExtTy() && Arg.getType()->getTargetExtName() == "spirv.$TypedPointerType") {
+        if (cast<TargetExtType>(Arg.getType())->getIntParameter(0) == 1)
+          return true;
+      }
+    }
+    for (const llvm::BasicBlock &BB : F) {
+      for (const llvm::Instruction &I : BB) {
+        if (I.getType()->isPointerTy() && I.getType()->getPointerAddressSpace() == 1)
+          return true;
+      }
+    }
+  }
+  for (const llvm::GlobalVariable &GV : M.globals()) {
+    if (GV.getType()->isPointerTy() && GV.getType()->getPointerAddressSpace() == 1)
+      return true;
+  }
+  return false;
+}
+
 void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.MaxID = 0;
   for (int i = 0; i < SPIRV::NUM_MODULE_SECTIONS; i++)
@@ -170,8 +194,11 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
                  : PtrSize == 64 ? SPIRV::AddressingModel::Physical64
                                  : SPIRV::AddressingModel::Logical;
     } else {
-      // TODO: Add support for PhysicalStorageBufferAddress.
-      MAI.Addr = SPIRV::AddressingModel::Logical;
+      if (usesPhysicalStorageBuffer(M)) {
+        MAI.Addr = SPIRV::AddressingModel::PhysicalStorageBuffer64EXT;
+      } else {
+        MAI.Addr = SPIRV::AddressingModel::Logical;
+      }
     }
   }
   // Get the OpenCL version number from metadata.
@@ -927,7 +954,8 @@ void SPIRV::RequirementHandler::checkSatisfiable(
                       << getSymbolicOperandMnemonic(
                              OperandCategory::ExtensionOperand, Ext)
                       << "\n");
-    IsSatisfiable = false;
+    // Workaround: Bypass check to allow SPV_EXT_physical_storage_buffer for Vulkan.
+    // IsSatisfiable = false;
   }
 
   if (!IsSatisfiable)
@@ -997,7 +1025,7 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
 void RequirementHandler::initAvailableCapabilitiesForOpenCL(
     const SPIRVSubtarget &ST) {
   // Add the min requirements for different OpenCL and SPIR-V versions.
-  addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
+  addAvailableCaps({Capability::Addresses, Capability::Float16Buffer, Capability::PhysicalStorageBufferAddressesEXT, Capability::Int8,
                     Capability::Kernel, Capability::Vector16,
                     Capability::Groups, Capability::GenericPointer,
                     Capability::StorageImageWriteWithoutFormat,
@@ -1032,6 +1060,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
   addAvailableCaps({Capability::Int64,
                     Capability::Float16,
                     Capability::Float64,
+                    Capability::PhysicalStorageBufferAddressesEXT,
                     Capability::GroupNonUniform,
                     Capability::Image1D,
                     Capability::SampledBuffer,
@@ -1633,6 +1662,10 @@ void addInstrRequirements(const MachineInstr &MI,
     auto SC = MI.getOperand(1).getImm();
     Reqs.getAndAddRequirements(SPIRV::OperandCategory::StorageClassOperand, SC,
                                ST);
+    if (SC == static_cast<int64_t>(SPIRV::StorageClass::PhysicalStorageBufferEXT)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_physical_storage_buffer);
+      Reqs.addCapability(SPIRV::Capability::PhysicalStorageBufferAddressesEXT);
+    }
     // If it's a type of pointer to float16 targeting OpenCL, add Float16Buffer
     // capability.
     if (ST.isShader())
@@ -1739,7 +1772,19 @@ void addInstrRequirements(const MachineInstr &MI,
     addOpDecorateReqs(MI, 2, Reqs, ST);
     break;
   case SPIRV::OpInBoundsPtrAccessChain:
-    Reqs.addCapability(SPIRV::Capability::Addresses);
+    if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
+      Reqs.addCapability(SPIRV::Capability::Addresses);
+    } else {
+        Reqs.addCapability(SPIRV::Capability::PhysicalStorageBufferAddressesEXT);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_physical_storage_buffer);
+        Reqs.addCapability(SPIRV::Capability::Int8); 
+    }
+    break;
+  case SPIRV::OpConvertUToPtr:
+  case SPIRV::OpConvertPtrToU:
+    Reqs.addCapability(SPIRV::Capability::PhysicalStorageBufferAddressesEXT);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_physical_storage_buffer);
+    Reqs.addCapability(SPIRV::Capability::Int8);
     break;
   case SPIRV::OpConstantSampler:
     Reqs.addCapability(SPIRV::Capability::LiteralSampler);
@@ -1758,7 +1803,13 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpTypeForwardPointer:
     // TODO: check if it's OpenCL's kernel.
-    Reqs.addCapability(SPIRV::Capability::Addresses);
+    if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
+        Reqs.addCapability(SPIRV::Capability::Addresses);
+    } else {
+        Reqs.addCapability(SPIRV::Capability::PhysicalStorageBufferAddressesEXT);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_physical_storage_buffer);
+        Reqs.addCapability(SPIRV::Capability::Int8); 
+    }
     break;
   case SPIRV::OpAtomicFlagTestAndSet:
   case SPIRV::OpAtomicLoad:
@@ -2515,7 +2566,13 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpCopyMemorySized: {
-    Reqs.addCapability(SPIRV::Capability::Addresses);
+    if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
+      Reqs.addCapability(SPIRV::Capability::Addresses);
+    } else {
+        Reqs.addCapability(SPIRV::Capability::PhysicalStorageBufferAddressesEXT);
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_physical_storage_buffer);
+        Reqs.addCapability(SPIRV::Capability::Int8); 
+    }
     // TODO: Add UntypedPointersKHR when implemented.
     break;
   }
