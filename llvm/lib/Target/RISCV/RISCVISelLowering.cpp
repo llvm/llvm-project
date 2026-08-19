@@ -9921,7 +9921,8 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
 
     MVT NarrowVT = VT.changeVectorElementType(MVT::i32);
     if (VT.isScalableVector() &&
-        RISCVTargetLowering::getLMUL(NarrowVT) > RISCVVType::LMUL_RESERVED) {
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(NarrowVT))
+            .second) {
       // When the accumulator is a single vector (LMUL 1), the i32 subvectors
       // are a fractional LMUL, so extracting the high subvector would need a
       // vslidedown. Widen the i32 sums to i64 first instead; the i64
