@@ -535,6 +535,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set LLVM readonly attribute on INTENT(IN) by-reference "
               "function arguments, if possible">,
   ];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
