@@ -673,6 +673,7 @@ GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
 MDTuple *ResourceInfo::getAsMetadata(Module &M,
                                      dxil::ResourceTypeInfo &RTI) const {
   assert(hasBinding() && "Resource must not be from heap to get metadata");
+  const ResourceBinding &Binding = getBinding();
 
   LLVMContext &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
@@ -690,13 +691,13 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(Binding->BindingID));
+  MDVals.push_back(getIntMD(Binding.BindingID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
-  MDVals.push_back(getIntMD(Binding->Space));
-  MDVals.push_back(getIntMD(Binding->LowerBound));
-  MDVals.push_back(getIntMD(Binding->Size == 0 ? ~0u : Binding->Size));
+  MDVals.push_back(getIntMD(Binding.Space));
+  MDVals.push_back(getIntMD(Binding.LowerBound));
+  MDVals.push_back(getIntMD(Binding.Size == 0 ? ~0u : Binding.Size));
 
   if (RTI.isCBuffer()) {
     MDVals.push_back(getIntMD(RTI.getCBufferSize(DL)));
@@ -802,13 +803,14 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
   }
 
   if (hasBinding()) {
+    const ResourceBinding &Binding = getBinding();
     OS << "  Binding:\n"
-       << "    Binding ID: " << Binding->BindingID << "\n"
-       << "    Space: " << Binding->Space << "\n"
-       << "    Lower Bound: " << Binding->LowerBound << "\n"
-       << "    Size: " << Binding->Size << "\n";
+       << "    Binding ID: " << Binding.BindingID << "\n"
+       << "    Space: " << Binding.Space << "\n"
+       << "    Lower Bound: " << Binding.LowerBound << "\n"
+       << "    Size: " << Binding.Size << "\n";
   } else {
-    OS << "  HeapIndexID: " << HeapResourceID << "\n";
+    OS << "  HeapIndexID: " << getHeapID() << "\n";
   }
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
@@ -871,7 +873,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
                                             DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
-  // We needs to assign a unique ID to each resource that is created
+  // We need to assign a unique ID to each resource that is created
   // from a heap. The ID must be unique for each unique Index value so
   // we can differentiate between resources instances of the same type.
   DenseMap<Value *, uint32_t> IndexToHeapResID;
