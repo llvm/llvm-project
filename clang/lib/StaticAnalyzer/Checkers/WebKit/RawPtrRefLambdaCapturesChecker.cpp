@@ -218,6 +218,8 @@ public:
         for (auto *Decl = FDecl->getParent(); Decl; Decl = Decl->getParent()) {
           if (!isa<NamespaceDecl>(Decl) && !isa<CXXRecordDecl>(Decl))
             return false;
+          if (auto *NS = dyn_cast<NamespaceDecl>(Decl); NS && NS->isInline())
+            continue;
           auto Name = safeGetName(Decl);
           // WTF::switchOn(T, F... f) is a variadic template function and
           // couldn't be annotated with NOESCAPE. We hard code it here to

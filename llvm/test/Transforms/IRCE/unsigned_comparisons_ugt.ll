@@ -445,7 +445,7 @@ exit:
 ; CHECK: [[RNG0]] = !{i32 0, i32 50}
 ; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 false}
+; CHECK: [[META3]] = !{!"llvm.loop.vectorize.disable"}
 ; CHECK: [[META4]] = !{!"llvm.loop.licm_versioning.disable"}
 ; CHECK: [[META5]] = !{!"llvm.loop.distribute.disable"}
 ; CHECK: [[META6]] = !{}

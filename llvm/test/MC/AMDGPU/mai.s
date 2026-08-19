@@ -41,7 +41,7 @@ v_accvgpr_write a2, shared_base
 // NOGFX908: :[[@LINE-1]]:{{[0-9]+}}: error: source operand must be either a VGPR or an inline constant
 
 v_accvgpr_write a2, pops_exiting_wave_id
-// NOGFX908: :[[@LINE-1]]:{{[0-9]+}}: error: source operand must be either a VGPR or an inline constant
+// NOGFX908: :[[@LINE-1]]:{{[0-9]+}}: error: src_pops_exiting_wave_id register not available on this GPU
 
 v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31]
 // GFX908: v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[0:31] ; encoding: [0x00,0x00,0xc0,0xd3,0x00,0x03,0x02,0x04]

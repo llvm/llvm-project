@@ -176,7 +176,7 @@ add_libc_test(
 )
 
 if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
-    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   libc_set_definition(strfrom_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
@@ -391,6 +391,7 @@ add_libc_test(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.utility
+    libc.src.__support.c_string
     libc.src.__support.fixedvector
     libc.src.__support.libc_assert
     libc.src.__support.libc_errno
@@ -405,6 +406,7 @@ add_libc_test(
     libc.src.unistd.close
     libc.src.unistd.getcwd
     libc.src.unistd.getpid
+    libc.src.unistd.symlinkat
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
@@ -577,14 +579,25 @@ if(LLVM_LIBC_FULL_BUILD AND LIBC_TEST_SUBPROCESS_TESTS)
       libc.include.stdlib
       libc.src.stdlib.quick_exit
   )
+
+  add_libc_test(
+    system_test
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      system_test.cpp
+    DEPENDS
+      libc.hdr.sys_wait_macros
+      libc.src.stdlib.system
+      libc.test.UnitTest.ErrnoCheckingTest
+  )
 endif()
 
 # Only baremetal and GPU has an in-tree 'malloc' implementation.
 if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
-      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     malloc_test
-    HERMETIC_TEST_ONLY
     SUITE
       libc-stdlib-tests
     SRCS

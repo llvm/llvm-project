@@ -1459,7 +1459,7 @@ define void @fcopysign() {
 define void @fcopysign_bf16() {
 ; ZVFH-LABEL: 'fcopysign_bf16'
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16 = call bfloat @llvm.copysign.bf16(bfloat poison, bfloat poison)
-; ZVFH-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison)
+; ZVFH-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16 = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16 = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
 ; ZVFH-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16 = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
@@ -1475,7 +1475,7 @@ define void @fcopysign_bf16() {
 ;
 ; ZVFHMIN-LABEL: 'fcopysign_bf16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %BF16 = call bfloat @llvm.copysign.bf16(bfloat poison, bfloat poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1BF16 = call <1 x bfloat> @llvm.copysign.v1bf16(<1 x bfloat> poison, <1 x bfloat> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2BF16 = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4BF16 = call <4 x bfloat> @llvm.copysign.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8BF16 = call <8 x bfloat> @llvm.copysign.v8bf16(<8 x bfloat> poison, <8 x bfloat> poison)
@@ -1543,7 +1543,7 @@ define void @fcopysign_f16() {
 ;
 ; ZVFHMIN-LABEL: 'fcopysign_f16'
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F16 = call half @llvm.copysign.f16(half poison, half poison)
-; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V1F16 = call <1 x half> @llvm.copysign.v1f16(<1 x half> poison, <1 x half> poison)
+; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V1F16 = call <1 x half> @llvm.copysign.v1f16(<1 x half> poison, <1 x half> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> poison, <2 x half> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> poison, <4 x half> poison)
 ; ZVFHMIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> poison, <8 x half> poison)

@@ -1586,7 +1586,7 @@ struct DoacrossFinder {
   }
 
   bool Pre(const parser::OpenMPSimpleStandaloneConstruct &x) {
-    inOrdered = x.v.DirId() == llvm::omp::Directive::OMPD_ordered;
+    inOrdered = x.v.DirId() == llvm::omp::Directive::OMPD_ordered_standalone;
     return !found;
   }
   void Post(const parser::OpenMPSimpleStandaloneConstruct &) {

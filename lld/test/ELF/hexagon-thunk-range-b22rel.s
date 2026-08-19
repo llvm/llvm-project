@@ -66,13 +66,13 @@ target_beyond_range_min:
   jumpr r31
 
 ## Verify thunk generation for targets beyond B22_PCREL range
-# CHECK:       <__hexagon_thunk_target_within_range_min_from_.text.thunk>:
-# CHECK-NEXT:    200b4: { immext(#0x900000)
-# CHECK-NEXT:             jump 0x9200cc <target_within_range_min> }
-
 # CHECK:       <__hexagon_thunk_target_beyond_range_min_from_.text.thunk>:
-# CHECK-NEXT:    200bc: { immext(#0x1100000)
+# CHECK-NEXT:    200b4: { immext(#0x1100000)
 # CHECK-NEXT:             jump 0x11200c8 <target_beyond_range_min> }
+
+# CHECK:       <__hexagon_thunk_target_within_range_min_from_.text.thunk>:
+# CHECK-NEXT:    200bc: { immext(#0x900000)
+# CHECK-NEXT:             jump 0x9200cc <target_within_range_min> }
 
 # CHECK:       <__hexagon_thunk_target_multiple_calls_from_.text.thunk>:
 # CHECK-NEXT:    200c4: { immext(#0x8fffc0)
@@ -82,8 +82,8 @@ target_beyond_range_min:
 # CHECK:       <_start>:
 # CHECK-NEXT:    200cc: { call 0x8200ac <target_within_range_max> }
 # CHECK-NEXT:           { call 0x8200b8 <target_beyond_range> }
-# CHECK-NEXT:           { call 0x200b4 <__hexagon_thunk_target_within_range_min_from_.text.thunk> }
-# CHECK-NEXT:           { call 0x200bc <__hexagon_thunk_target_beyond_range_min_from_.text.thunk> }
+# CHECK-NEXT:           { call 0x200bc <__hexagon_thunk_target_within_range_min_from_.text.thunk> }
+# CHECK-NEXT:           { call 0x200b4 <__hexagon_thunk_target_beyond_range_min_from_.text.thunk> }
 # CHECK-NEXT:           { call 0x200c4 <__hexagon_thunk_target_multiple_calls_from_.text.thunk> }
 # CHECK-NEXT:           { call 0x200c4 <__hexagon_thunk_target_multiple_calls_from_.text.thunk> }
 # CHECK-NEXT:           { call 0x200ec <target_close> }

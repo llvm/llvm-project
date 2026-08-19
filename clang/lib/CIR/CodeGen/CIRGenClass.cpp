@@ -786,71 +786,70 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     dynamicElPtr =
         builder.createPtrBitcast(arrayBase.getPointer(), elementType);
 
-  // C++ [class.temporary]p4:
-  // There are two contexts in which temporaries are destroyed at a different
-  // point than the end of the full-expression. The first context is when a
-  // default constructor is called to initialize an element of an array.
-  // If the constructor has one or more default arguments, the destruction of
-  // every temporary created in a default argument expression is sequenced
-  // before the construction of the next array element, if any.
-  {
-    RunCleanupsScope scope(*this);
+  // When the caller has already pushed an irregular partial-array cleanup
+  // (signalled by a valid endOfInit), our loop body will keep that cleanup's
+  // upper bound up to date, so we don't need a separate per-element
+  // partial-destruction region on the cir::ArrayCtor op.
+  bool needsPartialArrayCleanup = getLangOpts().Exceptions &&
+                                  !ctor->getParent()->hasTrivialDestructor() &&
+                                  !endOfInit.isValid();
 
-    // When the caller has already pushed an irregular partial-array cleanup
-    // (signalled by a valid endOfInit), our loop body will keep that cleanup's
-    // upper bound up to date, so we don't need a separate per-element
-    // partial-destruction region on the cir::ArrayCtor op.
-    bool needsPartialArrayCleanup =
-        getLangOpts().Exceptions &&
-        !ctor->getParent()->hasTrivialDestructor() && !endOfInit.isValid();
-
-    auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      // Extend the caller's irregular partial-array cleanup to cover the
-      // element we're about to construct. If this constructor throws, the
-      // cleanup will destroy every element strictly below this one.
-      if (endOfInit.isValid())
-        builder.createStore(l, arg, endOfInit);
-      assert(!cir::MissingFeatures::sanitizers());
-      if (zeroInitialize)
-        emitNullInitialization(l, curAddr, type);
-      auto currAVS = AggValueSlot::forAddr(
-          curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
-          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
-          AggValueSlot::IsNotZeroed);
+  auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    // Extend the caller's irregular partial-array cleanup to cover the
+    // element we're about to construct. If this constructor throws, the
+    // cleanup will destroy every element strictly below this one.
+    if (endOfInit.isValid())
+      builder.createStore(l, arg, endOfInit);
+    assert(!cir::MissingFeatures::sanitizers());
+    if (zeroInitialize)
+      emitNullInitialization(l, curAddr, type);
+    auto currAVS = AggValueSlot::forAddr(
+        curAddr, type.getQualifiers(), AggValueSlot::IsDestructed,
+        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap,
+        AggValueSlot::IsNotZeroed);
+    // C++ [class.temporary]p4:
+    // There are two contexts in which temporaries are destroyed at a
+    // different point than the end of the full-expression. The first context
+    // is when a default constructor is called to initialize an element of an
+    // array. If the constructor has one or more default arguments, the
+    // destruction of every temporary created in a default argument expression
+    // is sequenced before the construction of the next array element, if any.
+    {
+      RunCleanupsScope scope(*this);
       emitCXXConstructorCall(ctor, Ctor_Complete,
                              /*ForVirtualBase=*/false,
                              /*Delegating=*/false, currAVS, e);
-      cir::YieldOp::create(b, l);
-    };
-
-    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
-        emitPartialDtorBody = nullptr;
-    auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
-      mlir::BlockArgument arg =
-          b.getInsertionBlock()->addArgument(ptrToElmType, l);
-      Address curAddr = Address(arg, elementType, eltAlignment);
-      emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
-                            /*forVirtualBase=*/false,
-                            /*delegating=*/false, curAddr, type);
-      cir::YieldOp::create(b, l);
-    };
-    if (needsPartialArrayCleanup)
-      emitPartialDtorBody = partialDtorBuilder;
-
-    if (useDynamicArrayCtor) {
-      cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
-                             emitCtorBody, emitPartialDtorBody);
-    } else {
-      cir::ArrayType arrayTy =
-          cir::ArrayType::get(elementType, constElementCount);
-      mlir::Value arrayOp =
-          builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-      cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
-                             emitPartialDtorBody);
     }
+    cir::YieldOp::create(b, l);
+  };
+
+  llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>
+      emitPartialDtorBody = nullptr;
+  auto partialDtorBuilder = [&](mlir::OpBuilder &b, mlir::Location l) {
+    mlir::BlockArgument arg =
+        b.getInsertionBlock()->addArgument(ptrToElmType, l);
+    Address curAddr = Address(arg, elementType, eltAlignment);
+    emitCXXDestructorCall(ctor->getParent()->getDestructor(), Dtor_Complete,
+                          /*forVirtualBase=*/false,
+                          /*delegating=*/false, curAddr, type);
+    cir::YieldOp::create(b, l);
+  };
+  if (needsPartialArrayCleanup)
+    emitPartialDtorBody = partialDtorBuilder;
+
+  if (useDynamicArrayCtor) {
+    cir::ArrayCtor::create(builder, loc, dynamicElPtr, numElements,
+                           emitCtorBody, emitPartialDtorBody);
+  } else {
+    cir::ArrayType arrayTy =
+        cir::ArrayType::get(elementType, constElementCount);
+    mlir::Value arrayOp =
+        builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
+    cir::ArrayCtor::create(builder, loc, arrayOp, emitCtorBody,
+                           emitPartialDtorBody);
   }
 }
 
@@ -901,20 +900,6 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // A defaulted union copy/move assignment has an empty synthesized body:
-  // Sema skips union fields (the FIXME in SemaDeclCXX::buildSingleCopyAssign),
-  // so there is no AST expression for the implied whole-object memcpy.
-  // Emitting that body would silently drop the copy, so report NYI instead.
-  // Struct/array memcpy-equivalent assignments carry the implicit memberwise
-  // copies in the AST (per-field assignment expressions, or a builtin memcpy
-  // call for array members) and lower correctly through the loop below.
-  if (assignOp->isMemcpyEquivalentSpecialMember(getContext()) &&
-      assignOp->getParent()->isUnion()) {
-    cgm.errorNYI(assignOp->getSourceRange(),
-                 "defaulted union copy/move assignment operator");
-    return;
-  }
-
   // Classic codegen uses a special class to attempt to replace member
   // initializers with memcpy. We could possibly defer that to the
   // lowering or optimization phases to keep the memory accesses more
@@ -958,7 +943,8 @@ void CIRGenFunction::emitForwardingCallToLambda(
   // Now emit our call.
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
-  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs,
+                       /*isMustTail=*/false);
 
   // Forward the returned value through the function's return slot.
   if (!resultType->isVoidType()) {
@@ -1555,7 +1541,8 @@ void CIRGenFunction::emitCXXConstructorCall(
       args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
-  emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
+  emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
+           getLoc(loc));
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

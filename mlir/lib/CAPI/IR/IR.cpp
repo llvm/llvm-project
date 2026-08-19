@@ -127,6 +127,18 @@ MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
   return wrap(&unwrap(context)->getThreadPool());
 }
 
+void mlirContextBeginTransientScope(MlirContext context) {
+  unwrap(context)->beginTransientScope();
+}
+
+void mlirContextEndTransientScope(MlirContext context) {
+  unwrap(context)->endTransientScope();
+}
+
+bool mlirContextIsInTransientScope(MlirContext context) {
+  return unwrap(context)->isInTransientScope();
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
@@ -659,6 +671,25 @@ bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
 
 size_t mlirOperationHashValue(MlirOperation op) {
   return OperationEquivalence::computeHash(unwrap(op));
+}
+
+/// Translates the C equivalence flags to mlir::OperationEquivalence::Flags. The
+/// enumerator values mirror each other.
+static OperationEquivalence::Flags unwrapEquivalenceFlags(uint32_t flags) {
+  return static_cast<OperationEquivalence::Flags>(flags);
+}
+
+bool mlirOperationIsStructurallyEquivalent(MlirOperation lhs, MlirOperation rhs,
+                                           uint32_t flags) {
+  return OperationEquivalence::isEquivalentTo(unwrap(lhs), unwrap(rhs),
+                                              unwrapEquivalenceFlags(flags));
+}
+
+size_t mlirOperationStructuralHashValue(MlirOperation op, uint32_t flags) {
+  return OperationEquivalence::computeHash(
+      unwrap(op), /*hashOperands=*/OperationEquivalence::directHashValue,
+      /*hashResults=*/OperationEquivalence::ignoreHashValue,
+      unwrapEquivalenceFlags(flags));
 }
 
 MlirContext mlirOperationGetContext(MlirOperation op) {
@@ -1221,6 +1252,16 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   }
 
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
+}
+
+void mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                                MlirOpOperandReplaceFilterCallback filter,
+                                void *userData) {
+  assert(filter && "expected non-null filter callback");
+  unwrap(of).replaceUsesWithIf(unwrap(with),
+                               [filter, userData](OpOperand &operand) -> bool {
+                                 return filter(wrap(&operand), userData);
+                               });
 }
 
 MlirLocation mlirValueGetLocation(MlirValue v) {
