@@ -8282,8 +8282,8 @@ TEST_P(ImportMSInheritanceAttr, PropagatedOntoImportedRedecl) {
 
   Decl *FromTU =
       getTuDecl("namespace NS { class Inner; }", Lang_CXX17, "from.cc");
-  auto *FromInner =
-      FirstDeclMatcher<CXXRecordDecl>().match(FromTU, cxxRecordDecl(hasName("Inner")));
+  auto *FromInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
 
   auto *ToImportedInner = cast<CXXRecordDecl>(Import(FromInner, Lang_CXX17));
   ASSERT_TRUE(ToImportedInner);

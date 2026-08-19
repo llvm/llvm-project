@@ -3387,7 +3387,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 }
 
 static void importInheritableAttrs(ASTContext &Ctx, CXXRecordDecl *To,
-                                    CXXRecordDecl *Prev) {
+                                   CXXRecordDecl *Prev) {
   if (!To || !Prev || To == Prev || To->hasAttr<MSInheritanceAttr>())
     return;
 
