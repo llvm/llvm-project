@@ -258,6 +258,16 @@ struct BindImmMatch {
 /// Binds an immediate operand's value.
 inline BindImmMatch m_Imm(int64_t &Imm) { return BindImmMatch(Imm); }
 
+/// Matches an integer constant with all bits set, regardless of width.
+struct AllOnesConstantMatch {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    APInt MatchedVal;
+    return mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal.isAllOnes();
+  }
+};
+
+inline AllOnesConstantMatch m_AllOnes() { return {}; }
+
 /// Matcher for a specific constant splat.
 struct SpecificConstantSplatMatch {
   APInt RequestedVal;
