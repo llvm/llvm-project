@@ -617,14 +617,8 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
     // interference against the slot's discontiguous interval could let us pick
     // a PhysReg that is busy inside a gap, corrupting it. Instead, check
     // interference over the range the replacement register will occupy.
-    LiveInterval HullLI(LI->reg(), LI->weight());
-    VNInfo *HullVNI =
-        HullLI.getNextValue(LI->beginIndex(), LIS.getVNInfoAllocator());
-    HullLI.addSegment(
-        LiveInterval::Segment(LI->beginIndex(), LI->endIndex(), HullVNI));
-
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(HullLI, PhysReg) != LiveRegMatrix::IK_Free)
+      if (LRM.checkInterference(LI->beginIndex(), LI->endIndex(), PhysReg))
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
