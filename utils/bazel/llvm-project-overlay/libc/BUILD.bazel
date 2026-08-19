@@ -1475,8 +1475,10 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_os",
         ":__support_osutil_exit_hdrs",
-        ":__support_osutil_io",
-    ],
+    ] + select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": [":__support_osutil_io"],
+    }),
 )
 
 libc_support_library(
@@ -1647,6 +1649,7 @@ libc_support_library(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_close",
+        ":__support_osutil_linux_syscall_wrappers_dup2",
         ":__support_osutil_linux_syscall_wrappers_fcntl",
         ":__support_osutil_linux_syscall_wrappers_lseek",
         ":__support_osutil_linux_syscall_wrappers_open",
@@ -8045,9 +8048,9 @@ libc_support_library(
     name = "__support_math_floorf128",
     hdrs = ["src/__support/math/floorf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -11714,7 +11717,9 @@ libc_math_function(
 libc_math_function(
     name = "floorf128",
     additional_deps = [
+        ":__support_cpp_bit",
         ":__support_math_floorf128",
+        ":__support_fputil_float128",
     ],
 )
 
