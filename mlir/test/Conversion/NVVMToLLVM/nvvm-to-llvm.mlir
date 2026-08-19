@@ -9,8 +9,10 @@
 llvm.func @init_mbarrier(%barrier_gen : !llvm.ptr, %barrier : !llvm.ptr<3>, %count : i32, %pred : i1) {
   //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.shared.b64 [$0], $1;", "r,r,b" 
   nvvm.mbarrier.init %barrier, %count, predicate = %pred : !llvm.ptr<3>, i32, i1 
-  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b" 
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b"
   nvvm.mbarrier.init %barrier_gen, %count, predicate = %pred : !llvm.ptr, i32, i1
+  //CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.layout::v1.shared.b64 [$0], $1;", "r,r,b"
+  nvvm.mbarrier.init %barrier, %count layout = 1, predicate = %pred : !llvm.ptr<3>, i32, i1
   llvm.return
 }
 

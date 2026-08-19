@@ -711,3 +711,17 @@ define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
   %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
   ret void
 }
+
+declare void @llvm.nvvm.mbarrier.init(ptr, i32)
+declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3), i32)
+
+; The layout operand is appended, and the .shared variant folds into the
+; pointer-overloaded form.
+; CHECK-LABEL: @nvvm_mbarrier_init_default_layout
+define void @nvvm_mbarrier_init_default_layout(ptr %gen, ptr addrspace(3) %shared, i32 %count) {
+; CHECK: call void @llvm.nvvm.mbarrier.init.p0(ptr %gen, i32 %count, /* layout=v0 */ i32 0)
+; CHECK: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %shared, i32 %count, /* layout=v0 */ i32 0)
+  call void @llvm.nvvm.mbarrier.init(ptr %gen, i32 %count)
+  call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %shared, i32 %count)
+  ret void
+}
