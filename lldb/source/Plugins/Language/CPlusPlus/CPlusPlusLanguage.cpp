@@ -1972,6 +1972,23 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::priority_queue summary provider",
                 "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
+
+  // Keep children visible: the summary only prints the integer value, so
+  // the category pointer (_Mycat / _M_cat) must still be inspectable.
+  TypeSummaryImpl::Flags error_code_flags;
+  error_code_flags.SetCascades(true)
+      .SetSkipPointers(false)
+      .SetSkipReferences(false)
+      .SetDontShowChildren(false)
+      .SetDontShowValue(false)
+      .SetShowMembersOneLiner(false)
+      .SetHideItemNames(false);
+  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_code summary provider",
+                "std::error_code", error_code_flags);
+  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_condition summary provider",
+                "std::error_condition", error_code_flags);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

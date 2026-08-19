@@ -305,3 +305,26 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
   }
   return true;
 }
+
+bool lldb_private::formatters::IsMsvcStlErrorCode(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Myval") != nullptr &&
+           valobj_sp->GetChildMemberWithName("_Mycat") != nullptr;
+  return false;
+}
+
+bool lldb_private::formatters::MsvcStlErrorCodeSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
+  ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Myval");
+  if (!value_sp)
+    value_sp = valobj.GetChildMemberWithName("_M_value");
+  if (!value_sp)
+    return false;
+
+  const char *value = value_sp->GetValueAsCString();
+  if (!value)
+    return false;
+
+  stream.Printf("value=%s", value);
+  return true;
+}

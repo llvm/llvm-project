@@ -142,6 +142,11 @@ SyntheticChildrenFrontEnd *
 MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                     lldb::ValueObjectSP valobj_sp);
 
+// MSVC STL std::error_code / std::error_condition
+bool IsMsvcStlErrorCode(ValueObject &valobj);
+bool MsvcStlErrorCodeSummaryProvider(ValueObject &valobj, Stream &stream,
+                                     const TypeSummaryOptions &options);
+
 } // namespace formatters
 } // namespace lldb_private
 
