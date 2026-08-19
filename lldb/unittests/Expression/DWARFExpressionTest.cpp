@@ -984,28 +984,34 @@ TEST(DWARFExpression, DW_OP_plus_uconst_typed) {
   // The addend is interpreted as the same type as the popped operand
   // (DWARF v5, 2.5.1.4), so the addition wraps within that type.
   // (unsigned char)0xff + 1 == 0
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0xff, DW_OP_convert,
-                                 TypedDwarfDelegate::UnsignedChar,
-                                 DW_OP_plus_uconst, 1, DW_OP_stack_value},
-                                {}, &unit),
-                       ExpectScalar(8, 0, /*sign=*/false));
+  auto result = Evaluate({DW_OP_const1u, 0xff, DW_OP_convert,
+                          TypedDwarfDelegate::UnsignedChar, DW_OP_plus_uconst,
+                          1, DW_OP_stack_value},
+                         {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0, /*sign=*/false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_FALSE(result->GetScalar().IsSigned());
 
   // (signed char)0x7f + 1 == -128
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const1u, 0x7f, DW_OP_convert,
-                                 TypedDwarfDelegate::SignedChar,
-                                 DW_OP_plus_uconst, 1, DW_OP_stack_value},
-                                {}, &unit),
-                       ExpectScalar(8, 0x80, /*sign=*/true));
+  result = Evaluate({DW_OP_const1u, 0x7f, DW_OP_convert,
+                     TypedDwarfDelegate::SignedChar, DW_OP_plus_uconst, 1,
+                     DW_OP_stack_value},
+                    {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0x80, /*sign=*/true));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_TRUE(result->GetScalar().IsSigned());
 
   // The reproducer from the issue: if 0xff + 1 fails to wrap to zero, the
   // subsequent right shift produces 1 instead of 0.
-  EXPECT_THAT_EXPECTED(
+  result =
       Evaluate({DW_OP_const8u, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                 DW_OP_convert, TypedDwarfDelegate::UnsignedChar,
                 DW_OP_plus_uconst, 1, DW_OP_const1u, 7, DW_OP_convert,
                 TypedDwarfDelegate::UnsignedChar, DW_OP_shr, DW_OP_stack_value},
-               {}, &unit),
-      ExpectScalar(8, 0, /*sign=*/false));
+               {}, &unit);
+  ASSERT_THAT_EXPECTED(result, ExpectScalar(8, 0, /*sign=*/false));
+  EXPECT_EQ(result->GetScalar().GetAPSInt().getBitWidth(), 8u);
+  EXPECT_FALSE(result->GetScalar().IsSigned());
 }
 
 TEST(DWARFExpression, DW_OP_and) {
