@@ -798,22 +798,24 @@ getWholeArrayBase(const Fortran::semantics::MaybeExpr &designator,
 }
 
 template <typename Op>
-static void
-genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
-                         Fortran::lower::AbstractConverter &converter,
-                         Fortran::semantics::SemanticsContext &semanticsContext,
-                         Fortran::lower::StatementContext &stmtCtx,
-                         llvm::SmallVectorImpl<mlir::Value> &dataOperands,
-                         mlir::acc::DataClause dataClause, bool structured,
-                         bool implicit, llvm::ArrayRef<mlir::Value> async,
-                         llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
-                         llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
-                         bool setDeclareAttr = false,
-                         AccDataMap *dataMap = nullptr) {
+static void genDataOperandOperations(
+    const Fortran::parser::AccObjectList &objectList,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &stmtCtx,
+    llvm::SmallVectorImpl<mlir::Value> &dataOperands,
+    mlir::acc::DataClause dataClause, bool structured, bool implicit,
+    llvm::ArrayRef<mlir::Value> async,
+    llvm::ArrayRef<mlir::Attribute> asyncDeviceTypes,
+    llvm::ArrayRef<mlir::Attribute> asyncOnlyDeviceTypes,
+    bool setDeclareAttr = false, AccDataMap *dataMap = nullptr,
+    std::function<bool(const Fortran::parser::AccObject &)> filter = {}) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   const bool unwrapBoxAddr = true;
   for (const auto &accObject : objectList.v) {
+    if (filter && !filter(accObject))
+      continue;
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     mlir::Location operandLocation = genOperandLocation(converter, accObject);
@@ -2888,12 +2890,28 @@ static Op createComputeOp(
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
+      // CUDA device variables (DataAttribute::Device) are always present on
+      // the device, no need for a present check - use deviceptr instead.
+      auto isCUDADevice = [](const Fortran::parser::AccObject &obj) {
+        return Fortran::semantics::IsCUDADevice(
+            getSymbolFromAccObject(obj).GetUltimate());
+      };
+      genDataOperandOperations<mlir::acc::DevicePtrOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
+          /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap,
+          /*filter=*/isCUDADevice);
+      // DevicePtrOp requires no exit operation. Track only the PresentOp ones.
       auto crtDataStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap,
+          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
+            return !isCUDADevice(obj);
+          });
       presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                   dataClauseOperands.end());
     } else if (const auto *devicePtrClause =
@@ -3182,13 +3200,29 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *presentClause =
                    std::get_if<Fortran::parser::AccClause::Present>(
                        &clause.u)) {
-      auto crtDataStart = dataClauseOperands.size();
+      // CUDA device variables (DataAttribute::Device) are always present on
+      // the device, no need for a present check - use deviceptr instead.
+      auto isCUDADevice = [](const Fortran::parser::AccObject &obj) {
+        return Fortran::semantics::IsCUDADevice(
+            getSymbolFromAccObject(obj).GetUltimate());
+      };
+      genDataOperandOperations<mlir::acc::DevicePtrOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
+          /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, /*dataMap=*/nullptr,
+          /*filter=*/isCUDADevice);
+      // DevicePtrOp requires no exit operation. Track only the PresentOp ones.
+      auto crtPresentStart = dataClauseOperands.size();
       genDataOperandOperations<mlir::acc::PresentOp>(
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes);
-      presentEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, /*dataMap=*/nullptr,
+          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
+            return !isCUDADevice(obj);
+          });
+      presentEntryOperands.append(dataClauseOperands.begin() + crtPresentStart,
                                   dataClauseOperands.end());
     } else if (const auto *deviceptrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(

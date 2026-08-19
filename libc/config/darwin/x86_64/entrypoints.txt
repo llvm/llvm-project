@@ -224,6 +224,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.sinf
     #libc.src.math.sqrt
     #libc.src.math.sqrtf
+    #libc.src.math.sqrtf128
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf
