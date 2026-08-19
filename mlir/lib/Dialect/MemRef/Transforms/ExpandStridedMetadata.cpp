@@ -216,17 +216,17 @@ public:
 
     MemRefType resultType =
         updateTypeFromDescriptor(subview.getType(), *stridedMetadata);
-    auto reinterpretCast = memref::ReinterpretCastOp::create(
+    auto foldedSubview = memref::ReinterpretCastOp::create(
         rewriter, subview.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
     if (resultType == subview.getType()) {
-      rewriter.replaceOp(subview, reinterpretCast);
+      rewriter.replaceOp(subview, foldedSubview);
       return success();
     }
     // Preserve the original result type expected by existing users.
     rewriter.replaceOpWithNewOp<memref::CastOp>(subview, subview.getType(),
-                                                reinterpretCast);
+                                                foldedSubview);
     return success();
   }
 };
@@ -629,17 +629,17 @@ public:
     MemRefType resultType = reshape.getResultType();
     if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
       resultType = updateTypeFromDescriptor(resultType, *stridedMetadata);
-    auto reinterpretCast = memref::ReinterpretCastOp::create(
+    auto foldedReshape = memref::ReinterpretCastOp::create(
         rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
     if (resultType == reshape.getResultType()) {
-      rewriter.replaceOp(reshape, reinterpretCast);
+      rewriter.replaceOp(reshape, foldedReshape);
       return success();
     }
     // Preserve the original result type expected by existing users.
     rewriter.replaceOpWithNewOp<memref::CastOp>(
-        reshape, reshape.getResultType(), reinterpretCast);
+        reshape, reshape.getResultType(), foldedReshape);
     return success();
   }
 };
