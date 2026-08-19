@@ -6450,9 +6450,9 @@ libc_support_library(
     name = "__support_math_llroundf128",
     hdrs = ["src/__support/math/llroundf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6564,9 +6564,9 @@ libc_support_library(
     name = "__support_math_lroundf128",
     hdrs = ["src/__support/math/lroundf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -12579,6 +12579,8 @@ libc_math_function(
 libc_math_function(
     name = "llroundf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_llroundf128",
     ],
 )
@@ -12789,6 +12791,8 @@ libc_math_function(
 libc_math_function(
     name = "lroundf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_lroundf128",
     ],
 )
