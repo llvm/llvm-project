@@ -8,6 +8,8 @@
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
 // RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies argument types in
 // the same way that Clang does without the library.
