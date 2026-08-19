@@ -15,6 +15,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
@@ -24,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/IR/Module.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -342,6 +344,10 @@ int main(int argc, const char **argv) {
   if (CudaEnabled)
     DeviceCI->LoadRequestedPlugins();
 
+  // '-emit-llvm' prints the IR of each input instead of executing it.
+  const bool EmitLLVMIR =
+      CI->getFrontendOpts().ProgramAction == clang::frontend::EmitLLVM;
+
   std::unique_ptr<clang::Interpreter> Interp;
 
   if (CudaEnabled) {
@@ -361,8 +367,19 @@ int main(int argc, const char **argv) {
 
   bool HasError = false;
 
+  auto ProcessInput = [&](llvm::StringRef Input) -> llvm::Error {
+    if (!EmitLLVMIR)
+      return Interp->ParseAndExecute(Input);
+    auto PTU = Interp->Parse(Input);
+    if (!PTU)
+      return PTU.takeError();
+    if (PTU->TheModule)
+      PTU->TheModule->print(llvm::outs(), /*AAW=*/nullptr);
+    return llvm::Error::success();
+  };
+
   for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input)) {
+    if (auto Err = ProcessInput(input)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       HasError = true;
     }
@@ -413,7 +430,7 @@ int main(int argc, const char **argv) {
                 Input),
             std::error_code());
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-      } else if (auto Err = Interp->ParseAndExecute(Input)) {
+      } else if (auto Err = ProcessInput(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       }
 
