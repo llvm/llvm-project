@@ -135,7 +135,7 @@ define void @bound_is_trunc_of_sibling_loop_iv_multi_exit(ptr %a, ptr %b, i64 %n
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 508
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IV_1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IV_1_LCSSA]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 2
