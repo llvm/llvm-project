@@ -41,8 +41,9 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret i32 [[TMP21]]
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @sudot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -138,8 +139,9 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH:%.*]]
-; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret i32 [[TMP21]]
 ;
 ; CHECK-NOI8MM-LABEL: define i32 @usdot(
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
@@ -391,7 +393,7 @@ for.exit:
 
 !7 = distinct !{!7, !8, !9, !10}
 !8 = !{!"llvm.loop.mustprogress"}
-!9 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!10 = !{!"llvm.loop.vectorize.enable", i1 true}
+!9 = !{!"llvm.loop.vectorize.predicate.enable"}
+!10 = !{!"llvm.loop.vectorize.enable"}
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 attributes #1 = { "target-features"="+neon" }

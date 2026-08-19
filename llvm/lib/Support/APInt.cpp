@@ -109,11 +109,6 @@ APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
-APInt::APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[])
-    : BitWidth(numBits) {
-  initFromArray(ArrayRef(bigVal, numWords));
-}
-
 APInt::APInt(unsigned numbits, StringRef Str, uint8_t radix)
     : BitWidth(numbits) {
   fromString(numbits, Str, radix);
@@ -3239,7 +3234,7 @@ APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   return clmulr(LHS, RHS).lshr(1);
 }
 
-APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
+APInt llvm::APIntOps::pext(const APInt &Val, const APInt &Mask) {
   unsigned BW = Val.getBitWidth();
   assert(BW == Mask.getBitWidth() && "Operand mismatch");
   APInt Result = APInt::getZero(BW);
@@ -3249,7 +3244,7 @@ APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
   return Result;
 }
 
-APInt llvm::APIntOps::expandBits(const APInt &Val, const APInt &Mask) {
+APInt llvm::APIntOps::pdep(const APInt &Val, const APInt &Mask) {
   unsigned BW = Val.getBitWidth();
   assert(BW == Mask.getBitWidth() && "Operand mismatch");
   APInt Result = APInt::getZero(BW);

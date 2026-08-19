@@ -323,7 +323,7 @@ define <2 x i8> @shl1_decrement_vec(<2 x i8> %x) {
 
 define i32 @mul_bool(i32 %x, i1 %y) !prof !0 {
 ; CHECK-LABEL: @mul_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[Y:%.*]], i32 [[X:%.*]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %z = zext i1 %y to i32
@@ -357,7 +357,7 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %px, <2 x i1> %y) {
 
 define i32 @mul_sext_bool(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool(
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -369,7 +369,7 @@ define i32 @mul_sext_bool_use(i1 %x) !prof !0 {
 ; CHECK-LABEL: @mul_sext_bool_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -436,7 +436,7 @@ define i32 @mul_bools_use3(i1 %x, i1 %y) !prof !0 {
 ; CHECK-NEXT:    call void @use32(i32 [[ZX]])
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i32 [[ZY]], i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %zx = zext i1 %x to i32
@@ -745,7 +745,7 @@ define i32 @not_lowbit_mul(i32 %a, i32 %b) {
 define i32 @signsplat_mul(i32 %x) !prof !0 {
 ; CHECK-LABEL: @signsplat_mul(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[ISNEG]], i32 -42, i32 0, !prof [[PROF1]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %ash = ashr i32 %x, 31
@@ -2233,6 +2233,290 @@ define i16 @mul_udiv_zext_uneq(i8 %x) {
   %zext = zext i8 %div to i16
   %mul = mul i16 %zext, 15
   ret i16 %mul
+}
+
+
+
+; (shl  X, C1) * (select cond, C2, C3) --> X * (select cond, C2<<C1, C3<<C1)
+define i16 @shl_select_mul(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl  i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul  i16 %shl, %sel
+  ret i16 %mul
+}
+
+; (select cond, C2, C3) * (shl  X, C1) --> commuted outer mul
+define i16 @shl_select_commuted(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl  i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul  i16 %sel, %shl
+  ret i16 %mul
+}
+
+
+; One select arm is zero (reproduced from issue report)
+define  i64 @shl_select_zero_arm(i64 %0, i1 %1) {
+; CHECK-LABEL: @shl_select_zero_arm(
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1:%.*]], i64 4, i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP0:%.*]], [[TMP3]]
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %3 = select i1 %1, i64 2, i64 0
+  %4 = shl i64 %0, 1
+  %5 = mul i64 %4, %3
+  ret i64 %5
+}
+
+; (mul  X, C1) * (select cond, C2, C3) --> X * (select cond, C2*C1, C3*C1)
+define i16 @mul_select_mul(i16 %x, i1 %cond) {
+; CHECK-LABEL: @mul_select_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 12, i16 6
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %mul1 = mul  i16 %x, 3
+  %sel  = select i1 %cond, i16 4, i16 2
+  %mul  = mul  i16 %mul1, %sel
+  ret i16 %mul
+}
+
+
+; Flag tests
+
+; No flags on outer mul — no flags on result
+define i16 @shl_select_no_flags(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_no_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl  nsw i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul i16 %shl, %sel
+  ret i16 %mul
+}
+
+; Only nuw on outer mul - no flag on result
+define i16 @shl_select_nuw_only(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_nuw_only(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl  i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul nuw i16 %shl, %sel
+  ret i16 %mul
+}
+
+
+
+; Both inner shl and outer mul carry nuw nsw —  flags on result
+define i16 @shl_select_both_nuw_nsw(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_both_nuw_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 20, i16 12
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl nuw nsw i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul nuw nsw i16 %shl, %sel
+  ret i16 %mul
+}
+
+; Folded constant hits the minimum signed value — nsw must not propagate
+define i16 @shl_select_nsw_min_signed_value(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_nsw_min_signed_value(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i16 -32768, i16 200
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl  nsw i16 %x, 1
+  %sel = select i1 %cond, i16 16384, i16 100
+  %mul = mul  nsw i16 %shl, %sel
+  ret i16 %mul
+}
+
+; Vector tests — splat
+
+; shl splat vector
+define <4 x i16> @shl_select_vec_splat(<4 x i16> %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_vec_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <4 x i16> splat (i16 20), <4 x i16> splat (i16 12)
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %shl = shl  <4 x i16> %x, splat (i16 2)
+  %sel = select i1 %cond, <4 x i16> splat (i16 5), <4 x i16> splat (i16 3)
+  %mul = mul  <4 x i16> %shl, %sel
+  ret <4 x i16> %mul
+}
+
+; mul splat vector
+define <4 x i16> @mul_select_vec_splat(<4 x i16> %x, i1 %cond) {
+; CHECK-LABEL: @mul_select_vec_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <4 x i16> splat (i16 12), <4 x i16> splat (i16 6)
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %mul1 = mul  <4 x i16> %x, splat (i16 3)
+  %sel  = select i1 %cond,  <4 x i16> splat (i16 4), <4 x i16> splat (i16 2)
+  %mul  = mul  <4 x i16> %mul1, %sel
+  ret <4 x i16> %mul
+}
+
+; splat with poison element
+define <4 x i16> @shl_select_vector_with_poison(<4 x i16> %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_vector_with_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <4 x i16> <i16 20, i16 poison, i16 poison, i16 20>, <4 x i16> <i16 12, i16 poison, i16 poison, i16 12>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %shl = shl  <4 x i16> %x, <i16 2, i16 poison, i16 poison, i16 2>
+  %sel = select i1 %cond, <4 x i16> <i16 5, i16 poison, i16 5, i16 5>, <4 x i16> <i16 3, i16 poison, i16 3, i16 3>
+  %mul = mul  <4 x i16> %shl, %sel
+  ret <4 x i16> %mul
+}
+
+; non-splat vector
+
+define <4 x i16> @shl_select_vec_non_splat(<4 x i16> %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_vec_non_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], <4 x i16> <i16 10, i16 12, i16 56, i16 16>, <4 x i16> <i16 4, i16 16, i16 48, i16 128>
+; CHECK-NEXT:    [[MUL:%.*]] = mul <4 x i16> [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %shl = shl  <4 x i16> %x, <i16 1, i16 2, i16 3, i16 4>
+  %sel = select i1 %cond, <4 x i16> <i16 5, i16 3, i16 7, i16 1>, <4 x i16> <i16 2, i16 4, i16 6, i16 8>
+  %mul = mul  <4 x i16> %shl, %sel
+  ret <4 x i16> %mul
+}
+
+; Negative tests — transform should NOT fire
+
+declare void @use16(i16)
+; shl has extra use
+define i16 @shl_select_extra_use_shl(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_extra_use_shl(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i16 [[X:%.*]], 2
+; CHECK-NEXT:    call void @use16(i16 [[SHL]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i16 5, i16 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[SHL]], [[SEL]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl nuw nsw i16 %x, 2
+  call void @use16(i16 %shl)
+  %sel = select i1 %cond, i16 5, i16 3
+  %mul = mul nuw nsw i16 %shl, %sel
+  ret i16 %mul
+}
+
+; select has extra use
+define i16 @shl_select_extra_use_sel(i16 %x, i1 %cond) {
+; CHECK-LABEL: @shl_select_extra_use_sel(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i16 5, i16 3
+; CHECK-NEXT:    call void @use16(i16 [[SEL]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[SHL]], [[SEL]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %shl = shl nuw nsw i16 %x, 2
+  %sel = select i1 %cond, i16 5, i16 3
+  call void @use16(i16 %sel)
+  %mul = mul nuw nsw i16 %shl, %sel
+  ret i16 %mul
+}
+
+; inner mul has extra use
+define i16 @mul_select_extra_use_mul(i16 %x, i1 %cond) {
+; CHECK-LABEL: @mul_select_extra_use_mul(
+; CHECK-NEXT:    [[MUL1:%.*]] = mul nuw nsw i16 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use16(i16 [[MUL1]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i16 9, i16 5
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i16 [[MUL1]], [[SEL]]
+; CHECK-NEXT:    ret i16 [[MUL]]
+;
+  %mul1 = mul nuw nsw i16 %x, 3
+  call void @use16(i16 %mul1)
+  %sel  = select i1 %cond, i16 9, i16 5
+  %mul  = mul nuw nsw i16 %mul1, %sel
+  ret i16 %mul
+}
+
+define i16 @mul_add_one(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @mul_add_one(
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i16 @mul_add_one_extra_use(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @mul_add_one_extra_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use16(i16 [[ADD]])
+; CHECK-NEXT:    [[RET:%.*]] = shl i16 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  call void @use16(i16 %add)
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define <4 x i16> @mul_add_one_vec(<4 x i16> range(i16 0, 2) %x, <4 x i16> %y) {
+; CHECK-LABEL: @mul_add_one_vec(
+; CHECK-NEXT:    [[MUL:%.*]] = shl <4 x i16> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i16> [[MUL]]
+;
+  %add = add <4 x i16> %x, splat (i16 1)
+  %mul  = mul <4 x i16> %y, %add
+  ret <4 x i16> %mul
+}
+
+define i16 @neg_mul_add_one_no_range(i16 %x, i16 %y) {
+; CHECK-LABEL: @neg_mul_add_one_no_range(
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 1
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i16 @neg_mul_add_two(i16 range(i16 0, 2) %x, i16 %y) {
+; CHECK-LABEL: @neg_mul_add_two(
+; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[RET:%.*]] = mul i16 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+  %add = add i16 %x, 2
+  %ret = mul i16 %add, %y
+  ret i16 %ret
+}
+
+define i1 @neg_mul_add_one_i1(i1 %x, i1 %y) {
+; CHECK-LABEL: @neg_mul_add_one_i1(
+; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %add = add i1 %x, 1
+  %ret = mul i1 %add, %y
+  ret i1 %ret
 }
 
 !0 = !{!"function_entry_count", i64 1000}

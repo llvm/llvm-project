@@ -12,7 +12,7 @@ subroutine sb1(arr)
   !$omp end workshare
 !CHECK: }
   !$omp end parallel
-!CHECK: }
+!CHECK: } {omp.combined}
 end subroutine
 
 !CHECK-LABEL: func @_QPsb2
@@ -26,7 +26,7 @@ subroutine sb2(arr)
   !$omp end workshare nowait
 !CHECK: }
   !$omp end parallel
-!CHECK: }
+!CHECK: } {omp.combined}
 end subroutine
 
 !CHECK-LABEL: func @_QPsb3
@@ -38,5 +38,5 @@ subroutine sb3(arr)
     arr = 0
   !$omp end parallel workshare
 !CHECK: }
-!CHECK: }
+!CHECK: } {omp.combined}
 end subroutine

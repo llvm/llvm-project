@@ -16,7 +16,9 @@
 
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <memory>
 
 namespace llvm {
 namespace abi {
@@ -80,9 +82,34 @@ protected:
   LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
                                            bool ByVal = true) const;
   LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
+
+  /// Apply rules for classifying return types that are common to all targets.
+  LLVM_ABI bool maybeCommonClassifyReturnType(FunctionInfo &FI) const;
 };
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+  Last = AVX512 // must be last
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                       bool Has64BitPointers, const ABICompatInfo &Compat);
+
+enum class AArch64ABIKind {
+  AAPCS = 0,
+  DarwinPCS,
+  Win64,
+  AAPCSSoft,
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createAArch64TargetInfo(TypeBuilder &TB, AArch64ABIKind Kind);
 
 } // namespace abi
 } // namespace llvm

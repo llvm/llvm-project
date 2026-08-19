@@ -38,8 +38,20 @@ namespace mlir {
 
 using namespace mlir;
 
-static constexpr LLVM::GEPNoWrapFlags kNoWrapFlags =
-    LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
+/// Returns GEP no-wrap flags for a memref load/store.
+/// inbounds is always valid when indices are in-bounds per the memref spec.
+/// nuw requires every index*stride term to not unsigned-wrap, which holds iff
+/// all strides are statically non-negative. Negative strides would make the
+/// intermediate mul nuw overflow (e.g., idx * (-1 as u64) wraps for idx > 0).
+static LLVM::GEPNoWrapFlags getLoadStoreNoWrapFlags(MemRefType type) {
+  auto [strides, offset] = type.getStridesAndOffset();
+  LLVM::GEPNoWrapFlags flags = LLVM::GEPNoWrapFlags::inbounds;
+  if (llvm::all_of(strides, [](int64_t s) {
+        return !ShapedType::isDynamic(s) && s >= 0;
+      }))
+    flags = flags | LLVM::GEPNoWrapFlags::nuw;
+  return flags;
+}
 
 namespace {
 
@@ -964,12 +976,13 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
-                                         adaptor.getMemref(),
-                                         adaptor.getIndices(), kNoWrapFlags);
+    Value dataPtr = getStridedElementPtr(
+        rewriter, loadOp.getLoc(), type, adaptor.getMemref(),
+        adaptor.getIndices(), getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal(),
+        /*isInvariant=*/loadOp.getInvariant());
     return success();
   }
 };
@@ -987,9 +1000,9 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
-                             adaptor.getIndices(), kNoWrapFlags);
+    Value dataPtr = getStridedElementPtr(
+        rewriter, op.getLoc(), type, adaptor.getMemref(), adaptor.getIndices(),
+        getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
                                                op.getAlignment().value_or(0),
                                                false, op.getNontemporal());

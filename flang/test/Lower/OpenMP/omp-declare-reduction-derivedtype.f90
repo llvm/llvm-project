@@ -41,7 +41,7 @@ contains
   end function func
 
 end module maxtype_mod
-!CHECK:  omp.declare_reduction @red_add_max : !fir.ref<[[MAXTYPE:.*]]> {{.*}} alloc {
+!CHECK:  omp.declare_reduction @_QQMmaxtype_modFfuncred_add_max_byref_rec__QMmaxtype_modTmaxtype : !fir.ref<[[MAXTYPE:.*]]> {{.*}} alloc {
 !CHECK:  %[[ALLOCA:.*]] = fir.alloca [[MAXTYPE:.*]]
 !CHECK:  omp.yield(%[[ALLOCA]] : !fir.ref<[[MAXTYPE]]>)
 !CHECK:  } init {

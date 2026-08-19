@@ -14,10 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint16_t, ntohs, (uint16_t netshort)) {
-  if constexpr (Endian::IS_LITTLE)
-    return __builtin_bswap16(netshort);
-  else
-    return netshort;
+  return Endian::from_big_endian(netshort);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

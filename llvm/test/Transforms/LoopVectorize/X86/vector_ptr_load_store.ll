@@ -121,7 +121,7 @@ define i8 @test_consecutive_ptr_load() readonly {
 ;; However, we should not take unconsecutive loads of pointers into account.
 ; CHECK: test_nonconsecutive_ptr_load
 ; CHECK: LV: The Smallest and Widest types: 16 / 64 bits.
-; CHECK: LV: Selecting VF: 4
+; CHECK: LV: Selecting VF: 1
 define void @test_nonconsecutive_ptr_load() {
   br label %1
 

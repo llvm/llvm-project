@@ -59,3 +59,37 @@ define i32 @udiv_by_3(i32 %x) nounwind {
   %div = udiv i32 %x, 3
   ret i32 %div
 }
+
+; Even divisors with 33-bit magic. On AArch64 these use umulh (i32->i64
+; zero-extension is free).
+define i32 @udiv_by_14(i32 %x) nounwind {
+; CHECK-LABEL: udiv_by_14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #1342177280 // =0x50000000
+; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    movk x8, #9362, lsl #32
+; CHECK-NEXT:    movk x8, #4681, lsl #48
+; CHECK-NEXT:    umulh x0, x9, x8
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    ret
+  %div = udiv i32 %x, 14
+  ret i32 %div
+}
+
+; Vector udiv is unaffected by the free-zext scalar rewrite: <4 x i32> keeps
+; the even-divisor rewrite (this function is unchanged by the follow-up commit).
+define <4 x i32> @udiv_by_14_vec(<4 x i32> %x) nounwind {
+; CHECK-LABEL: udiv_by_14_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #9363 // =0x2493
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
+; CHECK-NEXT:    movk w8, #37449, lsl #16
+; CHECK-NEXT:    dup v1.4s, w8
+; CHECK-NEXT:    umull2 v2.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #2
+; CHECK-NEXT:    ret
+  %div = udiv <4 x i32> %x, <i32 14, i32 14, i32 14, i32 14>
+  ret <4 x i32> %div
+}

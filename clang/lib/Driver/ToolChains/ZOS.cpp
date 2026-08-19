@@ -28,7 +28,7 @@ ZOS::ZOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 ZOS::~ZOS() {}
 
 void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args, StringRef BoundArch,
+                                ArgStringList &CC1Args, BoundArch BA,
                                 Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
@@ -140,26 +140,38 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-b");
   CmdArgs.push_back(Args.MakeArgString(LinkerOptions));
 
+  CmdArgs.push_back("-e");
+  CmdArgs.push_back("CELQSTRT");
+  CmdArgs.push_back("-O");
+  CmdArgs.push_back("CELQSTRT");
   if (!IsSharedLib) {
-    CmdArgs.push_back("-e");
-    CmdArgs.push_back("CELQSTRT");
-
-    CmdArgs.push_back("-O");
-    CmdArgs.push_back("CELQSTRT");
-
     CmdArgs.push_back("-u");
     CmdArgs.push_back("CELQMAIN");
   }
 
   // Generate side file if -shared option is present.
   if (IsSharedLib) {
-    StringRef OutputName = Output.getFilename();
-    // Strip away the last file suffix in presence from output name and add
-    // a new .x suffix.
-    SmallString<128> SideDeckName = OutputName;
-    llvm::sys::path::replace_extension(SideDeckName, "x");
-    CmdArgs.push_back("-x");
-    CmdArgs.push_back(Args.MakeArgString(SideDeckName));
+    // Check if user has specified -Wl,-x option
+    bool HasSideDeck = false;
+    for (auto *Arg : Args.filtered(options::OPT_Wl_COMMA)) {
+      if (std::find_if(Arg->getValues().begin(), Arg->getValues().end(),
+                       [](StringRef ArgValue) {
+                         return ArgValue.starts_with("-x");
+                       }) != Arg->getValues().end()) {
+        HasSideDeck = true;
+        break;
+      }
+    }
+    // Only add default -x option if user hasn't specified one
+    if (!HasSideDeck) {
+      StringRef OutputName = Output.getFilename();
+      // Strip away the last file suffix in presence from output name and add
+      // a new .x suffix.
+      SmallString<128> SideDeckName = OutputName;
+      llvm::sys::path::replace_extension(SideDeckName, "x");
+      CmdArgs.push_back("-x");
+      CmdArgs.push_back(Args.MakeArgString(SideDeckName));
+    }
   } else {
     // We need to direct side file to /dev/null to suppress linker warning when
     // the object file contains exported symbols, and -shared or

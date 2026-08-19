@@ -11,7 +11,6 @@ CHECK-NEXT:	AcquiredBefore
 CHECK-NEXT:	Alias
 CHECK-NEXT:	Aligned
 CHECK-NEXT:	AnalyzerNoReturn
-CHECK-NEXT:	Annotate
 CHECK-NEXT:	ArcWeakrefUnavailable
 CHECK-NEXT:	AvailableOnlyInDefaultEvalMethod
 CHECK-NEXT:	Blocks
@@ -22,7 +21,6 @@ CHECK-NEXT:	CUDAConstant
 CHECK-NEXT:	CUDADevice
 CHECK-NEXT:	CUDAGlobal
 CHECK-NEXT:	CUDAHost
-CHECK-NEXT:	CUDALaunchBounds
 CHECK-NEXT:	CUDAShared
 CHECK-NEXT:	Capability
 CHECK-NEXT:	Common
@@ -69,7 +67,6 @@ CHECK-NEXT:	ObjCPreciseLifetime
 CHECK-NEXT:	ObjCRequiresPropertyDefs
 CHECK-NEXT:	ObjCReturnsInnerPointer
 CHECK-NEXT:	ObjCRootClass
-CHECK-NEXT:	OverflowBehavior
 CHECK-NEXT:	Packed
 CHECK-NEXT:	Pascal
 CHECK-NEXT:	PointerFieldProtection
@@ -91,4 +88,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 85
+CHECK-NEXT: Total: 82

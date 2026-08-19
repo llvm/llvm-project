@@ -473,7 +473,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     } -> !omp.iterated<!llvm.ptr>
 
     %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "data"}
-    omp.target depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) depend(taskdependin -> %it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
       omp.terminator
     }
     llvm.return

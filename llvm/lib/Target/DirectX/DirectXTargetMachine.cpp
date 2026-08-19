@@ -23,6 +23,7 @@
 #include "DXILOpLowering.h"
 #include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
+#include "DXILRemoveUnusedResources.h"
 #include "DXILResourceAccess.h"
 #include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
@@ -69,8 +70,10 @@ LLVMInitializeDirectXTarget() {
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
+  initializeDXContainerPDBPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
+  initializeDXILRemoveUnusedResourcesLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILResourceImplicitBindingLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
@@ -121,6 +124,7 @@ public:
     }
     addPass(createDXILMemIntrinsicsLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
+    addPass(createDXILRemoveUnusedResourcesLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
@@ -178,6 +182,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
       PM.add(createDXContainerGlobalsPass());
+      PM.add(createDXContainerPDBPass());
 
       if (!MMIWP)
         MMIWP = new MachineModuleInfoWrapperPass(this);

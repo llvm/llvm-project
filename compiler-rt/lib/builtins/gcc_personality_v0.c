@@ -22,8 +22,8 @@
 #endif
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)
+#define WIN32_LEAN_AND_MEAN 1
 #include <windows.h>
-#include <winnt.h>
 
 EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
                                             PDISPATCHER_CONTEXT,

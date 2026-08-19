@@ -117,7 +117,7 @@ body:             |
     ; RV64I-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C4]](s64)
     ; RV64I-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[LSHR2]], [[C3]]
     ; RV64I-NEXT: [[OR4:%[0-9]+]]:_(s64) = G_OR [[OR3]], [[AND3]]
-    ; RV64I-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16777216
+    ; RV64I-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 4278190080
     ; RV64I-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
     ; RV64I-NEXT: [[AND4:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C5]]
     ; RV64I-NEXT: [[SHL3:%[0-9]+]]:_(s64) = G_SHL [[AND4]], [[C6]](s64)

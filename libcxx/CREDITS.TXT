@@ -98,7 +98,7 @@ E: lebrungrandt@ornl.gov
 D: Implementation of mdspan.
 
 N: Microsoft Corporation
-D: Contributed floating-point to_chars.
+D: Contributed floating-point to_chars and an implementation of exception_ptr for Windows.
 
 N: Bruce Mitchener, Jr.
 E: bruce.mitchener@gmail.com

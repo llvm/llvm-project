@@ -20,13 +20,19 @@
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -82,10 +88,9 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       if (!CA)
         continue;
 
-      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
-        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
-          continue;
-      }
+      if (!all_of(CA->operands(),
+                  [](const Use &Op) { return isa<BlockAddress>(Op); }))
+        continue;
       Targets.push_back(&Global);
     }
 
@@ -316,4 +321,33 @@ LLVMInitializeBPFAsmPrinter() {
   RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());
+}
+
+PreservedAnalyses BPFAsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

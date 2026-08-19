@@ -365,6 +365,10 @@ static unsigned getInvertedBranchOp(unsigned BrOp) {
     return RISCV::QC_E_BGEUI;
   case RISCV::PseudoLongQC_E_BGEUI:
     return RISCV::QC_E_BLTUI;
+  case RISCV::PseudoLongCV_BEQIMM:
+    return RISCV::CV_BNEIMM;
+  case RISCV::PseudoLongCV_BNEIMM:
+    return RISCV::CV_BEQIMM;
   }
 }
 
@@ -602,6 +606,8 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case RISCV::PseudoLongQC_BGEI:
   case RISCV::PseudoLongQC_BLTUI:
   case RISCV::PseudoLongQC_BGEUI:
+  case RISCV::PseudoLongCV_BEQIMM:
+  case RISCV::PseudoLongCV_BNEIMM:
     expandQCLongCondBrImm(MI, CB, Fixups, STI, 4);
     MCNumEmitted += 2;
     return;

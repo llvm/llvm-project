@@ -8,6 +8,7 @@
 
 #include "Win64EHDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -19,37 +20,40 @@ using namespace llvm::object;
 using namespace llvm::Win64EH;
 
 // clang-format off
-const EnumEntry<unsigned> UnwindFlags[] = {
-  { "ExceptionHandler", UNW_ExceptionHandler },
-  { "TerminateHandler", UNW_TerminateHandler },
-  { "ChainInfo"       , UNW_ChainInfo        },
-  { "Large"           , UNW_FlagLarge        }
+constexpr EnumStringDef<unsigned> UnwindFlagDefs[] = {
+  {{"ExceptionHandler"}, UNW_ExceptionHandler},
+  {{"TerminateHandler"}, UNW_TerminateHandler},
+  {{"ChainInfo"}       , UNW_ChainInfo       },
+  {{"Large"}           , UNW_FlagLarge       }
 };
+constexpr auto UnwindFlags = BUILD_ENUM_STRINGS(UnwindFlagDefs);
 
-const EnumEntry<unsigned> EpilogFlags[] = {
-  { "ParentFragmentTransfer", EPILOG_PARENT_FRAGMENT_TRANSFER },
-  { "Large"                 , EPILOG_INFO_LARGE               }
+constexpr EnumStringDef<unsigned> EpilogFlagDefs[] = {
+  {{"ParentFragmentTransfer"}, EPILOG_PARENT_FRAGMENT_TRANSFER},
+  {{"Large"}                 , EPILOG_INFO_LARGE              }
 };
+constexpr auto EpilogFlags = BUILD_ENUM_STRINGS(EpilogFlagDefs);
+
+constexpr EnumStringDef<unsigned> UnwindOpInfoDefs[] = {
+  {{"RAX"},  0},
+  {{"RCX"},  1},
+  {{"RDX"},  2},
+  {{"RBX"},  3},
+  {{"RSP"},  4},
+  {{"RBP"},  5},
+  {{"RSI"},  6},
+  {{"RDI"},  7},
+  {{"R8"},   8},
+  {{"R9"},   9},
+  {{"R10"}, 10},
+  {{"R11"}, 11},
+  {{"R12"}, 12},
+  {{"R13"}, 13},
+  {{"R14"}, 14},
+  {{"R15"}, 15}
+};
+constexpr auto UnwindOpInfo = BUILD_ENUM_STRINGS(UnwindOpInfoDefs);
 // clang-format on
-
-const EnumEntry<unsigned> UnwindOpInfo[] = {
-  { "RAX",  0 },
-  { "RCX",  1 },
-  { "RDX",  2 },
-  { "RBX",  3 },
-  { "RSP",  4 },
-  { "RBP",  5 },
-  { "RSI",  6 },
-  { "RDI",  7 },
-  { "R8",   8 },
-  { "R9",   9 },
-  { "R10", 10 },
-  { "R11", 11 },
-  { "R12", 12 },
-  { "R13", 13 },
-  { "R14", 14 },
-  { "R15", 15 }
-};
 
 static uint64_t getOffsetOfLSDA(const UnwindInfo& UI) {
   return static_cast<const char*>(UI.getLanguageSpecificData())
@@ -346,11 +350,11 @@ void Dumper::printUnwindInfo(const Context &Ctx, const coff_section *Section,
                              off_t Offset, const UnwindInfo &UI) {
   DictScope UIS(SW, "UnwindInfo");
   SW.printNumber("Version", UI.getVersion());
-  SW.printFlags("Flags", UI.getFlags(), ArrayRef(UnwindFlags));
+  SW.printFlags("Flags", UI.getFlags(), EnumStrings(UnwindFlags));
   SW.printNumber("PrologSize", UI.PrologSize);
   if (UI.getFrameRegister()) {
     SW.printEnum("FrameRegister", UI.getFrameRegister(),
-                 ArrayRef(UnwindOpInfo));
+                 EnumStrings(UnwindOpInfo));
     SW.printHex("FrameOffset", UI.getFrameOffset());
   } else {
     SW.printString("FrameRegister", StringRef("-"));
@@ -518,7 +522,7 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
   const DecodedUnwindInfoV3 &Info = *InfoOrErr;
 
   SW.printNumber("Version", Info.Version);
-  SW.printFlags("Flags", Info.Flags, ArrayRef(UnwindFlags));
+  SW.printFlags("Flags", Info.Flags, EnumStrings(UnwindFlags));
   SW.printHex("SizeOfProlog", Info.SizeOfProlog);
   SW.printNumber("PayloadWords", Info.PayloadWords);
   SW.printNumber("NumberOfOps", Info.NumberOfOps);
@@ -551,11 +555,13 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
   }
 
   // Print epilog descriptors
+  uint8_t BaseEpilogFlags = 0;
+  bool HaveBaseEpilog = false;
   for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
     const DecodedEpilogV3 &Epi = Info.Epilogs[I];
 
     DictScope ES(SW, formatv("Epilog [{0}]", I).str());
-    SW.printFlags("Flags", Epi.Flags, ArrayRef(EpilogFlags));
+    SW.printFlags("Flags", Epi.Flags, EnumStrings(EpilogFlags));
     // Format the signed EpilogOffset as hex with explicit sign so negative
     // tail-relative offsets remain readable (e.g. "-0x14" rather than
     // "0xFFFFFFEC").
@@ -576,10 +582,18 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
       } else {
-        // Surface the values inherited from the previous epilog so a
+        // Per the V3 spec, Flags bits 0 and 1 are producer-replicated into an
+        // inherited descriptor, so they must match the base epilog. Warn if a
+        // non-compliant producer left them inconsistent.
+        if (HaveBaseEpilog && (Epi.Flags & 0x03) != (BaseEpilogFlags & 0x03))
+          WithColor::warning(errs())
+              << format("inherited epilog flags (0x%X) do not match base "
+                        "epilog flags (0x%X)\n",
+                        Epi.Flags & 0x03, BaseEpilogFlags & 0x03);
+        // Surface the values inherited from the base epilog so a
         // reader can see what the unwinder will actually execute.
         SW.startLine() << format(
-            "(inherits from previous epilog: FirstOp=0x%X, "
+            "(inherits from base epilog: FirstOp=0x%X, "
             "IpOffsetOfLastInstruction=0x%X, %u ops)\n",
             Epi.FirstOp, static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),
             static_cast<unsigned>(Epi.IpOffsets.size()));
@@ -589,6 +603,10 @@ void Dumper::printUnwindInfoV3(const Context &Ctx,
       SW.printHex("IpOffsetOfLastInstruction", Epi.IpOffsetOfLastInstruction);
       printWODSequence(SW, OS, Info.WODPool, Epi.FirstOp,
                        ArrayRef(Epi.IpOffsets), Epi.NumberOfOps);
+      // This is a full descriptor; it becomes the base that subsequent
+      // inherited descriptors replicate their flags from.
+      BaseEpilogFlags = Epi.Flags;
+      HaveBaseEpilog = true;
     }
   }
 

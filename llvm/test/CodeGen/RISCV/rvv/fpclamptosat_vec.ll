@@ -7090,16 +7090,16 @@ define <4 x i32> @ustest_f16i32_nsat(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    srai a1, s4, 63
 ; CHECK-NOV-NEXT:    srai a2, s1, 63
-; CHECK-NOV-NEXT:    and a2, a2, s1
+; CHECK-NOV-NEXT:    and a2, s1, a2
 ; CHECK-NOV-NEXT:    srai a3, s2, 63
-; CHECK-NOV-NEXT:    and a1, a1, s4
+; CHECK-NOV-NEXT:    and a1, s4, a1
 ; CHECK-NOV-NEXT:    sgtz a4, a2
-; CHECK-NOV-NEXT:    and a3, a3, s2
+; CHECK-NOV-NEXT:    and a3, s2, a3
 ; CHECK-NOV-NEXT:    neg a4, a4
 ; CHECK-NOV-NEXT:    and a2, a4, a2
 ; CHECK-NOV-NEXT:    srai a4, a0, 63
 ; CHECK-NOV-NEXT:    sgtz a5, a3
-; CHECK-NOV-NEXT:    and a0, a4, a0
+; CHECK-NOV-NEXT:    and a0, a0, a4
 ; CHECK-NOV-NEXT:    sgtz a4, a1
 ; CHECK-NOV-NEXT:    neg a5, a5
 ; CHECK-NOV-NEXT:    and a3, a5, a3

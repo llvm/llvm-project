@@ -36,6 +36,12 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+/// Write mask covering all four components of a UAV element. Typed UAV stores
+/// (textures and typed buffers) must always use this mask - the DXIL validator
+/// rejects anything narrower. Only raw and / structured buffer stores may use a
+/// partial mask.
+static constexpr uint8_t TypedUAVStoreWriteMask = 0xF;
+
 namespace {
 class OpLowerer {
   Module &M;
@@ -177,7 +183,7 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsicWithoutFolding(
         Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;
@@ -351,7 +357,7 @@ public:
           (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
-          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
+          ConstantInt::get(Int32Ty, Binding.BindingID), IndexOp,
           ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -633,6 +639,16 @@ public:
       Value *MipLevel = CI->getArgOperand(2);
       Value *Offsets = CI->getArgOperand(3);
 
+      // A UAV descriptor binds a single mip slice, so there is no mip to select
+      // in the case of a UAV. Multisampled UAVs are the exception: the slot
+      // carries a sample index and stays live.
+      auto *HandleTy = cast<TargetExtType>(CI->getArgOperand(0)->getType());
+      dxil::ResourceTypeInfo &RTI = DRTM[HandleTy];
+      dxil::ResourceKind Kind = RTI.getResourceKind();
+      if (RTI.isUAV() && Kind != dxil::ResourceKind::Texture2DMS &&
+          Kind != dxil::ResourceKind::Texture2DMSArray)
+        MipLevel = UndefValue::get(Int32Ty);
+
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
@@ -879,6 +895,66 @@ public:
     return false;
   }
 
+  /// Splits the value operand of a resource store into its (at most four)
+  /// scalar components. Slots beyond the length of `Data` are filled with
+  /// `undef` when `FillWithUndef` is set (raw and structured buffers), or with
+  /// the first component otherwise (typed UAVs, which must write all four
+  /// components - repeating the first one matches DXC).
+  static std::array<Value *, 4> splitStoreData(IRBuilder<> &IRB, Value *Data,
+                                               uint64_t NumElements,
+                                               bool FillWithUndef) {
+    Type *DataTy = Data->getType();
+    Type *ScalarTy = DataTy->getScalarType();
+
+    std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
+    if (DataTy == ScalarTy)
+      DataElements[0] = Data;
+    else {
+      // Since we're post-scalarizer, if we see a vector here it's likely
+      // constructed solely for the argument of the store. Just use the scalar
+      // values from before they're inserted into the temporary.
+      auto *IEI = dyn_cast<InsertElementInst>(Data);
+      while (IEI) {
+        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
+        if (!IndexOp)
+          break;
+        size_t IndexVal = IndexOp->getZExtValue();
+        assert(IndexVal < 4 && "Too many elements for resource store");
+        DataElements[IndexVal] = IEI->getOperand(1);
+        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      }
+    }
+
+    // If for some reason we weren't able to forward the arguments from the
+    // scalarizer artifact, then we may need to actually extract elements from
+    // the vector.
+    for (uint64_t I = 0, E = NumElements; I < E; ++I)
+      if (DataElements[I] == nullptr)
+        DataElements[I] = IRB.CreateExtractElement(
+            Data, ConstantInt::get(IRB.getInt32Ty(), I));
+
+    // For any elements beyond the length of the vector, we should fill it up
+    // with undef - however, for typed UAVs we repeat the first element to
+    // match DXC.
+    for (uint64_t I = NumElements, E = 4; I < E; ++I)
+      if (DataElements[I] == nullptr)
+        DataElements[I] =
+            FillWithUndef ? UndefValue::get(ScalarTy) : DataElements[0];
+
+    return DataElements;
+  }
+
+  /// Erase the chain of `insertelement`s that only existed to build up the
+  /// value operand of a store we've just replaced.
+  static void eraseDeadInsertElementChain(Value *Data) {
+    auto *IEI = dyn_cast<InsertElementInst>(Data);
+    while (IEI && IEI->use_empty()) {
+      InsertElementInst *Tmp = IEI;
+      IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
+      Tmp->eraseFromParent();
+    }
+  }
+
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -906,8 +982,8 @@ public:
 
       uint64_t NumElements =
           DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
-      Value *Mask =
-          ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements) : 15U);
+      Value *Mask = ConstantInt::get(Int8Ty, IsRaw ? ~(~0U << NumElements)
+                                                   : TypedUAVStoreWriteMask);
 
       // TODO: check that we only have vector or scalar...
       if (NumElements > 4)
@@ -915,39 +991,8 @@ public:
             "Buffer store data must have at most 4 elements",
             inconvertibleErrorCode());
 
-      std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-      if (DataTy == ScalarTy)
-        DataElements[0] = Data;
-      else {
-        // Since we're post-scalarizer, if we see a vector here it's likely
-        // constructed solely for the argument of the store. Just use the scalar
-        // values from before they're inserted into the temporary.
-        auto *IEI = dyn_cast<InsertElementInst>(Data);
-        while (IEI) {
-          auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-          if (!IndexOp)
-            break;
-          size_t IndexVal = IndexOp->getZExtValue();
-          assert(IndexVal < 4 && "Too many elements for buffer store");
-          DataElements[IndexVal] = IEI->getOperand(1);
-          IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-        }
-      }
-
-      // If for some reason we weren't able to forward the arguments from the
-      // scalarizer artifact, then we may need to actually extract elements from
-      // the vector.
-      for (int I = 0, E = NumElements; I < E; ++I)
-        if (DataElements[I] == nullptr)
-          DataElements[I] =
-              IRB.CreateExtractElement(Data, ConstantInt::get(Int32Ty, I));
-
-      // For any elements beyond the length of the vector, we should fill it up
-      // with undef - however, for typed buffers we repeat the first element to
-      // match DXC.
-      for (int I = NumElements, E = 4; I < E; ++I)
-        if (DataElements[I] == nullptr)
-          DataElements[I] = IsRaw ? UndefValue::get(ScalarTy) : DataElements[0];
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/IsRaw);
 
       dxil::OpCode Op = OpCode::BufferStore;
       SmallVector<Value *, 9> Args{
@@ -965,14 +1010,93 @@ public:
         return E;
 
       CI->eraseFromParent();
-      // Clean up any leftover `insertelement`s
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI && IEI->use_empty()) {
-        InsertElementInst *Tmp = IEI;
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-        Tmp->eraseFromParent();
+      eraseDeadInsertElementChain(Data);
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerTextureStore(Function &F) {
+    const DataLayout &DL = F.getDataLayout();
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int8Ty = IRB.getInt8Ty();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *Data = CI->getArgOperand(2);
+
+      Type *DataTy = Data->getType();
+      Type *ScalarTy = DataTy->getScalarType();
+      uint64_t NumElements =
+          DL.getTypeSizeInBits(DataTy) / DL.getTypeSizeInBits(ScalarTy);
+      if (NumElements > 4)
+        return make_error<StringError>(
+            "Texture store data must have at most 4 elements",
+            inconvertibleErrorCode());
+
+      Value *Mask = ConstantInt::get(Int8Ty, TypedUAVStoreWriteMask);
+      std::array<Value *, 4> DataElements =
+          splitStoreData(IRB, Data, NumElements, /*FillWithUndef=*/false);
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 9> Args{
+          Handle,          Undef,           Undef,
+          Undef,           DataElements[0], DataElements[1],
+          DataElements[2], DataElements[3], Mask};
+
+      // Copy the coordinates into Args.
+      extractElementsIntoArgs(IRB, Args, 1, Coords, 3);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(OpCode::TextureStore, Args, CI->getName());
+      if (Error E = OpCall.takeError())
+        return E;
+
+      CI->eraseFromParent();
+      eraseDeadInsertElementChain(Data);
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerResourceAtomicBinOp(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      // Cast the target-extension typed handle to `%dx.types.Handle`, tracked
+      // via CleanupCasts so the pair is reconciled by `cleanupHandleCasts`.
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *BinOp = CI->getArgOperand(1);
+      Value *Coord0 = CI->getArgOperand(2);
+      Value *Coord1 = CI->getArgOperand(3);
+      Value *NewValue = CI->getArgOperand(4);
+
+      std::array<Value *, 6> Args{
+          Handle,  BinOp, Coord0, Coord1, ConstantInt::get(IRB.getInt32Ty(), 0),
+          NewValue};
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
+      if (Error E = OpCall.takeError()) {
+        // Preserve the DXIL op error text but attach it as a
+        // DiagnosticInfoUnsupported so we don't crash with a dangling call.
+        std::string Message(toString(std::move(E)));
+        CI->getContext().diagnose(DiagnosticInfoUnsupported(
+            *CI->getFunction(), Message, CI->getDebugLoc()));
+        CI->replaceAllUsesWith(PoisonValue::get(CI->getType()));
+        CI->eraseFromParent();
+        return Error::success();
       }
 
+      CI->replaceAllUsesWith(*OpCall);
+      CI->eraseFromParent();
       return Error::success();
     });
   }
@@ -1157,6 +1281,7 @@ public:
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
         break;
+      case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
         break;
@@ -1195,6 +1320,9 @@ public:
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);
         break;
+      case Intrinsic::dx_resource_store_texture:
+        HasErrors |= lowerTextureStore(F);
+        break;
       case Intrinsic::dx_resource_load_rawbuffer:
         HasErrors |= lowerRawBufferLoad(F);
         break;
@@ -1208,6 +1336,9 @@ public:
         break;
       case Intrinsic::dx_resource_updatecounter:
         HasErrors |= lowerUpdateCounter(F);
+        break;
+      case Intrinsic::dx_resource_atomic_binop:
+        HasErrors |= lowerResourceAtomicBinOp(F);
         break;
       case Intrinsic::dx_resource_getdimensions_x:
         HasErrors |= lowerGetDimensionsX(F);

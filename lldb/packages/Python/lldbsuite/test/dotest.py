@@ -31,6 +31,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 # Third-party modules
 import unittest
@@ -44,7 +45,7 @@ from . import test_categories
 from . import test_result
 from ..support import seven
 from ..support import temp_file
-
+from ..support import xcode
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
@@ -276,6 +277,8 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
+    if args.resource_dir:
+        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
@@ -313,7 +316,8 @@ def parseOptionsAndInitTestdirs():
         configuration.libcxx_include_target_dir = None
         configuration.libcxx_library_dir = None
 
-    configuration.cmake_build_type = args.cmake_build_type.lower()
+    if args.cmake_build_type:
+        configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
         lldbtest_config.channels = args.channels
@@ -324,15 +328,15 @@ def parseOptionsAndInitTestdirs():
     if args.out_of_tree_debugserver:
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
-    # Set SDKROOT if we are using an Apple SDK
     if args.sysroot:
         configuration.sdkroot = args.sysroot
-    elif platform_system == "Darwin" and args.apple_sdk:
+    elif platform_system == "Darwin":
+        sdk = args.apple_sdk if args.apple_sdk else "macosx"
         configuration.sdkroot = seven.get_command_output(
-            'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
+            'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (sdk)
         )
         if not configuration.sdkroot:
-            logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
+            logging.error('xcrun found no SDK for "%s"', sdk)
             sys.exit(-1)
 
     if args.triple:
@@ -379,12 +383,17 @@ def parseOptionsAndInitTestdirs():
             setting_list = setting[0].split("=", 1)
             configuration.settings.append((setting_list[0], setting_list[1]))
 
-    if args.d:
+    if args.d or args.debug_with:
         sys.stdout.write(
             "Suspending the process %d to wait for debugger to attach...\n"
             % os.getpid()
         )
         sys.stdout.flush()
+
+        # debug_with is always lowercased by argparse
+        if args.debug_with == "xcode":
+            xcode.attach(os.getpid())
+
         os.kill(os.getpid(), signal.SIGSTOP)
 
     if args.f:
@@ -442,6 +451,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_available_ports = args.lldb_platform_available_ports
     if platform_system == "Darwin" and args.apple_sdk:
         configuration.apple_sdk = args.apple_sdk
+    if args.timeout:
+        configuration.timeout = args.timeout
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
     if args.lldb_module_cache_dir:
@@ -475,6 +486,9 @@ def parseOptionsAndInitTestdirs():
     if args.print_lldb_version:
         configuration.print_lldb_version = True
 
+    if args.lldb_python_dir:
+        configuration.lldb_python_dir = args.lldb_python_dir
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -493,6 +507,17 @@ def registerFaulthandler():
     # faulthandler.register is not available on Windows.
     if getattr(faulthandler, "register", None):
         faulthandler.register(signal.SIGTERM, chain=True)
+
+    if sys.platform != "win32":
+        return
+
+    # Dump every thread's stack shortly before lit's own per-test timeout would
+    # kill the process.
+    if configuration.timeout <= 0:
+        return
+
+    secs = max(1.0, configuration.timeout * 0.9)
+    faulthandler.dump_traceback_later(secs, exit=False)
 
 
 def setupSysPath():
@@ -586,17 +611,32 @@ def setupSysPath():
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
-    # If our lldb supports the -P option, use it to find the python path:
-    lldb_dash_p_result = subprocess.check_output(
-        [lldbtest_config.lldbExec, "-P"], universal_newlines=True
-    )
-    if lldb_dash_p_result:
-        for line in lldb_dash_p_result.splitlines():
-            if os.path.isdir(line) and os.path.exists(
-                os.path.join(line, "lldb", "__init__.py")
-            ):
-                lldbPythonDir = line
-                break
+    if configuration.lldb_python_dir:
+        # The path was passed in (typically by LIT, which discovers it once for
+        # the whole test run). Trust it without spawning lldb.
+        candidate = configuration.lldb_python_dir
+        if os.path.isdir(candidate) and os.path.exists(
+            os.path.join(candidate, "lldb", "__init__.py")
+        ):
+            lldbPythonDir = candidate
+        else:
+            print(
+                "warning: --lldb-python-dir '%s' does not contain 'lldb/__init__.py'; "
+                "falling back to '%s -P'" % (candidate, lldbtest_config.lldbExec)
+            )
+
+    if not lldbPythonDir:
+        # If our lldb supports the -P option, use it to find the python path:
+        lldb_dash_p_result = subprocess.check_output(
+            [lldbtest_config.lldbExec, "-P"], universal_newlines=True
+        )
+        if lldb_dash_p_result:
+            for line in lldb_dash_p_result.splitlines():
+                if os.path.isdir(line) and os.path.exists(
+                    os.path.join(line, "lldb", "__init__.py")
+                ):
+                    lldbPythonDir = line
+                    break
 
     if not lldbPythonDir:
         print(
@@ -812,6 +852,22 @@ def canRunLibcxxTests():
     if lldbplatformutil.platformIsDarwin():
         if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
             return False, "libc++ tests require a locally built libc++"
+
+        # Check that the libc++ architecture matches the test architecture.
+        test_architecture = lldbplatformutil.getArchitecture()
+
+        libcxx_dylib_path = os.path.join(
+            configuration.libcxx_library_dir, "libc++.dylib"
+        )
+        try:
+            libcxx_arch_list = subprocess.check_output(
+                ["lipo", "-archs", libcxx_dylib_path], text=True
+            ).split()
+            if test_architecture not in libcxx_arch_list:
+                return False, f"libc++ dylib missing {test_architecture} slice"
+        except subprocess.CalledProcessError:
+            return False, "libc++ dylib is not present"
+
         return True, "libc++ present"
 
     if platform == "linux":
@@ -916,6 +972,8 @@ def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
+    if platform.startswith("wasi"):
+        return False, "watchpoints are not supported on WebAssembly"
     if platform == "netbsd":
         if os.geteuid() == 0:
             return True, "root can always write dbregs"
@@ -958,6 +1016,18 @@ def checkObjcSupport():
         if configuration.verbose:
             print("objc tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("objc")
+
+
+def checkExpressionSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    # WebAssembly targets cannot JIT or interpret expressions yet.
+    if lldbplatformutil.getPlatform().startswith("wasi"):
+        if "expression" in configuration.categories_list:
+            return  # explicitly requested, let it run.
+        if configuration.verbose:
+            print("expression tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("expression")
 
 
 def checkDebugInfoSupport():
@@ -1080,14 +1150,31 @@ def run_suite():
             platform_connect_options = lldb.SBPlatformConnectOptions(
                 configuration.lldb_platform_url
             )
-            err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+            # Connecting to a remote platform through a port forward can fail
+            # transiently while the connection itself is perfectly healthy, so
+            # retry a few times before giving up. Every attempt is reported, and
+            # a device that is genuinely unreachable still fails quickly with the
+            # same error on each attempt, so this doesn't hide a broken device.
+            max_connect_attempts = 4
+            for attempt in range(1, max_connect_attempts + 1):
+                err = lldb.remote_platform.ConnectRemote(platform_connect_options)
+                if err.Success():
+                    break
+                print(
+                    "error: failed to connect to remote platform using URL "
+                    "'%s': %s (attempt %d of %d)"
+                    % (
+                        configuration.lldb_platform_url,
+                        err,
+                        attempt,
+                        max_connect_attempts,
+                    )
+                )
+                if attempt < max_connect_attempts:
+                    time.sleep(attempt)
             if err.Success():
                 print("Connected.")
             else:
-                print(
-                    "error: failed to connect to remote platform using URL '%s': %s"
-                    % (configuration.lldb_platform_url, err)
-                )
                 exitTestSuite(1)
         else:
             configuration.lldb_platform_url = None
@@ -1130,6 +1217,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkExpressionSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
     checkDAPSupport()
@@ -1198,6 +1286,12 @@ def run_suite():
             ).run(configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
+
+    if getattr(result, "skipped", None):
+        sys.stderr.write(
+            "Skip breakdown (unsupported=%d, skipped=%d)\n"
+            % (result.countUnsupported(), result.countSkipped())
+        )
 
     if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(

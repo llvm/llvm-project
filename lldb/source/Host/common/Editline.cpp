@@ -575,8 +575,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_current_line_rows = new_line_rows;
   }
 
-  if (m_terminal_size_has_changed)
-    ApplyTerminalSizeChange();
+  ApplyPendingTerminalSizeChange();
 
   // This mutex is locked by our caller (GetLine). Unlock it while we read a
   // character (blocking operation), so we do not hold the mutex
@@ -1554,13 +1553,13 @@ void Editline::SetContinuationPrompt(const char *continuation_prompt) {
       continuation_prompt == nullptr ? "" : continuation_prompt;
 }
 
-void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = 1; }
+void Editline::TerminalSizeChanged() { m_terminal_size_has_changed = true; }
 
 void Editline::ApplyTerminalSizeChange() {
   if (!m_editline)
     return;
 
-  m_terminal_size_has_changed = 0;
+  m_terminal_size_has_changed = false;
   el_resize(m_editline);
   int columns;
   // This function is documenting as taking (const char *, void *) for the
@@ -1588,6 +1587,11 @@ void Editline::ApplyTerminalSizeChange() {
   } else {
     m_terminal_height = INT_MAX;
   }
+}
+
+void Editline::ApplyPendingTerminalSizeChange() {
+  if (m_terminal_size_has_changed)
+    ApplyTerminalSizeChange();
 }
 
 const char *Editline::GetPrompt() { return m_set_prompt.c_str(); }
@@ -1706,6 +1710,7 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
                           size_t len) {
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
   if (m_editor_status == EditorStatus::Editing) {
+    ApplyPendingTerminalSizeChange();
     SaveEditedLine();
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(locked_stream.GetFile().GetStream(), ANSI_CLEAR_BELOW);
@@ -1721,7 +1726,18 @@ void Editline::Refresh() {
   if (!m_editline || !m_output_stream_sp)
     return;
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
-  el_set(m_editline, EL_REFRESH);
+  ApplyPendingTerminalSizeChange();
+  if (m_editor_status == EditorStatus::Editing) {
+    // EL_REFRESH redraws from libedit's cursor model, which is stale once the
+    // statusline has moved the cursor, so it reprints the prompt at the wrong
+    // column. Repaint from our own tracked position instead.
+    SaveEditedLine();
+    MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
+    DisplayInput();
+    MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
+  } else {
+    el_set(m_editline, EL_REFRESH);
+  }
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {

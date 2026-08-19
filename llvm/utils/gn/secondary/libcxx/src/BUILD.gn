@@ -50,7 +50,7 @@ config("cxx_config") {
     "-Wno-nullability-completeness",
   ]
   cflags_cc = [
-    "-std=c++23",
+    "-std=c++26",
     "-nostdinc++",
   ]
   defines = [
@@ -183,6 +183,7 @@ cxx_sources = [
   "support/runtime/stdexcept_default.ipp",
   "support/runtime/stdexcept_vcruntime.ipp",
   "system_error.cpp",
+  "text_encoding.cpp",
   "thread.cpp",
   "typeinfo.cpp",
   "valarray.cpp",

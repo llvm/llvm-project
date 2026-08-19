@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.1 -fblocks -DBLOCKS -DSYNTAX
 // RUN: %clang_cc1 %s -verify -fsyntax-only -cl-std=CL1.2 -fblocks -DBLOCKS -DSYNTAX
-// RUN: %clang_cc1 %s -triple amdgcn--amdhsa -x c -std=c99 -verify -fsyntax-only -DSYNTAX
+// RUN: %clang_cc1 %s -triple amdgpu--amdhsa -x c -std=c99 -verify -fsyntax-only -DSYNTAX
 // RUN: %clang_cc1 -cl-std=CL1.1 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION11 %s
 // RUN: %clang_cc1 -cl-std=CL1.2 -cl-strict-aliasing -fblocks %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION12 %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID-OPENCL-VERSION20 %s

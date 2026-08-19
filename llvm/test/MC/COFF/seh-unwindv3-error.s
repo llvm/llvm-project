@@ -49,6 +49,41 @@ push2_trailing_junk:
     retq
     .seh_endproc
 
+// Test: extended registers (r16-r31 / xmm16-xmm31) in prolog unwind codes
+// cannot be encoded in V1/V2 (the register field is only 4 bits), so they must
+// be diagnosed rather than silently truncated to a low register.
+pushreg_egpr_v1:
+    .seh_proc pushreg_egpr_v1
+    .seh_pushreg %r16
+// CHECK: :[[#@LINE-1]]:5: error: .seh_pushreg with an extended register requires unwind v3
+    .seh_endprologue
+    retq
+    .seh_endproc
+
+savereg_egpr_v1:
+    .seh_proc savereg_egpr_v1
+    .seh_savereg %r16, 0
+// CHECK: :[[#@LINE-1]]:5: error: .seh_savereg with an extended register requires unwind v3
+    .seh_endprologue
+    retq
+    .seh_endproc
+
+savexmm_egpr_v1:
+    .seh_proc savexmm_egpr_v1
+    .seh_savexmm %xmm16, 0
+// CHECK: :[[#@LINE-1]]:5: error: .seh_savexmm with an extended register requires unwind v3
+    .seh_endprologue
+    retq
+    .seh_endproc
+
+setframe_egpr_v1:
+    .seh_proc setframe_egpr_v1
+    .seh_setframe %r16, 0
+// CHECK: :[[#@LINE-1]]:5: error: .seh_setframe with an extended register requires unwind v3
+    .seh_endprologue
+    retq
+    .seh_endproc
+
 // Test: UOP_Push2 recorded under V3 then frame downgraded to V2 — the
 // directive-level check passes (since the frame is already V3), so the
 // error must come from the unwind-info emitter as a recoverable diagnostic
@@ -70,3 +105,4 @@ push2_downgrade_v2:
     retq
     .seh_endproc
 // CHECK: error: UOP_Push2 (PUSH2 with two registers) requires V3 unwind info
+

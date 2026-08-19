@@ -81,6 +81,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
   SBProgress.cpp
+  SBProtocolServer.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
@@ -115,6 +116,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
+  ScriptInterpreterBridge.cpp
   SystemInitializerFull.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -159,7 +161,20 @@ set_target_properties(liblldb
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS AND NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+  if (LLDB_EXPORT_ALL_SYMBOLS)
+    if (LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+      message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
+              " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
+      message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                      "Only the SB API is guaranteed to be stable.")
+      add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
+    else ()
+      message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+      message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                      "Only the SB API is guaranteed to be stable.")
+      add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
+    endif()
+  elseif (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     # Each script interpreter plugin contributes a list of its undefined
     # LLDB symbols. Concatenating those with liblldb.exports yields the
     # smallest export set that satisfies dynamically loaded plugins.
@@ -186,28 +201,18 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Symbols (liblldb): exporting the lldb namespace plus "
                    "script interpreter dependencies")
     lldb_apply_exports_file(liblldb ${generated_exports_file})
-  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS)
+  else ()
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
     message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
-  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
-    # Don't use an explicit export. Instead, tell the linker to export all symbols.
-    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
-                    "Only the SB API is guaranteed to be stable.")
-    add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
-  else ()
-    message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
-            " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
-                    "Only the SB API is guaranteed to be stable.")
-    add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
-elseif (LLDB_EXPORT_ALL_SYMBOLS)
+elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  # On Windows there is no per-plugin symbol extraction, so dynamically loaded
+  # script interpreter plugins resolve their imports against the full set of
+  # private symbols, same as LLDB_EXPORT_ALL_SYMBOLS.
   message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-
   # Pull out the various lldb libraries linked into liblldb, these will be used
   # when looking for symbols to extract. We ignore most plugin libraries here,
   # because we may expose more symbols than the DLL limit and these symbols
@@ -280,8 +285,6 @@ set(generated_public_headers ${LLDB_OBJ_DIR}/include/lldb/API/SBLanguages.h)
 file(GLOB root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-*.h)
 file(GLOB root_private_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h)
 list(REMOVE_ITEM root_public_headers ${root_private_headers})
-# Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
-list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
 add_custom_command(
   OUTPUT ${lldb_header_staging_dir}
@@ -307,6 +310,12 @@ foreach(header
   get_filename_component(basename ${header} NAME)
   set(staged_header ${lldb_header_staging_dir}/${basename})
 
+  if(basename STREQUAL "lldb-defines.h")
+    set(copy_command "${Python3_EXECUTABLE}"
+        ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py
+        -i ${header} -o ${staged_header}
+        -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH})
+  endif()
   if(unifdef_EXECUTABLE)
     # unifdef returns 0 when the file is unchanged and 1 if something was changed.
     # That means if we successfully remove SWIG code, the build system believes
@@ -341,9 +350,6 @@ foreach(header
   endif()
 endforeach()
 
-add_custom_command(TARGET liblldb-header-staging POST_BUILD
-  COMMAND "${Python3_EXECUTABLE}" ${LLDB_SOURCE_DIR}/scripts/version-header-fix.py -i ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h -o ${lldb_header_staging_dir}/lldb-defines.h -m ${LLDB_VERSION_MAJOR} -n ${LLDB_VERSION_MINOR} -p ${LLDB_VERSION_PATCH}
-)
 add_dependencies(liblldb liblldb-header-staging)
 
 if(LLDB_BUILD_FRAMEWORK)

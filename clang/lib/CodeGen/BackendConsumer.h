@@ -120,6 +120,9 @@ public:
 
   /// Specialized handler for unsupported backend feature diagnostic.
   void UnsupportedDiagHandler(const llvm::DiagnosticInfoUnsupported &D);
+  /// Specialized handler for unsupported target intrinsic diagnostic.
+  void UnsupportedTargetIntrinsicDiagHandler(
+      const llvm::DiagnosticInfoUnsupportedTargetIntrinsic &D);
   /// Specialized handlers for optimization remarks.
   /// Note that these handlers only accept remarks and they always handle
   /// them.

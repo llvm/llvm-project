@@ -321,7 +321,8 @@ EVT X86TargetLowering::getOptimalMemOpType(
       if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()) &&
           (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v4f32;
-    } else if (((Op.isMemcpy() && !Op.isMemcpyStrSrc()) || Op.isZeroMemset()) &&
+    } else if (((Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc()) ||
+                Op.isZeroMemset()) &&
                Op.size() >= 8 && !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
       // Do not use f64 to lower memcpy if source is string constant. It's
       // better to use i32 to avoid the loads.
@@ -670,6 +671,43 @@ bool X86TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
+  // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
+  // This logic exists for libcalls, a frontend should explicitly use sret
+  // rather than rely on the sret demotion here.
+  //
+  // Using sret is a reasonable implementation of the Windows x64 calling
+  // convention:
+  //
+  // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170#return-values
+  //
+  // > Otherwise, the caller must allocate memory for the return value and pass
+  // > a pointer to it as the first argument.
+  //
+  // Although it is not the only reasonable interpretation:
+  //
+  // > Nonscalar types including floats, doubles, and vector types such as
+  // > __m128, __m128i, __m128d are returned in XMM0.
+  //
+  // For now, we prefer compatibility with GCC. If official guidelines are ever
+  // published, this can be revisited.
+  //
+  // Return false, which will perform sret demotion.
+  auto IsWin64F128StackCC = [this](CallingConv::ID CC) -> bool {
+    switch (CC) {
+    case CallingConv::Win64:
+      return true;
+    case CallingConv::C:
+      return Subtarget.isOSWindowsOrUEFI();
+    default:
+      return false;
+    }
+  };
+
+  if (IsWin64F128StackCC(CallConv) &&
+      llvm::any_of(
+          Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
+    return false;
+
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_X86);
@@ -2392,12 +2430,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer (except regcall).
+    // GOT pointer.
     if (!isTailCall) {
-      // Indirect call with RegCall calling convertion may use up all the
-      // general registers, so it is not suitable to bind EBX reister for
-      // GOT address, just let register allocator handle it.
-      if (CallConv != CallingConv::X86_RegCall)
+      // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
+      // EBX. Indirect calls through a register or an absolute address do not
+      // go through the PLT and do not need EBX to hold the GOT base.
+      if ((Callee->getOpcode() == ISD::GlobalAddress ||
+           Callee->getOpcode() == ISD::ExternalSymbol))
         RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
@@ -2967,6 +3006,11 @@ bool X86TargetLowering::isEligibleForSiblingCallOpt(
   bool IsCalleeWin64 = Subtarget.isCallingConvWin64(CalleeCC);
   bool IsCallerWin64 = Subtarget.isCallingConvWin64(CallerCC);
   if (IsCalleeWin64 != IsCallerWin64)
+    return false;
+
+  // Do not optimize vararg calls with 6 arguments for LFI since LFI reserves
+  // %r11, meaning there will not be enough registers available.
+  if (Subtarget.isLFI() && ArgLocs.size() > 5)
     return false;
 
   // If we are using a GOT, don't generate sibling calls to non-local,

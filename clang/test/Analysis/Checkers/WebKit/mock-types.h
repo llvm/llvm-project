@@ -11,7 +11,17 @@ template <typename T> struct remove_reference<T&> {
 typedef T type;
 };
 
-template<typename T> typename remove_reference<T>::type&& move(T&& t);
+template <typename T> T&& move(T& t) { return static_cast<T&&>(t); }
+template <typename T> T&& move(T&& t) { return t; }
+
+}
+
+#endif
+
+#ifndef mock_types_1103988513531
+#define mock_types_1103988513531
+
+namespace std {
 
 template<typename T, typename U>
 T exchange(T& t, U&& u)
@@ -28,21 +38,6 @@ T exchange(T& t, decltype(nullptr))
   t = static_cast<T>(t);
   return r;
 }
-
-}
-
-#endif
-
-namespace WTF {
-
-template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
-
-}
-
-#ifndef mock_types_1103988513531
-#define mock_types_1103988513531
-
-namespace std {
 
 template <typename T>
 class unique_ptr {
@@ -67,6 +62,186 @@ public:
   unique_ptr &operator=(T *) { return *this; }
   explicit operator bool() const { return !!t; }
 };
+
+namespace ranges {
+
+template<typename IteratorType, typename CallbackType>
+void for_each(IteratorType first, IteratorType last, CallbackType callback) {
+  for (auto it = first; !(it == last); ++it)
+    callback(*it);
+}
+
+struct all_of_impl {
+  template <typename Collection, typename Predicate>
+  constexpr bool operator()(const Collection& collection, Predicate predicate) const {
+    for (auto it = collection.begin(), end = collection.end(); it != end; ++it) {
+      if (!predicate(*it))
+        return false;
+    }
+    return true;
+  }
+};
+inline constexpr auto all_of = all_of_impl {};
+
+}
+
+}
+
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+namespace Detail {
+
+template<typename Out, typename... In>
+class CallableWrapperBase {
+public:
+    virtual ~CallableWrapperBase() { }
+    virtual Out call(In...) = 0;
+};
+
+template<typename, typename, typename...> class CallableWrapper;
+
+template<typename CallableType, typename Out, typename... In>
+class CallableWrapper : public CallableWrapperBase<Out, In...> {
+public:
+    explicit CallableWrapper(CallableType& callable)
+        : m_callable(callable) { }
+    Out call(In... in) final { return m_callable(in...); }
+
+private:
+    CallableType m_callable;
+};
+
+} // namespace Detail
+
+template<typename> class Function;
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>*);
+
+template <typename Out, typename... In>
+class Function<Out(In...)> {
+public:
+    using Impl = Detail::CallableWrapperBase<Out, In...>;
+
+    Function() = default;
+
+    template<typename FunctionType>
+    Function(FunctionType f)
+        : m_callableWrapper(new Detail::CallableWrapper<FunctionType, Out, In...>(f)) { }
+
+    Out operator()(In... in) const { return m_callableWrapper->call(in...); }
+    explicit operator bool() const { return !!m_callableWrapper; }
+
+private:
+    enum AdoptTag { Adopt };
+    Function(Impl* impl, AdoptTag)
+        : m_callableWrapper(impl)
+    {
+    }
+
+    friend Function adopt<Out, In...>(Impl*);
+
+    std::unique_ptr<Impl> m_callableWrapper;
+};
+
+template<typename Out, typename... In> Function<Out(In...)> adopt(Detail::CallableWrapperBase<Out, In...>* impl)
+{
+    return Function<Out(In...)>(impl, Function<Out(In...)>::Adopt);
+}
+
+template <typename KeyType, typename ValueType>
+class HashMap {
+public:
+  HashMap();
+  HashMap([[clang::noescape]] const Function<ValueType()>&);
+  void ensure(const KeyType&, [[clang::noescape]] const Function<ValueType()>&);
+  bool operator+([[clang::noescape]] const Function<ValueType()>&) const;
+  static void ifAny(HashMap, [[clang::noescape]] const Function<bool(ValueType)>&);
+
+  template <typename U> ValueType* find(U&) const;
+  template <typename U> bool contains(U&) const;
+  template <typename U> ValueType* get(U&) const;
+  template <typename U> ValueType* inlineGet(U&) const;
+  template <typename U> void add(U&) const;
+  template <typename U> void remove(U&) const;
+
+private:
+  ValueType* m_table { nullptr };
+};
+
+class ScopeExit final {
+public:
+  template<typename ExitFunctionParameter>
+  explicit ScopeExit(ExitFunctionParameter&& exitFunction)
+    : m_exitFunction(std::move(exitFunction)) {
+  }
+
+  ScopeExit(ScopeExit&& other)
+    : m_exitFunction(std::move(other.m_exitFunction))
+    , m_execute(std::move(other.m_execute)) {
+  }
+
+  ~ScopeExit() {
+    if (m_execute)
+      m_exitFunction();
+  }
+
+  WTF::Function<void()> take() {
+    m_execute = false;
+    return std::move(m_exitFunction);
+  }
+
+  void release() { m_execute = false; }
+
+  ScopeExit(const ScopeExit&) = delete;
+  ScopeExit& operator=(const ScopeExit&) = delete;
+  ScopeExit& operator=(ScopeExit&&) = delete;
+
+private:
+  WTF::Function<void()> m_exitFunction;
+  bool m_execute { true };
+};
+
+template<typename ExitFunction> ScopeExit makeScopeExit(ExitFunction&&);
+template<typename ExitFunction>
+ScopeExit makeScopeExit(ExitFunction&& exitFunction)
+{
+    return ScopeExit(std::move(exitFunction));
+}
+
+// Visitor adapted from http://stackoverflow.com/questions/25338795/is-there-a-name-for-this-tuple-creation-idiom
+
+template<class A, class... B> struct Visitor : Visitor<A>, Visitor<B...> {
+    Visitor(A a, B... b)
+        : Visitor<A>(a)
+        , Visitor<B...>(b...)
+    {
+    }
+
+    using Visitor<A>::operator ();
+    using Visitor<B...>::operator ();
+};
+
+template<class A> struct Visitor<A> : A {
+    Visitor(A a)
+        : A(a)
+    {
+    }
+
+    using A::operator();
+};
+
+template<class... F> Visitor<F...> makeVisitor(F... f)
+{
+    return Visitor<F...>(f...);
+}
+
+void opaqueFunction();
+template <typename Visitor, typename... Variants> void visit(Visitor&& v, Variants&&... values)
+{
+  opaqueFunction();
+}
 
 };
 
@@ -308,6 +483,7 @@ public:
   void incrementCheckedPtrCount() { ++m_ptrCount; }
   void decrementCheckedPtrCount() { --m_ptrCount; }
   void method();
+  void constMethod() const;
   int trivial() { return 123; }
   CheckedObj* next();
 

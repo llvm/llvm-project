@@ -10,8 +10,10 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_LLDBSERVERACCELERATORPLUGIN_H
 
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "llvm/ADT/StringRef.h"
+#include <memory>
 #include <optional>
 
 namespace lldb_private {
@@ -25,8 +27,10 @@ namespace lldb_server {
 class LLDBServerAcceleratorPlugin {
 public:
   using GDBServer = process_gdb_remote::GDBRemoteCommunicationServerLLGS;
+  using Manager = NativeProcessProtocol::Manager;
 
-  LLDBServerAcceleratorPlugin(GDBServer &gdb_server, MainLoop &main_loop);
+  LLDBServerAcceleratorPlugin(GDBServer &native_gdb_server,
+                              MainLoop &native_main_loop);
   virtual ~LLDBServerAcceleratorPlugin();
 
   virtual llvm::StringRef GetPluginName() = 0;
@@ -36,9 +40,19 @@ public:
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
 
+  /// Create an AcceleratorActions with an identifier unique within this plugin,
+  /// so identifiers from different actions don't collide.
+  AcceleratorActions GetNewAcceleratorAction() {
+    return AcceleratorActions(GetPluginName(),
+                              ++m_accelerator_action_identifier);
+  }
+
 protected:
-  GDBServer &m_gdb_server;
-  MainLoop &m_main_loop;
+  GDBServer &m_native_gdb_server;
+  MainLoop &m_native_main_loop;
+  std::unique_ptr<Manager> m_process_manager_up;
+  std::unique_ptr<GDBServer> m_accelerator_gdb_server;
+  int64_t m_accelerator_action_identifier = 0;
 };
 
 } // namespace lldb_server

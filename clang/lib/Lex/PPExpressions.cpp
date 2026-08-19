@@ -983,9 +983,9 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 }
 
 static std::optional<CXXStandardLibraryVersionInfo>
-getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+getCXXStandardLibraryVersion(Preprocessor &PP, IdentifierInfo *MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
-  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+  MacroInfo *Macro = PP.getMacroInfo(MacroName);
   if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
     return std::nullopt;
 
@@ -1008,7 +1008,7 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
 std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   if (!CXXStandardLibraryVersion)
     CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
-        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+        *this, Ident__GLIBCXX__, CXXStandardLibraryVersionInfo::LibStdCXX);
   if (!CXXStandardLibraryVersion)
     return std::nullopt;
 
@@ -1016,6 +1016,13 @@ std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
       CXXStandardLibraryVersionInfo::LibStdCXX)
     return CXXStandardLibraryVersion->Version;
   return std::nullopt;
+}
+
+void Preprocessor::setStdLibCxxVersion(std::uint64_t Version) {
+  CXXStandardLibraryVersion = {
+      CXXStandardLibraryVersionInfo::LibStdCXX,
+      Version,
+  };
 }
 
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {

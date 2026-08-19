@@ -53,11 +53,16 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
   bool isRoot() const {
     return Base == Pointee->getDescriptor()->getMetadataSize();
+  }
+
+  bool isConst() const {
+    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
   InlineDescriptor *getInlineDesc() const {
@@ -134,6 +139,13 @@ struct PtrView {
     if (!Desc->IsArray)
       return *this;
     return PtrView{Pointee, Next, Offset};
+  }
+
+  [[nodiscard]] PtrView stripBaseCasts() const {
+    PtrView V = *this;
+    while (V.isBaseClass())
+      V = V.getBase();
+    return V;
   }
 
   [[nodiscard]] PtrView getArray() const {
@@ -532,15 +544,15 @@ public:
   SourceLocation getDeclLoc() const { return getDeclDesc()->getLocation(); }
 
   /// Returns the expression or declaration the pointer has been created for.
-  DeclTy getSource() const {
+  DeclOrExpr getSource() const {
     if (isBlockPointer())
       return getDeclDesc()->getSource();
     if (isFunctionPointer()) {
       const Function *F = Fn.Func;
-      return F ? F->getDecl() : DeclTy();
+      return F ? F->getDecl() : DeclOrExpr();
     }
     llvm_unreachable("Unsupported pointer type in getSource()");
-    return DeclTy();
+    return DeclOrExpr();
   }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -574,6 +586,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
 
@@ -670,7 +683,11 @@ public:
   bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
 
   /// Returns the record descriptor of a class.
-  const Record *getRecord() const { return view().getRecord(); }
+  const Record *getRecord() const {
+    if (!isBlockPointer())
+      return nullptr;
+    return view().getRecord();
+  }
   /// Returns the element record type, if this is a non-primive array.
   const Record *getElemRecord() const { return view().getElemRecord(); }
   /// Returns the field information.
@@ -753,7 +770,7 @@ public:
   bool isConst() const {
     if (isIntegralPointer())
       return true;
-    return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
+    return view().isConst();
   }
   bool isConstInMutable() const {
     if (!isBlockPointer())
@@ -941,23 +958,7 @@ public:
   Lifetime getLifetime() const {
     if (!isBlockPointer())
       return Lifetime::Started;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return Lifetime::Started;
-
-    if (inArray() && !isArrayRoot()) {
-      InitMapPtr &IM = getInitMap();
-
-      if (!IM.hasInitMap()) {
-        if (IM.allInitialized())
-          return Lifetime::Started;
-        return getArray().getLifetime();
-      }
-
-      return IM->isElementAlive(getIndex()) ? Lifetime::Started
-                                            : Lifetime::Ended;
-    }
-
-    return getInlineDesc()->LifeState;
+    return view().getLifetime();
   }
 
   /// Start the lifetime of this pointer. This works for pointer with an
@@ -980,10 +981,7 @@ public:
   /// The result is either a root pointer or something
   /// that isn't a base class anymore.
   [[nodiscard]] Pointer stripBaseCasts() const {
-    PtrView V = view();
-    while (V.isBaseClass())
-      V = V.getBase();
-    return Pointer(V);
+    return Pointer(view().stripBaseCasts());
   }
 
   /// Compare two pointers.
@@ -1002,7 +1000,7 @@ public:
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.
-  static bool hasSameArray(const Pointer &A, const Pointer &B);
+  static bool elemsOfSameArray(const Pointer &A, const Pointer &B);
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
@@ -1030,6 +1028,9 @@ public:
   /// regarding the AST record layout.
   std::optional<size_t>
   computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  /// Compute the pointer offset as given by the ASTRecordLayout.
+  /// Returns the result in bytes.
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
@@ -1098,14 +1099,14 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       std::reverse(Indices.begin(), Indices.end());
       OS << Indices;
     }
-  } else if (P.isArrayRoot())
+  } else if (P.isBlockPointer() && P.isArrayRoot())
     OS << " arrayroot";
 
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
-  if (P.isBaseClass())
+  if (P.isBlockPointer() && P.isBaseClass())
     OS << " base-class";
   return OS;
 }

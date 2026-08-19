@@ -143,6 +143,14 @@ entry:
   ret i32 %asmresult1
 }
 
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call{{.*}} (in function: inline_asm_multi_reg_input)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for inline_asm_multi_reg_input
+; FALLBACK-WITH-REPORT-OUT-LABEL: inline_asm_multi_reg_input
+define i128 @inline_asm_multi_reg_input(i128 %x) {
+  %r = call i128 asm sideeffect "/* $0 $1 */", "=&r,r"(i128 %x)
+  ret i128 %r
+}
+
 attributes #1 = { "target-features"="+sve" }
 attributes #2 = { "target-features"="+ls64" }
 

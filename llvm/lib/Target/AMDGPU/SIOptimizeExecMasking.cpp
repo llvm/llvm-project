@@ -293,6 +293,12 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_AND_B32));
     return true;
   }
+  case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U32_nosdst_e32));
+    return true;
+  case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
+    MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
+    return true;
   default:
     return false;
   }

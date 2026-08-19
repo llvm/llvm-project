@@ -1218,7 +1218,7 @@ vzeroupper
 # CHECK-NEXT:  2      7     1.00    *                   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      6     0.50    *                   vlddqu	(%rax), %xmm2
 # CHECK-NEXT:  1      7     0.50    *                   vlddqu	(%rax), %ymm2
-# CHECK-NEXT:  4      5     1.00    *      *      U     vldmxcsr	(%rax)
+# CHECK-NEXT:  3      5     1.00    *      *      U     vldmxcsr	(%rax)
 # CHECK-NEXT:  1      1     1.00    *      *      U     vmaskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  3      8     1.00    *                   vmaskmovpd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  3      9     1.00    *                   vmaskmovpd	(%rax), %ymm0, %ymm2
@@ -1734,7 +1734,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     572.00 248.50 319.00 39.00  371.50 179.50 179.50
+# CHECK-NEXT:  -     572.00 248.50 319.00 38.00  371.50 179.50 179.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -1926,7 +1926,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -     1.00   0.50   0.50   vinsertps	$1, (%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vlddqu	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   0.50   vlddqu	(%rax), %ymm2
-# CHECK-NEXT:  -      -     1.00    -     1.00   1.00   0.50   0.50   vldmxcsr	(%rax)
+# CHECK-NEXT:  -      -     1.00    -      -     1.00   0.50   0.50   vldmxcsr	(%rax)
 # CHECK-NEXT:  -      -      -      -     1.00    -     0.50   0.50   vmaskmovdqu	%xmm0, %xmm1
 # CHECK-NEXT:  -      -     1.00    -      -     1.00   0.50   0.50   vmaskmovpd	(%rax), %xmm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -     1.00   0.50   0.50   vmaskmovpd	(%rax), %ymm0, %ymm2

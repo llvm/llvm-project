@@ -108,7 +108,6 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
-    Parser.Line->IsModuleOrImportDecl = PreBlockLine->IsModuleOrImportDecl;
     Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
@@ -1508,23 +1507,54 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   }
   switch (FormatTok->Tok.getKind()) {
-  case tok::kw_asm:
+  case tok::kw_asm: {
+    // Track whether to skip formatting inline asm by finalizing the tokens
+    // in the block. Formatting is skipped inside of braces by default.
+    // A style option could be added to also skip formatting inside parens.
+    bool DoNotFormat = false;
+    tok::TokenKind OpenType;
+    tok::TokenKind CloseType;
     nextToken();
+    while (FormatTok &&
+           FormatTok->isOneOf(tok::kw_volatile, tok::kw_inline, tok::kw_goto)) {
+      nextToken();
+    }
+    if (!FormatTok)
+      break;
     if (FormatTok->is(tok::l_brace)) {
       FormatTok->setFinalizedType(TT_InlineASMBrace);
+      OpenType = tok::l_brace;
+      CloseType = tok::r_brace;
+      DoNotFormat = true;
+    } else if (FormatTok->is(tok::l_paren)) {
+      OpenType = tok::l_paren;
+      CloseType = tok::r_paren;
+      FormatTok->setFinalizedType(TT_InlineASMParen);
+    } else {
+      break;
+    }
+    if (DoNotFormat) {
+      FormatToken *OpenTok = FormatTok;
+      int NestLevel = 0;
       nextToken();
       while (FormatTok && !eof()) {
-        if (FormatTok->is(tok::r_brace)) {
-          FormatTok->setFinalizedType(TT_InlineASMBrace);
-          nextToken();
-          addUnwrappedLine();
-          break;
+        if (FormatTok->is(OpenType)) {
+          ++NestLevel;
+        } else if (FormatTok->is(CloseType)) {
+          --NestLevel;
+          if (NestLevel < 1) {
+            FormatTok->setFinalizedType(OpenTok->getType());
+            nextToken();
+            addUnwrappedLine();
+            break;
+          }
         }
         FormatTok->Finalized = true;
         nextToken();
       }
     }
     break;
+  }
   case tok::kw_namespace:
     parseNamespace();
     return;
@@ -1743,7 +1773,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (!Line->InMacroBody || CurrentLines->size() > 1)
         Line->Tokens.begin()->Tok->MustBreakBefore = true;
       FormatTok->setFinalizedType(TT_GotoLabelColon);
-      parseLabel(Style.IndentGotoLabels);
+      parseLabel(/*IsGotoLabel=*/true);
       if (HasLabel)
         *HasLabel = true;
       return;
@@ -2633,7 +2663,8 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
 /// Parses a pair of parentheses (and everything between them).
 /// \param StarAndAmpTokenType If different than TT_Unknown sets this type for
 /// all (double) ampersands and stars. This applies for all nested scopes as
-/// well.
+/// well, this is disabled within a (potential) template argument <>, and thus
+/// also if we find only a <.
 ///
 /// Returns whether there is a `=` token between the parentheses.
 bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
@@ -2644,6 +2675,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
+  auto ExcessLess = 0;
   nextToken();
   const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
   if (!InMacroCall && Prev && Prev->is(TT_FunctionLikeMacro))
@@ -2651,8 +2683,10 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
-      if (parseParens(StarAndAmpTokenType, InMacroCall))
+      if (parseParens(ExcessLess == 0 ? StarAndAmpTokenType : TT_Unknown,
+                      InMacroCall)) {
         SeenEqual = true;
+      }
       if (Style.isJava() && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
@@ -2769,10 +2803,21 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
     case tok::kw_requires:
       parseRequiresExpression();
       break;
+    case tok::less:
+      // We have here no clue wether this is a less, or a template opener, opt
+      // out of the predefined StarAndAmpTokenType.
+      ++ExcessLess;
+      nextToken();
+      break;
+    case tok::greater:
+      if (ExcessLess > 0)
+        --ExcessLess;
+      nextToken();
+      break;
     case tok::star:
     case tok::amp:
     case tok::ampamp:
-      if (StarAndAmpTokenType != TT_Unknown)
+      if (StarAndAmpTokenType != TT_Unknown && ExcessLess == 0)
         FormatTok->setFinalizedType(StarAndAmpTokenType);
       [[fallthrough]];
     default:
@@ -3401,28 +3446,24 @@ void UnwrappedLineParser::parseDoWhile() {
   parseStructuralElement();
 }
 
-void UnwrappedLineParser::parseLabel(
-    FormatStyle::IndentGotoLabelStyle IndentGotoLabels) {
-  const bool IsGotoLabel = FormatTok->is(TT_GotoLabelColon);
+void UnwrappedLineParser::parseLabel(bool IsGotoLabel) {
   nextToken();
-  unsigned OldLineLevel = Line->Level;
 
-  switch (IndentGotoLabels) {
-  case FormatStyle::IGLS_NoIndent:
-    Line->Level = 0;
-    break;
-  case FormatStyle::IGLS_OuterIndent:
-    if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-      --Line->Level;
-    break;
-  case FormatStyle::IGLS_HalfIndent:
-  case FormatStyle::IGLS_InnerIndent:
-    break;
+  const auto IndentGotoLabel = Style.IndentGotoLabels;
+  const auto OldLineLevel = Line->Level;
+  auto &Level = Line->Level;
+
+  if (IsGotoLabel && IndentGotoLabel == FormatStyle::IGLS_NoIndent)
+    Level = 0;
+
+  if (!IsGotoLabel || IndentGotoLabel == FormatStyle::IGLS_OuterIndent) {
+    if (OldLineLevel > 1 || (!Line->InPPDirective && OldLineLevel > 0))
+      --Level;
   }
 
   if (!IsGotoLabel && !Style.IndentCaseBlocks &&
       CommentsBeforeNextToken.empty() && FormatTok->is(tok::l_brace)) {
-    CompoundStatementIndenter Indenter(this, Line->Level,
+    CompoundStatementIndenter Indenter(this, Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
     parseBlock();
@@ -3432,7 +3473,7 @@ void UnwrappedLineParser::parseLabel(
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          ++Line->Level;
+          ++Level;
         }
       }
       parseStructuralElement();
@@ -3443,7 +3484,9 @@ void UnwrappedLineParser::parseLabel(
       nextToken();
     addUnwrappedLine();
   }
-  Line->Level = OldLineLevel;
+
+  Level = OldLineLevel;
+
   if (FormatTok->isNot(tok::l_brace)) {
     parseStructuralElement();
     addUnwrappedLine();
@@ -3830,6 +3873,7 @@ void UnwrappedLineParser::parseConstraintExpression() {
       case tok::exclaim:     // The same as above, but unary.
       case tok::kw_requires: // Initial identifier of a requires clause.
       case tok::equal:       // Initial identifier of a concept declaration.
+      case tok::kw_template: // A dependent template.
         break;
       default:
         return;
@@ -4718,6 +4762,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
   Line->SeenDecltypeAuto = false;
+  Line->IsModuleOrImportDecl = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;

@@ -82,14 +82,13 @@ STATISTIC(NumZCZeroingInstrsFPR,
           "Number of zero-cycle FPR zeroing instructions expanded from "
           "canonical pseudo instructions");
 
-enum PtrauthCheckMode { Default, Unchecked, Poison, Trap };
+enum PtrauthCheckMode { Unchecked, Poison, Trap };
 static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     "aarch64-ptrauth-auth-checks", cl::Hidden,
     cl::values(clEnumValN(Unchecked, "none", "don't test for failure"),
                clEnumValN(Poison, "poison", "poison on failure"),
                clEnumValN(Trap, "trap", "trap on failure")),
-    cl::desc("Check pointer authentication auth/resign failures"),
-    cl::init(Default));
+    cl::desc("Check pointer authentication auth/resign failures"));
 
 namespace {
 
@@ -98,6 +97,8 @@ class AArch64AsmPrinter : public AsmPrinter {
   FaultMaps FM;
   const AArch64Subtarget *STI;
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
+  bool PtrauthInitFini = false;
+  bool PtrauthInitFiniAddressDisc = false;
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
@@ -190,13 +191,20 @@ public:
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
   struct PtrAuthSchema {
-    PtrAuthSchema(AArch64PACKey::ID Key, uint64_t IntDisc,
-                  const MachineOperand &AddrDiscOp);
+    static PtrAuthSchema CreateImmReg(AArch64PACKey::ID Key, uint64_t IntDisc,
+                                      const MachineOperand &AddrDiscOp);
+    static PtrAuthSchema CreateRegReg(AArch64PACKey::ID Key, Register AddrDisc,
+                                      Register PCDisc);
 
     AArch64PACKey::ID Key;
     uint64_t IntDisc;
     Register AddrDisc;
     bool AddrDiscIsKilled;
+    Register PCDisc;
+
+    bool addrDiscIsKilledAndNoneOf(std::initializer_list<Register> Regs) {
+      return AddrDiscIsKilled && !llvm::is_contained(Regs, AddrDisc);
+    }
   };
 
   // Helper for emitting AUTRELLOADPAC: increment Pointer by Addend and then by
@@ -209,7 +217,8 @@ public:
   void emitPtrauthApplyIndirectAddend(Register Pointer, Register Scratch,
                                       int64_t Addend);
 
-  // Emit the sequence for AUT or AUTPAC. Addend if AUTRELLOADPAC
+  // Emit the sequence for AUT or AUTPAC (or their PC-blending variants).
+  // Addend is only used for AUTRELLOADPAC.
   void emitPtrauthAuthResign(Register Pointer, Register Scratch,
                              PtrAuthSchema AuthSchema,
                              std::optional<PtrAuthSchema> SignSchema,
@@ -394,6 +403,17 @@ private:
 
 } // end anonymous namespace
 
+// Get boolean module flag (0 or 1), treating absent flag as having value 0.
+static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
+  Metadata *Flag = M.getModuleFlag(Name);
+  if (!Flag)
+    return false;
+
+  uint64_t Value = mdconst::extract<ConstantInt>(Flag)->getZExtValue();
+  assert((Value == 0 || Value == 1) && "Boolean flag is expected, if present");
+  return Value;
+}
+
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -404,6 +424,10 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
   }
+
+  PtrauthInitFini = getOptionalBooleanModuleFlag(M, "ptrauth-init-fini");
+  PtrauthInitFiniAddressDisc = getOptionalBooleanModuleFlag(
+      M, "ptrauth-init-fini-address-discrimination");
 
   if (!TT.isOSBinFormatELF())
     return;
@@ -449,6 +473,16 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("aarch64-elf-pauthabi-version"))) {
     PAuthABIVersion = PAV->getZExtValue();
+  }
+
+  // For LLVM_LINUX experimental platform, version value of 0 means no PAuth
+  // support. Do not emit corresponding PAuthABI GNU property note and AArch64
+  // build attributes for this case to keep Linux binaries not using PAuth
+  // unaffected.
+  if (PAuthABIPlatform == ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX &&
+      PAuthABIVersion == 0) {
+    PAuthABIPlatform = uint64_t(-1);
+    PAuthABIVersion = uint64_t(-1);
   }
 
   // Emit AArch64 Build Attributes
@@ -510,7 +544,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   //   ;DATA: higher 32 bits of the address of the trampoline
   //   LDP X0, X30, [SP], #16 ; pop X0 and the link register from the stack
   //
-  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -1461,18 +1495,31 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
 void AArch64AsmPrinter::emitXXStructor(const DataLayout &DL,
                                        const Constant *CV) {
-  if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CV))
-    if (CPA->hasAddressDiscriminator() &&
-        !CPA->hasSpecialAddressDiscriminator(
-            ConstantPtrAuth::AddrDiscriminator_CtorsDtors))
-      report_fatal_error(
-          "unexpected address discrimination value for ctors/dtors entry, only "
-          "'ptr inttoptr (i64 1 to ptr)' is allowed");
-  // If we have signed pointers in xxstructors list, they'll be lowered to @AUTH
-  // MCExpr's via AArch64AsmPrinter::lowerConstantPtrAuth. It does not look at
-  // actual address discrimination value and only checks
-  // hasAddressDiscriminator(), so it's OK to leave special address
-  // discrimination value here.
+  LLVMContext &C = CV->getContext();
+  assert(!isa<ConstantPtrAuth>(CV) &&
+         "ctors/dtors are to be signed by asm printer");
+
+  if (PtrauthInitFini) {
+    IntegerType *Int32Ty = IntegerType::get(C, 32);
+    IntegerType *Int64Ty = IntegerType::get(C, 64);
+    PointerType *PtrTy = PointerType::get(C, 0);
+
+    ConstantInt *Key = ConstantInt::get(Int32Ty, AArch64PAuth::InitFiniKey);
+    ConstantInt *IntDisc = ConstantInt::get(
+        Int64Ty, AArch64PAuth::InitFiniPointerConstantDiscriminator);
+    Constant *Null = ConstantPointerNull::get(PtrTy);
+    Constant *AddressDisc = Null;
+    if (PtrauthInitFiniAddressDisc) {
+      uint64_t Marker = ConstantPtrAuth::AddrDiscriminator_CtorsDtors;
+      AddressDisc =
+          ConstantExpr::getIntToPtr(ConstantInt::get(Int64Ty, Marker), PtrTy);
+    }
+
+    CV = ConstantPtrAuth::get(const_cast<Constant *>(CV), Key, IntDisc,
+                              AddressDisc, /*DeactivationSymbol=*/Null);
+  }
+
+  // Signed pointers will be lowered by AArch64AsmPrinter::lowerConstantPtrAuth.
   AsmPrinter::emitXXStructor(DL, CV);
 }
 
@@ -2237,10 +2284,29 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
   return false;
 }
 
-AArch64AsmPrinter::PtrAuthSchema::PtrAuthSchema(
-    AArch64PACKey::ID Key, uint64_t IntDisc, const MachineOperand &AddrDiscOp)
-    : Key(Key), IntDisc(IntDisc), AddrDisc(AddrDiscOp.getReg()),
-      AddrDiscIsKilled(AddrDiscOp.isKill()) {}
+AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateImmReg(
+    AArch64PACKey::ID Key, uint64_t IntDisc, const MachineOperand &AddrDiscOp) {
+  PtrAuthSchema Schema;
+  Schema.Key = Key;
+  Schema.IntDisc = IntDisc;
+  Schema.AddrDisc = AddrDiscOp.getReg();
+  Schema.AddrDiscIsKilled = AddrDiscOp.isKill();
+  Schema.PCDisc = AArch64::NoRegister;
+  return Schema;
+}
+
+AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
+    AArch64PACKey::ID Key, Register AddrDisc, Register PCDisc) {
+  assert(PCDisc != AArch64::NoRegister &&
+         "Use CreateImmReg for non-PC schemas");
+  PtrAuthSchema Schema;
+  Schema.Key = Key;
+  Schema.IntDisc = 0;
+  Schema.AddrDisc = AddrDisc;
+  Schema.AddrDiscIsKilled = false;
+  Schema.PCDisc = PCDisc;
+  return Schema;
+}
 
 void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
                                                        Register Scratch,
@@ -2295,88 +2361,144 @@ void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
                      .addImm(0));
 }
 
+static PtrauthCheckMode getCheckMode(const MachineFunction *MF) {
+  const AArch64Subtarget &STI = MF->getSubtarget<AArch64Subtarget>();
+
+  // If an override is passed via command line argument, just use that value.
+  if (PtrauthAuthChecks.getNumOccurrences())
+    return PtrauthAuthChecks;
+
+  // Otherwise, on an FPAC CPU, you get traps whether you want them or not:
+  // there's no point in emitting checks or traps.
+  if (STI.hasFPAC())
+    return PtrauthCheckMode::Unchecked;
+
+  bool ShouldTrap = MF->getFunction().hasFnAttribute("ptrauth-auth-traps");
+  return ShouldTrap ? PtrauthCheckMode::Trap : PtrauthCheckMode::Poison;
+}
+
+// We expand non-signing AUT* pseudo instructions into a sequence of the form
+//
+//      ; 1. Authenticate Pointer
+//
+// or
+//
+//      ; 1. Authenticate Pointer
+//      ; 2. Check that Pointer is valid, trap otherwise
+//
+// We expand AUT*PAC pseudo instructions into a sequence of the form
+// (with addend only applied if Addend argument is given):
+//
+//      ; 1. Authenticate Pointer
+//      ; 3. Apply addend and sign Pointer
+//
+// or
+//
+//      ; 1. Authenticate Pointer
+//      ; 2. Check that Pointer is valid, trap otherwise
+//      ; 3. Apply addend and sign Pointer
+//
+// or
+//
+//      ; 1. Authenticate Pointer
+//      ; 2. Check that Pointer is valid, jump to .Lon_failure otherwise
+//      ; 3. Apply addend and sign Pointer
+//    .Lon_failure:
+//
 void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register Pointer, Register Scratch, PtrAuthSchema AuthSchema,
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
-  const bool IsResign = SignSchema.has_value();
-  // We expand AUT/AUTPAC into a sequence of the form
-  //
-  //      ; authenticate x16
-  //      ; check pointer in x16
-  //    Lsuccess:
-  //      ; sign x16 (if AUTPAC)
-  //    Lend:   ; if not trapping on failure
-  //
-  // with the checking sequence chosen depending on whether/how we should check
-  // the pointer and whether we should trap on failure.
+  const PtrauthCheckMode CheckMode = getCheckMode(MF);
+  const bool IsAuthWithPC = AuthSchema.PCDisc != AArch64::NoRegister;
+  assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
 
-  // By default, auth/resign sequences check for auth failures.
-  bool ShouldCheck = true;
-  // In the checked sequence, we only trap if explicitly requested.
-  bool ShouldTrap = MF->getFunction().hasFnAttribute("ptrauth-auth-traps");
+  Register SignAddrDiscOrNone =
+      SignSchema ? SignSchema->AddrDisc : AArch64::NoRegister;
 
-  // On an FPAC CPU, you get traps whether you want them or not: there's
-  // no point in emitting checks or traps.
-  if (STI->hasFPAC())
-    ShouldCheck = ShouldTrap = false;
+  // 1. Authenticate Pointer - this is the only common step.
+  // It is more complex than signing because AUTI[AB]171615 may be used.
 
-  // However, command-line flags can override this, for experimentation.
-  switch (PtrauthAuthChecks) {
-  case PtrauthCheckMode::Default:
-    break;
-  case PtrauthCheckMode::Unchecked:
-    ShouldCheck = ShouldTrap = false;
-    break;
-  case PtrauthCheckMode::Poison:
-    ShouldCheck = true;
-    ShouldTrap = false;
-    break;
-  case PtrauthCheckMode::Trap:
-    ShouldCheck = ShouldTrap = true;
-    break;
+  if (IsAuthWithPC) {
+    assert(Pointer == AArch64::X17 && Scratch == AArch64::X16 &&
+           "AUTPCPAC must use x17/x16 as Pointer/Scratch");
+
+    assert(AuthSchema.AddrDisc == AArch64::X16 &&
+           "AUTPCPAC requires address discriminator in X16");
+
+    assert(AuthSchema.PCDisc == AArch64::X15 &&
+           "AUTPCPAC requires PC discriminator in X15");
+
+    assert(AuthSchema.IntDisc == 0 && "AUTPCPAC does not support IntDisc");
+
+    assert((AuthSchema.Key == AArch64PACKey::IB ||
+            AuthSchema.Key == AArch64PACKey::IA) &&
+           "AUTPCPAC only supports AUT-ing with IA/IB");
+
+    if (!emitDeactivationSymbolRelocation(DS)) {
+      unsigned AutOpc = (AuthSchema.Key == AArch64PACKey::IB)
+                            ? AArch64::AUTIB171615
+                            : AArch64::AUTIA171615;
+      EmitToStreamer(MCInstBuilder(AutOpc));
+    }
+  } else {
+    // emitPtrauthDiscriminator is allowed to clobber AuthSchema.AddrDisc as
+    // long as it is not used past this point neither externally (the register
+    // operand is "killed"), nor internally (it does not alias anything being
+    // used later by this pseudo instruction).
+    //
+    // Note that, while rather unlikely, it is technically possible to use the
+    // Pointer to compute its own discriminator.
+    Register AUTDiscReg = emitPtrauthDiscriminator(
+        AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
+        AuthSchema.addrDiscIsKilledAndNoneOf({Pointer, SignAddrDiscOrNone}));
+    if (!emitDeactivationSymbolRelocation(DS))
+      emitAUT(AuthSchema.Key, Pointer, AUTDiscReg);
   }
 
-  // Compute aut discriminator
-  Register AUTDiscReg =
-      emitPtrauthDiscriminator(AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
-                               AuthSchema.AddrDiscIsKilled);
-
-  if (!emitDeactivationSymbolRelocation(DS))
-    emitAUT(AuthSchema.Key, Pointer, AUTDiscReg);
-
-  // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
-  if (!IsResign && (!ShouldCheck || !ShouldTrap))
-    return;
-
-  MCSymbol *EndSym = nullptr;
-
-  if (ShouldCheck) {
-    if (IsResign && !ShouldTrap)
-      EndSym = createTempSymbol("resign_end_");
-
+  // The other two steps are optional, define lambdas for them:
+  // 2. Check that Pointer is valid, on failure jump to label or trap.
+  auto EmitCheck = [&](MCSymbol *OnFailure = nullptr) {
     emitPtrauthCheckAuthenticatedValue(Pointer, Scratch, AuthSchema.Key,
                                        AArch64PAuth::AuthCheckMethod::XPAC,
-                                       EndSym);
+                                       OnFailure);
+  };
+  // 3. Apply addend and sign Pointer.
+  auto EmitResignOnSuccess = [&]() {
+    if (Addend.has_value())
+      emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
+
+    assert(Pointer != SignSchema->AddrDisc && "Pointer is early-clobbered");
+    Register PACDiscReg =
+        emitPtrauthDiscriminator(SignSchema->IntDisc, SignSchema->AddrDisc,
+                                 Scratch, SignSchema->AddrDiscIsKilled);
+    emitPAC(SignSchema->Key, Pointer, PACDiscReg);
+  };
+
+  // Emit checking and resigning as needed.
+
+  if (!SignSchema) {
+    if (CheckMode == PtrauthCheckMode::Trap)
+      EmitCheck();
+    // For authentication-only pseudos, Poison is demoted to Unchecked.
+    return;
   }
 
-  // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
-  // Trapping AUTs don't need PAC: we're done.
-  if (!IsResign)
-    return;
-
-  if (Addend.has_value())
-    emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
-
-  // Compute pac discriminator into x17
-  Register PACDiscReg = emitPtrauthDiscriminator(SignSchema->IntDisc,
-                                                 SignSchema->AddrDisc, Scratch);
-  emitPAC(SignSchema->Key, Pointer, PACDiscReg);
-
-  //  Lend:
-  if (EndSym)
-    OutStreamer->emitLabel(EndSym);
+  switch (CheckMode) {
+  case Unchecked:
+    EmitResignOnSuccess();
+    break;
+  case Trap:
+    EmitCheck();
+    EmitResignOnSuccess();
+    break;
+  case Poison:
+    MCSymbol *OnFailure = createTempSymbol("resign_end_");
+    EmitCheck(OnFailure);
+    EmitResignOnSuccess();
+    OutStreamer->emitLabel(OnFailure);
+    break;
+  }
 }
 
 void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
@@ -3203,7 +3325,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
         MI == &MF->front().front()) {
       int64_t Imm = MI->getOperand(0).getImm();
-      if ((Imm & 32) && (Imm & 6)) {
+      if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38) {
         MCInst Inst;
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);
@@ -3299,8 +3421,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     const Register Pointer = AArch64::X16;
     const Register Scratch = AArch64::X17;
 
-    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                             MI->getOperand(1).getImm(), MI->getOperand(2));
+    auto AuthSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), MI->getOperand(2));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, std::nullopt,
                           std::nullopt, MI->getDeactivationSymbol());
@@ -3311,8 +3434,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     const Register Pointer = MI->getOperand(0).getReg();
     const Register Scratch = MI->getOperand(1).getReg();
 
-    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
-                             MI->getOperand(4).getImm(), MI->getOperand(5));
+    auto AuthSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, std::nullopt,
                           std::nullopt, MI->getDeactivationSymbol());
@@ -3323,14 +3447,31 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     const Register Pointer = AArch64::X16;
     const Register Scratch = AArch64::X17;
 
-    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                             MI->getOperand(1).getImm(), MI->getOperand(2));
+    auto AuthSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), MI->getOperand(2));
 
-    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
-                             MI->getOperand(4).getImm(), MI->getOperand(5));
+    auto SignSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
                           std::nullopt, MI->getDeactivationSymbol());
+    return;
+  }
+
+  case AArch64::AUTPCPAC: {
+    auto AuthSchema = PtrAuthSchema::CreateRegReg(
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(), AArch64::X16,
+        AArch64::X15);
+
+    auto SignSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(1).getImm(),
+        MI->getOperand(2).getImm(), MI->getOperand(3));
+
+    emitPtrauthAuthResign(/*Pointer=*/AArch64::X17, /*Scratch=*/AArch64::X16,
+                          AuthSchema, SignSchema, std::nullopt,
+                          MI->getDeactivationSymbol());
     return;
   }
 
@@ -3338,11 +3479,13 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     const Register Pointer = AArch64::X16;
     const Register Scratch = AArch64::X17;
 
-    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
-                             MI->getOperand(1).getImm(), MI->getOperand(2));
+    auto AuthSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getImm(), MI->getOperand(2));
 
-    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(3).getImm(),
-                             MI->getOperand(4).getImm(), MI->getOperand(5));
+    auto SignSchema = PtrAuthSchema::CreateImmReg(
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
                           MI->getOperand(6).getImm(),
