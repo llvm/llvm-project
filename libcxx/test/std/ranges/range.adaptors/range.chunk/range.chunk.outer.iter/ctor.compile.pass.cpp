@@ -17,12 +17,30 @@
 #include <concepts>
 #include <ranges>
 
-#include "../types.h"
+#include "test_iterators.h"
 
-using OuterIterator = std::ranges::iterator_t<std::ranges::chunk_view<input_span<int>>>;
+// Test `outer_iterator() = delete`
+static_assert(!std::default_initializable< std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>);
 
-static_assert(!std::default_initializable<OuterIterator>);
-static_assert(!std::copy_constructible<OuterIterator>);
-static_assert(!std::assignable_from<OuterIterator&, const OuterIterator&>);
-static_assert(std::move_constructible<OuterIterator>);
-static_assert(std::assignable_from<OuterIterator&, OuterIterator>);
+// Test `outer_iterator(const outer_iterator&) = delete`
+static_assert(!std::copy_constructible< std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>);
+
+// Test `outer_iterator& operator=(const outer_iterator&) = default`
+static_assert(!std::assignable_from<
+              std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>&,
+              const std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>&>);
+
+// Test `outer_iterator(outer_iterator&&) = delete`
+static_assert(std::move_constructible< std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>);
+
+// Test `outer_iterator& operator=(outer_iterator&&) = default`
+static_assert(std::assignable_from<
+              std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>&,
+              std::ranges::iterator_t<std::ranges::chunk_view<
+                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>);
