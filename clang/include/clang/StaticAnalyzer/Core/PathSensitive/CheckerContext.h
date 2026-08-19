@@ -447,12 +447,7 @@ private:
     if (!P)
       P = Pred;
 
-    ExplodedNode *node;
-    if (MarkAsSink)
-      node = NB.generateSink(LocalLoc, State, P);
-    else
-      node = NB.generateNode(LocalLoc, State, P);
-    return node;
+    return NB.generateNode(LocalLoc, State, P, MarkAsSink);
   }
 };
 
