@@ -18,6 +18,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -44,23 +45,6 @@ struct StridedMetadata {
   SmallVector<OpFoldResult> sizes;
   SmallVector<OpFoldResult> strides;
 };
-
-static MemRefType updateTypeFromDescriptor(MemRefType type,
-                                           const StridedMetadata &metadata) {
-  SmallVector<OpFoldResult> offsets{metadata.offset};
-  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
-  SmallVector<int64_t> staticSizes = decomposeMixedValues(metadata.sizes).first;
-  SmallVector<int64_t> staticStrides =
-      decomposeMixedValues(metadata.strides).first;
-  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
-                                       staticStrides);
-  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
-                                           layout, type.getMemorySpace());
-  if (!type.getLayout().isIdentity())
-    return updatedType;
-  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
-  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
-}
 
 /// From `subview(memref, subOffset, subSizes, subStrides))` compute
 ///
@@ -214,8 +198,9 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    MemRefType resultType =
-        updateTypeFromDescriptor(subview.getType(), *stridedMetadata);
+    MemRefType resultType = memref::updateTypeFromDescriptor(
+        subview.getType(), stridedMetadata->offset, stridedMetadata->sizes,
+        stridedMetadata->strides);
     auto foldedSubview = memref::ReinterpretCastOp::create(
         rewriter, subview.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
@@ -628,7 +613,9 @@ public:
 
     MemRefType resultType = reshape.getResultType();
     if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
-      resultType = updateTypeFromDescriptor(resultType, *stridedMetadata);
+      resultType = memref::updateTypeFromDescriptor(
+          resultType, stridedMetadata->offset, stridedMetadata->sizes,
+          stridedMetadata->strides);
     auto foldedReshape = memref::ReinterpretCastOp::create(
         rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,

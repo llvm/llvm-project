@@ -198,6 +198,13 @@ LogicalResult resolveSourceIndicesRankReducingSubview(
 /// negative.
 bool hasNegativeStaticStride(MemRefType memRefTy);
 
+/// Returns a memref type matching the descriptor's offset, sizes, and strides.
+/// Static attributes become static type metadata; SSA values remain dynamic.
+/// The caller remains responsible for ensuring the descriptor is semantically
+/// correct.
+MemRefType updateTypeFromDescriptor(MemRefType type, OpFoldResult offset,
+                                    ArrayRef<OpFoldResult> sizes,
+                                    ArrayRef<OpFoldResult> strides);
 } // namespace memref
 } // namespace mlir
 

@@ -14,6 +14,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
@@ -26,23 +27,6 @@ namespace mlir {
 } // namespace mlir
 
 using namespace mlir;
-
-static MemRefType updateTypeFromDescriptor(MemRefType type, OpFoldResult offset,
-                                           ArrayRef<OpFoldResult> sizes,
-                                           ArrayRef<OpFoldResult> strides) {
-  SmallVector<OpFoldResult> offsets{offset};
-  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
-  SmallVector<int64_t> staticSizes = decomposeMixedValues(sizes).first;
-  SmallVector<int64_t> staticStrides = decomposeMixedValues(strides).first;
-  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
-                                       staticStrides);
-  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
-                                           layout, type.getMemorySpace());
-  if (!type.getLayout().isIdentity())
-    return updatedType;
-  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
-  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
-}
 
 static MemRefType inferCastResultType(Value source, OpFoldResult offset) {
   auto sourceType = cast<BaseMemRefType>(source.getType());
@@ -229,8 +213,8 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
       finalStrides.push_back(strides[i]);
     }
 
-    resultType = updateTypeFromDescriptor(resultType, finalOffset, finalSizes,
-                                          finalStrides);
+    resultType = memref::updateTypeFromDescriptor(resultType, finalOffset,
+                                                  finalSizes, finalStrides);
     auto flattenedSubview = memref::ReinterpretCastOp::create(
         rewriter, op.getLoc(), resultType, base, finalOffset, finalSizes,
         finalStrides);

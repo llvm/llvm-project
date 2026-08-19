@@ -70,6 +70,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRIndexDialect
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIRMemRefUtils
   MLIRNVVMTarget
   MLIRPass
   MLIRROCDLDialect

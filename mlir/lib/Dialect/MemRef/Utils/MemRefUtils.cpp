@@ -351,5 +351,24 @@ bool hasNegativeStaticStride(MemRefType memRefTy) {
   });
 }
 
+MemRefType updateTypeFromDescriptor(MemRefType type, OpFoldResult offset,
+                                    ArrayRef<OpFoldResult> sizes,
+                                    ArrayRef<OpFoldResult> strides) {
+  SmallVector<OpFoldResult> offsets{offset};
+  SmallVector<int64_t> staticOffsets = decomposeMixedValues(offsets).first;
+  SmallVector<int64_t> staticSizes = decomposeMixedValues(sizes).first;
+  SmallVector<int64_t> staticStrides = decomposeMixedValues(strides).first;
+  auto layout = StridedLayoutAttr::get(type.getContext(), staticOffsets.front(),
+                                       staticStrides);
+  // Build a MemRefType using the original element type and memory space,
+  // but derive its shape, offset, and strides from the supplied descriptor.
+  MemRefType updatedType = MemRefType::get(staticSizes, type.getElementType(),
+                                           layout, type.getMemorySpace());
+  if (!type.getLayout().isIdentity())
+    return updatedType;
+  MemRefType canonicalType = updatedType.canonicalizeStridedLayout();
+  return canonicalType.getLayout().isIdentity() ? canonicalType : updatedType;
+}
+
 } // namespace memref
 } // namespace mlir
