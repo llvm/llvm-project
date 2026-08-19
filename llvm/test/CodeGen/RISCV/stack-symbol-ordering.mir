@@ -1,0 +1,67 @@
+# RUN: llc %s -mtriple=riscv64 -O2 \
+# RUN:   -start-before=prolog-epilog -verify-machineinstrs -o - \
+# RUN:   | FileCheck %s --check-prefix=SP
+# RUN: llc %s -mtriple=riscv64 -O2 \
+# RUN:   -frame-pointer=all -start-before=prolog-epilog \
+# RUN:   -verify-machineinstrs -o - | FileCheck %s --check-prefix=FP
+
+# The 4-byte slot is referenced twelve times and the 2000-byte cold slot only once.
+# Declare the hot slot first so the original PEI order puts it away from SP.
+# Density sorting moves the hot slot to the tail of the allocation order, which
+# places it closest to SP. FP-relative locals require reversing that order so
+# the hot slot is instead near FP.
+
+--- |
+  define void @test() {
+  entry:
+    ret void
+  }
+...
+---
+name:            test
+alignment:       2
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    16
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 2000, alignment: 16 }
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $x10
+
+    ; Hot slot: six stores and six loads.
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+    SW $x10, %stack.0, 0 :: (store (s32) into %stack.0)
+    $x11 = LW %stack.0, 0 :: (load (s32) from %stack.0)
+
+    ; Cold slot: one reference, but large enough to separate the objects.
+    SW $x10, %stack.1, 0 :: (store (s32) into %stack.1)
+    PseudoRET
+
+# SP-LABEL: test:
+# SP:       addi sp, sp, -2016
+# SP:       sw a0, 12(sp)
+# SP:       lw a1, 12(sp)
+# SP:       sw a0, 12(sp)
+# SP:       lw a1, 12(sp)
+
+# FP-LABEL: test:
+# FP:       addi s0, sp, 2032
+# FP-NEXT: .cfi_def_cfa s0, 0
+# FP-NEXT: sw a0, -28(s0)
+# FP-NEXT: lw a1, -28(s0)
+# FP-NEXT: sw a0, -28(s0)
+# FP-NEXT: lw a1, -28(s0)
+# FP-NEXT: sw a0, -28(s0)
+# FP-NEXT: lw a1, -28(s0)

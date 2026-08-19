@@ -19,21 +19,21 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -16
 ; CHECK-NEXT:    mv s1, sp
-; CHECK-NEXT:    lw t0, 44(s1)
-; CHECK-NEXT:    lw a2, 40(s1)
-; CHECK-NEXT:    lw a3, 36(s1)
-; CHECK-NEXT:    lw a4, 32(s1)
-; CHECK-NEXT:    lw a5, 28(s1)
-; CHECK-NEXT:    lw a6, 24(s1)
-; CHECK-NEXT:    lw a7, 20(s1)
-; CHECK-NEXT:    lw a1, 16(s1)
-; CHECK-NEXT:    lw t1, 12(s1)
-; CHECK-NEXT:    lw t2, 8(s1)
+; CHECK-NEXT:    lw t0, 48(s1)
+; CHECK-NEXT:    lw a2, 44(s1)
+; CHECK-NEXT:    lw a3, 40(s1)
+; CHECK-NEXT:    lw a4, 36(s1)
+; CHECK-NEXT:    lw a5, 32(s1)
+; CHECK-NEXT:    lw a6, 28(s1)
+; CHECK-NEXT:    lw a7, 24(s1)
+; CHECK-NEXT:    lw a1, 20(s1)
+; CHECK-NEXT:    lw t1, 16(s1)
+; CHECK-NEXT:    lw t2, 12(s1)
 ; CHECK-NEXT:    sw a0, 52(s1)
-; CHECK-NEXT:    sw a0, 48(s1)
+; CHECK-NEXT:    sw a0, 8(s1)
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    sd a1, 0(sp)
-; CHECK-NEXT:    addi a1, s1, 48
+; CHECK-NEXT:    addi a1, s1, 8
 ; CHECK-NEXT:    mv a0, t0
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t2, 16(sp)

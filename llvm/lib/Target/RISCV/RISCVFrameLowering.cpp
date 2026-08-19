@@ -15,6 +15,8 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -2844,6 +2846,77 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       MBBI->eraseFromParent();
     }
   }
+}
+
+namespace {
+/// Bookkeeping record used while ordering local stack objects by access
+/// density. One record is created for each frame index passed to
+/// orderFrameObjects().
+struct RISCVFrameSortingObject {
+  int ObjectIndex;
+  uint64_t ObjectSize;
+  Align ObjectAlign;
+  uint64_t NumUses = 0;
+};
+} // end anonymous namespace
+
+void RISCVFrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  // PEI has already removed callee-saved, dead, stack-protector, EH and other
+  // special objects from ObjectsToAllocate. The remaining objects are safe to
+  // reorder.
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  DenseMap<int, unsigned> Index;
+  SmallVector<RISCVFrameSortingObject, 0> Sorting;
+  Sorting.reserve(ObjectsToAllocate.size());
+
+  for (int FI : ObjectsToAllocate) {
+    int64_t Size = MFI.getObjectSize(FI);
+    RISCVFrameSortingObject Obj{
+        FI, Size > 0 ? static_cast<uint64_t>(Size) : 1,
+        MFI.getObjectAlign(FI)};
+    Index[FI] = Sorting.size();
+    Sorting.push_back(Obj);
+  }
+
+  // Count static references to each frame index. This provides an access
+  // density heuristic without requiring profile data.
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isFI())
+          continue;
+        auto It = Index.find(MO.getIndex());
+        if (It != Index.end())
+          ++Sorting[It->second].NumUses;
+      }
+    }
+  }
+
+  // Sort by NumUses / ObjectSize using cross multiplication. High-density
+  // objects are placed at the end of the list, which puts them closest to SP
+  // or BP when PEI allocates objects on the downward-growing stack.
+  llvm::stable_sort(
+      Sorting, [](const RISCVFrameSortingObject &A,
+                  const RISCVFrameSortingObject &B) {
+        uint64_t DensityA = A.NumUses * B.ObjectSize;
+        uint64_t DensityB = B.NumUses * A.ObjectSize;
+        if (DensityA != DensityB)
+          return DensityA < DensityB;
+        return A.ObjectAlign < B.ObjectAlign;
+      });
+
+  for (auto [Idx, Obj] : llvm::enumerate(Sorting))
+    ObjectsToAllocate[Idx] = Obj.ObjectIndex;
+
+  // Ordinary local objects in a non-realigned FP frame are addressed from the
+  // opposite end of the allocation order. Reverse the SP/BP-oriented order so
+  // high-density objects are close to FP instead.
+  if (!STI.getRegisterInfo()->hasStackRealignment(MF) && hasFP(MF))
+    std::reverse(ObjectsToAllocate.begin(), ObjectsToAllocate.end());
 }
 
 int RISCVFrameLowering::getInitialCFAOffset(const MachineFunction &MF) const {

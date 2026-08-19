@@ -51,7 +51,7 @@
 ; CHECK-NEXT:   .quad   -1
 ; CHECK-NEXT:   .quad   1
 ; CHECK-NEXT:   .quad   floats
-; CHECK-NEXT:   .quad   32
+; CHECK-NEXT:   .quad   16
 ; CHECK-NEXT:   .quad   1
 
 ; Num LargeConstants

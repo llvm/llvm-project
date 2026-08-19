@@ -2255,15 +2255,15 @@ define i32 @caller_large_struct() {
 ; ILP32E-WITHFP-NEXT:    li a1, 2
 ; ILP32E-WITHFP-NEXT:    li a2, 3
 ; ILP32E-WITHFP-NEXT:    li a3, 4
-; ILP32E-WITHFP-NEXT:    sw a0, 16(sp)
-; ILP32E-WITHFP-NEXT:    sw a1, 20(sp)
-; ILP32E-WITHFP-NEXT:    sw a2, 24(sp)
-; ILP32E-WITHFP-NEXT:    sw a3, 28(sp)
 ; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
 ; ILP32E-WITHFP-NEXT:    sw a1, 4(sp)
 ; ILP32E-WITHFP-NEXT:    sw a2, 8(sp)
 ; ILP32E-WITHFP-NEXT:    sw a3, 12(sp)
-; ILP32E-WITHFP-NEXT:    mv a0, sp
+; ILP32E-WITHFP-NEXT:    sw a0, 16(sp)
+; ILP32E-WITHFP-NEXT:    sw a1, 20(sp)
+; ILP32E-WITHFP-NEXT:    sw a2, 24(sp)
+; ILP32E-WITHFP-NEXT:    sw a3, 28(sp)
+; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
 ; ILP32E-WITHFP-NEXT:    call callee_large_struct
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 40
 ; ILP32E-WITHFP-NEXT:    lw ra, 36(sp) # 4-byte Folded Reload
@@ -2313,15 +2313,15 @@ define i32 @caller_large_struct() {
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a1, 2
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a2, 3
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    li a3, 4
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 16(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a1, 20(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a2, 24(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a3, 28(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 0(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a1, 4(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a2, 8(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a3, 12(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    mv a0, sp
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a0, 16(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a1, 20(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a2, 24(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    sw a3, 28(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi a0, sp, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    call callee_large_struct
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 40
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi sp, sp, 32
