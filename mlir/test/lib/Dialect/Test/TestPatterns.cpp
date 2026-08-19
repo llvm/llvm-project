@@ -384,7 +384,8 @@ struct CloneRegionBeforeOp : public RewritePattern {
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_cloned", rewriter.getUnitAttr()); });
     return success();
   }
 };
@@ -434,6 +435,33 @@ public:
     }
 
     return failure();
+  }
+};
+
+/// Creates and immediately erases an operation and a block.
+class CreateAndEraseOpAndBlock : public RewritePattern {
+public:
+  CreateAndEraseOpAndBlock(MLIRContext *context)
+      : RewritePattern("test.create_and_erase_op_and_block", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasAttr("was_rewritten"))
+      return failure();
+
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.transient_op", op->getContext()).getIdentifier(),
+        ValueRange(), TypeRange());
+    rewriter.eraseOp(newOp);
+
+    Block *newBlock = rewriter.createBlock(op->getParentRegion());
+    rewriter.eraseBlock(newBlock);
+
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_rewritten", rewriter.getUnitAttr()); });
+    return success();
   }
 };
 
@@ -709,8 +737,8 @@ struct TestWalkPatternDriver final
 
     // Patterns for testing the WalkPatternRewriteDriver.
     patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
-                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
-        &getContext());
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock,
+                 CreateAndEraseOpAndBlock>(&getContext());
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),

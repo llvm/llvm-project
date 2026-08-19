@@ -103,18 +103,25 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
   // is only ever accessed as a whole buffer (e.g. through whole-buffer
   // `vector.transfer_read`/`vector.transfer_write`).
   if (VectorType::isValidElementType(type.getElementType())) {
+    // Vector types require strictly positive extents, so a memref with a zero
+    // extent has nothing to promote.
+    if (llvm::is_contained(type.getShape(), 0))
+      return {};
+
     // Static shape: a fixed-size vector of the same extents.
     if (type.hasStaticShape())
       return {MemorySlot{getResult(), VectorType::get(type.getShape(),
                                                       type.getElementType())}};
 
-    // A 1-D memref whose single dynamic extent is `vector.vscale * C` maps to a
-    // scalable `vector<[C]x...>` slot.
+    // A 1-D memref whose single dynamic extent is `vector.vscale * N` maps to a
+    // scalable `vector<[N]x...>` slot, for a strictly positive multiple `N`.
     if (type.getRank() == 1 && type.isDynamicDim(0)) {
-      if (std::optional<int64_t> c = matchVScaleMultiple(getDynamicSizes()[0]))
-        return {
-            MemorySlot{getResult(), VectorType::get({*c}, type.getElementType(),
-                                                    /*scalableDims=*/{true})}};
+      if (std::optional<int64_t> multiple =
+              matchVScaleMultiple(getDynamicSizes()[0]);
+          multiple && *multiple > 0)
+        return {MemorySlot{getResult(),
+                           VectorType::get({*multiple}, type.getElementType(),
+                                           /*scalableDims=*/{true})}};
     }
   }
 

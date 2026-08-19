@@ -203,6 +203,32 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   return createEvent();
 }
 
+EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+                                 const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+
+  if (NumBytes == 0) {
+    handleEventDependencies(DepEvents);
+    return createEvent();
+  }
+  if (!Ptr) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in prefetch operation");
+  }
+
+  constexpr std::size_t Count = 1;
+  const void *Mems[] = {Ptr};
+  const std::size_t Sizes[] = {NumBytes};
+
+  constexpr ol_mem_migration_flags_t Flag =
+      OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
+
+  return createEvent();
+}
+
 void QueueImpl::handleEventDependencies(const std::vector<EventImplPtr> &Deps) {
   // TODO: liboffload supports only in-order queues and no cross context waiting
   // is available now that means that this code is excessive but correct. I

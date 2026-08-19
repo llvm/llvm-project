@@ -57,7 +57,9 @@ std::unique_ptr<TargetInfo> createAArch64TargetInfo(TypeBuilder &TB,
 }
 
 static void reportNYI(StringRef Feature) {
-  WithColor::warning() << Feature << " is not yet implemented for AArch64\n";
+  WithColor::warning()
+      << Feature
+      << " is not yet implemented for AArch64 in the LLVM ABI library.\n";
 }
 
 ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
@@ -66,14 +68,14 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getIgnore();
 
   if (RetTy->isVector()) {
-    reportNYI("Vector return type");
+    reportNYI("Vector return type handling");
     return ArgInfo::getDirect();
   }
 
   if (!passAsAggregateType(RetTy)) {
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
       if (IntTy->isBitInt()) {
-        reportNYI("BitInt return type");
+        reportNYI("BitInt return type handling");
         return ArgInfo::getDirect();
       }
       if (isPromotableInteger(IntTy) && isDarwinPCS()) {
@@ -85,14 +87,41 @@ ArgInfo AArch64TargetInfo::classifyReturnType(const Type *RetTy,
     return ArgInfo::getDirect();
   }
 
-  reportNYI("Aggregate return type");
+  reportNYI("Aggregate return type handling");
   return ArgInfo::getDirect();
 }
 
 ArgInfo AArch64TargetInfo::classifyArgumentType(
     const Type *Ty, bool IsVariadicFn, bool IsNamedArg,
     unsigned CallingConvention, unsigned &NSRN, unsigned &NPRN) const {
-  reportNYI("Classify argument type");
+  // TODO: Handle variadic functins here when Windows Arm64 EC is supported.
+
+  if (Ty->isVector()) {
+    reportNYI("Vector argument type handling");
+    return ArgInfo::getDirect();
+  }
+
+  if (!passAsAggregateType(Ty)) {
+    if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+      if (IntTy->isBitInt()) {
+        reportNYI("BitInt argument type handling");
+        return ArgInfo::getDirect();
+      }
+      if (isPromotableInteger(IntTy) && isDarwinPCS()) {
+        return ArgInfo::getExtend(IntTy);
+      }
+    }
+
+    // TODO: Legal vector types will update NSRN or NPRN.
+
+    if (Ty->isFloat())
+      NSRN = std::min(NSRN + 1, 8u);
+
+    // Everything not handled above is returned directly.
+    return ArgInfo::getDirect();
+  }
+
+  reportNYI("Aggregate argument type handling");
   return ArgInfo::getDirect();
 }
 

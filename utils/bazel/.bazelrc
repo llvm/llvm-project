@@ -222,6 +222,19 @@ build:hermetic-toolchain --@llvm-project//llvm:pfm=disable
 build:hermetic-toolchain --copt=-Wno-modules-import-nested-redundant --host_copt=-Wno-modules-import-nested-redundant
 
 ###############################################################################
+# Options for Emscripten WebAssembly builds.
+###############################################################################
+
+build:wasm --platforms=@emsdk//:platform_wasm
+# Match LLVM's single-threaded config and shut the runtime down when main returns.
+build:wasm --features=-use_pthreads,exit_runtime
+# Make the default CLI artifact use Node's host filesystem; browser builds override this to 0.
+build:wasm --linkopt=-sNODERAWFS=1
+
+# TODO: zstd unconditionally enables pthreads on non-Windows targets.
+build:wasm --@llvm-project//third-party:llvm_enable_zstd=false
+
+###############################################################################
 # Options for continuous integration.
 ###############################################################################
 

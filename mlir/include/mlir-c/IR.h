@@ -179,6 +179,20 @@ MLIR_CAPI_EXPORTED unsigned mlirContextGetNumThreads(MlirContext context);
 MLIR_CAPI_EXPORTED MlirLlvmThreadPool
 mlirContextGetThreadPool(MlirContext context);
 
+/// Begins a transient scope on the context, freezing the base layer (loaded
+/// dialects, registered operations, interface models, and existing
+/// types/attributes).
+/// Precondition: The context must not already be in a transient scope.
+MLIR_CAPI_EXPORTED void mlirContextBeginTransientScope(MlirContext context);
+
+/// Ends the transient scope and resets the context to the base state, pruning
+/// transient types, attributes, affine expressions, distinct attributes, and
+/// unregistered operations added during the transient scope.
+MLIR_CAPI_EXPORTED void mlirContextEndTransientScope(MlirContext context);
+
+/// Returns whether the context is currently in a transient scope.
+MLIR_CAPI_EXPORTED bool mlirContextIsInTransientScope(MlirContext context);
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//

@@ -15,9 +15,9 @@
 
 #include "orc-rt/SimpleNativeMemoryMap.h"
 #include "orc-rt/Session.h"
+#include "orc-rt/StringExtras.h"
 
 #include <optional>
-#include <sstream>
 
 #if defined(__APPLE__) || defined(__linux__)
 #include "Unix/NativeMemoryAPIs.inc"
@@ -52,9 +52,8 @@ void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
   if (Size % S.processInfo().pageSize()) {
     return OnComplete(make_error<StringError>(
-        (std::ostringstream()
-         << "SimpleNativeMemoryMap error: reserved size " << std::hex << Size
-         << " is not a page-size multiple")
+        (StringOutputStream() << "SimpleNativeMemoryMap error: reserved size "
+                              << hex(Size) << " is not a page-size multiple")
             .str()));
   }
 
@@ -85,11 +84,12 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   }
 
   if (!SI) {
-    std::ostringstream ErrMsg;
-    ErrMsg << "SimpleNativeMemoryMap error: release called on unrecognized "
-              "address "
-           << Addr;
-    return OnComplete(make_error<StringError>(ErrMsg.str()));
+    return OnComplete(make_error<StringError>(
+        (StringOutputStream()
+         << "SimpleNativeMemoryMap error: release called on unrecognized "
+            "address "
+         << Addr)
+            .str()));
   }
 
   for (auto &[Addr, DAAs] : SI->DeallocActions)
@@ -116,11 +116,11 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
 
     if (S.Content.size() > S.Size) {
       return OnComplete(make_error<StringError>(
-          (std::ostringstream()
+          (StringOutputStream()
            << "For segment [" << (void *)S.Address << ".."
            << (void *)(S.Address + S.Size) << "), "
-           << " content size (" << std::hex << S.Content.size()
-           << ") exceeds segment size (" << S.Size << ")")
+           << " content size (" << hex(S.Content.size())
+           << ") exceeds segment size (" << hex(S.Size) << ")")
               .str()));
     }
 
@@ -181,12 +181,12 @@ void SimpleNativeMemoryMap::deinitialize(OnDeinitializeCompleteFn &&OnComplete,
     auto I = SI->DeallocActions.find(Base);
     if (I == SI->DeallocActions.end()) {
       Lock.unlock();
-      std::ostringstream ErrMsg;
-      ErrMsg
-          << "SimpleNativeMemoryMap deinitialize error: no deallocate actions "
-             "registered for segment base address "
-          << Base;
-      return OnComplete(make_error<StringError>(ErrMsg.str()));
+      return OnComplete(make_error<StringError>(
+          (StringOutputStream()
+           << "SimpleNativeMemoryMap deinitialize error: no deallocate actions "
+              "registered for segment base address "
+           << Base)
+              .str()));
     }
 
     DAAs = std::move(I->second);
@@ -302,10 +302,11 @@ void SimpleNativeMemoryMap::shutdownNext(Service::OnCompleteFn OnComplete,
 }
 
 Error SimpleNativeMemoryMap::makeBadSlabError(void *Base, const char *Op) {
-  std::ostringstream ErrMsg;
-  ErrMsg << "SimpleNativeMemoryMap " << Op << " error: segment base address "
-         << Base << " does not fall within an allocated slab";
-  return make_error<StringError>(ErrMsg.str());
+  return make_error<StringError>((StringOutputStream()
+                                  << "SimpleNativeMemoryMap " << Op
+                                  << " error: segment base address " << Base
+                                  << " does not fall within an allocated slab")
+                                     .str());
 }
 
 SimpleNativeMemoryMap::SlabInfo *
@@ -336,10 +337,9 @@ Error SimpleNativeMemoryMap::recordDeallocActions(
   auto I = SI->DeallocActions.find(Base);
   if (I != SI->DeallocActions.end()) {
     Lock.unlock();
-    std::ostringstream ErrMsg;
-    ErrMsg << "SimpleNativeMemoryMap initialize error: segment base address "
-              "reused in subsequent initialize call";
-    return make_error<StringError>(ErrMsg.str());
+    return make_error<StringError>(
+        "SimpleNativeMemoryMap initialize error: segment base address "
+        "reused in subsequent initialize call");
   }
 
   SI->DeallocActions[Base] = std::move(DeallocActions);

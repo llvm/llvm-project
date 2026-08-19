@@ -214,11 +214,6 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);

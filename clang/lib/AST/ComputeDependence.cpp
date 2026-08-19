@@ -831,7 +831,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
                            ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
-        isa<UnresolvedUsingValueDecl>(D) || isa<TemplateTemplateParmDecl>(D))
+        isa<UnresolvedUsingValueDecl>(D))
       Deps |= ExprDependence::TypeValueInstantiation;
   }
   // If we have explicit template arguments, check for dependent
@@ -898,6 +898,17 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
     D |= E->getBase()->getDependence();
   D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
+  for (const auto &A : E->template_arguments())
+    D |= toExprDependence(A.getArgument().getDependence());
+  return D;
+}
+
+ExprDependence clang::computeDependence(DependentTemplateIdExpr *E) {
+  auto D = ExprDependence::TypeValueInstantiation;
+  if (E->getTemplateName().getDependence() &
+      TemplateNameDependence::UnexpandedPack)
+    D |= ExprDependence::UnexpandedPack;
+  D |= getDependenceInExpr(E->getNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;

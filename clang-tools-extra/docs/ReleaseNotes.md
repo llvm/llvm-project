@@ -154,6 +154,12 @@ infrastructure are described first, followed by tool-specific sections.
   `std::initializer_list` constructor, as the braced form could select a
   different constructor.
 
+- Improved {doc}`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check by adding
+  the {option}`AllowReferencedInitialValues` to support the
+  `INT09-C-EX1` exception, allowing enumerators initialized by referencing
+  another enumerator in the same enum (e.g., `last = first`).
+
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 

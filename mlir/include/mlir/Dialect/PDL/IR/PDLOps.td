@@ -52,7 +52,8 @@ def PDL_ApplyNativeConstraintOp
                        DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name `(` $args `:` type($args) `)` (`:`  type($results)^ )? attr-dict
+    $name `(` $args `:` type($args) `)`
+    (`is_negated` `=` $isNegated^)? (`:`  type($results)^ )? attr-dict
   }];
   let hasVerifier = 1;
 }

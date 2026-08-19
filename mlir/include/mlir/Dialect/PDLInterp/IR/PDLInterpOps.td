@@ -36,6 +36,7 @@ def PDLInterp_Dialect : Dialect {
   }];
 
   let name = "pdl_interp";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
   let extraClassDeclaration = [{
@@ -110,7 +111,8 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
                        DefaultValuedAttr<BoolAttr, "false">:$isNegated);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name `(` $args `:` type($args) `)` (`:` type($results)^)? attr-dict 
+    $name `(` $args `:` type($args) `)`
+    (`is_negated` `=` $isNegated^)? (`:` type($results)^)? attr-dict
     `->` successors
   }];
 }

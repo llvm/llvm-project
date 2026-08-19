@@ -162,7 +162,7 @@ bool BPFPassConfig::addIRTranslator() {
 }
 
 bool BPFPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

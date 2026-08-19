@@ -3699,12 +3699,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
             CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Lo,
             CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
                                       MVT::i32),
-            (!HasOpSel && Lo->isDivergent()) ? Lo : Undef,
+            // For packed 64-bit ops without OPSEL support, a later pass will
+            // optimize the splat sgpr patterns to save registers.
+            HasOpSel ? Undef : Lo,
             CurDAG->getTargetConstant(
                 TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
 
         Src = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, SL,
                                              Src.getValueType(), Ops), 0);
+        // Check that both op_sel_0 and op_sel_1 are zero.
+        assert(!(Mods & (SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1)));
       }
       SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
       return true;

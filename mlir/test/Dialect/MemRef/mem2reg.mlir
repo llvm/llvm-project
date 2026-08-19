@@ -309,3 +309,37 @@ func.func @two_consecutive_merge_points(%cond1: i1, %cond2: i1) -> i32 {
   // CHECK: return %[[RESULT]] : i32
   return %result : i32
 }
+
+// -----
+
+// A memref with a zero extent holds no elements and cannot be promoted.
+
+// CHECK-LABEL: func.func @zero_extent_alloca
+func.func @zero_extent_alloca() {
+  // CHECK: memref.alloca() : memref<0xf32>
+  %alloca = memref.alloca() : memref<0xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @zero_extent_alloca_multi_dim
+func.func @zero_extent_alloca_multi_dim() {
+  // CHECK: memref.alloca() : memref<2x0x3xf32>
+  %alloca = memref.alloca() : memref<2x0x3xf32>
+  return
+}
+
+// -----
+
+// A memref with a `vector.vscale * 0` extent holds no elements and cannot be promoted.
+
+// CHECK-LABEL: func.func @scalable_zero_extent_alloca
+func.func @scalable_zero_extent_alloca() {
+  %vscale = vector.vscale
+  %c0 = arith.constant 0 : index
+  %size = arith.muli %vscale, %c0 : index
+  // CHECK: memref.alloca(%{{.*}}) : memref<?xf32>
+  %alloca = memref.alloca(%size) : memref<?xf32>
+  return
+}

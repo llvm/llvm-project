@@ -45,7 +45,7 @@ protected:
   const ABIType *Matrix;
 
   AArch64TargetInfoTest()
-      : TB(Alloc), Bool(TB.getIntegerType(1, llvm::Align(1), /*Signed=*/true)),
+      : TB(Alloc), Bool(TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false)),
         I8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/true)),
         U8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false)),
         I16(TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true)),
@@ -104,7 +104,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCS) {
 
 // DarwinPCS returns non-promotable scalars directly. Promotable integer
 // returns are extended.
-TEST_F(AArch64TargetInfoTest, ClassifyReturnNonPromotableScalarsDirectDarwin) {
+TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectOrPromotableDarwin) {
   std::unique_ptr<TargetInfo> TI =
       createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
 
@@ -140,6 +140,59 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCSSoft) {
     FI->getReturnInfo() = ArgInfo::getIgnore();
     TI->computeInfo(*FI);
     expectUncoercedDirect(FI->getReturnInfo());
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// argument path under AAPCS.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCS) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCS);
+
+  for (const ABIType *ArgTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+// DarwinPCS passes non-promotable scalars directly. Promotable integer
+// arguments are extended.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectOrPromotableDarwin) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+
+  for (const ABIType *ArgTy : {I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  for (const ABIType *ArgTy : {Bool, I8, U8, I16, U16}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+
+    bool IsSigned = llvm::cast<llvm::abi::IntegerType>(ArgTy)->isSigned();
+    expectExtendInteger(FI->getArgInfo(0).Info, ArgTy, IsSigned);
+  }
+}
+
+// Non-aggregate scalars, matrix types, and promotable integers take the Direct
+// argument path under AAPCSSoft.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCSSoft) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCSSoft);
+
+  for (const ABIType *ArgTy :
+       {Bool, I8, U8, I16, U16, I32, U32, I64, U64, F32, F64, Ptr, Matrix}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
   }
 }
 

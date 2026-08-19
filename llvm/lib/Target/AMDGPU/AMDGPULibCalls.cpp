@@ -912,41 +912,15 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
-    //  pow/powr/pown(x, 0) == 1
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    replaceCall(FPOp, cnval);
-    return true;
-  }
-  if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
-    // pow/powr/pown(x, 1.0) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
-    replaceCall(FPOp, opr0);
-    return true;
-  }
-  if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
-    // pow/powr/pown(x, 2.0) = x*x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
-                      << *opr0 << "\n");
-    Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
-    replaceCall(FPOp, nval);
-    return true;
-  }
-  if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
-    // pow/powr/pown(x, -1.0) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
-    replaceCall(FPOp, nval);
-    return true;
-  }
+  // OpenCL powr(x<0, y) = NaN, but the folds below would turn it into a
+  // finite number. Skip them unless NaNs are ignored or the base is known
+  // non-negative.
+  bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+                FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+  bool SkipConstantFolds =
+      IsPowr && !FPOp->hasNoNaNs() &&
+      !cannotBeOrderedLessThanZero(
+          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp)));
 
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
@@ -957,9 +931,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
     // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
     // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
-    // required for all variants.
-    bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-                  FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+    // required for all variants. sqrt/rsqrt already return NaN for a
+    // negative base like powr does, so this fold skips the base-sign check.
     if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
       bool issqrt = CF->isExactlyValue(0.5);
       if (FunctionCallee FPExpr =
@@ -973,6 +946,44 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
         replaceCall(FPOp, nval);
         return true;
       }
+    }
+  }
+
+  if (!SkipConstantFolds) {
+    if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
+      //  pow/powr/pown(x, 0) == 1
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      replaceCall(FPOp, cnval);
+      return true;
+    }
+    if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
+      // pow/powr/pown(x, 1.0) = x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+      replaceCall(FPOp, opr0);
+      return true;
+    }
+    if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
+      // pow/powr/pown(x, 2.0) = x*x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
+                        << *opr0 << "\n");
+      Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
+      replaceCall(FPOp, nval);
+      return true;
+    }
+    if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
+      // pow/powr/pown(x, -1.0) = 1.0/x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
+      replaceCall(FPOp, nval);
+      return true;
     }
   }
 

@@ -56,6 +56,17 @@ void foo_preemptible_machine(void) {}
 __attribute__((interrupt("machine", "SiFive-CLIC-preemptible")))
 void foo_machine_preemptible(void) {}
 
+// CHECK-LABEL:  @foo_machine_stack_swap_preemptible() #2
+// CHECK: ret void
+__attribute__((interrupt("machine", "SiFive-CLIC-stack-swap",
+                         "SiFive-CLIC-preemptible")))
+void foo_machine_stack_swap_preemptible(void) {}
+
+// CHECK-LABEL:  @foo_preemptible_stack_swap_machine() #2
+// CHECK: ret void
+__attribute__((interrupt("SiFive-CLIC-preemptible",
+                         "SiFive-CLIC-stack-swap", "machine")))
+void foo_preemptible_stack_swap_machine(void) {}
 
 // CHECK: attributes #0
 // CHECK: "interrupt"="SiFive-CLIC-stack-swap"
@@ -77,8 +88,10 @@ __attribute__((interrupt("machine", "SiFive-CLIC-preemptible"))) void foo15(void
 
 __attribute__((interrupt("SiFive-CLIC-preemptible", "SiFive-CLIC-stack-swap"))) void foo16(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-preemptible' requires extension 'XSfmclic'}}
 __attribute__((interrupt("SiFive-CLIC-stack-swap", "SiFive-CLIC-preemptible"))) void foo17(void) {} // disabled-error {{RISC-V 'interrupt' attribute 'SiFive-CLIC-stack-swap' requires extension 'XSfmclic'}}
+__attribute__((interrupt("machine", "SiFive-CLIC-stack-swap", "SiFive-CLIC-preemptible"))) void foo18(void) {} // disabled-error {{requires extension 'XSfmclic'}}
 
-__attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible"))) void foo24(void) {} // both-error {{'interrupt' attribute takes no more than 2 arguments}}
+__attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible"))) void foo24(void) {} // disabled-error {{requires extension 'XSfmclic'}}
+__attribute__((interrupt("machine", "machine", "SiFive-CLIC-preemptible", "SiFive-CLIC-stack-swap"))) void foo25(void) {} // both-error {{'interrupt' attribute takes no more than 3 arguments}}
 
 __attribute__((interrupt("SiFive-CLIC-preemptible", "supervisor"))) void foo27(void) {} // both-error {{RISC-V 'interrupt' attribute contains invalid combination of interrupt types}}
 

@@ -1316,6 +1316,54 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
   return maxLinearIndex;
 }
 
+static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+  auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
+  if (!pointerType ||
+      pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
+    return std::nullopt;
+
+  Type pointeeType = pointerType.getPointeeType();
+  if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
+    if (structType.getNumElements() != 1)
+      return std::nullopt;
+    pointeeType = structType.getElementType(0);
+  }
+  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
+  if (!arrayType)
+    return std::nullopt;
+  return arrayType.getNumElements();
+}
+
+static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
+                                          ArrayRef<int64_t> strides,
+                                          int64_t offset,
+                                          uint64_t accessElementCount) {
+  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
+  // than the source element. Keep a plain access chain so later bitwidth
+  // emulation can adjust the final index in storage-element units.
+  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
+    if (integerType.getWidth() < 16)
+      return false;
+
+  std::optional<uint64_t> maxSourceElementIndex =
+      getMaxLinearizedIndex(baseType.getShape(), strides, offset);
+  std::optional<uint64_t> storageElementCount =
+      getStorageBufferElementCount(basePtr);
+  if (!maxSourceElementIndex || !storageElementCount)
+    return false;
+
+  if (accessElementCount == 0 || accessElementCount > *storageElementCount)
+    return false;
+
+  // `InBoundsAccessChain` requires the computed pointer to stay within the
+  // SPIR-V base object. Dynamic index validity is assumed from the source
+  // operation/caller contract; for vector accesses, `accessElementCount` only
+  // rejects widths that cannot fit in the fixed StorageBuffer object at all.
+  // The static proof here is that the memref layout's linear index space maps
+  // into that same object.
+  return *maxSourceElementIndex < *storageElementCount;
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1431,7 +1479,8 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                                        MemRefType baseType, Value basePtr,
                                        ValueRange indices, Location loc,
-                                       OpBuilder &builder) {
+                                       OpBuilder &builder,
+                                       uint64_t accessElementCount) {
   // Get base and offset of the MemRefType and verify they are static.
 
   int64_t offset;
@@ -1462,7 +1511,19 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
   // Interface memrefs are wrapped in a struct: index to its first elem.
   if (isa<spirv::StructType>(pointeeType))
     linearizedIndices.insert(linearizedIndices.begin(), zero);
+  if (shouldEmitInBoundsAccessChain(baseType, basePtr, strides, offset,
+                                    accessElementCount))
+    return spirv::InBoundsAccessChainOp::create(builder, loc, basePtr,
+                                                linearizedIndices);
   return spirv::AccessChainOp::create(builder, loc, basePtr, linearizedIndices);
+}
+
+Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
+                                       MemRefType baseType, Value basePtr,
+                                       ValueRange indices, Location loc,
+                                       OpBuilder &builder) {
+  return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
+                             builder, /*accessElementCount=*/1);
 }
 
 Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
@@ -1506,7 +1567,8 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
                                  MemRefType baseType, Value basePtr,
                                  ValueRange indices, Location loc,
-                                 OpBuilder &builder) {
+                                 OpBuilder &builder,
+                                 uint64_t accessElementCount) {
 
   if (typeConverter.allows(spirv::Capability::Kernel)) {
     return getOpenCLElementPtr(typeConverter, baseType, basePtr, indices, loc,
@@ -1514,7 +1576,15 @@ Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
   }
 
   return getVulkanElementPtr(typeConverter, baseType, basePtr, indices, loc,
-                             builder);
+                             builder, accessElementCount);
+}
+
+Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,
+                                 MemRefType baseType, Value basePtr,
+                                 ValueRange indices, Location loc,
+                                 OpBuilder &builder) {
+  return getElementPtr(typeConverter, baseType, basePtr, indices, loc, builder,
+                       /*accessElementCount=*/1);
 }
 
 //===----------------------------------------------------------------------===//

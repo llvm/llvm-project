@@ -20,6 +20,19 @@
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
 
+// Wide character encoding.
+#if defined(LIBC_COMPILER_IS_CLANG) || defined(LIBC_COMPILER_IS_GCC)
+#if defined(__SIZEOF_WCHAR_T__)
+#if __SIZEOF_WCHAR_T__ == 4
+#define LIBC_TYPES_WCHAR_T_IS_UTF32
+#elif __SIZEOF_WCHAR_T__ == 2
+#define LIBC_TYPES_WCHAR_T_IS_UTF16
+#endif
+#endif // __SIZEOF_WCHAR_T__
+#elif defined(LIBC_COMPILER_IS_MSVC)
+#define LIBC_TYPES_WCHAR_T_IS_UTF16
+#endif // LIBC_COMPILER
+
 // 'long double' properties.
 //
 // Note: we cannot distinguish between f64 and f80 by just checking for a 53-bit

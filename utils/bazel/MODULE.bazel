@@ -30,6 +30,7 @@ bazel_dep(name = "nanobind", version = "2.12.0.bcr.1")
 bazel_dep(name = "libpfm", version = "4.13.0", repo_name = "pfm")
 bazel_dep(name = "vulkan_headers", version = "1.4.349")
 
+bazel_dep(name = "emsdk", version = "6.0.2", dev_dependency = True)
 bazel_dep(name = "llvm", version = "0.8.5", dev_dependency = True)
 
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")

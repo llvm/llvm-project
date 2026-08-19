@@ -271,7 +271,10 @@ def Async_CallOp : Async_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)`
+    (`arg_attrs` `=` $arg_attrs^)?
+    (`res_attrs` `=` $res_attrs^)?
+    attr-dict `:` functional-type($operands, results)
   }];
 }
 
@@ -705,7 +708,7 @@ def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
                        ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
-    $operand attr-dict `:` type($operand)
+    $operand `count` `=` $count attr-dict `:` type($operand)
   }];
 }
 
@@ -720,7 +723,7 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
                        ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
-    $operand attr-dict `:` type($operand)
+    $operand `count` `=` $count attr-dict `:` type($operand)
   }];
 }
 

@@ -1,6 +1,13 @@
 // RUN: mlir-opt %s --test-walk-pattern-rewrite-driver="dump-notifications=true" \
 // RUN:   --allow-unregistered-dialect --split-input-file | FileCheck %s
 
+// Check that newly created operations and blocks may be erased without
+// invalidating the walk, while still forwarding listener notifications.
+// CHECK: notifyOperationInserted: test.transient_op, was unlinked
+// CHECK-NEXT: notifyOperationErased: test.transient_op
+// CHECK-NEXT: notifyBlockInserted into func.func: was unlinked
+// CHECK-NEXT: notifyBlockErased
+
 // The following op is updated in-place and will not be added back to the worklist.
 // CHECK-LABEL: func.func @inplace_update()
 // CHECK: "test.any_attr_of_i32_str"() <{attr = 1 : i32}> : () -> ()
@@ -120,6 +127,12 @@ func.func @erase_nested_block() -> i32 {
   return %a : i32
 }
 
+// CHECK-LABEL: func.func @create_and_erase_op_and_block
+// CHECK: "test.create_and_erase_op_and_block"() {was_rewritten}
+func.func @create_and_erase_op_and_block() {
+  "test.create_and_erase_op_and_block"() : () -> ()
+  return
+}
 
 // CHECK-LABEL: func.func @unreachable_replace_with_new_op
 // CHECK: "test.new_op"
@@ -138,4 +151,3 @@ func.func @unreachable_replace_with_new_op() {
   %c = "test.replace_with_new_op"() : () -> (i32)
   return
 }
-

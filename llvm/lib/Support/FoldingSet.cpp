@@ -15,7 +15,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include <cassert>
@@ -164,7 +163,7 @@ static void **GetBucketFor(unsigned Hash, void **Buckets, unsigned NumBuckets) {
   return Buckets + BucketNum;
 }
 
-/// AllocateBuckets - Allocated initialized bucket memory.
+/// AllocateBuckets - Allocate initialized bucket memory.
 static void **AllocateBuckets(unsigned NumBuckets) {
   void **Buckets =
       static_cast<void **>(safe_calloc(NumBuckets + 1, sizeof(void *)));
@@ -225,7 +224,6 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
   // Clear out new buckets.
   Buckets = AllocateBuckets(NewBucketCount);
-  // Set NumBuckets only if allocation of new buckets was successful.
   NumBuckets = NewBucketCount;
   NumNodes = 0;
 
@@ -356,8 +354,7 @@ bool FoldingSetBase::RemoveNode(Node *N) {
 }
 
 FoldingSetBase::Node *
-FoldingSetBase::GetOrInsertNode(FoldingSetBase::Node *N,
-                                const FoldingSetInfo &Info) {
+FoldingSetBase::GetOrInsertNode(Node *N, const FoldingSetInfo &Info) {
   FoldingSetNodeID ID;
   Info.GetNodeProfile(this, N, ID);
   void *IP;

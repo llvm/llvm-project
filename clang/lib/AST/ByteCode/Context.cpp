@@ -687,8 +687,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     unsigned PrimTSize = align(primSize(PT));
     ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
@@ -718,8 +718,8 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);
-    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
-                                           IsConst, /*IsTemporary=*/false,
+    Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, IsConst,
+                                           /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
     ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));

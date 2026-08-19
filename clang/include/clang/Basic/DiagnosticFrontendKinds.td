@@ -407,6 +407,10 @@ def warn_profile_data_misexpect : Warning<
   BackendInfo, InGroup<MisExpect>;
 } // end of instrumentation issue category
 
+def warn_cgs_no_proto : Warning<
+  "indirect call to a function with no prototype; generating type metadata for assumed prototype %0 (type string: %1)">,
+  InGroup<DiagGroup<"call-graph-section-no-prototype">>;
+
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,

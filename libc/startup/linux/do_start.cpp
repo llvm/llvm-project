@@ -182,7 +182,7 @@ static TLSDescriptor tls;
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
 
-  self.attrib = &main_thread_attrib;
+  internal::self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
       internal::get_thread_atexit_callback_mgr();
 
