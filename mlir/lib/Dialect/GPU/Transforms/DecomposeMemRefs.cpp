@@ -238,6 +238,7 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
       rewriter.replaceOp(op, reinterpretCast);
       return success();
     }
+    // Preserve the original result type expected by existing users.
     rewriter.replaceOpWithNewOp<memref::CastOp>(op, op.getType(),
                                                 reinterpretCast);
     return success();
