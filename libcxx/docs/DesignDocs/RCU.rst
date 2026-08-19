@@ -180,7 +180,10 @@ This is the main class that implements the `rcu` logic. It contains
 - `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the collector thread that is waiting for the grace period to end.
 
 - `std::mutex retire_queue_mutex_` and  `rcu_singly_list_view __retired_callback_queue_` : This queue stores all the retired callbacks that are waiting for the grace period to end.
-  TODO: `mutex` can throw, we need to consider how to replace it.
+
+  - TODO: `mutex` can throw, we need to consider how to replace it.
+
+  - Design 2: The access pattern of this list in this implementation is very special. The writer threads are only going to push to this queue. And the collector threads are only going to splice the entire queue. It is easy to implement it with a single `atomic<pair<Head*, Tail*>>`. It will be efficient if the platform supports 16 bytes CAS. To reduce contention between multiple writer threads retiring objects, we let each thread have a thread local queue
 
 - `rcu_singly_list_view callbacks_phase_1_` and `rcu_singly_list_view callbacks_phase_2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector (?) thread is holding the `grace_period_mutex_` .
 
