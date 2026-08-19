@@ -1436,6 +1436,44 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       return;
     }
   }
+  // REAL and COMPLEX: when the allocation size exceeds the store size
+  // (e.g. x86_fp80 stores 10 bytes but occupies 16), fill the full
+  // allocation with a byte loop so padding bytes are also initialized.
+  auto emitByteLoop = [&](uint64_t nBytes) {
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type i8Ty = builder.getIntegerType(8);
+    mlir::Type i8SeqTy =
+        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+    mlir::Value byteBase =
+        builder.createConvert(loc, builder.getRefType(i8SeqTy), addr);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value last = builder.createIntegerConstant(
+        loc, idxTy, static_cast<int64_t>(nBytes) - 1);
+    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(loop.getBody());
+    mlir::Value iv = loop.getInductionVar();
+    mlir::Value byteAddr = fir::CoordinateOp::create(
+        builder, loc, builder.getRefType(i8Ty), byteBase, mlir::ValueRange{iv});
+    int64_t fillByte =
+        (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+    mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
+    fir::StoreOp::create(builder, loc, pat, byteAddr);
+  };
+
+  if (mlir::isa<mlir::FloatType, mlir::ComplexType>(ty)) {
+    const mlir::DataLayout &dl = builder.getDataLayout();
+    uint64_t storeSize = dl.getTypeSize(ty);
+    uint64_t allocSize = llvm::alignTo(storeSize, dl.getTypeABIAlignment(ty));
+    if (allocSize > storeSize) {
+      emitByteLoop(allocSize);
+      return;
+    }
+  }
+
   mlir::Value val;
   switch (mode) {
   case Fortran::lower::InitLocalKind::Zero:
@@ -1530,17 +1568,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
             initAddr(eleTy, elemAddr);
           }
         } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty)) {
-          // Derived type initialization:
-          //   zero: fir.zero_bits over the whole struct -- covers all typed
-          //         fields and any padding bytes between them.
-          //   hex:  byte-loop over the whole struct using the compile-time
-          //         struct size from fir::getTypeSizeAndAlignmentOrCrash --
-          //         also covers padding bytes, giving a uniform byte pattern.
-          if (mode == Fortran::lower::InitLocalKind::Zero) {
-            fir::StoreOp::create(
-                builder, loc, fir::ZeroOp::create(builder, loc, recTy), addr);
-          } else if (mode == Fortran::lower::InitLocalKind::Hex) {
-            // Fill every byte (typed fields + padding) with hexByte.
+          // Byte-fill the full allocation (fields + internal padding +
+          // tail padding). A typed fir.zero_bits store would leave tail
+          // padding as 'undef', which LLVM may not zero at -O2.
+          {
             auto [byteSize, _align] = fir::getTypeSizeAndAlignmentOrCrash(
                 loc, recTy, builder.getDataLayout(), builder.getKindMap());
             if (byteSize > 0) {
@@ -1563,8 +1594,10 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
               mlir::Value byteAddr = fir::CoordinateOp::create(
                   builder, loc, builder.getRefType(i8Ty), byteBase,
                   mlir::ValueRange{iv});
-              mlir::Value pat = builder.createIntegerConstant(
-                  loc, i8Ty, static_cast<int64_t>(hexByte));
+              int64_t fillByte =
+                  (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+              mlir::Value pat =
+                  builder.createIntegerConstant(loc, i8Ty, fillByte);
               fir::StoreOp::create(builder, loc, pat, byteAddr);
             }
           }
