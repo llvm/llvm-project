@@ -2287,46 +2287,54 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
   return Interesting;
 }
 
-bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
+bool ScalarEvolution::willNotOverflow(unsigned Opcode, bool Signed,
                                       const SCEV *LHS, const SCEV *RHS,
-                                      const Instruction *CtxI) {
-  const SCEV *(ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                            unsigned);
-  switch (BinOp) {
+                                      const Instruction *CtxI, const Loop *L) {
+  using OpFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, SCEVUse,
+                                                  SCEV::NoWrapFlags, unsigned);
+  std::function<const SCEV *(SCEVUse, SCEVUse, SCEV::NoWrapFlags, unsigned)>
+      OperationFn;
+  switch (Opcode) {
   default:
     llvm_unreachable("Unsupported binary op");
   case Instruction::Add:
-    Operation = &ScalarEvolution::getAddExpr;
+    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getAddExpr, this);
     break;
   case Instruction::Sub:
-    Operation = &ScalarEvolution::getMinusSCEV;
+    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getMinusSCEV, this);
     break;
   case Instruction::Mul:
-    Operation = &ScalarEvolution::getMulExpr;
+    OperationFn = bind_front<OpFnTy>(&ScalarEvolution::getMulExpr, this);
+    break;
+  case Instruction::PHI:
+    assert(L && "Loop argument must be given for PHI");
+    OperationFn = [&](SCEVUse LHS, SCEVUse RHS, SCEV::NoWrapFlags NW,
+                      unsigned) { return getAddRecExpr(LHS, RHS, L, NW); };
     break;
   }
 
-  const SCEV *(ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
-      Signed ? &ScalarEvolution::getSignExtendExpr
-             : &ScalarEvolution::getZeroExtendExpr;
+  using ExtFnTy = const SCEV *(ScalarEvolution::*)(SCEVUse, Type *, unsigned);
+  std::function<const SCEV *(SCEVUse, Type *, unsigned)> ExtensionFn =
+      Signed ? bind_front<ExtFnTy>(&ScalarEvolution::getSignExtendExpr, this)
+             : bind_front<ExtFnTy>(&ScalarEvolution::getZeroExtendExpr, this);
 
   // Check ext(LHS op RHS) == ext(LHS) op ext(RHS)
   auto *NarrowTy = cast<IntegerType>(LHS->getType());
   auto *WideTy =
       IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
-  const SCEV *A = (this->*Extension)(
-      (this->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
-  const SCEV *LHSB = (this->*Extension)(LHS, WideTy, 0);
-  const SCEV *RHSB = (this->*Extension)(RHS, WideTy, 0);
-  const SCEV *B = (this->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
+  const SCEV *A =
+      ExtensionFn(OperationFn(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
+  const SCEV *LHSB = ExtensionFn(LHS, WideTy, 0);
+  const SCEV *RHSB = ExtensionFn(RHS, WideTy, 0);
+  const SCEV *B = OperationFn(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
   if (A == B)
     return true;
   // Can we use context to prove the fact we need?
   if (!CtxI)
     return false;
   // TODO: Support mul.
-  if (BinOp == Instruction::Mul)
+  if (Opcode == Instruction::Mul)
     return false;
   auto *RHSC = dyn_cast<SCEVConstant>(RHS);
   // TODO: Lift this limitation.
@@ -2334,7 +2342,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     return false;
   APInt C = RHSC->getAPInt();
   unsigned NumBits = C.getBitWidth();
-  bool IsSub = (BinOp == Instruction::Sub);
+  bool IsSub = (Opcode == Instruction::Sub);
   bool IsNegativeConst = (Signed && C.isNegative());
   // Compute the direction and magnitude by which we need to check overflow.
   bool OverflowDown = IsSub ^ IsNegativeConst;
@@ -3470,27 +3478,16 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     if (!RHSC->getValue()->isZero()) {
       // Determine if the division can be folded into the operands of
       // its operands.
-      // TODO: Generalize this to non-constants by using known-bits information.
-      Type *Ty = LHS->getType();
-      unsigned LZ = RHSC->getAPInt().countl_zero();
-      unsigned MaxShiftAmt = getTypeSizeInBits(Ty) - LZ - 1;
-      // For non-power-of-two values, effectively round the value up to the
-      // nearest power of two.
-      if (!RHSC->getAPInt().isPowerOf2())
-        ++MaxShiftAmt;
-      IntegerType *ExtTy =
-        IntegerType::get(getContext(), getTypeSizeInBits(Ty) + MaxShiftAmt);
       if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(LHS))
         if (const SCEVConstant *Step =
             dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this))) {
           // {X,+,N}/C --> {X/C,+,N/C} if safe and N/C can be folded.
           const APInt &StepInt = Step->getAPInt();
           const APInt &DivInt = RHSC->getAPInt();
-          if (!StepInt.urem(DivInt) &&
-              getZeroExtendExpr(AR, ExtTy) ==
-              getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                            getZeroExtendExpr(Step, ExtTy),
-                            AR->getLoop(), SCEV::FlagAnyWrap)) {
+          bool NoWrap = willNotOverflow(Instruction::PHI, /*Signed=*/false,
+                                        AR->getStart(), Step, /*CtxI=*/nullptr,
+                                        AR->getLoop());
+          if (!StepInt.urem(DivInt) && NoWrap) {
             SmallVector<SCEVUse, 4> Operands;
             for (const SCEV *Op : AR->operands())
               Operands.push_back(getUDivExpr(Op, RHS));
@@ -3501,12 +3498,6 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
           const APInt *StartRem;
           if (!DivInt.urem(StepInt) && match(getURemExpr(AR->getStart(), Step),
                                              m_scev_APInt(StartRem))) {
-            bool NoWrap =
-                getZeroExtendExpr(AR, ExtTy) ==
-                getAddRecExpr(getZeroExtendExpr(AR->getStart(), ExtTy),
-                              getZeroExtendExpr(Step, ExtTy), AR->getLoop(),
-                              SCEV::FlagAnyWrap);
-
             // With N <= C and both N, C as powers-of-2, the transformation
             // {X,+,N}/C => {(X - X%N),+,N}/C preserves division results even
             // if wrapping occurs, as the division results remain equivalent for
