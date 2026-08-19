@@ -5741,6 +5741,22 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
     // -fdiagnostics-show-note-include-stack. We don't care how this
     // declaration was previously reached.
     Diag(DeclLoc, diag::note_unreachable_entity) << (int)MIK;
+
+    // If the declaring header isn't itself listed in any module map,
+    // but some other header in Modules[0] textually includes it, it
+    // should be reported. The owning module is an accident of include
+    // order, header is not explicitly listed in any modulemap.
+    if (OptionalFileEntryRef DeclFile =
+            SourceMgr.getFileEntryRefForID(SourceMgr.getFileID(DeclLoc))) {
+      ModuleMap &Map = PP.getHeaderSearchInfo().getModuleMap();
+      if (!Map.findModuleForHeader(*DeclFile, /*AllowTextual=*/false)) {
+        ModuleMap::KnownHeader Textual =
+            Map.findModuleForHeader(*DeclFile, /*AllowTextual=*/true);
+        if (Textual && Textual.getModule() == Modules[0])
+          Diag(DeclLoc, diag::note_entity_declared_via_orphan_header)
+              << Modules[0]->getFullModuleName();
+      }
+    }
   };
 
   // Weed out duplicates from module list.

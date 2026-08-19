@@ -12922,6 +12922,10 @@ def note_unreachable_entity : Note<
   "%select{declaration|definition|default argument declared|"
   "explicit specialization declared|partial specialization declared}0 here "
   "is not %select{visible|reachable|reachable|reachable|reachable|reachable}0">;
+def note_entity_declared_via_orphan_header : Note<
+  "the header declaring this entity is not listed in any module map; it was "
+  "pulled into module '%0' only because another header in that module "
+  "'#include's it non-modularly">;
 def ext_module_import_in_extern_c : ExtWarn<
   "import of C++ module '%0' appears within extern \"C\" language linkage "
   "specification">, InGroup<DiagGroup<"module-import-in-extern-c">>;
