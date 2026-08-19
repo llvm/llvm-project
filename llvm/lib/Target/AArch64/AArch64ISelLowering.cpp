@@ -3120,6 +3120,46 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+void AArch64TargetLowering::computeKnownBitsForTargetInstr(
+    GISelValueTracking &Analysis, Register R, KnownBits &Known,
+    const APInt &DemandedElts, const MachineRegisterInfo &MRI,
+    unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  switch (MI->getOpcode()) {
+  case AArch64::G_DUP: {
+    Register Src = MI->getOperand(1).getReg();
+    unsigned SrcBits = MRI.getType(Src).getSizeInBits();
+    KnownBits SrcKnown(SrcBits);
+    Analysis.computeKnownBitsImpl(Src, SrcKnown, APInt(1, 1), Depth + 1);
+    unsigned EltBits = MRI.getType(R).getScalarSizeInBits();
+    if (SrcBits != EltBits) {
+      assert(SrcBits > EltBits && "Expected DUP implicit truncation");
+      SrcKnown = SrcKnown.trunc(EltBits);
+    }
+    Known = SrcKnown;
+    break;
+  }
+  case AArch64::G_VASHR:
+  case AArch64::G_VLSHR: {
+    unsigned BitWidth = MRI.getType(R).getScalarSizeInBits();
+    uint64_t Shift = MI->getOperand(2).getImm();
+    // A shift by the full element width is legal for these instructions, but
+    // KnownBits::ashr/lshr model IR shifts, for which it is poison. Leave the
+    // result unknown in that case.
+    if (Shift >= BitWidth)
+      break;
+    KnownBits SrcKnown(BitWidth);
+    Analysis.computeKnownBitsImpl(MI->getOperand(1).getReg(), SrcKnown,
+                                  DemandedElts, Depth + 1);
+    KnownBits ShiftKnown = KnownBits::makeConstant(APInt(BitWidth, Shift));
+    Known = MI->getOpcode() == AArch64::G_VASHR
+                ? KnownBits::ashr(SrcKnown, ShiftKnown)
+                : KnownBits::lshr(SrcKnown, ShiftKnown);
+    break;
+  }
+  }
+}
+
 unsigned AArch64TargetLowering::computeNumSignBitsForTargetInstr(
     GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
     const MachineRegisterInfo &MRI, unsigned Depth) const {
