@@ -437,9 +437,9 @@ name:            fold_v_mov_b64_pseudo_64_to_unaligned
 body:             |
   bb.0:
     ; GCN-LABEL: name: fold_v_mov_b64_pseudo_64_to_unaligned
-    ; GCN: [[V_MOV_B64_PSEUDO:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
-    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B]]
+    ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG implicit [[V_MOV_B1]]
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 1311768467750121200, implicit $exec
     %1:vreg_64 = COPY killed %0
     SI_RETURN_TO_EPILOG implicit %1
@@ -872,13 +872,13 @@ name: fold_imm_copy_kill_bug
 tracksRegLiveness: true
 body: |
   bb.0:
-    ; GCN-LABEL: name: fold_imm_copy_kill_bug
-    ; GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-    ; GCN-NEXT: %3:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
-    ; GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
-    ; GCN-NEXT: S_ENDPGM 0
 
+    ; GCN-LABEL: name: fold_imm_copy_kill_bug
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_1]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_1]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; GCN-NEXT: S_ENDPGM 0
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
 
@@ -889,4 +889,103 @@ body: |
 
     S_ENDPGM 0
 
+...
+
+---
+name:            fold_s_mov_b32_inline_imm_valu_inst_0
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GCN-LABEL: name: fold_s_mov_b32_inline_imm_valu_inst_0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], 1, 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:vgpr_32 = V_ADD_U32_e64 %0, %1, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %2
+
+...
+
+---
+name:            fold_s_mov_b32_inline_imm_valu_inst_1
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; GCN-LABEL: name: fold_s_mov_b32_inline_imm_valu_inst_1
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, [[COPY]], 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    %0:vgpr_32 = COPY $vgpr0
+    %1:sreg_32 = S_MOV_B32 1
+    %2:vgpr_32 = V_ADD_U32_e64 %1, %0, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %2
+
+...
+
+---
+name:            fold_s_mov_b32_inline_imm_valu_inst_with_multi_uses
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_s_mov_b32_inline_imm_valu_inst_with_multi_uses
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, 1, 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    %0:sreg_32 = S_MOV_B32 1
+    %1:vgpr_32 = V_ADD_U32_e64 %0, %0, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+
+...
+
+---
+name:            fold_s_mov_b64_inline_imm_valu_inst_with_multi_uses
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_s_mov_b64_inline_imm_valu_inst_with_multi_uses
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 1
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 1, 0, 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    %0:sreg_64 = S_MOV_B64 1
+    %1:vgpr_32 = V_ADD_U32_e64 %0.sub0, %0.sub1, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+
+...
+
+---
+name:            fold_s_mov_b64_imm_subregs_partial_inline_imm_one_inst
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_s_mov_b64_imm_subregs_partial_inline_imm_one_inst
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4096
+    ; GCN-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_MOV_B]].sub0, 0, 0, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_ADD_U32_e64_]]
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 4096
+    %1:vgpr_32 = V_ADD_U32_e64 %0.sub0, %0.sub1, 0, implicit $exec
+    SI_RETURN_TO_EPILOG %1
+
+...
+
+# FIXME: This should not fold
+---
+name:            fold_inline_imm_f16_pseudo_scalar_trans_restriction
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: fold_inline_imm_f16_pseudo_scalar_trans_restriction
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
+    ; GCN-NEXT: [[V_S_EXP_F16_e64_:%[0-9]+]]:sgpr_32 = V_S_EXP_F16_e64 0, -1, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[V_S_EXP_F16_e64_]]
+    %0:sreg_32 = S_MOV_B32 -1
+    %1:sgpr_32 = V_S_EXP_F16_e64 0, %0, 0, 0, implicit $mode, implicit $exec
+    SI_RETURN_TO_EPILOG %1
 ...
