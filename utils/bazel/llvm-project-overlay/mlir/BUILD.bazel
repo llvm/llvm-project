@@ -10997,6 +10997,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithToLLVM",
+        ":ComplexDialect",
         ":ControlFlowToLLVM",
         ":ConversionPassIncGen",
         ":FuncDialect",
@@ -11004,6 +11005,9 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
+        ":MemRefToLLVM",
+        ":OpenACCAnalysis",
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
