@@ -75,6 +75,16 @@ constexpr void test_SFINAE() {
     static_assert(!std::is_constructible_v<decltype(sent1), decltype(sent2)>);
     static_assert(!std::is_constructible_v<decltype(sent2), decltype(sent1)>); // this assert fails
   }
+  {
+    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
+    auto sent1 = v.end();
+    std::ranges::sentinel_t<const decltype(v)> sent2 = sent1;
+
+    static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
+
+    // We cannot create a non-const sentinel from a const sentinel.
+    static_assert(!std::is_constructible_v<decltype(sent1), decltype(sent2)>);
+  }
 }
 
 template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
