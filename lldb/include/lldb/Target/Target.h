@@ -2050,6 +2050,10 @@ public:
   void PrintDummySignals(Stream &strm, Args &signals);
 
 protected:
+  /// The mutex the calling thread must serialize on for its current policy, or
+  /// nullptr when that policy bypasses the API mutex entirely.
+  std::recursive_mutex *GetAPIMutexForCurrentPolicy();
+
   /// Implementing of ModuleList::Notifier.
 
   void NotifyModuleAdded(const ModuleList &module_list,

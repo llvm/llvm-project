@@ -780,12 +780,11 @@ public:
                              const TargetLibraryInfo *TLI, AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE,
                              std::function<BlockFrequencyInfo &()> GetBFI,
-                             const Function *F, const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI,
+                             const Function *F, InterleavedAccessInfo &IAI,
                              VFSelectionContext &Config)
       : Config(Config), EpilogueLoweringStatus(SEL), TheLoop(L), PSE(PSE),
         LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
-        GetBFI(GetBFI), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
+        GetBFI(GetBFI), TheFunction(F), InterleaveInfo(IAI) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -1515,9 +1514,6 @@ public:
   }
 
   const Function *TheFunction;
-
-  /// Loop Vectorize Hint.
-  const LoopVectorizeHints *Hints;
 
   /// The interleave access information contains groups of interleaved accesses
   /// with the same stride and close to each other.
@@ -5814,7 +5810,7 @@ LoopVectorizationPlanner::computeBestVF() {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
 
-  ElementCount UserVF = Hints.getWidth();
+  ElementCount UserVF = Config.getHints().getWidth();
   if (VPlans.size() == 1) {
     // For outer loops, the plan has a single vector VF determined by the
     // heuristic.
@@ -5853,7 +5849,8 @@ LoopVectorizationPlanner::computeBestVF() {
   VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
   VectorizationFactor BestFactor = ScalarFactor;
 
-  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  bool ForceVectorization =
+      Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
   if (ForceVectorization) {
     // Ignore scalar width, because the user explicitly wants vectorization.
     // Initialize cost to max so that VF = 2 is, at least, chosen during cost
@@ -6554,11 +6551,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
-                      *OrigLoop, VPDT, Legal->getInductionVars(),
-                      Legal->getReductionVars(),
-                      Legal->getFixedOrderRecurrences(),
-                      Config.getInLoopReductions(), Hints.allowReordering())) {
+  if (!RUN_VPLAN_PASS(
+          VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE, *OrigLoop,
+          VPDT, Legal->getInductionVars(), Legal->getReductionVars(),
+          Legal->getFixedOrderRecurrences(), Config.getInLoopReductions(),
+          Config.getHints().allowReordering())) {
     return nullptr;
   }
 
@@ -6567,7 +6564,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides(), VPDT);
 
   // Add surviving induction predicates to PSE and check constraints.
-  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  bool ForceVectorization =
+      Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
   bool OptForSize =
       !ForceVectorization &&
       (CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
@@ -7105,7 +7103,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
   if (SCEVCheckBlock && SCEVCheckBlock->hasNPredecessors(0)) {
     assert((!Config.OptForSize ||
-            CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
+            Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled) &&
            "Cannot SCEV check stride or overflow when optimizing for size");
     RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan, SCEVCheckCond,
                    SCEVCheckBlock, HasBranchWeights);
@@ -7119,7 +7117,7 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 
     if (Config.OptForSize) {
       assert(
-          CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
+          Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled &&
           "Cannot emit memory checks when optimizing for size, unless forced "
           "to vectorize.");
       ORE->emit([&]() {
@@ -8063,10 +8061,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   VFSelectionContext Config(*TTI, &LVL, L, *F, PSE, DB, ORE, &Hints,
                             OptForSize);
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE,
-                                GetBFI, F, &Hints, IAI, Config);
+                                GetBFI, F, IAI, Config);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
-                               Hints, ORE);
+                               ORE);
 
   EpilogueLowering EpilogueTailLoweringStatus =
       getEpilogueTailLowering(CM, L, ORE);

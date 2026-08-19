@@ -118,6 +118,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     ## Currently disabled for failing tests.
     # math.h entrypoints
+    #libc.src.math.atan2f128
     #libc.src.math.copysign
     #libc.src.math.copysignf
     #libc.src.math.copysignl
@@ -175,12 +176,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.llrintl
     #libc.src.math.llround
     #libc.src.math.llroundf
+    #libc.src.math.llroundf128
     #libc.src.math.llroundl
     #libc.src.math.lrint
     #libc.src.math.lrintf
     #libc.src.math.lrintl
     #libc.src.math.lround
     #libc.src.math.lroundf
+    #libc.src.math.lroundf128
     #libc.src.math.lroundl
     #libc.src.math.ldexp
     #libc.src.math.ldexpf
@@ -200,6 +203,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.nanl
     #libc.src.math.nearbyint
     #libc.src.math.nearbyintf
+    #libc.src.math.nearbyintf128
     #libc.src.math.nearbyintl
     #libc.src.math.nextafter
     #libc.src.math.nextafterf
@@ -218,12 +222,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.rintl
     #libc.src.math.round
     #libc.src.math.roundf
+    #libc.src.math.roundf128
     #libc.src.math.roundl
     #libc.src.math.sincosf
     #libc.src.math.sinhf
     #libc.src.math.sinf
     #libc.src.math.sqrt
     #libc.src.math.sqrtf
+    #libc.src.math.sqrtf128
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf
