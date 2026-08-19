@@ -1663,7 +1663,8 @@ static mlir::Value
 genCUFAllocDescriptor(mlir::Location loc,
                       mlir::ConversionPatternRewriter &rewriter,
                       mlir::ModuleOp mod, fir::BaseBoxType boxTy,
-                      const fir::LLVMTypeConverter &typeConverter) {
+                      const fir::LLVMTypeConverter &typeConverter,
+                      llvm::StringRef cudaDescriptorAllocFunction) {
   std::optional<mlir::DataLayout> dl =
       fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/true);
   if (!dl)
@@ -1684,14 +1685,15 @@ genCUFAllocDescriptor(mlir::Location loc,
   auto fctTy = mlir::LLVM::LLVMFunctionType::get(
       llvmPointerType, {llvmIntPtrType, llvmPointerType, llvmInt32Type});
 
-  auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(
-      RTNAME_STRING(CUFAllocDescriptor));
-  auto funcFunc =
-      mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDescriptor));
+  llvm::StringRef funcName = cudaDescriptorAllocFunction.empty()
+                                 ? RTNAME_STRING(CUFAllocDescriptor)
+                                 : cudaDescriptorAllocFunction;
+
+  auto llvmFunc = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(funcName);
+  auto funcFunc = mod.lookupSymbol<mlir::func::FuncOp>(funcName);
   if (!llvmFunc && !funcFunc) {
     auto builder = mlir::OpBuilder::atBlockEnd(mod.getBody());
-    mlir::LLVM::LLVMFuncOp::create(builder, loc,
-                                   RTNAME_STRING(CUFAllocDescriptor), fctTy);
+    mlir::LLVM::LLVMFuncOp::create(builder, loc, funcName, fctTy);
   }
 
   mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
@@ -1699,14 +1701,15 @@ genCUFAllocDescriptor(mlir::Location loc,
   mlir::Value sizeInBytes =
       fir::genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
   llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
-  return mlir::LLVM::CallOp::create(rewriter, loc, fctTy,
-                                    RTNAME_STRING(CUFAllocDescriptor), args)
+  return mlir::LLVM::CallOp::create(rewriter, loc, fctTy, funcName, args)
       .getResult();
 }
 
 static bool isUsedByGPULaunchFunc(mlir::Value val);
 
-static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal);
+static bool
+isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
+                   llvm::StringRef cudaDescriptorAllocFunction = {});
 
 /// Get the address of the type descriptor global variable that was created by
 /// lowering for derived type \p recType.
@@ -2163,7 +2166,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
       auto mod = boxValue.getDefiningOp()->getParentOfType<mlir::ModuleOp>();
       auto baseBoxTy = mlir::dyn_cast<fir::BaseBoxType>(boxTy);
       storage =
-          genCUFAllocDescriptor(loc, rewriter, mod, baseBoxTy, this->lowerTy());
+          genCUFAllocDescriptor(loc, rewriter, mod, baseBoxTy, this->lowerTy(),
+                                this->options.cudaDescriptorAllocFunction);
     } else {
       storage = this->genAllocaAndAddrCastWithType(loc, llvmBoxTy, defaultAlign,
                                                    rewriter);
@@ -2221,7 +2225,8 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
       return mlir::failure();
     }
     bool needsDeviceAlloc =
-        isDeviceAllocation(embox.getMemref(), adaptor.getMemref()) ||
+        isDeviceAllocation(embox.getMemref(), adaptor.getMemref(),
+                           this->options.cudaDescriptorAllocFunction) ||
         isUsedByGPULaunchFunc(embox);
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), boxTy,
                                                dest, needsDeviceAlloc);
@@ -2266,7 +2271,8 @@ static bool isUsedByOpenACCDataClause(mlir::Value val) {
   return false;
 }
 
-static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
+static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal,
+                               llvm::StringRef cudaDescriptorAllocFunction) {
   if (val.getDefiningOp() &&
       val.getDefiningOp()->getParentOfType<mlir::gpu::GPUModuleOp>())
     return false;
@@ -2280,13 +2286,16 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
         return true;
 
   if (auto loadOp = mlir::dyn_cast_or_null<fir::LoadOp>(val.getDefiningOp()))
-    return isDeviceAllocation(loadOp.getMemref(), {});
+    return isDeviceAllocation(loadOp.getMemref(), {},
+                              cudaDescriptorAllocFunction);
   if (auto boxAddrOp =
           mlir::dyn_cast_or_null<fir::BoxAddrOp>(val.getDefiningOp()))
-    return isDeviceAllocation(boxAddrOp.getVal(), {});
+    return isDeviceAllocation(boxAddrOp.getVal(), {},
+                              cudaDescriptorAllocFunction);
   if (auto convertOp =
           mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
-    return isDeviceAllocation(convertOp.getValue(), {});
+    return isDeviceAllocation(convertOp.getValue(), {},
+                              cudaDescriptorAllocFunction);
   if (!val.getDefiningOp() && adaptorVal) {
     if (auto blockArg = llvm::cast<mlir::BlockArgument>(adaptorVal)) {
       if (blockArg.getOwner() && blockArg.getOwner()->getParentOp() &&
@@ -2308,14 +2317,17 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
     }
   }
   if (auto callOp = mlir::dyn_cast_or_null<fir::CallOp>(val.getDefiningOp()))
-    if (callOp.getCallee() &&
-        (callOp.getCallee().value().getRootReference().getValue().starts_with(
-             RTNAME_STRING(CUFMemAlloc)) ||
-         callOp.getCallee().value().getRootReference().getValue().starts_with(
-             RTNAME_STRING(CUFAllocDescriptor)) ||
-         callOp.getCallee().value().getRootReference().getValue() ==
-             "__tgt_acc_get_deviceptr"))
-      return true;
+    if (callOp.getCallee()) {
+      llvm::StringRef calleeName =
+          callOp.getCallee().value().getRootReference().getValue();
+      llvm::StringRef allocDescName = cudaDescriptorAllocFunction.empty()
+                                          ? RTNAME_STRING(CUFAllocDescriptor)
+                                          : cudaDescriptorAllocFunction;
+      if (calleeName.starts_with(RTNAME_STRING(CUFMemAlloc)) ||
+          calleeName.starts_with(allocDescName) ||
+          calleeName == "__tgt_acc_get_deviceptr")
+        return true;
+    }
   return false;
 }
 
@@ -2353,7 +2365,8 @@ struct CreateBoxOpConversion : public EmboxCommonConversion<fir::CreateBoxOp> {
     dest = insertBaseAddress(rewriter, loc, dest, adaptor.getMemref());
 
     bool needsDeviceAlloc =
-        isDeviceAllocation(createBox.getMemref(), adaptor.getMemref()) ||
+        isDeviceAllocation(createBox.getMemref(), adaptor.getMemref(),
+                           this->options.cudaDescriptorAllocFunction) ||
         isUsedByGPULaunchFunc(createBox);
     mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
                                                       dest, needsDeviceAlloc);
@@ -2552,7 +2565,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       TODO(loc, "fir.embox codegen of derived with length parameters");
     bool needsDeviceAlloc =
         isUsedByGPULaunchFunc(xbox) ||
-        (isDeviceAllocation(xbox.getMemref(), adaptor.getMemref()) &&
+        (isDeviceAllocation(xbox.getMemref(), adaptor.getMemref(),
+                            this->options.cudaDescriptorAllocFunction) &&
          !isUsedByOpenACCDataClause(xbox));
     mlir::Value result = placeInMemoryIfNotGlobalInit(rewriter, loc, boxTy,
                                                       dest, needsDeviceAlloc);
@@ -2673,7 +2687,8 @@ private:
     dest = insertBaseAddress(rewriter, loc, dest, base);
     bool needsDeviceAlloc =
         isUsedByGPULaunchFunc(rebox) ||
-        (isDeviceAllocation(rebox.getBox(), adaptor.getBox()) &&
+        (isDeviceAllocation(rebox.getBox(), adaptor.getBox(),
+                            this->options.cudaDescriptorAllocFunction) &&
          !isUsedByOpenACCDataClause(rebox));
     mlir::Value result = placeInMemoryIfNotGlobalInit(
         rewriter, rebox.getLoc(), destBoxTy, dest, needsDeviceAlloc);
@@ -3851,13 +3866,15 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
           // source is handled below if the load is used by a GPU launch.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
           newBoxStorage =
-              genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
+              genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy(),
+                                    this->options.cudaDescriptorAllocFunction);
         }
       }
       if (!newBoxStorage && isUsedByGPULaunchFunc(load)) {
         auto mod = load->getParentOfType<mlir::ModuleOp>();
         newBoxStorage =
-            genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy());
+            genCUFAllocDescriptor(loc, rewriter, mod, boxTy, lowerTy(),
+                                  this->options.cudaDescriptorAllocFunction);
       }
       if (!newBoxStorage)
         newBoxStorage = genAllocaAndAddrCastWithType(loc, llvmLoadTy,
@@ -4726,6 +4743,9 @@ public:
     if (typeDescriptorsRenamedForAssembly)
       options.typeDescriptorsRenamedForAssembly =
           typeDescriptorsRenamedForAssembly;
+
+    if (!cudaDescriptorAllocFunction.empty())
+      options.cudaDescriptorAllocFunction = cudaDescriptorAllocFunction;
 
     // Run dynamic pass pipeline for converting Math dialect
     // operations into other dialects (llvm, func, etc.).
