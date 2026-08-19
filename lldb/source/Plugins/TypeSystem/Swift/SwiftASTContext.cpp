@@ -3285,6 +3285,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     sdk_path_override = true;
   }
 
+  ModuleSP exe_module_sp =
+      target_sp ? target_sp->GetExecutableModule() : ModuleSP();
+
   std::optional<XcodeSDK> sdk;
   if (auto platform_sp = Platform::GetHostPlatform()) {
     if (cu) {
@@ -3303,11 +3306,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
         LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
                    sdk->GetString().str().c_str());
       }
-    } else if (module_sp) {
-      // There is no CU, fall back to the SDK of the symbol context's module.
-      // This avoids using a default SDK, which can cause problems when when
-      // debugging a binary that depends on a specific non-default SDK.
-      if (auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module_sp)) {
+    } else if (module_sp || exe_module_sp) {
+      // There is no CU, fall back to the SDK of a prevailing module (via either
+      // the symbol context, or the executable). This avoids using a default
+      // SDK, which can cause problems when when debugging a binary built
+      // against non-default SDK.
+      auto &module = *(module_sp ? module_sp : exe_module_sp);
+      if (auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(module)) {
         sdk = sdk_or_err->first;
         LLDB_LOG(GetLog(LLDBLog::Types), "Using SDK from module: {0} -- {1}",
                  sdk->GetString(), module_sp->GetFileSpec().GetFilename());
@@ -3321,8 +3326,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   // First, prime the compiler with the options from the main executable:
   bool got_serialized_options = false;
-  ModuleSP exe_module_sp =
-      target_sp ? target_sp->GetExecutableModule() : ModuleSP();
 
   // If we're debugging a testsuite, then treat the main test bundle
   // as the executable.

@@ -46,6 +46,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1484,6 +1485,11 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
       merged_sdk.Merge(cu_sdk);
     }
   }
+
+  if (merged_sdk.GetString().empty())
+    return llvm::createStringErrorV(
+        "No SDK found in debug info for module '{0}'",
+        module.GetFileSpec().GetFilename());
 
   const bool found_mismatch = found_internal_sdk && found_public_sdk;
 
