@@ -46,7 +46,7 @@ Scalar<T> CallHostRt(
 }
 
 void TestHostRuntimeSubnormalFlushing() {
-  using R4 = host::TypeKind<TypeCategory::Real, 4>;
+  using R4 = TypeKind<TypeCategory::Real, 4>;
   using FR4 = R4::FortranType;
   if constexpr (std::is_same_v<host::HostType<R4>, float>) {
     Fortran::parser::CharBlock src;

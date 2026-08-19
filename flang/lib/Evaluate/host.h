@@ -22,6 +22,7 @@
 #include "flang/Common/float128.h"
 #endif
 #include "flang/Evaluate/type.h"
+#include "flang/Evaluate/typekind-traits.h"
 #include <cfenv>
 #include <complex>
 #include <cstdint>
@@ -54,34 +55,6 @@ private:
 
 // Type mapping from F18 types to host types
 struct UnsupportedType {}; // There is no host type for the F18 type
-
-/// Because HostType<T> depends on the type's kind as well, KIND must be part of
-/// the template as well where Type<CAT> does not.
-template <common::TypeCategory CAT, int KIND> struct TypeKind {
-  using FortranType = Fortran::evaluate::Type<CAT>;
-  using Scalar = Fortran::evaluate::Scalar<FortranType>;
-  static constexpr common::TypeCategory category{CAT};
-  static constexpr int kind{KIND};
-
-  static constexpr DynamicType GetType() { return DynamicType{CAT, KIND}; }
-
-  // Meaningful for COMPLEX only: the real component's (category, kind) tag.
-  using Part = TypeKind<common::TypeCategory::Real, KIND>;
-};
-
-using AllHostKindTypes = std::tuple<TypeKind<TypeCategory::Integer, 1>,
-    TypeKind<TypeCategory::Integer, 2>, TypeKind<TypeCategory::Integer, 4>,
-    TypeKind<TypeCategory::Integer, 8>, TypeKind<TypeCategory::Integer, 16>,
-    TypeKind<TypeCategory::Real, 2>, TypeKind<TypeCategory::Real, 3>,
-    TypeKind<TypeCategory::Real, 4>, TypeKind<TypeCategory::Real, 8>,
-    TypeKind<TypeCategory::Real, 10>, TypeKind<TypeCategory::Real, 16>,
-    TypeKind<TypeCategory::Complex, 2>, TypeKind<TypeCategory::Complex, 3>,
-    TypeKind<TypeCategory::Complex, 4>, TypeKind<TypeCategory::Complex, 8>,
-    TypeKind<TypeCategory::Complex, 10>, TypeKind<TypeCategory::Complex, 16>,
-    TypeKind<TypeCategory::Logical, 1>, TypeKind<TypeCategory::Logical, 2>,
-    TypeKind<TypeCategory::Logical, 4>, TypeKind<TypeCategory::Logical, 8>,
-    TypeKind<TypeCategory::Character, 1>, TypeKind<TypeCategory::Character, 2>,
-    TypeKind<TypeCategory::Character, 4>>;
 
 template <typename FTN_T> struct HostTypeHelper {
   using Type = UnsupportedType;
@@ -235,13 +208,13 @@ struct IndexInTupleHelper<T, std::tuple<TT...>> {
 struct UnknownType {}; // the host type does not match any F18 types
 template <typename HOST_T> struct FortranTypeHelper {
   using HostTypeMapping =
-      common::MapTemplate<HostType, AllHostKindTypes, std::tuple>;
+      common::MapTemplate<HostType, AllIntrinsicKindTypes, std::tuple>;
   static constexpr int index{
       IndexInTupleHelper<HOST_T, HostTypeMapping>::value};
   // Both conditional types are "instantiated", so a valid type must be
   // created for invalid index even if not used.
   using Type = std::conditional_t<index >= 0,
-      std::tuple_element_t<(index >= 0) ? index : 0, AllHostKindTypes>,
+      std::tuple_element_t<(index >= 0) ? index : 0, AllIntrinsicKindTypes>,
       UnknownType>;
 };
 
