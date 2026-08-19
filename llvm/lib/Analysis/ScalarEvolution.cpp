@@ -1157,7 +1157,7 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   return IntOp;
 }
 
-const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
+const SCEV *ScalarEvolution::getTruncateExpr(SCEVUse Op, Type *Ty,
                                              unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) > getTypeSizeInBits(Ty) &&
          "This is not a truncating conversion!");
@@ -1168,7 +1168,7 @@ const SCEV *ScalarEvolution::getTruncateExpr(const SCEV *Op, Type *Ty,
 
   FoldingSetNodeID ID;
   ID.AddInteger(scTruncate);
-  ID.AddPointer(Op);
+  ID.AddPointer(Op.getOpaqueValue());
   ID.AddPointer(Ty);
   void *IP = nullptr;
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
@@ -1289,7 +1289,7 @@ static const SCEV *getUnsignedOverflowLimitForStep(const SCEV *Step,
 namespace {
 
 struct ExtendOpTraitsBase {
-  typedef const SCEV *(ScalarEvolution::*GetExtendExprTy)(const SCEV *, Type *,
+  typedef const SCEV *(ScalarEvolution::*GetExtendExprTy)(SCEVUse, Type *,
                                                           unsigned);
 };
 
@@ -1573,8 +1573,8 @@ static void insertFoldCacheEntry(
   FoldCacheUser[S].push_back(ID);
 }
 
-const SCEV *
-ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
+const SCEV *ScalarEvolution::getZeroExtendExpr(SCEVUse Op, Type *Ty,
+                                               unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) &&
@@ -1592,7 +1592,7 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   return S;
 }
 
-const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
+const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
                                                    unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
@@ -1625,7 +1625,7 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   // computed a SCEV for this Op and Ty.
   FoldingSetNodeID ID;
   ID.AddInteger(scZeroExtend);
-  ID.AddPointer(Op);
+  ID.AddPointer(Op.getOpaqueValue());
   ID.AddPointer(Ty);
   void *IP = nullptr;
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
@@ -1923,8 +1923,8 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   return S;
 }
 
-const SCEV *
-ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
+const SCEV *ScalarEvolution::getSignExtendExpr(SCEVUse Op, Type *Ty,
+                                               unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) &&
@@ -1942,7 +1942,7 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   return S;
 }
 
-const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
+const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
                                                    unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
@@ -1980,7 +1980,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   // computed a SCEV for this Op and Ty.
   FoldingSetNodeID ID;
   ID.AddInteger(scSignExtend);
-  ID.AddPointer(Op);
+  ID.AddPointer(Op.getOpaqueValue());
   ID.AddPointer(Ty);
   void *IP = nullptr;
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP)) return S;
@@ -2186,8 +2186,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   return S;
 }
 
-const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, const SCEV *Op,
-                                         Type *Ty) {
+const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, SCEVUse Op, Type *Ty) {
   switch (Kind) {
   case scTruncate:
     return getTruncateExpr(Op, Ty);
@@ -2207,8 +2206,7 @@ const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, const SCEV *Op,
 
 /// getAnyExtendExpr - Return a SCEV for the given operand extended with
 /// unspecified bits out to the given type.
-const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
-                                              Type *Ty) {
+const SCEV *ScalarEvolution::getAnyExtendExpr(SCEVUse Op, Type *Ty) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) &&
@@ -2358,7 +2356,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     break;
   }
 
-  const SCEV *(ScalarEvolution::*Extension)(const SCEV *, Type *, unsigned) =
+  const SCEV *(ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
              : &ScalarEvolution::getZeroExtendExpr;
 
@@ -4815,8 +4813,7 @@ const SCEV *ScalarEvolution::getTruncateOrSignExtend(const SCEV *V, Type *Ty,
   return getSignExtendExpr(V, Ty, Depth);
 }
 
-const SCEV *
-ScalarEvolution::getNoopOrZeroExtend(const SCEV *V, Type *Ty) {
+const SCEV *ScalarEvolution::getNoopOrZeroExtend(const SCEV *V, Type *Ty) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot noop or zero extend with non-integer arguments!");
@@ -4827,8 +4824,7 @@ ScalarEvolution::getNoopOrZeroExtend(const SCEV *V, Type *Ty) {
   return getZeroExtendExpr(V, Ty);
 }
 
-const SCEV *
-ScalarEvolution::getNoopOrSignExtend(const SCEV *V, Type *Ty) {
+const SCEV *ScalarEvolution::getNoopOrSignExtend(const SCEV *V, Type *Ty) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot noop or sign extend with non-integer arguments!");
@@ -4839,8 +4835,7 @@ ScalarEvolution::getNoopOrSignExtend(const SCEV *V, Type *Ty) {
   return getSignExtendExpr(V, Ty);
 }
 
-const SCEV *
-ScalarEvolution::getNoopOrAnyExtend(const SCEV *V, Type *Ty) {
+const SCEV *ScalarEvolution::getNoopOrAnyExtend(const SCEV *V, Type *Ty) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot noop or any extend with non-integer arguments!");
@@ -4851,8 +4846,7 @@ ScalarEvolution::getNoopOrAnyExtend(const SCEV *V, Type *Ty) {
   return getAnyExtendExpr(V, Ty);
 }
 
-const SCEV *
-ScalarEvolution::getTruncateOrNoop(const SCEV *V, Type *Ty) {
+const SCEV *ScalarEvolution::getTruncateOrNoop(const SCEV *V, Type *Ty) {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot truncate or noop with non-integer arguments!");
