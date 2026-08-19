@@ -10,14 +10,16 @@ jobs:
           dotnet tool install --global wix
           choco install wixtoolset
           #which candle.exe
+
+      - shell: bash
+        run: |
+          which candle.exe
+      - shell: bash
+        run: |
           echo "int main(int argc, char **argv) { }" > test.c
           echo "cmake_minimum_required(VERSION 3.20.0)" > CMakeLists.txt
           echo "add_executable(test test.c)" >> CMakeLists.txt
           echo "include(CPack)" >> CMakeLists.txt
           cmake -G Ninja -S . -B build -DCPACK_GENERATOR=WIX
           ninja -C build package
-
-      - shell: bash
-        run: |
-          which candle.exe
 
