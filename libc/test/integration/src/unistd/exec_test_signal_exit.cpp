@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Helper that terminates via signal (SIGUSR1) to test exec*
+///
+//===----------------------------------------------------------------------===//
 
 #include <signal.h>
 #include <stdlib.h>

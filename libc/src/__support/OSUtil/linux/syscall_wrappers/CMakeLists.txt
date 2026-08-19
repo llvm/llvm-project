@@ -1005,5 +1005,3 @@ add_header_library(
     libc.src.__support.macros.config
     libc.include.sys_syscall
 )
-
-
