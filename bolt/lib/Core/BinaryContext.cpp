@@ -1208,12 +1208,13 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     BD = new BinaryData(*Symbol, Address, Size, Alignment ? Alignment : 1,
                         Section, Flags);
     GAI = BinaryDataMap.emplace(Address, BD).first;
-    GlobalSymbols[Name] = BD;
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[Symbol->getName()] = BD;
     updateObjectNesting(GAI);
   } else {
     BD = GAI->second;
     if (!BD->hasName(Name)) {
-      GlobalSymbols[Name] = BD;
+      GlobalSymbols[Symbol->getName()] = BD;
       BD->updateSize(Size);
       BD->Symbols.push_back(Symbol);
     }
@@ -1338,8 +1339,10 @@ void BinaryContext::generateSymbolHashes() {
       }
       continue;
     }
-    BD.Symbols.insert(BD.Symbols.begin(), Ctx->getOrCreateSymbol(NewName));
-    GlobalSymbols[NewName] = &BD;
+    MCSymbol *NewSymbol = Ctx->getOrCreateSymbol(NewName);
+    BD.Symbols.insert(BD.Symbols.begin(), NewSymbol);
+    // Key on the MCContext-owned name so the map does not duplicate the string.
+    GlobalSymbols[NewSymbol->getName()] = &BD;
   }
   if (NumCollisions) {
     this->errs() << "BOLT-WARNING: " << NumCollisions

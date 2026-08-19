@@ -23,8 +23,10 @@
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -388,7 +390,14 @@ public:
   std::vector<SegmentInfo> NewSegments;
 
   /// [name] -> [BinaryData*] map used for global symbol resolution.
-  using SymbolMapType = StringMap<BinaryData *>;
+  ///
+  /// The map keys are StringRefs pointing into the names owned by MCContext
+  /// (i.e. MCSymbol::getName()) rather than strings owned by this map. Every
+  /// registered name is already interned in MCContext, so keying on those
+  /// strings avoids duplicating potentially large (mangled) symbol names, which
+  /// is a significant source of memory use on large binaries. The referenced
+  /// names outlive this map, as MCContext is owned by BinaryContext.
+  using SymbolMapType = DenseMap<StringRef, BinaryData *>;
   SymbolMapType GlobalSymbols;
 
   /// [address] -> [BinaryData], ...
