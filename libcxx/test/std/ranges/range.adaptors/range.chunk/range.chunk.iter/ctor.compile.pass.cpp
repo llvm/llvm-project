@@ -23,9 +23,9 @@
 
 // `test_view` is not a `simple_view`.
 
-static_assert(!std::same_as<
-  std::ranges::iterator_t<      std::ranges::chunk_view<test_view<forward_iterator>>>, 
-  std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>
->);
-static_assert(std::convertible_to<std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>, std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>>);
-static_assert(!std::convertible_to<std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>, std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>>);
+static_assert(!std::same_as< std::ranges::iterator_t< std::ranges::chunk_view<test_view<forward_iterator>>>,
+                             std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>> >);
+static_assert(std::convertible_to<std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>,
+                                  std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>>);
+static_assert(!std::convertible_to<std::ranges::iterator_t<const std::ranges::chunk_view<test_view<forward_iterator>>>,
+                                   std::ranges::iterator_t<std::ranges::chunk_view<test_view<forward_iterator>>>>);

@@ -26,13 +26,13 @@
 
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  
+
   // Test `friend constexpr difference_type operator-(default_sentinel_t t, const outer_iterator&)`
   {
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
         chunked =
-            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(  
+            std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>(
                 cpp17_input_iterator<int*>(vector.data()),
                 sized_sentinel<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
             std::views::chunk(3);

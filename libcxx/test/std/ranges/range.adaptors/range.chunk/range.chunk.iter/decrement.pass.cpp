@@ -34,13 +34,13 @@ constexpr bool test() {
     std::ranges::chunk_view<
         std::ranges::
             subrange<bidirectional_iterator<int*>, bidirectional_iterator<int*>, std::ranges::subrange_kind::sized>>
-        chunked(std::ranges::subrange<bidirectional_iterator<int*>,
-                                      bidirectional_iterator<int*>,
-                                      std::ranges::subrange_kind::sized>(
+        chunked(
+            std::ranges::
+                subrange<bidirectional_iterator<int*>, bidirectional_iterator<int*>, std::ranges::subrange_kind::sized>(
                     bidirectional_iterator<int*>(vector.data()),
                     bidirectional_iterator<int*>(vector.data() + vector.size()),
                     vector.size()),
-                2);
+            2);
     auto it                                                                         = chunked.end();
     std::same_as<std::ranges::iterator_t<decltype(chunked)>&> decltype(auto) result = --it;
     assert(&result == &it);
@@ -52,15 +52,12 @@ constexpr bool test() {
 
   // Test `iterator& operator-=(difference_type)`
   {
-    std::ranges::chunk_view<
-        std::ranges::
-            subrange<random_access_iterator<int*>, random_access_iterator<int*>>>
-        chunked(std::ranges::subrange<random_access_iterator<int*>,
-                                      random_access_iterator<int*>>(
-                    random_access_iterator<int*>(vector.data()),
-                    random_access_iterator<int*>(vector.data() + vector.size()),
-                    vector.size()),
-                2);
+    std::ranges::chunk_view< std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>> chunked(
+        std::ranges::subrange<random_access_iterator<int*>, random_access_iterator<int*>>(
+            random_access_iterator<int*>(vector.data()),
+            random_access_iterator<int*>(vector.data() + vector.size()),
+            vector.size()),
+        2);
     auto it = chunked.end();
     it -= 1;
     assert(std::ranges::equal(*it, std::vector{7, 8}));

@@ -24,7 +24,7 @@
 
 constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-  
+
   // Test `constexpr value_type outer_iterator::operator*() const`
   {
     std::ranges::chunk_view<

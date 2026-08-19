@@ -41,7 +41,7 @@ constexpr bool test() {
     ++it;
     assert(base(it.base()) == vector.data() + 2);
   }
-  
+
   return true;
 }
 

@@ -30,11 +30,9 @@ constexpr bool test() {
     std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>>
-        chunked =
-            std::ranges::subrange(
-                cpp17_input_iterator<int*>(vector.data()),
-                sized_sentinel(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
-            std::views::chunk(3);
+        chunked = std::ranges::subrange(cpp17_input_iterator<int*>(vector.data()),
+                                        sized_sentinel(cpp17_input_iterator<int*>(vector.data() + vector.size()))) |
+                  std::views::chunk(3);
 
     static_assert(
         std::same_as<
