@@ -13,24 +13,21 @@ define amdgpu_kernel void @icmpzero_mixed_ptr_width(ptr addrspace(5) %scratch) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SRC_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DST:%.*]] = phi ptr addrspace(5) [ [[SCRATCH]], %[[ENTRY]] ], [ [[DST_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr null, i64 [[LSR_IV]]
 ; CHECK-NEXT:    [[D0:%.*]] = load double, ptr addrspace(5) [[DST]], align 8
 ; CHECK-NEXT:    [[S0:%.*]] = load double, ptr [[SCEVGEP4]], align 8
 ; CHECK-NEXT:    [[DST_1:%.*]] = getelementptr i8, ptr addrspace(5) [[DST]], i32 8
 ; CHECK-NEXT:    [[D1:%.*]] = load double, ptr addrspace(5) [[DST_1]], align 8
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr null, i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 8
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 8
 ; CHECK-NEXT:    [[S1:%.*]] = load double, ptr [[SCEVGEP3]], align 8
 ; CHECK-NEXT:    [[DST_2:%.*]] = getelementptr i8, ptr addrspace(5) [[DST]], i32 16
 ; CHECK-NEXT:    [[D2:%.*]] = load double, ptr addrspace(5) [[DST_2]], align 8
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 16
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP4]], i64 16
 ; CHECK-NEXT:    [[S2:%.*]] = load double, ptr [[SCEVGEP1]], align 8
 ; CHECK-NEXT:    [[DST_NEXT]] = getelementptr i8, ptr addrspace(5) [[DST]], i32 96
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 96
-; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 96
+; CHECK-NEXT:    [[SRC_NEXT]] = getelementptr i8, ptr [[SCEVGEP4]], i64 96
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq ptr addrspace(5) [[DST]], [[SCRATCH]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
