@@ -179,3 +179,8 @@ set(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH "" CACHE STRING
 
 add_subdirectory(OffloadAPI)
 add_subdirectory(Conformance)
+
+# Host-only, and the code under test lives in the AMDGPU plugin.
+if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+  add_subdirectory(TaskGraph)
+endif()

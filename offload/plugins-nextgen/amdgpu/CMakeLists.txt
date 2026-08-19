@@ -4,7 +4,7 @@ find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/
 # Create the library and add the default arguments.
 add_target_library(omptarget.rtl.amdgpu AMDGPU)
 
-target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp)
+target_sources(omptarget.rtl.amdgpu PRIVATE src/rtl.cpp src/TaskGraphSchedule.cpp)
 target_include_directories(omptarget.rtl.amdgpu PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/utils)
 
