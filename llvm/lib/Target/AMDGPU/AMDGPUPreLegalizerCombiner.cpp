@@ -200,13 +200,18 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 }
 
 static bool
-runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo, GISelValueTracking *VT,
-            MachineDominatorTree *MDT,
+runCombiner(MachineFunction &MF, function_ref<GISelCSEInfo *()> GetCSEInfo,
+            function_ref<GISelValueTracking *()> GetVT,
+            function_ref<MachineDominatorTree *()> GetMDT,
             const AMDGPUPreLegalizerCombinerImplRuleConfig &RuleConfig,
             bool EnableOpt) {
+  // If the ISel pipeline failed, do not bother running that pass.
+  if (MF.getProperties().hasFailedISel())
+    return false;
+
   const GCNSubtarget &STI = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true, /*ShouldLegalizeIllegal=*/false,
                      nullptr, EnableOpt, F.hasOptSize(), F.hasMinSize());
   // Disable fixed-point iteration to reduce compile-time
   CInfo.MaxIterations = 1;
@@ -214,6 +219,10 @@ runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo, GISelValueTracking *VT,
   // This is the first Combiner, so the input IR might contain dead
   // instructions.
   CInfo.EnableFullDCE = true;
+
+  GISelValueTracking *VT = GetVT();
+  GISelCSEInfo *CSEInfo = GetCSEInfo();
+  MachineDominatorTree *MDT = GetMDT();
   AMDGPUPreLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, STI,
                                       MDT, STI.getLegalizerInfo());
   return Impl.combineMachineInstrs();
@@ -267,24 +276,26 @@ AMDGPUPreLegalizerCombinerLegacy::AMDGPUPreLegalizerCombinerLegacy(
 
 bool AMDGPUPreLegalizerCombinerLegacy::runOnMachineFunction(
     MachineFunction &MF) {
-  if (MF.getProperties().hasFailedISel())
-    return false;
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
       MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
-
-  // Enable CSE.
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
-
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr
-                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  return runCombiner(MF, CSEInfo, VT, MDT, RuleConfig, EnableOpt);
+  return runCombiner(
+      MF,
+      [&]() {
+        // Enable CSE.
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(getAnalysis<TargetPassConfig>().getCSEConfig());
+      },
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      },
+      [&]() -> MachineDominatorTree * {
+        return IsOptNone ? nullptr
+                         : &getAnalysis<MachineDominatorTreeWrapperPass>()
+                                .getDomTree();
+      },
+      RuleConfig, EnableOpt);
 }
 
 char AMDGPUPreLegalizerCombinerLegacy::ID = 0;
@@ -297,28 +308,28 @@ INITIALIZE_PASS_END(AMDGPUPreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine AMDGPU machine instrs before legalization", false,
                     false)
 
-FunctionPass *llvm::createAMDGPUPreLegalizeCombiner(bool IsOptNone) {
+FunctionPass *llvm::createAMDGPUPreLegalizeCombinerLegacy(bool IsOptNone) {
   return new AMDGPUPreLegalizerCombinerLegacy(IsOptNone);
 }
 
 PreservedAnalyses
 AMDGPUPreLegalizerCombinerPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
-  if (MF.getProperties().hasFailedISel())
-    return PreservedAnalyses::all();
-
   AMDGPUPreLegalizerCombinerImplRuleConfig RuleConfig;
   if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
+    reportFatalUsageError("Invalid rule identifier");
 
   bool IsOptNone = MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
-  GISelCSEInfo *CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF).get();
-  GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
-  MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-
-  if (!runCombiner(MF, CSEInfo, &VT, MDT, RuleConfig, /*EnableOpt=*/!IsOptNone))
+  if (!runCombiner(
+          MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
+          [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); },
+          [&]() -> MachineDominatorTree * {
+            return IsOptNone
+                       ? nullptr
+                       : &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+          },
+          RuleConfig, /*EnableOpt=*/!IsOptNone))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
