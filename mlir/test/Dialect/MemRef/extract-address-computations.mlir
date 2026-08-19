@@ -314,14 +314,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME: %[[DYN_OFFSET2:[^:]*]]: index)
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, 8] [1, 1, 1] : memref<4x32x32xf16, 3> to memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] numTiles = 4 transpose = false : memref<1x1x8xf16, strided<[1024, 32, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_ldmatrix(%base : memref<4x32x32xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %loaded_val = nvgpu.ldmatrix
-    %base[%offset0, %offset1, %offset2]
-    {numTiles = 4 : i32, transpose = false}
+    %base[%offset0, %offset1, %offset2] numTiles = 4 transpose = false
       : memref<4x32x32xf16, 3> -> vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }
@@ -351,14 +350,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:3, {{.*}} = memref.extract_strided_metadata %[[BASE]]
 // CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_8_MAP]]()[%[[SIZES]]#2, %[[DYN_OFFSET2]]]
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET0]], %[[DYN_OFFSET1]], %[[DYN_OFFSET2]]] [1, 1, %[[DYN_SIZE]]] [1, 1, 1] : memref<?x?x?xf16, 3> to memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3>
-// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] {numTiles = 4 : i32, transpose = false} : memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
+// CHECK: %[[LOADED_VAL:.*]] = nvgpu.ldmatrix %[[SUBVIEW]][%[[C0]], %[[C0]], %[[C0]]] numTiles = 4 transpose = false : memref<1x1x?xf16, strided<[?, ?, 1], offset: ?>, 3> -> vector<4x2xf16>
 // CHECK: return %[[LOADED_VAL]] : vector<4x2xf16>
 func.func @test_dynamic_ldmatrix(%base : memref<?x?x?xf16, 3>,
     %offset0 : index, %offset1: index, %offset2: index)
     -> vector<4x2xf16> {
   %loaded_val = nvgpu.ldmatrix
-    %base[%offset0, %offset1, %offset2]
-    {numTiles = 4 : i32, transpose = false}
+    %base[%offset0, %offset1, %offset2] numTiles = 4 transpose = false
       : memref<?x?x?xf16, 3> -> vector<4x2xf16>
   return %loaded_val : vector<4x2xf16>
 }

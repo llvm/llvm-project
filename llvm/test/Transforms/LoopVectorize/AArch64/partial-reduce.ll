@@ -42,7 +42,7 @@ define i32 @zext_add_reduc_i8_i32_sve(ptr %a) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP2]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -235,7 +235,7 @@ define i64 @zext_add_reduc_i8_i64(ptr %a) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -340,7 +340,7 @@ define i64 @zext_add_reduc_i16_i64(ptr %a) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -839,7 +839,7 @@ define i32 @sext_add_reduc_i8_i32(ptr %a) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -956,7 +956,7 @@ define i32 @add_of_zext_outside_loop(i32 %a, ptr noalias %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP11]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = shl nuw i32 [[TMP5]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP16]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP5]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], [[TMP4]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i32 [[D]], [[N_VEC]]
@@ -1084,7 +1084,7 @@ define i32 @add_of_loop_invariant_zext(i32 %a, ptr %b, i8 %c, i32 %d) #0 {
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP11]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = shl nuw i32 [[TMP5]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = shl nuw i32 [[TMP8]], 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = shl nuw i32 [[TMP5]], 5
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], [[TMP12]]
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = add i32 [[D]], [[N_VEC]]

@@ -396,6 +396,10 @@ features cannot lower the translation-unit ABI level;
 - `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
   `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
 
+- `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
+  for pointer arithmetic on statically-sized arrays when the offset is a
+  non-negative constant within the array bounds.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -416,6 +420,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
+- Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 
 #### Bug Fixes to Compiler Builtins
@@ -505,6 +510,8 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
@@ -554,6 +561,9 @@ features cannot lower the translation-unit ABI level;
 #### LoongArch Support
 
 #### RISC-V Support
+
+- Fixed a bug where the `interrupt` attribute did not accept `machine` together
+  with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
 
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If

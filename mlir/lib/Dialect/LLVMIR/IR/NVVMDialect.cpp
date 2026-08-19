@@ -91,6 +91,40 @@ getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   llvm_unreachable("unsupported cta_group value");
 }
 
+static ParseResult parseCTAGroup(OpAsmParser &parser,
+                                 NVVM::CTAGroupKindAttr &groupAttr) {
+  StringRef keyword;
+  if (parser.parseKeyword(&keyword))
+    return failure();
+  std::optional<NVVM::CTAGroupKind> group =
+      NVVM::symbolizeCTAGroupKind(keyword);
+  if (!group)
+    return parser.emitError(parser.getNameLoc()) << " expected CTA group";
+  groupAttr = NVVM::CTAGroupKindAttr::get(parser.getContext(), *group);
+  return success();
+}
+
+static void printCTAGroup(OpAsmPrinter &printer, Operation *,
+                          NVVM::CTAGroupKindAttr groupAttr) {
+  printer << NVVM::stringifyCTAGroupKind(groupAttr.getValue());
+}
+
+template <typename AttrTy>
+static ParseResult parseEnumKeyword(OpAsmParser &parser, AttrTy &attr) {
+  SMLoc loc = parser.getCurrentLocation();
+  std::string keyword;
+  if (parser.parseKeywordOrString(&keyword))
+    return failure();
+
+  using EnumTy = decltype(attr.getValue());
+  std::optional<EnumTy> value = NVVM::symbolizeEnum<EnumTy>(keyword);
+  if (!value)
+    return parser.emitError(loc) << "unknown enum value '" << keyword << "'";
+
+  attr = AttrTy::get(parser.getContext(), *value);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
@@ -765,6 +799,147 @@ MMATypes MmaOp::resultPtxType() {
   return val.value();
 }
 
+template <typename AttrTy>
+static void printMmaProperty(OpAsmPrinter &printer, bool &isFirst,
+                             StringRef keyword, AttrTy value) {
+  printer << (isFirst ? " " : ", ") << keyword << " = ";
+  printer.printStrippedAttrOrType(value);
+  isFirst = false;
+}
+
+template <typename AttrTy>
+static void printMmaEnumProperty(OpAsmPrinter &printer, bool &isFirst,
+                                 StringRef keyword, AttrTy value) {
+  printer << (isFirst ? " " : ", ") << keyword << " = "
+          << NVVM::stringifyEnum(value.getValue());
+  isFirst = false;
+}
+
+static void printMmaUnitProperty(OpAsmPrinter &printer, bool &isFirst,
+                                 StringRef keyword) {
+  printer << (isFirst ? " " : ", ") << keyword;
+  isFirst = false;
+}
+
+template <typename AttrTy>
+static ParseResult parseMmaPropertyValue(OpAsmParser &parser,
+                                         NamedAttrList &attributes,
+                                         StringRef name) {
+  if (attributes.get(name))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "duplicate property '" + name + "'");
+  AttrTy value;
+  if (parser.parseEqual() || parser.parseCustomAttributeWithFallback(value))
+    return failure();
+  attributes.append(name, value);
+  return success();
+}
+
+template <typename AttrTy>
+static ParseResult parseMmaEnumPropertyValue(OpAsmParser &parser,
+                                             NamedAttrList &attributes,
+                                             StringRef name) {
+  if (attributes.get(name))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "duplicate property '" + name + "'");
+  AttrTy value;
+  if (parser.parseEqual() || parseEnumKeyword(parser, value))
+    return failure();
+  attributes.append(name, value);
+  return success();
+}
+
+static bool isMmaPropertyName(StringRef name) {
+  return llvm::is_contained(
+      ArrayRef<StringRef>{
+          "shape", "b1Op", "intOverflowBehavior", "layoutA", "layoutB",
+          "multiplicandAPtxType", "multiplicandBPtxType", "orderedMetadata",
+          "kind", "scaleVecSize", "blockScaleFormat", "operandSegmentSizes"},
+      name);
+}
+
+static ParseResult parseMmaProperties(OpAsmParser &parser,
+                                      NamedAttrList &attributes,
+                                      ArrayRef<StringRef> allowedKeywords,
+                                      ArrayRef<StringRef> requiredProperties) {
+  while (true) {
+    StringRef keyword;
+    if (parser.parseKeyword(&keyword))
+      return failure();
+    if (!llvm::is_contained(allowedKeywords, keyword))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown MMA property '" + keyword + "'");
+
+    ParseResult parseResult = success();
+    if (keyword == "shape")
+      parseResult =
+          parseMmaPropertyValue<MMAShapeAttr>(parser, attributes, "shape");
+    else if (keyword == "b1_op")
+      parseResult =
+          parseMmaEnumPropertyValue<MMAB1OpAttr>(parser, attributes, "b1Op");
+    else if (keyword == "int_overflow")
+      parseResult = parseMmaEnumPropertyValue<MMAIntOverflowAttr>(
+          parser, attributes, "intOverflowBehavior");
+    else if (keyword == "layout_a")
+      parseResult = parseMmaEnumPropertyValue<MMALayoutAttr>(parser, attributes,
+                                                             "layoutA");
+    else if (keyword == "layout_b")
+      parseResult = parseMmaEnumPropertyValue<MMALayoutAttr>(parser, attributes,
+                                                             "layoutB");
+    else if (keyword == "multiplicand_a_ptx_type")
+      parseResult = parseMmaEnumPropertyValue<MMATypesAttr>(
+          parser, attributes, "multiplicandAPtxType");
+    else if (keyword == "multiplicand_b_ptx_type")
+      parseResult = parseMmaEnumPropertyValue<MMATypesAttr>(
+          parser, attributes, "multiplicandBPtxType");
+    else if (keyword == "kind") {
+      if (llvm::is_contained(allowedKeywords, "block_scale_format"))
+        parseResult = parseMmaEnumPropertyValue<MMABlockScaleKindAttr>(
+            parser, attributes, "kind");
+      else
+        parseResult =
+            parseMmaEnumPropertyValue<MMAKindAttr>(parser, attributes, "kind");
+    } else if (keyword == "scale_vec_size")
+      parseResult = parseMmaEnumPropertyValue<ScaleVecSizeAttr>(
+          parser, attributes, "scaleVecSize");
+    else if (keyword == "block_scale_format")
+      parseResult = parseMmaEnumPropertyValue<BlockScaleFormatAttr>(
+          parser, attributes, "blockScaleFormat");
+    else if (keyword == "ordered_metadata") {
+      if (attributes.get("orderedMetadata"))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate property 'orderedMetadata'");
+      attributes.append("orderedMetadata", parser.getBuilder().getUnitAttr());
+    } else {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "unknown MMA property '" + keyword + "'");
+    }
+    if (failed(parseResult))
+      return failure();
+    if (failed(parser.parseOptionalComma()))
+      break;
+  }
+
+  for (StringRef property : requiredProperties) {
+    if (!attributes.get(property))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "missing required property '" + property + "'");
+  }
+
+  NamedAttrList discardableAttributes;
+  if (parser.parseOptionalAttrDict(discardableAttributes))
+    return failure();
+  for (NamedAttribute attribute : discardableAttributes) {
+    if (isMmaPropertyName(attribute.getName()))
+      return parser.emitError(
+          parser.getCurrentLocation(),
+          "inherent property '" + attribute.getName().getValue() +
+              "' must be spelled directly in the operation syntax");
+    attributes.append(attribute);
+  }
+  return success();
+}
+
 void MmaOp::print(OpAsmPrinter &p) {
   SmallVector<Type, 4> regTypes;
   struct MMAOperandFragment {
@@ -810,6 +985,30 @@ void MmaOp::print(OpAsmPrinter &p) {
     printMmaOperand(frag);
   }
 
+  bool isFirstProperty = true;
+  printMmaProperty(p, isFirstProperty, "shape", getShapeAttr());
+  if (getB1OpAttr())
+    printMmaEnumProperty(p, isFirstProperty, "b1_op", getB1OpAttr());
+  if (getIntOverflowBehaviorAttr())
+    printMmaEnumProperty(p, isFirstProperty, "int_overflow",
+                         getIntOverflowBehaviorAttr());
+  printMmaEnumProperty(p, isFirstProperty, "layout_a", getLayoutAAttr());
+  printMmaEnumProperty(p, isFirstProperty, "layout_b", getLayoutBAttr());
+  if (getMultiplicandAPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandAPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_a_ptx_type",
+                         getMultiplicandAPtxTypeAttr());
+  if (getMultiplicandBPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandBPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_b_ptx_type",
+                         getMultiplicandBPtxTypeAttr());
+  llvm::append_range(ignoreAttrNames,
+                     ArrayRef<StringRef>{getShapeAttrName(), getB1OpAttrName(),
+                                         getIntOverflowBehaviorAttrName(),
+                                         getLayoutAAttrName(),
+                                         getLayoutBAttrName(),
+                                         getMultiplicandAPtxTypeAttrName(),
+                                         getMultiplicandBPtxTypeAttrName()});
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
@@ -876,7 +1075,8 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 
 // <operation> :=
 //   A `[` $operandA `]` B `[` $operandB `]` C `[` $operandC `]`
-//   attr-dict : (type($operandA[0]), type($operandB[0]), type($operandC[0]))
+//   properties attr-dict
+//   : (type($operandA[0]), type($operandB[0]), type($operandC[0]))
 //     `->` type($res)
 ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   struct MMAOperandFragment {
@@ -910,7 +1110,11 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parseMmaOperand("C", frags[2]).failed())
     return failure();
 
-  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+  if (parseMmaProperties(parser, namedAttributes,
+                         {"shape", "b1_op", "int_overflow", "layout_a",
+                          "layout_b", "multiplicand_a_ptx_type",
+                          "multiplicand_b_ptx_type"},
+                         {"shape", "layoutA", "layoutB"}))
     return failure();
 
   // Parse the type specification and resolve operands.
@@ -1275,6 +1479,29 @@ void MmaSpOp::print(OpAsmPrinter &p) {
   for (const auto &frag : frags)
     printMmaSpOperand(frag);
 
+  bool isFirstProperty = true;
+  printMmaProperty(p, isFirstProperty, "shape", getShapeAttr());
+  if (getIntOverflowBehaviorAttr())
+    printMmaEnumProperty(p, isFirstProperty, "int_overflow",
+                         getIntOverflowBehaviorAttr());
+  if (getMultiplicandAPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandAPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_a_ptx_type",
+                         getMultiplicandAPtxTypeAttr());
+  if (getMultiplicandBPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandBPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_b_ptx_type",
+                         getMultiplicandBPtxTypeAttr());
+  if (getOrderedMetadata())
+    printMmaUnitProperty(p, isFirstProperty, "ordered_metadata");
+  if (getKindAttr())
+    printMmaEnumProperty(p, isFirstProperty, "kind", getKindAttr());
+  llvm::append_range(
+      ignoreAttrNames,
+      ArrayRef<StringRef>{getShapeAttrName(), getIntOverflowBehaviorAttrName(),
+                          getMultiplicandAPtxTypeAttrName(),
+                          getMultiplicandBPtxTypeAttrName(),
+                          getOrderedMetadataAttrName(), getKindAttrName()});
   p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
   p << " : ";
   p << "(";
@@ -1365,7 +1592,11 @@ ParseResult MmaSpOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parseMmaSpOperand("selector", frags[4]).failed())
     return failure();
 
-  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+  if (parseMmaProperties(parser, namedAttributes,
+                         {"shape", "int_overflow", "multiplicand_a_ptx_type",
+                          "multiplicand_b_ptx_type", "ordered_metadata",
+                          "kind"},
+                         {"shape"}))
     return failure();
 
   // Parse the type specification and resolve operands.
@@ -1840,6 +2071,27 @@ void MmaBlockScaleOp::print(OpAsmPrinter &p) {
   printOperandList(p, "scaleB",
                    {getScaleBData(), getByteIdB(), getThreadIdB()});
 
+  bool isFirstProperty = true;
+  printMmaProperty(p, isFirstProperty, "shape", getShapeAttr());
+  if (getMultiplicandAPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandAPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_a_ptx_type",
+                         getMultiplicandAPtxTypeAttr());
+  if (getMultiplicandBPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandBPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_b_ptx_type",
+                         getMultiplicandBPtxTypeAttr());
+  printMmaEnumProperty(p, isFirstProperty, "scale_vec_size",
+                       getScaleVecSizeAttr());
+  printMmaEnumProperty(p, isFirstProperty, "block_scale_format",
+                       getBlockScaleFormatAttr());
+  printMmaEnumProperty(p, isFirstProperty, "kind", getKindAttr());
+  llvm::append_range(
+      ignoreAttrNames,
+      ArrayRef<StringRef>{getShapeAttrName(), getMultiplicandAPtxTypeAttrName(),
+                          getMultiplicandBPtxTypeAttrName(),
+                          getScaleVecSizeAttrName(),
+                          getBlockScaleFormatAttrName(), getKindAttrName()});
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print type signature
@@ -1875,7 +2127,11 @@ ParseResult MmaBlockScaleOp::parse(OpAsmParser &parser,
       parseMmaOperand(parser, "scaleB", scaleBOperands).failed())
     return failure();
 
-  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+  if (parseMmaProperties(parser, namedAttributes,
+                         {"shape", "multiplicand_a_ptx_type",
+                          "multiplicand_b_ptx_type", "scale_vec_size",
+                          "block_scale_format", "kind"},
+                         {"shape", "scaleVecSize", "blockScaleFormat", "kind"}))
     return failure();
 
   // Parse type signature
@@ -2071,6 +2327,29 @@ void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
   printOperandList(p, "scaleB",
                    {getScaleBData(), getByteIdB(), getThreadIdB()});
 
+  bool isFirstProperty = true;
+  printMmaProperty(p, isFirstProperty, "shape", getShapeAttr());
+  if (getMultiplicandAPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandAPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_a_ptx_type",
+                         getMultiplicandAPtxTypeAttr());
+  if (getMultiplicandBPtxTypeAttr() &&
+      !llvm::is_contained(ignoreAttrNames, getMultiplicandBPtxTypeAttrName()))
+    printMmaEnumProperty(p, isFirstProperty, "multiplicand_b_ptx_type",
+                         getMultiplicandBPtxTypeAttr());
+  printMmaUnitProperty(p, isFirstProperty, "ordered_metadata");
+  printMmaEnumProperty(p, isFirstProperty, "scale_vec_size",
+                       getScaleVecSizeAttr());
+  printMmaEnumProperty(p, isFirstProperty, "block_scale_format",
+                       getBlockScaleFormatAttr());
+  printMmaEnumProperty(p, isFirstProperty, "kind", getKindAttr());
+  llvm::append_range(
+      ignoreAttrNames,
+      ArrayRef<StringRef>{getShapeAttrName(), getMultiplicandAPtxTypeAttrName(),
+                          getMultiplicandBPtxTypeAttrName(),
+                          getOrderedMetadataAttrName(),
+                          getScaleVecSizeAttrName(),
+                          getBlockScaleFormatAttrName(), getKindAttrName()});
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print type signature
@@ -2113,7 +2392,11 @@ ParseResult MmaSpBlockScaleOp::parse(OpAsmParser &parser,
       parseMmaOperand(parser, "scaleB", scaleBOperands).failed())
     return failure();
 
-  if (parser.parseOptionalAttrDict(namedAttributes).failed())
+  if (parseMmaProperties(parser, namedAttributes,
+                         {"shape", "multiplicand_a_ptx_type",
+                          "multiplicand_b_ptx_type", "ordered_metadata",
+                          "scale_vec_size", "block_scale_format", "kind"},
+                         {"shape", "scaleVecSize", "blockScaleFormat", "kind"}))
     return failure();
 
   // Parse type signature

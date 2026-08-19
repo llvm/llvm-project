@@ -828,6 +828,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3610,6 +3611,8 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -3679,6 +3682,7 @@ add_fp_unittest(
     # The dependency on sqrtf128 is used to disable the test when float128
     # support is not available.
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
@@ -5066,6 +5070,8 @@ add_fp_unittest(
     atan2f128_test.cpp
   DEPENDS
     libc.src.math.atan2f128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(

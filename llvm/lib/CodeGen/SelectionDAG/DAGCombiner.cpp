@@ -4718,6 +4718,42 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
   if (DAG.willNotOverflowSub(IsSigned, N0, N1))
     return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
 
+  // Narrow a vXiN USUBSAT to a smaller type when both operands are known
+  // to fit in fewer bits. This allows targets with native narrow USUBSAT
+  // (e.g. vpsubusb/vpsubusw) to avoid emulation with vpmaxu + vsub.
+  if (!IsSigned && VT.isVector() && VT.isSimple()) {
+    unsigned ScalarBits = VT.getScalarSizeInBits();
+    if (ScalarBits > 8 && isPowerOf2_32(ScalarBits) &&
+        !TLI.isOperationLegal(ISD::USUBSAT, VT)) {
+      KnownBits Known0 = DAG.computeKnownBits(N0);
+      unsigned ActiveBits = Known0.countMaxActiveBits();
+      for (unsigned NarrowBits = PowerOf2Ceil(ActiveBits);
+           NarrowBits < ScalarBits; NarrowBits *= 2) {
+        unsigned Scale = ScalarBits / NarrowBits;
+        unsigned NumElts = VT.getVectorNumElements() * Scale;
+        MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
+        MVT NarrowVT = MVT::getVectorVT(NarrowSVT, NumElts);
+
+        if (!TLI.isOperationLegalOrCustom(ISD::USUBSAT, NarrowVT))
+          continue;
+        KnownBits Known1 = DAG.computeKnownBits(N1);
+        if (Known1.countMaxActiveBits() <= NarrowBits) {
+          SDValue NarrowN0 = DAG.getBitcast(NarrowVT, N0);
+          SDValue NarrowN1 = DAG.getBitcast(NarrowVT, N1);
+          SDValue NarrowSub =
+              DAG.getNode(ISD::USUBSAT, DL, NarrowVT, NarrowN0, NarrowN1);
+          return DAG.getBitcast(VT, NarrowSub);
+        }
+        // TODO: If N1 doesn't fit in NarrowBits, we could OR the upper bits
+        // of N1 with 1s to force saturation in those lanes, allowing the
+        // narrow USUBSAT to still be used. This requires a TLI hook to check
+        // whether the constant can be folded as a broadcast memory operand
+        // (profitable on AVX512, not on SSE/AVX), to avoid introducing an
+        // extra register and instruction on non-AVX512 targets.
+        break;
+      }
+    }
+  }
   return SDValue();
 }
 
