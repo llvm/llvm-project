@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -complex-range=full -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
+// CIR: [[REC_LD:!rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.f80, data !cir.f80}>
+// CIR: [[REC_D:!rec_anon_struct[0-9]*]] = !cir.struct<{data !cir.double, data !cir.double}>
+
 float _Complex divf(float _Complex a, float _Complex b) { return a / b; }
 
 // A float pair is SSE-classified, so the helper return coerces to <2 x float>.
@@ -35,7 +38,11 @@ double _Complex divd(double _Complex a, double _Complex b) { return a / b; }
 
 // A double pair spans two eightbytes, so the return stays a two-field record.
 // CIR-LABEL: cir.func {{.*}}@divd
-// CIR: cir.call @__divdc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D:!rec_anon_struct[0-9]*]]
+// CIR: cir.call @__divdc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D]]{{[^0-9]}}
+
+// CIR does not carry noundef onto expanded parameters.
+// LLVMCIR: define dso_local { double, double } @divd(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
+// OGCG: define dso_local { double, double } @divd(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
 
 // LLVMCIR: call { double, double } @__divdc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
 // OGCG: call { double, double } @__divdc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
@@ -43,7 +50,7 @@ double _Complex divd(double _Complex a, double _Complex b) { return a / b; }
 double _Complex muld(double _Complex a, double _Complex b) { return a * b; }
 
 // CIR-LABEL: cir.func {{.*}}@muld
-// CIR: cir.call @__muldc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D]]
+// CIR: cir.call @__muldc3({{.*}}) : (!cir.double, !cir.double, !cir.double, !cir.double) -> [[REC_D]]{{[^0-9]}}
 
 // LLVMCIR: call { double, double } @__muldc3(double %{{.+}}, double %{{.+}}, double %{{.+}}, double %{{.+}})
 // OGCG: call { double, double } @__muldc3(double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}}, double noundef %{{.+}})
@@ -54,9 +61,9 @@ long double _Complex divld(long double _Complex a, long double _Complex b) {
 
 // A long double pair is x87-classified, so the return stays a two-field record.
 // CIR-LABEL: cir.func {{.*}}@divld
-// CIR: cir.call @__divxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD:!rec_anon_struct[0-9]*]]
+// CIR: cir.call @__divxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD]]{{[^0-9]}}
 
-// An x87 pair is passed indirectly, so the caller's own parameters are byval.
+// An x87 pair is passed indirectly, and CIR marks those byval slots noalias.
 // LLVMCIR: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noalias noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 // OGCG: define dso_local { x86_fp80, x86_fp80 } @divld(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}}, ptr noundef byval({ x86_fp80, x86_fp80 }) align 16 %{{.+}})
 
@@ -68,7 +75,7 @@ long double _Complex mulld(long double _Complex a, long double _Complex b) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@mulld
-// CIR: cir.call @__mulxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD]]
+// CIR: cir.call @__mulxc3({{.*}}) : (!cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f80>) -> [[REC_LD]]{{[^0-9]}}
 
 // LLVMCIR: call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
 // OGCG: call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}}, x86_fp80 noundef %{{.+}})

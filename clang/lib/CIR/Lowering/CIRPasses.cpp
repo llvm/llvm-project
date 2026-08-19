@@ -106,12 +106,11 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
 
-  // Complex multiplication and division synthesize calls to runtime helpers
-  // such as __mulsc3 and __divsc3, so they must be expanded before
-  // CallConvLowering classifies calls.  A division in a global initializer is
-  // therefore coerced while still inside the global's initializer region,
-  // before LoweringPrepare turns that region into __cxx_global_var_init.
-  pm.addPass(mlir::createComplexLoweringPass(&astContext));
+  // LoweringPrepare synthesizes calls to runtime helpers such as __divsc3, and
+  // outlines dynamic global initializers into functions.  It must run before
+  // CallConvLowering so the classifier sees them, otherwise their signatures
+  // go unclassified and caller and callee disagree on the ABI.
+  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
@@ -125,8 +124,6 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
           target, getX86AVXABILevel(targetInfo.getABI()),
           allowsX86TargetAttrAvx(astContext), getX86ABICompatInfo(astContext)));
   }
-
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);

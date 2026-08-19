@@ -184,26 +184,6 @@ def LoweringPrepare : Pass<"cir-lowering-prepare"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
-def ComplexLowering : Pass<"cir-complex-lowering", "mlir::ModuleOp"> {
-  let summary = "Expand complex multiplication and division";
-  let description = [{
-    This pass replaces `cir.complex.mul` and `cir.complex.div` with the
-    arithmetic each one expands to, which for the full complex range is a call
-    to a runtime helper such as `__mulsc3` or `__divsc3`.
-
-    It runs before the calling-convention pass rather than alongside the rest
-    of the lowering-prepare work, because a call created after that pass has
-    run never gets its return type coerced, which places the real and
-    imaginary halves of the result in the wrong registers.
-
-    Among the complex operations, only these two synthesize a call whose
-    return type has to be coerced, so `cir.complex.conj` and the complex casts
-    are still expanded by `cir-lowering-prepare`.
-  }];
-  let constructor = "mlir::createComplexLoweringPass()";
-  let dependentDialects = ["cir::CIRDialect"];
-}
-
 def IdiomRecognizer : Pass<"cir-idiom-recognizer", "mlir::ModuleOp"> {
   let summary = "Raise calls to C/C++ libraries to CIR operations";
   let description = [{
