@@ -209,7 +209,7 @@ subroutine lastprivate()
             x = x + 1
 !CHECK: omp.terminator
 !CHECK: }
-!CHECK: omp.barrier
+!CHECK-NOT: omp.barrier
      !$omp end sections nowait
 
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}

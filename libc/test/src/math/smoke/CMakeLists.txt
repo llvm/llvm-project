@@ -274,7 +274,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddl_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -290,7 +289,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   faddf128_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -618,6 +616,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceilf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -751,6 +750,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3610,6 +3610,8 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -3679,6 +3681,7 @@ add_fp_unittest(
     # The dependency on sqrtf128 is used to disable the test when float128
     # support is not available.
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
@@ -4775,7 +4778,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4833,7 +4835,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinpif16_test
-  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -4915,7 +4916,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   acosbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS
@@ -5008,7 +5008,6 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanbf16_test
-  NEED_MPFR
   SUITE
     libc-math-smoke-tests
   SRCS

@@ -49,6 +49,7 @@ class LoopOp;
 } // namespace mlir
 
 namespace clang {
+class OutlinedFunctionDecl;
 class SYCLKernelCallStmt;
 } // namespace clang
 
@@ -2305,6 +2306,13 @@ public:
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
   mlir::LogicalResult emitSYCLKernelCallStmt(const SYCLKernelCallStmt &s);
+
+  void emitSYCLKernelCaller(const clang::OutlinedFunctionDecl *outlinedFnDecl,
+                            cir::FuncOp funcOp, cir::FuncType funcType,
+                            FunctionArgList &args);
+
+  /// Remove leftover empty and unreachable blocks from an emitted function.
+  static void eraseEmptyAndUnusedBlocks(cir::FuncOp func);
 
   std::optional<mlir::Value>
   emitTargetBuiltinExpr(unsigned builtinID, const clang::CallExpr *e,
