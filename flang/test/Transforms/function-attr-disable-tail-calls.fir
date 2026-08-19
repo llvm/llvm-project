@@ -13,4 +13,3 @@ func.func @_QPf() {
 // DISABLED-NOT: llvm.disable_tail_calls
 // DISABLED-NEXT:   return
 // DISABLED-NEXT: }
-

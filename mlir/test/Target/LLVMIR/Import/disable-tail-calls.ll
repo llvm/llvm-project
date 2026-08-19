@@ -6,14 +6,11 @@ define void @disable_tail_calls() #0 {
   ret void
 }
 
-attributes #0 = { "disable-tail-calls"="true" }
-
-; // -----
-
 ; CHECK-LABEL: llvm.func @disable_tail_calls_false()
 ; CHECK-NOT: disable_tail_calls
 define void @disable_tail_calls_false() #1 {
   ret void
 }
 
+attributes #0 = { "disable-tail-calls"="true" }
 attributes #1 = { "disable-tail-calls"="false" }
