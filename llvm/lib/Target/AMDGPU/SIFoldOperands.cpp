@@ -248,13 +248,13 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
-  struct AndMaskResult {
+  struct ANDMaskResult {
     int64_t Mask;
     Register Reg;
     unsigned RegIdx;
   };
 
-  std::optional<AndMaskResult> getAndMaskRegOperand(MachineInstr &AndMI) const;
+  std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
 
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
@@ -1865,8 +1865,8 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
 
 // Extract mask, register, and register operand index from an AND instruction.
 // Immediate can be in operand 1 or 2.
-std::optional<SIFoldOperandsImpl::AndMaskResult>
-SIFoldOperandsImpl::getAndMaskRegOperand(MachineInstr &AndMI) const {
+std::optional<SIFoldOperandsImpl::ANDMaskResult>
+SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
   unsigned Opc = AndMI.getOpcode();
   if (Opc != AMDGPU::V_AND_B32_e64 && Opc != AMDGPU::V_AND_B32_e32 &&
       Opc != AMDGPU::S_AND_B32)
@@ -1875,17 +1875,17 @@ SIFoldOperandsImpl::getAndMaskRegOperand(MachineInstr &AndMI) const {
   std::optional<int64_t> MaskImm =
       TII->getImmOrMaterializedImm(AndMI.getOperand(1));
   if (MaskImm && AndMI.getOperand(2).isReg())
-    return AndMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
 
   MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
   if (MaskImm && AndMI.getOperand(1).isReg())
-    return AndMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
 
   return std::nullopt;
 }
 
-// Eliminate redundant AND operations by detecting when ChildMI's mask contains
-// ParentMI's mask.
+// Eliminate redundant 32-bit AND operations by detecting when ChildMI's mask
+// contains ParentMI's mask.
 //
 // For example:
 //   ParentMI: %1 = AND %0, 0x7fff
@@ -1899,14 +1899,14 @@ bool SIFoldOperandsImpl::tryFoldRedundantAnd(MachineInstr &ChildMI) const {
   if (!ChildMI.allImplicitDefsAreDead())
     return false;
 
-  std::optional<AndMaskResult> ChildResult = getAndMaskRegOperand(ChildMI);
+  std::optional<ANDMaskResult> ChildResult = getANDMaskRegOperand(ChildMI);
   if (!ChildResult)
     return false;
 
   MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
 
-  int64_t ParentMask;
-  std::optional<AndMaskResult> ParentResult = getAndMaskRegOperand(*ParentMI);
+  int64_t ParentMask = 0;
+  std::optional<ANDMaskResult> ParentResult = getANDMaskRegOperand(*ParentMI);
   if (ParentResult) {
     // Parent is an AND - extract its mask.
     ParentMask = ParentResult->Mask;
