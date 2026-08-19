@@ -42,10 +42,11 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7
   ; CHECK-NEXT:   %m4:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m2, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY %m4
-  ; CHECK-NEXT:   %out1:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   %out2:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 undef %s1:vreg_128_align2, undef %s0:vreg_128_align2, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_ENDPGM 0, implicit %out1, implicit %out2
+  ; CHECK-NEXT:   %out1:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 undef %s0:vreg_128_align2, undef %s1:vreg_128_align2, %m4, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   %out2:areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64 undef %s1:vreg_128_align2, undef %s0:vreg_128_align2, %m4, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY %out1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY %out2
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]
   bb.0:
     successors: %bb.1(0x80000000)
     %p0:vreg_1024 = IMPLICIT_DEF
