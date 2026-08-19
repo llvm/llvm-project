@@ -2074,7 +2074,8 @@ struct FixedPointBuilder {
     // lossless, except for overflow to infinity which is unlikely.
     const llvm::fltSemantics &opSemantics =
         mlir::cast<cir::FPTypeInterface>(opTy).getFloatSemantics();
-    llvm::APFloat scaleVal(std::pow(2.0, srcSema.getScale()));
+    llvm::APFloat scaleVal(
+        std::pow(2.0, -static_cast<int>(srcSema.getScale())));
     bool losesInfo;
     scaleVal.convert(opSemantics, llvm::APFloat::rmNearestTiesToEven,
                      &losesInfo);

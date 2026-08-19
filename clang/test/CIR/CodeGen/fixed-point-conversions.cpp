@@ -962,7 +962,7 @@ bool sat_accum_to_bool(_Sat _Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s16i -> !cir.float
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.05175781E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -970,7 +970,7 @@ bool sat_accum_to_bool(_Sat _Accum a) {
 // LLVM-LABEL: @fract_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = sitofp i16 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(3.276800e\+04|f0x38000000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x38000000
 // LLVM: ret float %{{.*}}
 float fract_to_float(_Fract f) {
   return f;
@@ -980,7 +980,7 @@ float fract_to_float(_Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s32i -> !cir.float
-// CIR-NEXT: %[[SCALE]] = cir.const #cir.fp<3.276800e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.05175781E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -988,7 +988,7 @@ float fract_to_float(_Fract f) {
 // LLVM-LABEL: @accum_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = sitofp i32 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(3.276800e\+04|f0x38000000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x38000000
 // LLVM: ret float %{{.*}}
 float accum_to_float(_Accum a) {
   return a;
@@ -998,7 +998,7 @@ float accum_to_float(_Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!u16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!u16i>, !u16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !u16i -> !cir.float
-// CIR-NEXT: %[[SCALE]] = cir.const #cir.fp<6.553600e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<1.52587891E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -1006,7 +1006,7 @@ float accum_to_float(_Accum a) {
 // LLVM-LABEL: @ufract_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = uitofp i16 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(6.553600e\+04|f0x37800000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x37800000
 // LLVM: ret float %{{.*}}
 float ufract_to_float(unsigned _Fract f) {
   return f;
@@ -1016,7 +1016,7 @@ float ufract_to_float(unsigned _Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !u32i -> !cir.float
-// CIR-NEXT: %[[SCALE]] = cir.const #cir.fp<6.553600e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<1.52587891E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -1024,7 +1024,7 @@ float ufract_to_float(unsigned _Fract f) {
 // LLVM-LABEL: @uaccum_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = uitofp i32 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(6.553600e\+04|f0x37800000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x37800000
 // LLVM: ret float %{{.*}}
 float uaccum_to_float(unsigned _Accum a) {
   return a;
@@ -1034,7 +1034,7 @@ float uaccum_to_float(unsigned _Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s16i -> !cir.float
-// CIR-NEXT: %[[SCALE]] = cir.const #cir.fp<3.276800e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.05175781E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -1042,7 +1042,7 @@ float uaccum_to_float(unsigned _Accum a) {
 // LLVM-LABEL: @sat_fract_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = sitofp i16 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(3.276800e\+04|f0x38000000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x38000000
 // LLVM: ret float %{{.*}}
 float sat_fract_to_float(_Sat _Fract f) {
   return f;
@@ -1052,7 +1052,7 @@ float sat_fract_to_float(_Sat _Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s32i -> !cir.float
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.float
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.05175781E-5> : !cir.float
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.float
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.float, !cir.ptr<!cir.float>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.float>, !cir.float
@@ -1060,7 +1060,7 @@ float sat_fract_to_float(_Sat _Fract f) {
 // LLVM-LABEL: @sat_accum_to_float
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = sitofp i32 %[[LOAD_ARG]] to float
-// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], {{(3.276800e\+04|f0x38000000)}}
+// LLVM: %[[MULT:.*]] = fmul float %[[CAST]], f0x38000000
 // LLVM: ret float %{{.*}}
 float sat_accum_to_float(_Sat _Accum a) {
   return a;
@@ -1070,7 +1070,7 @@ float sat_accum_to_float(_Sat _Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s16i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.0517578125E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1078,7 +1078,7 @@ float sat_accum_to_float(_Sat _Accum a) {
 // LLVM-LABEL: @fract_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = sitofp i16 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(3.276800e\+04|f0x3F00000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3F00000000000000
 // LLVM: ret double %{{.*}}
 double fract_to_double(_Fract f) {
   return f;
@@ -1088,7 +1088,7 @@ double fract_to_double(_Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s32i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.0517578125E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1096,7 +1096,7 @@ double fract_to_double(_Fract f) {
 // LLVM-LABEL: @accum_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = sitofp i32 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(3.276800e\+04|f0x3F00000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3F00000000000000
 // LLVM: ret double %{{.*}}
 double accum_to_double(_Accum a) {
   return a;
@@ -1106,7 +1106,7 @@ double accum_to_double(_Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!u16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!u16i>, !u16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !u16i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<6.553600e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<1.52587890625E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1114,7 +1114,7 @@ double accum_to_double(_Accum a) {
 // LLVM-LABEL: @ufract_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = uitofp i16 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(6.553600e\+04|f0x3EF0000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3EF0000000000000
 // LLVM: ret double %{{.*}}
 double ufract_to_double(unsigned _Fract f) {
   return f;
@@ -1124,7 +1124,7 @@ double ufract_to_double(unsigned _Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!u32i>, !u32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !u32i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<6.553600e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<1.52587890625E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1132,7 +1132,7 @@ double ufract_to_double(unsigned _Fract f) {
 // LLVM-LABEL: @uaccum_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = uitofp i32 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(6.553600e\+04|f0x3EF0000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3EF0000000000000
 // LLVM: ret double %{{.*}}
 double uaccum_to_double(unsigned _Accum a) {
   return a;
@@ -1142,7 +1142,7 @@ double uaccum_to_double(unsigned _Accum a) {
 // CIR: %[[ARG:.*]] = cir.alloca "f" align(2) init : !cir.ptr<!s16i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(2) %[[ARG]] : !cir.ptr<!s16i>, !s16i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s16i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.0517578125E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1150,7 +1150,7 @@ double uaccum_to_double(unsigned _Accum a) {
 // LLVM-LABEL: @sat_fract_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i16, ptr %{{.*}}, align 2
 // LLVM: %[[CAST:.*]] = sitofp i16 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(3.276800e\+04|f0x3F00000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3F00000000000000
 // LLVM: ret double %{{.*}}
 double sat_fract_to_double(_Sat _Fract f) {
   return f;
@@ -1160,7 +1160,7 @@ double sat_fract_to_double(_Sat _Fract f) {
 // CIR: %[[ARG:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[CAST:.*]] = cir.cast int_to_float %[[LOAD_ARG]] : !s32i -> !cir.double
-// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.276800e+04> : !cir.double
+// CIR-NEXT: %[[SCALE:.*]] = cir.const #cir.fp<3.0517578125E-5> : !cir.double
 // CIR-NEXT: %[[MUL:.*]] = cir.fmul %[[CAST]], %[[SCALE]] : !cir.double
 // CIR-NEXT: cir.store %[[MUL]], %[[RET:.*]] : !cir.double, !cir.ptr<!cir.double>
 // CIR-NEXT: %[[LOAD_RET:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.double>, !cir.double
@@ -1168,7 +1168,7 @@ double sat_fract_to_double(_Sat _Fract f) {
 // LLVM-LABEL: @sat_accum_to_double
 // LLVM: %[[LOAD_ARG:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: %[[CAST:.*]] = sitofp i32 %[[LOAD_ARG]] to double
-// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], {{(3.276800e\+04|f0x3F00000000000000)}}
+// LLVM: %[[MULT:.*]] = fmul double %[[CAST]], f0x3F00000000000000
 // LLVM: ret double %{{.*}}
 double sat_accum_to_double(_Sat _Accum a) {
   return a;
