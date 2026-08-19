@@ -2253,14 +2253,6 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   }
 }
 
-void ASTStmtWriter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
-  VisitExpr(E);
-  Record.AddSourceRange(E->getSourceRange());
-  Record.AddTypeSourceInfo(E->getLHSTypeInfo());
-  Record.AddTypeSourceInfo(E->getRHSTypeInfo());
-  Code = serialization::EXPR_BUILTIN_TYPE_ORDER;
-}
-
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);

@@ -1514,48 +1514,6 @@ bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
   return true;
 }
 
-ExprResult Sema::ActOnBuiltinTypeOrder(SourceLocation KWLoc, ParsedType LhsTy,
-                                       ParsedType RhsTy,
-                                       SourceLocation RParenLoc) {
-  SmallVector<TypeSourceInfo *, 2> Args;
-  for (auto ArgT : {LhsTy, RhsTy}) {
-    TypeSourceInfo *TInfo;
-    QualType T = GetTypeFromParser(ArgT, &TInfo);
-    if (!TInfo)
-      TInfo = Context.getTrivialTypeSourceInfo(T, KWLoc);
-
-    Args.push_back(TInfo);
-  }
-  return BuildBuiltinTypeOrderExpr(KWLoc, Args[0], Args[1], RParenLoc);
-}
-
-ExprResult Sema::BuildBuiltinTypeOrderExpr(SourceLocation KWLoc,
-                                           TypeSourceInfo *LhsT,
-                                           TypeSourceInfo *RhsT,
-                                           SourceLocation RParenLoc) {
-  QualType StrongOrdering =
-      CheckComparisonCategoryType(ComparisonCategoryType::StrongOrdering, KWLoc,
-                                  ComparisonCategoryUsage::Builtin);
-  if (StrongOrdering.isNull())
-    return ExprError();
-
-  QualType LHS = LhsT->getType();
-  QualType RHS = RhsT->getType();
-  if (LHS->isDependentType() || RHS->isDependentType())
-    return new (Context)
-        BuiltinTypeOrderExpr(StrongOrdering, KWLoc, LhsT, RhsT, RParenLoc);
-
-  ComparisonCategoryResult Result = EvaluateTypeOrder(*this, LHS, RHS);
-  VarDecl *ResultVD = Context.CompCategories.getInfoForType(StrongOrdering)
-                          .getValueInfo(Result)
-                          ->VD;
-  Expr *ResultExpr =
-      BuildDeclRefExpr(ResultVD, ResultVD->getType(), VK_LValue, KWLoc);
-  return PerformCopyInitialization(
-      InitializedEntity::InitializeTemporary(StrongOrdering), KWLoc,
-      ResultExpr);
-}
-
 enum class TypeTraitReturnType {
   Bool,
   SizeT,

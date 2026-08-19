@@ -37,12 +37,6 @@ class TypeTraitExpr {
       addData(S->getArg(i)->getType());
   }];
 }
-class BuiltinTypeOrderExpr {
-  code Code = [{
-    addData(S->getLHSType());
-    addData(S->getRHSType());
-  }];
-}
 
 //--- Calls --------------------------------------------------------------//
 class CallExpr {

@@ -22529,7 +22529,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ObjCBoolLiteralExprClass:
   case Expr::CXXBoolLiteralExprClass:
   case Expr::CXXScalarValueInitExprClass:
-  case Expr::BuiltinTypeOrderExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:

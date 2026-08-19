@@ -193,7 +193,6 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::FloatingLiteralClass:
   case Expr::CXXNoexceptExprClass:
   case Expr::CXXScalarValueInitExprClass:
-  case Expr::BuiltinTypeOrderExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:

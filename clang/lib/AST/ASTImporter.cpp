@@ -700,9 +700,7 @@ namespace clang {
     ExpectedStmt VisitArrayInitIndexExpr(ArrayInitIndexExpr *E);
     ExpectedStmt VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E);
     ExpectedStmt VisitCXXNamedCastExpr(CXXNamedCastExpr *E);
-    ExpectedStmt
-    VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E);
-    ExpectedStmt VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E);
+    ExpectedStmt VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *E);
     ExpectedStmt VisitTypeTraitExpr(TypeTraitExpr *E);
     ExpectedStmt VisitCXXTypeidExpr(CXXTypeidExpr *E);
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
@@ -9246,21 +9244,6 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
       ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
       ToParamType, E->getIndex(), E->getPackIndex(), E->getFinal());
-}
-
-ExpectedStmt
-ASTNodeImporter::VisitBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
-  Error Err = Error::success();
-  auto ToType = importChecked(Err, E->getType());
-  auto ToBeginLoc = importChecked(Err, E->getBeginLoc());
-  auto ToEndLoc = importChecked(Err, E->getEndLoc());
-  auto *ToLhs = importChecked(Err, E->getLHSTypeInfo());
-  auto *ToRhs = importChecked(Err, E->getRHSTypeInfo());
-  if (Err)
-    return std::move(Err);
-
-  return new (Importer.getToContext())
-      BuiltinTypeOrderExpr(ToType, ToBeginLoc, ToLhs, ToRhs, ToEndLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {

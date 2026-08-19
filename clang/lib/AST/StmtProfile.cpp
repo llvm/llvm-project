@@ -2320,12 +2320,6 @@ void StmtProfiler::VisitTypeTraitExpr(const TypeTraitExpr *S) {
     VisitType(S->getArg(I)->getType());
 }
 
-void StmtProfiler::VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *S) {
-  VisitExpr(S);
-  VisitType(S->getLHSType());
-  VisitType(S->getRHSType());
-}
-
 void StmtProfiler::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getTrait());

@@ -304,7 +304,6 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::AsTypeExprClass:
   case Stmt::AtomicExprClass:
   case Stmt::BinaryConditionalOperatorClass:
-  case Stmt::BuiltinTypeOrderExprClass:
   case Stmt::TypeTraitExprClass:
   case Stmt::CoawaitExprClass:
   case Stmt::DependentCoawaitExprClass:

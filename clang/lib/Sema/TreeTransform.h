@@ -3567,17 +3567,6 @@ public:
                                     Operand);
   }
 
-  /// Build a new type ordering expression.
-  ///
-  /// By default, performs semantic analysis to build the new expression.
-  /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildBuiltinTypeOrderExpr(SourceLocation StartLoc,
-                                         TypeSourceInfo *LhsT,
-                                         TypeSourceInfo *RhsT,
-                                         SourceLocation RParenLoc) {
-    return getSema().BuildBuiltinTypeOrderExpr(StartLoc, LhsT, RhsT, RParenLoc);
-  }
-
   /// Build a new type trait expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -15496,28 +15485,7 @@ TreeTransform<Derived>::TransformUnresolvedLookupExpr(UnresolvedLookupExpr *Old,
                                             Old->requiresADL(), &TransArgs);
 }
 
-template <typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformBuiltinTypeOrderExpr(BuiltinTypeOrderExpr *E) {
-  SmallVector<TypeSourceInfo *, 2> Args;
-  bool ArgChanged = false;
-  for (TypeSourceInfo *From : {E->getLHSTypeInfo(), E->getRHSTypeInfo()}) {
-    TypeSourceInfo *To = getDerived().TransformType(From);
-    if (!To)
-      return ExprError();
-
-    Args.push_back(To);
-    ArgChanged |= To != From;
-  }
-
-  if (!getDerived().AlwaysRebuild() && !ArgChanged)
-    return E;
-
-  return getDerived().RebuildBuiltinTypeOrderExpr(E->getBeginLoc(), Args[0],
-                                                  Args[1], E->getEndLoc());
-}
-
-template <typename Derived>
+template<typename Derived>
 ExprResult TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
   bool ArgChanged = false;
   SmallVector<TypeSourceInfo *, 4> Args;

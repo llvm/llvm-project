@@ -84,7 +84,6 @@ class DependentTemplateIdExpr;
 class MaterializeTemporaryExpr;
 class CXXFoldExpr;
 class CXXParenListInitExpr;
-class BuiltinTypeOrderExpr;
 class TypeTraitExpr;
 class ConceptSpecializationExpr;
 class SYCLUniqueStableNameExpr;
@@ -181,7 +180,6 @@ ExprDependence computeDependence(DependentTemplateIdExpr *E);
 ExprDependence computeDependence(MaterializeTemporaryExpr *E);
 ExprDependence computeDependence(CXXFoldExpr *E);
 ExprDependence computeDependence(CXXParenListInitExpr *E);
-ExprDependence computeDependence(BuiltinTypeOrderExpr *E);
 ExprDependence computeDependence(TypeTraitExpr *E);
 ExprDependence computeDependence(ConceptSpecializationExpr *E,
                                  bool ValueDependent);

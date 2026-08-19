@@ -3490,39 +3490,6 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
   }
 }
 
-ExprResult Parser::ParseBuiltinTypeOrder() {
-  SourceLocation Loc = ConsumeToken();
-
-  BalancedDelimiterTracker Parens(*this, tok::l_paren);
-  if (Parens.expectAndConsume())
-    return ExprError();
-
-  TypeResult LHS = ParseTypeName(/*SourceRange=*/nullptr,
-                                 DeclaratorContext::TemplateTypeArg);
-  if (LHS.isInvalid()) {
-    Parens.skipToEnd();
-    return ExprError();
-  }
-
-  if (ExpectAndConsume(tok::comma)) {
-    Parens.skipToEnd();
-    return ExprError();
-  }
-
-  TypeResult RHS = ParseTypeName(/*SourceRange=*/nullptr,
-                                 DeclaratorContext::TemplateTypeArg);
-  if (RHS.isInvalid()) {
-    Parens.skipToEnd();
-    return ExprError();
-  }
-
-  if (Parens.consumeClose())
-    return ExprError();
-
-  return Actions.ActOnBuiltinTypeOrder(Loc, LHS.get(), RHS.get(),
-                                       Parens.getCloseLocation());
-}
-
 ExprResult Parser::ParseTypeTrait() {
   tok::TokenKind Kind = Tok.getKind();
 

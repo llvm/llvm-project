@@ -2136,7 +2136,6 @@ public:
   void VisitStmt(const Stmt *S);
   void VisitSwitchStmt(const SwitchStmt *S);
   void VisitWhileStmt(const WhileStmt *W);
-  void VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *E);
   void VisitTypeTraitExpr(const TypeTraitExpr *E);
   void VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E);
   void VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
@@ -3278,11 +3277,6 @@ void EnqueueVisitor::VisitWhileStmt(const WhileStmt *W) {
 void EnqueueVisitor::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   for (unsigned I = E->getNumArgs(); I > 0; --I)
     AddTypeLoc(E->getArg(I - 1));
-}
-
-void EnqueueVisitor::VisitBuiltinTypeOrderExpr(const BuiltinTypeOrderExpr *E) {
-  AddTypeLoc(E->getRHSTypeInfo());
-  AddTypeLoc(E->getLHSTypeInfo());
 }
 
 void EnqueueVisitor::VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {

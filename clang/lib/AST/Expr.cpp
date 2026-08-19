@@ -3748,7 +3748,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXNullPtrLiteralExprClass:
   case CXXThisExprClass:
   case CXXScalarValueInitExprClass:
-  case BuiltinTypeOrderExprClass:
   case TypeTraitExprClass:
   case ArrayTypeTraitExprClass:
   case ExpressionTraitExprClass:

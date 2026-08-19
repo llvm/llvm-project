@@ -5055,7 +5055,6 @@ recurse:
   case Expr::StmtExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
-  case Expr::BuiltinTypeOrderExprClass:
   case Expr::VAArgExprClass:
   case Expr::CUDAKernelCallExprClass:
   case Expr::AsTypeExprClass:

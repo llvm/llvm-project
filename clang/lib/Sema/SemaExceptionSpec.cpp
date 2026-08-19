@@ -1392,7 +1392,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::AddrLabelExprClass:
   case Expr::ArrayTypeTraitExprClass:
   case Expr::AtomicExprClass:
-  case Expr::BuiltinTypeOrderExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::CXXBoolLiteralExprClass:
   case Expr::CXXNoexceptExprClass:

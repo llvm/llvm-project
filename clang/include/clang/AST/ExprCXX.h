@@ -2887,49 +2887,6 @@ public:
   }
 };
 
-/// Represents a C++26 __builtin_type_order(T, U) expression. Used to implement
-/// std::type_order.
-class BuiltinTypeOrderExpr final : public Expr {
-  friend class ASTStmtReader;
-
-  SourceLocation Loc;
-  SourceLocation RParenLoc;
-  TypeSourceInfo *LHS;
-  TypeSourceInfo *RHS;
-
-public:
-  BuiltinTypeOrderExpr(QualType T, SourceLocation Loc, TypeSourceInfo *LHS,
-                       TypeSourceInfo *RHS, SourceLocation RParenLoc)
-      : Expr(BuiltinTypeOrderExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
-        RParenLoc(RParenLoc), LHS(LHS), RHS(RHS) {
-    setDependence(computeDependence(this));
-  }
-
-  explicit BuiltinTypeOrderExpr(EmptyShell Empty)
-      : Expr(BuiltinTypeOrderExprClass, Empty) {}
-
-  TypeSourceInfo *getLHSTypeInfo() const { return LHS; }
-  TypeSourceInfo *getRHSTypeInfo() const { return RHS; }
-
-  QualType getLHSType() const { return getLHSTypeInfo()->getType(); }
-  QualType getRHSType() const { return getRHSTypeInfo()->getType(); }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == BuiltinTypeOrderExprClass;
-  }
-
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
-};
-
 /// A type trait used in the implementation of various C++11 and
 /// Library TR1 trait templates.
 ///

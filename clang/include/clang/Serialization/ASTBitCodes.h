@@ -1939,7 +1939,6 @@ enum StmtCode {
 
   EXPR_OPAQUE_VALUE,                // OpaqueValueExpr
   EXPR_BINARY_CONDITIONAL_OPERATOR, // BinaryConditionalOperator
-  EXPR_BUILTIN_TYPE_ORDER,          // BuiltinTypeOrderExpr
   EXPR_TYPE_TRAIT,                  // TypeTraitExpr
   EXPR_ARRAY_TYPE_TRAIT,            // ArrayTypeTraitIntExpr
 
