@@ -9,10 +9,10 @@ add_header_library(
     libc.hdr.types.struct_tm
     libc.src.__support.macros.config
     libc.src.time.time_constants
-    LibcTest
+    libc.test.UnitTest.LibcTest
 )
 
-add_libc_unittest(
+add_libc_test(
   asctime_test
   SUITE
     libc_time_unittests
@@ -29,7 +29,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   asctime_r_test
   SUITE
     libc_time_unittests
@@ -46,7 +46,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   ctime_test
   SUITE
     libc_time_unittests
@@ -64,7 +64,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   ctime_r_test
   SUITE
     libc_time_unittests
@@ -82,7 +82,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   localtime_test
   SUITE
     libc_time_unittests
@@ -93,7 +93,7 @@ add_libc_unittest(
     libc.src.time.localtime
 )
 
-add_libc_unittest(
+add_libc_test(
   localtime_r_test
   SUITE
     libc_time_unittests
@@ -143,7 +143,7 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   difftime_test
   SUITE
     libc_time_unittests
@@ -155,7 +155,7 @@ add_libc_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_libc_unittest(
+add_libc_test(
   gmtime_test
   SUITE
     libc_time_unittests
@@ -172,7 +172,7 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   gmtime_r_test
   SUITE
     libc_time_unittests
@@ -209,9 +209,10 @@ add_libc_test(
   SRCS
     nanosleep_test.cpp
   DEPENDS
-    libc.include.time
     libc.hdr.types.struct_timespec
+    libc.hdr.signal_macros
     libc.src.time.nanosleep
+    libc.src.__support.macros.config
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -237,7 +238,7 @@ add_libc_test(
     libc.src.time.strptime
 )
 
-add_libc_unittest(
+add_libc_test(
   time_test
   SUITE
     libc_time_unittests

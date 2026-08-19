@@ -8,13 +8,13 @@
 
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
-void foo() {
+void foo(void) {
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} void @bar(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void bar() {
-  void (*fp)() = foo;
+void bar(void) {
+  void (*fp)(void) = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   fp();
@@ -34,7 +34,7 @@ int *qux(char *a, float *b, double *c) {
 
 // CHECK-LABEL: define {{(dso_local)?}} void @corge(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void corge() {
+void corge(void) {
   int (*fp_baz)(char, float, double) = baz;  
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]
   fp_baz('a', .0f, .0);
@@ -58,7 +58,7 @@ void stparam(struct st2 a, struct st2 *b) {}
 
 // CHECK-LABEL: define {{(dso_local)?}} void @stf(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void stf() {
+void stf(void) {
   struct st1 St1;
   St1.fp = qux;  
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]

@@ -3398,7 +3398,10 @@ Value *OpenMPIRBuilder::createRuntimeShuffleFunction(InsertPointTy AllocaIP,
       Builder.CreateIntCast(WarpSize, Builder.getInt16Ty(), /*isSigned=*/true);
   Value *ShuffleCall =
       createRuntimeFunctionCall(ShuffleFunc, {ElemCast, Offset, WarpSizeCast});
-  return castValueToType(AllocaIP, ShuffleCall, CastTy);
+  // The shuffle runtime functions return a 32- or 64-bit value. Cast it back
+  // down to the requested element type, otherwise storing the result would
+  // write past the end of an element narrower than the shuffle width.
+  return castValueToType(AllocaIP, ShuffleCall, ElementType);
 }
 
 void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
@@ -3472,11 +3475,10 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       emitBranch(PreCondBB);
       emitBlock(ExitBB, CurFunc);
     } else {
+      // The shuffled value comes back as the chunk's integer type, so the
+      // store covers exactly this chunk regardless of what ElemType is.
       Value *Res = createRuntimeShuffleFunction(
           AllocaIP, Builder.CreateLoad(IntType, Ptr), IntType, Offset);
-      if (ElemType->isIntegerTy() && ElemType->getScalarSizeInBits() <
-                                         Res->getType()->getScalarSizeInBits())
-        Res = Builder.CreateTrunc(Res, ElemType);
       Builder.CreateStore(Res, ElemPtr);
       Ptr = Builder.CreateGEP(IntType, Ptr, {ConstantInt::get(IndexTy, 1)});
       ElemPtr =
@@ -5766,7 +5768,7 @@ void OpenMPIRBuilder::createScanBBs(ScanInfo *ScanRedInfo) {
 }
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
-    BasicBlock *PostInsertBefore, const Twine &Name) {
+    BasicBlock *PostInsertBefore, const Twine &Name, bool IsCollapsed) {
   Module *M = F->getParent();
   LLVMContext &Ctx = M->getContext();
   Type *IndVarTy = TripCount->getType();
@@ -5807,8 +5809,29 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
   Builder.CreateBr(Latch);
 
   Builder.SetInsertPoint(Latch);
-  Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
-                                  "omp_" + Name + ".next", /*HasNUW=*/true);
+  // Decide whether the induction variable increment can carry nsw.
+  //
+  // Single loops: nsw is always kept (matching Clang). Any Fortran program
+  // whose trip count overflows i32 is non-conforming per F2018 11.1.7.4.1, so
+  // for valid programs 0 <= count <= INT_MAX always holds.
+  //
+  // Collapsed loops: the trip count is a product that can overflow i32 even for
+  // a conforming program, so nsw is kept only when the product is a constant
+  // that provably fits, dropped otherwise.
+  bool HasNSW = Config.hasNoSignedWrap();
+  if (HasNSW) {
+    if (auto *CI = dyn_cast<ConstantInt>(TripCount)) {
+      unsigned BitWidth = CI->getType()->getIntegerBitWidth();
+      APInt SignedMax = APInt::getSignedMaxValue(BitWidth);
+      if (CI->getValue().ugt(SignedMax))
+        HasNSW = false;
+    } else if (IsCollapsed) {
+      HasNSW = false;
+    }
+  }
+  Value *Next =
+      Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
+                        "omp_" + Name + ".next", /*HasNUW=*/true, HasNSW);
   Builder.CreateBr(Header);
   IndVarPHI->addIncoming(Next, Latch);
 
@@ -6004,8 +6027,10 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
-    Value *Span = Builder.CreateMul(IV, Step);
-    Value *IndVar = Builder.CreateAdd(Span, Start);
+    Value *Span = Builder.CreateMul(IV, Step, "", /*HasNUW=*/false,
+                                    /*HasNSW=*/Config.hasNoSignedWrap());
+    Value *IndVar = Builder.CreateAdd(Span, Start, "", /*HasNUW=*/false,
+                                      /*HasNSW=*/Config.hasNoSignedWrap());
     if (InScan)
       ScanRedInfo->IV = IndVar;
     return BodyGenCB(Builder.saveIP(), IndVar);
@@ -6160,7 +6185,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(DL);
-    return Builder.CreateAdd(OldIV, LowerBound);
+    return Builder.CreateAdd(OldIV, LowerBound, "", /*HasNUW=*/false,
+                             /*HasNSW=*/Config.hasNoSignedWrap());
   });
 
   // In the "exit" block, call the "fini" function.
@@ -7005,7 +7031,8 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Create the collapsed loop control flow.
   CanonicalLoopInfo *Result =
       createLoopSkeleton(DL, CollapsedTripCount, F,
-                         OrigPreheader->getNextNode(), OrigAfter, "collapsed");
+                         OrigPreheader->getNextNode(), OrigAfter, "collapsed",
+                         /*IsCollapsed=*/true);
 
   // Build the collapsed loop body code.
   // Start with deriving the input loop induction variables from the collapsed
@@ -8107,7 +8134,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createOrderedThreadsSimd(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Directive OMPD = Directive::OMPD_ordered;
+  Directive OMPD = Directive::OMPD_ordered_blockassoc;
   Instruction *EntryCall = nullptr;
   Instruction *ExitCall = nullptr;
 
@@ -10257,7 +10284,7 @@ GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
                                : M.getTargetTriple().isAMDGPU()
                                    ? 0
                                    : DL.getDefaultGlobalsAddressSpace();
-    auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
+    auto Linkage = this->M.getTargetTriple().isWasm()
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
@@ -10542,7 +10569,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
     Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
-    bool PreserveMemberOfFlags) {
+    bool PreserveMemberOfFlags, bool PropagatePresentToPointee) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10569,8 +10596,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Start the mapper function code generation.
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", MapperFn);
-  auto SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   Value *MapperHandle = MapperFn->getArg(0);
   Value *BaseIn = MapperFn->getArg(1);
@@ -10801,16 +10829,41 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     // specified in the declared mapper.
     //
     // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
-    // TODO: PRESENT is not propagated here yet. Doing so requires
-    // distinguishing pointee entries from the struct's own storage; it is
-    // handled in a follow-on.
-    Value *ImportedModifierBits = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
-                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
-                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE)));
+    //
+    // ALWAYS/DELETE/CLOSE are propagated to every (non-ATTACH) entry.
+    //
+    // PRESENT is propagated only to entries that have an attach ptr
+    // (HasAttachPtr): the pointee data, which occupies a different storage
+    // block than the struct being mapped and so is not covered by the
+    // present-check on the struct's own storage. A present modifier on the
+    // outer clause must still require that pointee to be present on the device.
+    //
+    // This is gated on \p PropagatePresentToPointee (set by callers only for
+    // OpenMP >= 6.0). Before 6.0 the present modifier is treated as not
+    // applying to the pointee: the spec committee confirmed the divergence
+    // between the present "motion" modifier (to/from) and the present map-type
+    // modifier (map) was unintentional, to be fixed as an OpenMP 6.0 erratum,
+    // so for 5.2 present is ignored for the pointee for both map and to/from.
+    //
+    // TODO: PRESENT should also be propagated to the struct's own members
+    // (e.g. the s.x, s.y of map(present, mapper(id): s)) so that an absent
+    // member triggers the present-check. We cannot do that yet: while pointer
+    // members are mapped with PTR_AND_OBJ, a single combined entry allocates
+    // the whole struct (including the pointer's storage), so propagating
+    // PRESENT to it would wrongly require the pointer's pointee to be present.
+    // Enable member propagation once Clang stops emitting PTR_AND_OBJ and uses
+    // attach-style maps throughout.
+    uint64_t ModifierBits =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+            OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+            OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
+    if (PropagatePresentToPointee && Info->HasAttachPtr[I])
+      ModifierBits |=
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
+    Value *ImportedModifierBits =
+        Builder.CreateAnd(MapType, Builder.getInt64(ModifierBits));
     Value *CurMapTypeWithModifiers = Builder.CreateOr(
         CurMapType, ImportedModifierBits, "omp.maptype.with.modifiers");
 
@@ -10859,7 +10912,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
   return MapperFn;
 }
 

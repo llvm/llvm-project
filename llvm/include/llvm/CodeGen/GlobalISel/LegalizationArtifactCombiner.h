@@ -95,20 +95,19 @@ public:
     }
 
     // Try to fold aext(g_constant) when the larger constant type is legal.
-    auto *SrcMI = MRI.getVRegDef(SrcReg);
-    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+    GConstant *SrcCst;
+    if (mi_match(SrcReg, MRI, m_GConstant(SrcCst))) {
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto &CstVal = SrcMI->getOperand(1);
-        auto MergedLocation =
-            DebugLoc::getMergedLocation(MI.getDebugLoc(), SrcMI->getDebugLoc());
-        // Set the debug location to the merged location of the SrcMI and the MI
-        // if the aext fold is successful.
+        auto MergedLocation = DebugLoc::getMergedLocation(
+            MI.getDebugLoc(), SrcCst->getDebugLoc());
+        // Set the debug location to the merged location of the SrcCst and the
+        // MI if the aext fold is successful.
         Builder.setDebugLoc(MergedLocation);
-        Builder.buildConstant(
-            DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
+        Builder.buildConstant(DstReg,
+                              SrcCst->getValue().sext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
-        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        markInstAndDefDead(MI, *SrcCst, DeadInsts);
         return true;
       }
     }
@@ -175,15 +174,14 @@ public:
     }
 
     // Try to fold zext(g_constant) when the larger constant type is legal.
-    auto *SrcMI = MRI.getVRegDef(SrcReg);
-    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+    GConstant *SrcCst;
+    if (mi_match(SrcReg, MRI, m_GConstant(SrcCst))) {
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto &CstVal = SrcMI->getOperand(1);
-        Builder.buildConstant(
-            DstReg, CstVal.getCImm()->getValue().zext(DstTy.getSizeInBits()));
+        Builder.buildConstant(DstReg,
+                              SrcCst->getValue().zext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
-        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        markInstAndDefDead(MI, *SrcCst, DeadInsts);
         return true;
       }
     }
@@ -242,15 +240,14 @@ public:
     }
 
     // Try to fold sext(g_constant) when the larger constant type is legal.
-    auto *SrcMI = MRI.getVRegDef(SrcReg);
-    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+    GConstant *SrcCst;
+    if (mi_match(SrcReg, MRI, m_GConstant(SrcCst))) {
       const LLT DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto &CstVal = SrcMI->getOperand(1);
-        Builder.buildConstant(
-            DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
+        Builder.buildConstant(DstReg,
+                              SrcCst->getValue().sext(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
-        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        markInstAndDefDead(MI, *SrcCst, DeadInsts);
         return true;
       }
     }
@@ -265,26 +262,26 @@ public:
     using namespace llvm::MIPatternMatch;
     assert(MI.getOpcode() == TargetOpcode::G_TRUNC);
 
-    Builder.setInstr(MI);
+    Builder.setInstrAndDebugLoc(MI);
     Register DstReg = MI.getOperand(0).getReg();
     const LLT DstTy = MRI.getType(DstReg);
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // Try to fold trunc(g_constant) when the smaller constant type is legal.
-    auto *SrcMI = MRI.getVRegDef(SrcReg);
-    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+    GConstant *SrcCst;
+    if (mi_match(SrcReg, MRI, m_GConstant(SrcCst))) {
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto &CstVal = SrcMI->getOperand(1);
-        Builder.buildConstant(
-            DstReg, CstVal.getCImm()->getValue().trunc(DstTy.getSizeInBits()));
+        Builder.buildConstant(DstReg,
+                              SrcCst->getValue().trunc(DstTy.getSizeInBits()));
         UpdatedDefs.push_back(DstReg);
-        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        markInstAndDefDead(MI, *SrcCst, DeadInsts);
         return true;
       }
     }
 
     // Try to fold trunc(merge) to directly use the source of the merge.
     // This gets rid of large, difficult to legalize, merges
+    MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
     if (auto *SrcMerge = dyn_cast<GMerge>(SrcMI)) {
       const Register MergeSrcReg = SrcMerge->getSourceReg(0);
       const LLT MergeSrcTy = MRI.getType(MergeSrcReg);
@@ -398,7 +395,7 @@ public:
 
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       Register DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
 
@@ -474,7 +471,7 @@ public:
                     .Action == LegalizeActions::MoreElements)
           return false;
 
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
         auto NewUnmerge = Builder.buildUnmerge(UnmergeTy, CastSrcReg);
 
         for (unsigned I = 0; I != NumDefs; ++I) {
@@ -515,7 +512,7 @@ public:
         }
 
         // Build new unmerge
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
         Builder.buildUnmerge(DstRegs, CastSrcReg);
         UpdatedDefs.append(DstRegs.begin(), DstRegs.begin() + NewNumDefs);
         markInstAndDefDead(MI, CastMI, DeadInsts);
@@ -964,6 +961,7 @@ public:
                                GUnmerge *Unmerge, unsigned UnmergeIdxStart,
                                unsigned NumElts, unsigned EltSize,
                                bool AllowUndef) {
+      using namespace llvm::MIPatternMatch;
       assert(MergeStartIdx + NumElts <= MI.getNumSources());
       for (unsigned i = MergeStartIdx; i < MergeStartIdx + NumElts; ++i) {
         unsigned EltUnmergeIdx;
@@ -975,8 +973,7 @@ public:
           if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
             return false;
         } else if (!AllowUndef ||
-                   MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
-                       TargetOpcode::G_IMPLICIT_DEF)
+                   !mi_match(MI.getSourceReg(i), MRI, m_GImplicitDef()))
           return false;
       }
       return true;
@@ -1023,8 +1020,7 @@ public:
       }
 
       // Recognize UnmergeSrc that can be unmerged to DstTy directly.
-      // Types can be either both vector or both non-vector types, or one
-      // is a vector type and the other is a scalar type.
+      // Types have to be either both vector or both non-vector types.
       // In case of vector types, the scalar elements need to match.
       // Merge-like opcodes are combined one at the time. First one creates new
       // unmerge, following should use the same unmerge (builder performs CSE).
@@ -1034,23 +1030,15 @@ public:
       // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
       //
       // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
-      bool MixedVectorScalar = DstTy.isVector() != UnmergeSrcTy.isVector();
       if ((DstSize < UnmergeSrcSize) &&
-          (!DstTy.isVector() || !UnmergeSrcTy.isVector() ||
-           DstTy.getScalarType() == UnmergeSrcTy.getScalarType()) &&
+          ((!DstTy.isVector() && !UnmergeSrcTy.isVector()) ||
+           (DstTy.isVector() && UnmergeSrcTy.isVector() &&
+            DstTy.getScalarType() == UnmergeSrcTy.getScalarType())) &&
           (Elt0UnmergeIdx % NumMIElts == 0) &&
-          (MixedVectorScalar
-               ? UnmergeSrcSize % DstSize == 0
-               : getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy)) {
+          getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
                                    EltSize, false))
           return false;
-        if (MixedVectorScalar) {
-          LegalizeActionStep ActionStep = LI.getAction(
-              {TargetOpcode::G_UNMERGE_VALUES, {DstTy, UnmergeSrcTy}});
-          if (ActionStep.Action != LegalizeAction::Legal)
-            return false;
-        }
         MIB.setInstrAndDebugLoc(MI);
         auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
         unsigned DstIdx = (Elt0UnmergeIdx * EltSize) / DstTy.getSizeInBits();
@@ -1193,7 +1181,7 @@ public:
       if (NumDefs % NumMergeRegs != 0)
         return false;
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       // Transform to UNMERGEs, for example
       //   %1 = G_MERGE_VALUES %4, %5
       //   %9, %10, %11, %12 = G_UNMERGE_VALUES %1
@@ -1243,7 +1231,7 @@ public:
       if (ConvertOp != 0 || NumMergeRegs % NumDefs != 0)
         return false;
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       // Transform to MERGEs
       //   %6 = G_MERGE_VALUES %17, %18, %19, %20
       //   %7, %8 = G_UNMERGE_VALUES %6
@@ -1276,7 +1264,7 @@ public:
       }
 
       if (ConvertOp) {
-        Builder.setInstr(MI);
+        Builder.setInstrAndDebugLoc(MI);
 
         for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
           Register DefReg = MI.getOperand(Idx).getReg();
@@ -1296,7 +1284,7 @@ public:
              "Bitcast and the other kinds of conversions should "
              "have happened earlier");
 
-      Builder.setInstr(MI);
+      Builder.setInstrAndDebugLoc(MI);
       for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
         Register DstReg = MI.getOperand(Idx).getReg();
         Register SrcReg = MergeI->getOperand(Idx + 1).getReg();
@@ -1357,7 +1345,7 @@ public:
       return false;
 
     // TODO: We could modify MI in place in most cases.
-    Builder.setInstr(MI);
+    Builder.setInstrAndDebugLoc(MI);
     Builder.buildExtract(DstReg, MergeI->getOperand(MergeSrcIdx + 1).getReg(),
                          Offset - MergeSrcIdx * MergeSrcSize);
     UpdatedDefs.push_back(DstReg);

@@ -134,9 +134,9 @@ for building with NMake. By default, CMake chooses the most specific generator
 supported by your development environment. If you want an alternative generator,
 you must specify this to CMake with the `-G` option.
 
-```{todo}
+:::{todo}
 Explain variables and cache. Move explanation here from #options section.
-```
+:::
 
 (Options and variables)=
 ## Options and variables
@@ -314,9 +314,9 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     Windows, shared libraries may be used when building with MinGW, including
     mingw-w64, but not when building with the Microsoft toolchain.
 
-    ```{note}
+    :::{note}
     `BUILD_SHARED_LIBS` is only recommended for use by LLVM developers. If you want to build LLVM as a shared library, you should use the `LLVM_BUILD_LLVM_DYLIB` option.
-    ```
+    :::
 
 **LLVM_ABI_BREAKING_CHECKS**:STRING
 
@@ -643,9 +643,9 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
     `bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly`
 
-    ```{note}
+    :::{note}
     Some projects listed here can also go in `LLVM_ENABLE_RUNTIMES`. They should only appear in one of the two lists. If a project is a valid possibility for both, prefer putting it in `LLVM_ENABLE_RUNTIMES`.
-    ```
+    :::
 
 **LLVM_ENABLE_RTTI**:BOOL
 
@@ -660,9 +660,9 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     using a system compiler, see the [libc++
     documentation](https://libcxx.llvm.org/VendorDocumentation.html).
 
-    ```{note}
+    :::{note}
     The list should not have duplicates with `LLVM_ENABLE_PROJECTS`.
-    ```
+    :::
 
     To list all possible runtimes, include an invalid name. For example
     `-DLLVM_ENABLE_RUNTIMES=notaruntime`. The resulting CMake error will list
