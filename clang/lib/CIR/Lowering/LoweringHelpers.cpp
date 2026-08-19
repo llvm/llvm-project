@@ -493,7 +493,9 @@ static mlir::Type adjustGlobalStructTypeForInit(
     mlir::Type lastInitType =
         mlir::cast<mlir::TypedAttr>(initMembers.back()).getType();
     if (mlir::cast<cir::ArrayType>(lastInitType).getSize() != 0) {
-      newBody.back() = converter.convertType(lastInitType);
+      newBody.back() =
+          adjustGlobalTypeForInit(converter.convertType(lastInitType),
+                                  initMembers.back(), converter, dataLayout);
       packed = packed || shouldPackFAMStruct(dataLayout, newBody);
       widenedFAM = true;
       changed = true;
@@ -568,12 +570,61 @@ static mlir::Type adjustGlobalUnionTypeForInit(
                                                 unionTy.getPacked());
 }
 
+// Unions in an array can cause individual elements to be of different types.
+// This function adjusts the array type and replaces it with a struct type if
+// necessary, OR leaves it as a 'new' array type if necessary.
+static mlir::Type adjustGlobalArrayTypeForInit(
+    mlir::LLVM::LLVMArrayType arrayTy, cir::ConstArrayAttr arrayInit,
+    const mlir::TypeConverter &converter, const mlir::DataLayout &dataLayout) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(arrayInit.getElts());
+
+  if (!elts)
+    return arrayTy;
+
+  mlir::Type origEltTy = arrayTy.getElementType();
+  llvm::SmallVector<mlir::Type> adjustedElts(arrayTy.getNumElements(),
+                                             origEltTy);
+  bool changed = false;
+
+  for (auto [idx, elt] : llvm::enumerate(elts)) {
+    mlir::Type adjusted =
+        adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+
+    if (idx >= arrayTy.getNumElements()) {
+      adjustedElts.push_back(adjusted);
+      changed = true;
+    } else if (adjusted != origEltTy) {
+      adjustedElts[idx] = adjusted;
+      changed = true;
+    }
+  }
+
+  if (!changed)
+    return arrayTy;
+
+  if (llvm::all_equal(adjustedElts))
+    return mlir::LLVM::LLVMArrayType::get(adjustedElts.front(),
+                                          adjustedElts.size());
+
+  // Packed, because arrays shouldn't be subject to padding.
+  return mlir::LLVM::LLVMStructType::getLiteral(
+      arrayTy.getContext(), adjustedElts, /*isPacked=*/true);
+}
+
 // Apply various adjustments required for struct/union types.
 mlir::Type
 adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                         const mlir::TypeConverter &converter,
                         const mlir::DataLayout &dataLayout,
                         llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+  if (auto arrayInit = mlir::dyn_cast_if_present<cir::ConstArrayAttr>(init)) {
+    auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmType);
+    if (!arrayTy)
+      return llvmType;
+    return adjustGlobalArrayTypeForInit(arrayTy, arrayInit, converter,
+                                        dataLayout);
+  }
+
   // Conversions for both only happen if we have a record init.
   auto constRecord = mlir::dyn_cast_if_present<cir::ConstRecordAttr>(init);
   if (!constRecord)

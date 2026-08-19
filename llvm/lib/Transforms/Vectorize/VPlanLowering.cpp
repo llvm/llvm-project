@@ -980,10 +980,8 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
-  VPValue *MulByUF = Builder.createOverflowingOp(
-      Instruction::Mul,
-      {RuntimeVF, Plan.getConstantInt(TCTy, Plan.getConcreteUF())},
-      {true, false});
+  VPValue *MulByUF =
+      Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
   VFxUF.replaceAllUsesWith(MulByUF);
 }
 
