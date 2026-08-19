@@ -1,17 +1,6 @@
 STRING_EXTENSION_OUTSIDE(SBStructuredData)
 
 %extend lldb::SBStructuredData {
-    std::string GetStringValue() const {
-        const size_t len = $self->GetStringValue(nullptr, 0);
-        if (len == 0)
-            return std::string{};
-
-        std::string result(len, '\0');
-        $self->GetStringValue(result.data(), result.size() + 1);
-
-        return result;
-    }
-
 #ifdef SWIGPYTHON
     %pythoncode%{
     def __len__(self):

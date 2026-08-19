@@ -232,7 +232,6 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 %feature("python:annotations", "0") lldb::SBProcess::GetSTDOUT;
 %feature("python:annotations", "0") lldb::SBProcess::GetSTDERR;
 %feature("python:annotations", "0") lldb::SBProcess::GetAsyncProfileData;
-%feature("python:annotations", "0") lldb::SBStructuredData::GetStringValue;
 
 // Uses (void *char_buf, size_t size) argout typemap.
 // Should return `str`, but annotated as `typing.List[typing.Union[int, typing.Optional[SWIGTYPE_p_void]]]`.
