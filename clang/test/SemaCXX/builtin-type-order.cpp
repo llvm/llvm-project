@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -std=c++20 -fsyntax-only -verify -DMICROSOFT -fexperimental-new-constant-interpreter %s
 
 constexpr auto missing = __builtin_type_order(int, long);
-// expected-error@-1 {{cannot retrieve type order because type 'std::strong_ordering' was not found; include <compare>}}
+// expected-error@-1 {{cannot compute order because type 'std::strong_ordering' was not found; include <compare>}}
 
 namespace std {
   struct strong_ordering {
