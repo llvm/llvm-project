@@ -111,6 +111,10 @@ inline bool isPrivate(int64_t MapType) {
 inline bool isLiteral(int64_t MapType) {
   return MapType & OMP_TGT_MAPTYPE_LITERAL;
 }
+/// Non-contiguous descriptor (used by non-contiguous target update).
+inline bool isNonContig(int64_t MapType) {
+  return MapType & OMP_TGT_MAPTYPE_NON_CONTIG;
+}
 /// Firstprivate aggregate whose clause carried the "saved" modifier.
 inline bool isSaved(int64_t MapType) { return MapType & OMP_TGT_MAPTYPE_SAVED; }
 } // namespace maptype
@@ -486,6 +490,110 @@ void *__tgt_get_mapped_ptr(int64_t DeviceId, const void *HostPtr);
 // unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
 // code for details.
 void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
+
+//===----------------------------------------------------------------------===//
+// Taskgraph transmission ABI (libomp -> libomptarget)
+//
+// libomp runs a replayed taskgraph itself.  Each maximal subtree of its
+// processed region tree that holds only target constructs is a *subgraph*,
+// which libomp streams to libomptarget through the preorder calls below, once,
+// when the taskgraph is recorded.  A replay that reaches the subgraph has
+// libomptarget run it on the device, and waits for it.  See Shared/TaskGraph.h
+// for the resulting data structures within this library.
+//
+// Everything a subgraph names is libomp's: the recorded kernel arguments and
+// map arrays, which libomp brings up to date for each replay before any
+// subgraph runs.  Only plain values and opaque pointers cross this interface,
+// so no structure layout has to be kept in step between the two libraries.
+//===----------------------------------------------------------------------===//
+
+/// Begin streaming a subgraph.  The first element streamed after this, a
+/// region or a single leaf, is the subgraph's root.
+///
+/// \p ByteSize drives the two-pass, single-block construction.  On the first
+/// (measuring) pass libomp passes 0; libomptarget only accumulates the byte
+/// size the subgraph will occupy and returns it from __tgt_taskgraph_end.
+/// libomp then replays the identical stream on a second pass, passing that
+/// size back here so libomptarget can allocate the whole subgraph in one
+/// exactly-sized block that never moves during construction.
+void *__tgt_taskgraph_start(int64_t DeviceId, uintptr_t GraphId,
+                            size_t ByteSize);
+
+/// Preorder region bracketing.  \p NodeCount is the region's immediate-child
+/// count.
+void __tgt_taskgraph_start_parallel(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_parallel(void *Graph);
+void __tgt_taskgraph_start_sequential(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_sequential(void *Graph);
+void __tgt_taskgraph_start_exclusive(void *Graph, int32_t NodeCount);
+void __tgt_taskgraph_end_exclusive(void *Graph);
+
+/// Irreducible region bracketing.  Child nodes are transmitted first, followed
+/// by edges.
+/// \p NodeCount is the immediate-child count (as for the other containers) and
+/// \p EdgeCount is the number of edges.
+void __tgt_taskgraph_start_irreducible(void *Graph, int32_t NodeCount,
+                                       int32_t EdgeCount);
+void __tgt_taskgraph_end_irreducible(void *Graph);
+
+/// A single edge of an irreducible region.  \p SrcChild / \p DstChild are
+/// 0-based child indices within that region, and the edges must not form a
+/// cycle.  A subgraph breaking either rule is not offloaded.
+void __tgt_taskgraph_emit_edge(void *Graph, int32_t SrcChild, int32_t DstChild);
+
+/// Emit a target kernel leaf.  \p KernelArgs is libomp's deep copy of the
+/// kernel-arguments blob (opaque KernelArgsTy*).
+void __tgt_taskgraph_emit_target(void *Graph, int64_t DeviceId,
+                                 int32_t NumTeams, int32_t ThreadLimit,
+                                 void *HostPtr, void *KernelArgs);
+
+/// Emit a target enter-data / exit-data / update leaf.  The map arrays are
+/// libomp-owned deep copies.
+void __tgt_taskgraph_emit_target_enter_data(void *Graph, int64_t DeviceId,
+                                            int32_t ArgNum, void **ArgsBase,
+                                            void **Args, int64_t *ArgSizes,
+                                            int64_t *ArgTypes, void **ArgNames,
+                                            void **ArgMappers);
+void __tgt_taskgraph_emit_target_exit_data(void *Graph, int64_t DeviceId,
+                                           int32_t ArgNum, void **ArgsBase,
+                                           void **Args, int64_t *ArgSizes,
+                                           int64_t *ArgTypes, void **ArgNames,
+                                           void **ArgMappers);
+void __tgt_taskgraph_emit_target_update(void *Graph, int64_t DeviceId,
+                                        int32_t ArgNum, void **ArgsBase,
+                                        void **Args, int64_t *ArgSizes,
+                                        int64_t *ArgTypes, void **ArgNames,
+                                        void **ArgMappers);
+
+/// Finish transmitting a subgraph.  Returns the number of bytes the subgraph
+/// occupies (the single-block size): meaningful on the first (measuring) pass,
+/// where its return value is fed back to __tgt_taskgraph_start as
+/// \p ByteSize.
+size_t __tgt_taskgraph_end(void *Graph);
+
+/// Build the executable form of a subgraph (delegates to the active plugin).
+/// Returns OFFLOAD_SUCCESS iff a plugin claimed the subgraph and will execute
+/// it.  On OFFLOAD_FAIL, libomp runs the subgraph's target constructs itself,
+/// one at a time.  The subgraph is finalized for the device it was started on.
+int __tgt_taskgraph_finalize(void *Graph);
+
+/// Begin a replay of the taskgraph a finalized subgraph belongs to.  Called
+/// for every subgraph when the replay starts, after libomp has brought the
+/// recorded arguments up to date and before anything in the replay runs:
+/// this is when the subgraph takes the values of its firstprivates (OpenMP
+/// 6.0 [14.3]).
+void __tgt_taskgraph_begin_replay(void *Graph);
+
+/// Run a finalized subgraph on the device and wait for it to complete:
+/// resolve its data against the current mapping state, issue it, and wait.
+/// Returns OFFLOAD_SUCCESS once it has run, or OFFLOAD_FAIL if it was declined
+/// before anything was issued, in which case libomp runs its target constructs
+/// itself.  A failure after anything was issued is fatal.
+int __tgt_taskgraph_replay(void *Graph);
+
+/// Destroy a finalized taskgraph.  Must be called before libomp frees the
+/// captured node payloads referenced by the graph.
+void __tgt_taskgraph_destroy(void *Graph);
 
 /// Duplicate kernel args at capture time.  Uses a two-pass measure/allocate
 /// strategy.  Used so libomp doesn't have to understand kernel arg layout.

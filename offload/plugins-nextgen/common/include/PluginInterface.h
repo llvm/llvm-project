@@ -28,6 +28,7 @@
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
 #include "Shared/Requirements.h"
+#include "Shared/TaskGraph.h"
 #include "Shared/Utils.h"
 
 #include "GenericProfiler.h"
@@ -1266,6 +1267,33 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   RecordReplayTy *getRecordReplay() { return RecordReplay; }
 
+  /// Taskgraph handoff hooks.  \p Graph is a shared taskgraph tree
+  /// (Shared/TaskGraph.h) of target constructs only, which the plugin only
+  /// reads.  libomptarget only offers a well-formed graph: every region has the
+  /// children and edges it announced, irreducible regions are acyclic, every
+  /// leaf targets the graph's device, and every target leaf has a recorded
+  /// launch whose configuration is settled as for a launch outside a graph.
+  ///
+  /// finalizeTaskGraph interprets the tree into whatever executable form suits
+  /// the backend and claims ownership of the graph by returning that form,
+  /// which must not be null; libomptarget keeps it in the graph's PluginGraph,
+  /// where the other hooks find it.  replay dispatches that form and waits for
+  /// it to complete, and destroy frees it.  The base implementations decline,
+  /// as should any backend that meets something in the tree it cannot express.
+  /// libomp runs the target constructs of a declined graph itself.
+  virtual Expected<void *>
+  finalizeTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "taskgraph finalize unsupported by this plugin");
+  }
+  virtual Error replayTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                         "taskgraph replay unsupported by this plugin");
+  }
+  virtual Error destroyTaskGraph(const llvm::omp::target::TaskGraphTy *Graph) {
+    return Plugin::success();
+  }
+
   /// Map to record kernel have been launchedl, for error reporting purposes.
   ProtectedObj<KernelTraceInfoRecordTy> KernelLaunchTraces;
 
@@ -1566,6 +1594,19 @@ public:
                         KernelLaunchArgsTy &LaunchArgs,
                         __tgt_async_info *AsyncInfoPtr,
                         GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Taskgraph support: build an executable form of \p Graph, replay it, or
+  /// destroy it on the given device. Return OFFLOAD_SUCCESS only if the plugin
+  /// handled the request; libomp replays the graph on the host otherwise.  A
+  /// successful finalize returns the plugin's form of the graph in
+  /// \p PluginGraph.
+  int32_t finalize_taskgraph(int32_t DeviceId,
+                             const llvm::omp::target::TaskGraphTy *Graph,
+                             void **PluginGraph);
+  int32_t replay_taskgraph(int32_t DeviceId,
+                           const llvm::omp::target::TaskGraphTy *Graph);
+  int32_t destroy_taskgraph(int32_t DeviceId,
+                            const llvm::omp::target::TaskGraphTy *Graph);
 
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);

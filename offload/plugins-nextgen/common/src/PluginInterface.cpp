@@ -1231,6 +1231,49 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
+int32_t
+GenericPluginTy::finalize_taskgraph(int32_t DeviceId,
+                                    const llvm::omp::target::TaskGraphTy *Graph,
+                                    void **PluginGraph) {
+  auto PluginGraphOrErr = getDevice(DeviceId).finalizeTaskGraph(Graph);
+  if (Error Err = PluginGraphOrErr.takeError()) {
+    // Declining is the normal case for plugins without a graph backend, and a
+    // legitimate outcome for one that meets a construct it cannot express;
+    // libomp then replays the graph on the host.  So this is not reported as a
+    // failure -- but the reason is the first thing anyone asks when a graph
+    // unexpectedly runs on the host, so it goes to the debug stream.
+    std::string Reason = toString(std::move(Err));
+    ODBG(OLDT_Module) << "device " << DeviceId << " declined taskgraph "
+                      << Graph << ": " << Reason;
+    return OFFLOAD_FAIL;
+  }
+  *PluginGraph = *PluginGraphOrErr;
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t
+GenericPluginTy::replay_taskgraph(int32_t DeviceId,
+                                  const llvm::omp::target::TaskGraphTy *Graph) {
+  auto Err = getDevice(DeviceId).replayTaskGraph(Graph);
+  if (Err) {
+    REPORT() << "Failure to replay taskgraph on device " << DeviceId << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t GenericPluginTy::destroy_taskgraph(
+    int32_t DeviceId, const llvm::omp::target::TaskGraphTy *Graph) {
+  auto Err = getDevice(DeviceId).destroyTaskGraph(Graph);
+  if (Err) {
+    REPORT() << "Failure to destroy taskgraph on device " << DeviceId << ": "
+             << toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
 }
