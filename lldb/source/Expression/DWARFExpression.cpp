@@ -1630,9 +1630,17 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_plus_uconst: {
       const uint64_t uconst_value = op->getRawOperand(0);
-      // Implicit conversion from a UINT to a Scalar...
-      stack.back().GetScalar() += uconst_value;
-      if (!stack.back().GetScalar().IsValid())
+      Scalar &operand = stack.back().GetScalar();
+      Scalar addend(uconst_value);
+      // The addend is interpreted as the same type as the popped operand
+      // (DWARF v5, 2.5.1.4). Give it the operand's exact integer type so
+      // the addition keeps the operand's width and wraparound semantics
+      // instead of promoting to a 64-bit unsigned value.
+      if (operand.GetType() == Scalar::e_int)
+        addend.TruncOrExtendTo(operand.GetAPSInt().getBitWidth(),
+                               operand.GetAPSInt().isSigned());
+      operand += addend;
+      if (!operand.IsValid())
         return llvm::createStringError("DW_OP_plus_uconst failed");
     } break;
 
