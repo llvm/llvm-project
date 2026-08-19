@@ -29,11 +29,20 @@ constexpr static long getMajor(long Ver) { return (Ver / 10000) % 100; }
 constexpr static long getMinor(long Ver) { return (Ver / 100) % 100; }
 constexpr static long getStep(long Ver) { return Ver % 100; }
 
-int printGPUsByKFD() {
+// Enumerate the GPUs described by the KFD topology rooted at \p NodePath.
+// Exposed so unit tests can run against a synthetic topology; it is not
+// declared in a header.
+int printGPUsByKFD(StringRef NodePath) {
   SmallVector<std::pair<long, long>> Devices;
   std::error_code EC;
-  for (sys::fs::directory_iterator Begin(KFD_SYSFS_NODE_PATH, EC), End;
-       Begin != End; Begin.increment(EC)) {
+  sys::fs::directory_iterator Begin(NodePath, EC), End;
+
+  // Check if we could construct the directory_iterator, which can fail if
+  // there is no KFD driver (e.g., WSL)
+  if (EC)
+    return 1;
+
+  for (; Begin != End; Begin.increment(EC)) {
     if (EC)
       return 1;
 
@@ -75,3 +84,5 @@ int printGPUsByKFD() {
 
   return 0;
 }
+
+int printGPUsByKFD() { return printGPUsByKFD(KFD_SYSFS_NODE_PATH); }
