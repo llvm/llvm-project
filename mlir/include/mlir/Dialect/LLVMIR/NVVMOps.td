@@ -3405,6 +3405,8 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
     combinations are possible for certain layouts according to the table below.
 
+    For FP8 operations, A and B can independently use `e4m3` or `e5m2`.
+
     ```
     | A/B Type | Shape     | ALayout | BLayout | A Type   | B Type   | C/D Type          |
     |----------|-----------|---------|---------|----------|----------|-------------------|
@@ -3424,6 +3426,8 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     |          | m16n8k64  | row     | col     | 4x i32   | 2x i32   | 4x i32            |
     | b1       | m8n8k128  | row     | col     | 1x i32   | 1x i32   | 2x i32            |
     |          | m16n8k128 | row     | col     | 2x i32   | 1x i32   | 4x i32            |
+    | e4m3/e5m2 | .m16n8k16 | row     | col     | 2x i32   | 1x i32   | 2x f16x2 or 4 f32 |
+    |            | .m16n8k32 | row     | col     | 4x i32   | 2x i32   | 2x f16x2 or 4 f32 |
     ```
 
 
