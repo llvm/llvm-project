@@ -1051,11 +1051,26 @@ private:
             // Mark every possible target of the assigned GO TO so that
             // wrappability analyses can see any escape from an enclosing
             // construct.
+            auto markIfBranchTarget = [&](parser::Label label) {
+              if (!label)
+                return;
+
+              auto iter{labelEvaluationMap->find(label)};
+              if (iter == labelEvaluationMap->end())
+                return;
+
+              lower::pft::Evaluation *target{iter->second};
+              if (!target)
+                return;
+
+              if (semanticsContext.IsRecordedBranchTarget(target->position))
+                markBranchTarget(eval, *target);
+            };
             const auto &labelList = std::get<std::list<parser::Label>>(s.t);
             if (!labelList.empty()) {
               // Explicit target list: `go to v, (l1, l2, ...)`.
               for (const auto &label : labelList)
-                markBranchTarget(eval, label);
+                markIfBranchTarget(label);
             } else {
               // No explicit list (`go to v`): fall back to the set of labels
               // that have been previously ASSIGN'd to v.
@@ -1067,7 +1082,7 @@ private:
                 auto iter = assignSymbolLabelMap->find(*sym);
                 if (iter != assignSymbolLabelMap->end())
                   for (auto label : iter->second)
-                    markBranchTarget(eval, label);
+                    markIfBranchTarget(label);
               }
             }
             eval.isUnstructured = true;
