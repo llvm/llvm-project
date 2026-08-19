@@ -208,7 +208,8 @@ TEST(AssignSimple, ZeroSizeArray) {
 TEST(AssignSimple, AliasedOverlappingSection) {
   // Test aliasing with overlapping array sections: a(3:7) = a(1:5)
   // This is a classic case where the destination partially overlaps the source.
-  // Without a temporary buffer, elements would be corrupted as the copy progresses.
+  // Without a temporary buffer, elements would be corrupted as the copy
+  // progresses.
   //
   // Example:
   // Initial:  [1, 2, 3, 4, 5, 6, 7, 8]
@@ -356,7 +357,8 @@ TEST(AssignSimple, AliasedNonContiguousToNonContiguous) {
   // Dest: a(6:2:-2) - indices [5, 3, 1] reverse, stride -2
   StaticDescriptor<1> staticDest;
   Descriptor &dest{staticDest.descriptor()};
-  dest.Establish(intType, elementBytes, &data[5], 1, extent); // Start at index 5
+  dest.Establish(
+      intType, elementBytes, &data[5], 1, extent); // Start at index 5
   dest.GetDimension(0).SetLowerBound(1);
   dest.GetDimension(0).SetByteStride(-2 * elementBytes);
   EXPECT_FALSE(dest.IsContiguous());
