@@ -698,7 +698,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsExportBlock) {
   auto Tokens = annotate("export {\n"
                          "int foo();\n"
                          "}");
-  ASSERT_EQ(Tokens.size(), 9u);
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_ExportLBrace);
 }
 

@@ -3312,7 +3312,7 @@ void UnwrappedLineParser::parseNamespace() {
 
 void UnwrappedLineParser::parseCppExportBlock() {
   if (FormatTok->is(tok::l_brace)) {
-    FormatTok->setType(TT_ExportLBrace);
+    FormatTok->setFinalizedType(TT_ExportLBrace);
     if (Style.BraceWrapping.AfterExportBlock)
       addUnwrappedLine();
   }

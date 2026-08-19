@@ -1558,7 +1558,6 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AfterExternBlock; // Partially superseded by IndentExternBlock
-
     /// Wrap before `catch`.
     /// \code
     ///   true:
