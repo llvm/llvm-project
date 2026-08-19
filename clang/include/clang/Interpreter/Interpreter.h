@@ -65,27 +65,34 @@ public:
   // Offload options
   void SetOffloadArch(llvm::StringRef Arch) { OffloadArch = Arch; };
 
-  // CUDA specific
-  void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
+  void SetDeviceSDK(llvm::StringRef Path, bool HipEnabled) {
+    if (HipEnabled)
+      RocmSDKPath = Path;
+    else
+      CudaSDKPath = Path;
+  }
 
   // Hand over the compilation.
   void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
     CompilationCB = C;
   }
 
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
-  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
+  llvm::Expected<std::unique_ptr<CompilerInstance>> CreateHost(bool HipEnabled);
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
+  CreateDevice(bool HipEnabled);
 
 private:
   llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
-  llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
+  createOffload(bool HipEnabled, bool device);
 
   std::vector<const char *> UserArgs;
   std::optional<std::string> TargetTriple;
 
   llvm::StringRef OffloadArch;
+  llvm::StringRef RocmSDKPath;
   llvm::StringRef CudaSDKPath;
 
   std::optional<std::function<DriverCompilationFn>> CompilationCB;
@@ -106,9 +113,9 @@ class Interpreter {
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
 
   // An optional parser for CUDA offloading
-  std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
+  std::unique_ptr<IncrementalCUDADeviceParser> CUDADeviceParser;
 
-  // An optional action for CUDA offloading
+  // An optional action for Device offloading
   std::unique_ptr<IncrementalAction> DeviceAct;
 
   /// List containing information about each incrementally parsed piece of code.
@@ -147,8 +154,8 @@ public:
   create(std::unique_ptr<CompilerInstance> CI,
          std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  createWithCUDA(std::unique_ptr<CompilerInstance> CI,
-                 std::unique_ptr<CompilerInstance> DCI);
+  createWithDevice(bool HipEnabled, std::unique_ptr<CompilerInstance> CI,
+                   std::unique_ptr<CompilerInstance> DCI);
 
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();

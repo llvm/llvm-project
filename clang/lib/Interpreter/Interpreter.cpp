@@ -302,19 +302,16 @@ IncrementalCompilerBuilder::CreateCpp() {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::createCuda(bool device) {
+IncrementalCompilerBuilder::createOffload(bool HipEnabled, bool device) {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
+  Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
-  Argv.push_back("-xcuda");
-  if (device)
-    Argv.push_back("--cuda-device-only");
-  else
-    Argv.push_back("--cuda-host-only");
-
-  std::string SDKPathArg = "--cuda-path=";
-  if (!CudaSDKPath.empty()) {
-    SDKPathArg += CudaSDKPath;
+  llvm::StringRef SDKPath = HipEnabled ? RocmSDKPath : CudaSDKPath;
+  std::string SDKPathArg = HipEnabled ? "--rocm-path=" : "--cuda-path=";
+  if (!SDKPath.empty()) {
+    SDKPathArg += SDKPath;
     Argv.push_back(SDKPathArg.c_str());
   }
 
@@ -324,6 +321,9 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
+  if (device && HipEnabled)
+    Argv.push_back("-O3");
+
   llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
@@ -331,13 +331,14 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaDevice() {
-  return IncrementalCompilerBuilder::createCuda(true);
+IncrementalCompilerBuilder::CreateDevice(bool HipEnabled) {
+  return IncrementalCompilerBuilder::createOffload(HipEnabled, /*device=*/true);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::CreateCudaHost() {
-  return IncrementalCompilerBuilder::createCuda(false);
+IncrementalCompilerBuilder::CreateHost(bool HipEnabled) {
+  return IncrementalCompilerBuilder::createOffload(HipEnabled,
+                                                   /*device=*/false);
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
@@ -403,8 +404,8 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 Interpreter::~Interpreter() {
   IncrParser.reset();
   Act->FinalizeAction();
-  if (DeviceParser)
-    DeviceParser.reset();
+  if (CUDADeviceParser)
+    CUDADeviceParser.reset();
   if (DeviceAct)
     DeviceAct->FinalizeAction();
   if (IncrExecutor) {
@@ -472,8 +473,9 @@ llvm::Expected<std::unique_ptr<Interpreter>> Interpreter::create(
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
-                            std::unique_ptr<CompilerInstance> DCI) {
+Interpreter::createWithDevice(bool HipEnabled,
+                              std::unique_ptr<CompilerInstance> CI,
+                              std::unique_ptr<CompilerInstance> DCI) {
   // avoid writing fat binary to disk using an in-memory virtual file system
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> IMVFS =
       std::make_unique<llvm::vfs::InMemoryFileSystem>();
@@ -507,14 +509,20 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
 
   Interp->DeviceCI = std::move(DCI);
 
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      *Interp->DeviceCI, *Interp->getCompilerInstance(),
-      Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+  if (HipEnabled) {
+    // FIXME: HIP device parsing is not supported yet; it should use an
+    // IncrementalHIPDeviceParser once one exists.
+  } else {
+    auto CUDADeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
 
-  if (Err)
-    return std::move(Err);
+    if (Err)
+      return std::move(Err);
 
-  Interp->DeviceParser = std::move(DeviceParser);
+    Interp->CUDADeviceParser = std::move(CUDADeviceParser);
+  }
+
   return std::move(Interp);
 }
 
@@ -554,18 +562,19 @@ llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
   // included in the host compilation
-  if (DeviceParser) {
-    llvm::Expected<TranslationUnitDecl *> DeviceTU = DeviceParser->Parse(Code);
+  if (CUDADeviceParser) {
+    llvm::Expected<TranslationUnitDecl *> DeviceTU =
+        CUDADeviceParser->Parse(Code);
     if (auto E = DeviceTU.takeError())
       return std::move(E);
 
-    DeviceParser->RegisterPTU(*DeviceTU);
+    CUDADeviceParser->RegisterPTU(*DeviceTU);
 
-    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
+    llvm::Expected<llvm::StringRef> PTX = CUDADeviceParser->GeneratePTX();
     if (!PTX)
       return PTX.takeError();
 
-    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    llvm::Error Err = CUDADeviceParser->GenerateFatbinary();
     if (Err)
       return std::move(Err);
   }
