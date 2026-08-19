@@ -740,6 +740,9 @@ public:
   /// \return The loop being analyzed.
   const Loop *getLoop() const { return TheLoop; }
 
+  /// \return The vectorization hints for the loop being analyzed.
+  const LoopVectorizeHints &getHints() const { return *Hints; }
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
@@ -864,8 +867,6 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
-  const LoopVectorizeHints &Hints;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -898,9 +899,9 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, VFSelectionContext &Config,
       InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
+      OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
