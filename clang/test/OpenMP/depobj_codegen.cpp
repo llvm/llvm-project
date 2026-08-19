@@ -115,8 +115,8 @@ int main(int argc, char **argv) {
 // CHECK: [[ARGV:%.+]] = load ptr, ptr [[ARGV_ADDR]], align 8
 // CHECK: [[END_ADDR:%.+]] = getelementptr inbounds ptr, ptr [[ARGV]], i64 0
 // CHECK: [[END:%.+]] = load ptr, ptr [[END_ADDR]], align 8
-// CHECK: [[BEGIN_INT:%.+]] = ptrtoint ptr [[BEGIN]] to i64
-// CHECK: [[END_INT:%.+]] = ptrtoint ptr [[END]] to i64
+// CHECK: [[BEGIN_INT:%.+]] = ptrtoaddr ptr [[BEGIN]] to i64
+// CHECK: [[END_INT:%.+]] = ptrtoaddr ptr [[END]] to i64
 // CHECK: [[BE_SUB:%.+]] = sub i64 [[BEGIN_INT]], [[END_INT]]
 // CHECK: [[BE_SUB_ST_SUB:%.+]] = add nsw i64 [[BE_SUB]], 1
 // CHECK: [[BE_SUB_ST_SUB_1_SUB:%.+]] = sub nsw i64 [[BE_SUB_ST_SUB]], 1
@@ -148,8 +148,8 @@ int main(int argc, char **argv) {
 // CHECK: [[ARGV:%.+]] = load ptr, ptr [[ARGV_ADDR]], align 8
 // CHECK: [[END_ADDR:%.+]] = getelementptr inbounds ptr, ptr [[ARGV]], i64 0
 // CHECK: [[END:%.+]] = load ptr, ptr [[END_ADDR]], align 8
-// CHECK: [[BEGIN_INT:%.+]] = ptrtoint ptr [[BEGIN]] to i64
-// CHECK: [[END_INT:%.+]] = ptrtoint ptr [[END]] to i64
+// CHECK: [[BEGIN_INT:%.+]] = ptrtoaddr ptr [[BEGIN]] to i64
+// CHECK: [[END_INT:%.+]] = ptrtoaddr ptr [[END]] to i64
 // CHECK: [[BE_SUB:%.+]] = sub i64 [[BEGIN_INT]], [[END_INT]]
 // CHECK: [[BE_SUB_ST_SUB:%.+]] = add nsw i64 [[BE_SUB]], 1
 // CHECK: [[BE_SUB_ST_SUB_1_SUB:%.+]] = sub nsw i64 [[BE_SUB_ST_SUB]], 1

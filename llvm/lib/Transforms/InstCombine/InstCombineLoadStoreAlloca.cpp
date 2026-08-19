@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
@@ -260,7 +261,7 @@ private:
   }
 
   SmallSetVector<Instruction *, 32> UsersToReplace;
-  MapVector<Value *, Value *> WorkMap;
+  DenseMap<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
@@ -1309,6 +1310,9 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   if (!SI.isUnordered())
     return false;
 
+  if (SI.isElementwise())
+    return false;
+
   // swifterror values can't be bitcasted.
   if (SI.getPointerOperand()->isSwiftError())
     return false;
@@ -1752,6 +1756,10 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   AAMDNodes AATags = SI.getAAMetadata();
   if (AATags)
     NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
+
+  // If the two stores had access groups, intersect them.
+  NewSI->setMetadata(LLVMContext::MD_access_group,
+                     intersectAccessGroups(&SI, OtherStore));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

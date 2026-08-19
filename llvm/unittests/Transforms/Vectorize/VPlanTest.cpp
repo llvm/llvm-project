@@ -1128,7 +1128,7 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, Args);
+  VPWidenRecipe WidenR(*AI, Args, VPIRFlags::getDefaultFlags(AI->getOpcode()));
 
   checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
@@ -1358,7 +1358,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, Args);
+    VPWidenRecipe Recipe(*AI, Args,
+                         VPIRFlags::getDefaultFlags(AI->getOpcode()));
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1546,7 +1547,8 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPWidenRecipe *WidenR = new VPWidenRecipe(*AI, Args);
+  VPWidenRecipe *WidenR =
+      new VPWidenRecipe(*AI, Args, VPIRFlags::getDefaultFlags(AI->getOpcode()));
   VPBB1->appendRecipe(WidenR);
 
   {

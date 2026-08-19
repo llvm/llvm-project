@@ -7,10 +7,6 @@
 f:
         .cfi_startproc
 
-        ## TODO: Remove these lines when the initial frame directives set the callee saved registers
-        .cfi_undefined %rax
-        .cfi_undefined %flags
-
         pushq   %rbp
         # CHECK: warning: CFA offset is changed from 8 to 17, and CFA register RSP is modified, but validating the modification amount is not implemented yet
         # CHECK: warning: validating changes happening to register RBP unwinding rule structure is not implemented yet

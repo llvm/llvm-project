@@ -59,7 +59,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;
@@ -89,8 +94,6 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_SpirFunction:
-    return llvm::CallingConv::SPIR_FUNC;
   case CC_DeviceKernel:
     return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
@@ -3185,6 +3188,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
+      assert(!ParamType->isIncompleteType() &&
+             "Pass-by-value parameter has incomplete definition?");
+
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
@@ -3237,6 +3243,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
+
+      // The `nofree` and `dereferenceable` attributes can already be inferred
+      // for `byval` arguments. We'll need to provide additional hints
+      // otherwise.
+      if (!AI.getIndirectByVal()) {
+        // Both 6.9.1 of the C standard and [basic.stc.auto] of the C++ standard
+        // require parameters to have automatic storage duration. Therefore, the
+        // underlying object of this pointer will not be freed during the
+        // function's execution.
+        Attrs.addAttribute(llvm::Attribute::NoFree);
+        Attrs.addDereferenceableAttr(
+            Context.getTypeSizeInChars(ParamType).getQuantity());
+      }
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
@@ -5430,6 +5449,23 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   llvm::Type *RetTy,
+                                                   const llvm::Twine &Name) {
+  SmallVector<llvm::Type *> ArgTys;
+  ArgTys.reserve(Args.size());
+  for (llvm::Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+      &CGM.getModule(), ID, RetTy, ArgTys);
   llvm::CallInst *Call =
       Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
   if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())

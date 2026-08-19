@@ -26,6 +26,9 @@ typedef const ol_error_struct_t *ol_result_t;
 struct ol_device_impl_t;
 typedef struct ol_device_impl_t *ol_device_handle_t;
 
+struct ol_context_impl_t;
+typedef struct ol_context_impl_t *ol_context_handle_t;
+
 struct ol_program_impl_t;
 typedef struct ol_program_impl_t *ol_program_handle_t;
 

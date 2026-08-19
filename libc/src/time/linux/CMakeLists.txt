@@ -1,6 +1,6 @@
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
   message(STATUS "libc.src.__support.OSUtil.osutil is not available. "
-                  "Skip libc.src.time.linux.* targets.")
+    "Skip libc.src.time.linux.* targets.")
   return()
 endif()
 
