@@ -14,7 +14,6 @@
 #include <algorithm>
 #include <charconv>
 #include <functional>
-#include <numeric>
 #include <optional>
 #include <string>
 #include <string_view>
