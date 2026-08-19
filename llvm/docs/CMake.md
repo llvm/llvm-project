@@ -940,13 +940,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
 
-**LLVM_SPHINX_BUILD_JOBS**:STRING
+**LLVM_SPHINX_THREADS**:STRING
 
-:   Controls `sphinx-build -j`, which defines the max internal Sphinx action
-    parallelism level. Defaults to half the number of logical cores, rounded
-    up. The default is high because Sphinx is often on the critical path, and
-    rarely uses all available cores. Set to an empty string to omit the Sphinx
-    `-j` option.
+:   Controls `sphinx-build -j`, which is the internal Sphinx worker count.
+    Defaults to half the number of logical cores, rounded up. The default is
+    high because Sphinx is often on the critical path, and rarely uses all
+    available cores. Set to an empty string to omit the Sphinx `-j` option.
 
 **LLVM_STATIC_LINK_CXX_STDLIB**:BOOL
 

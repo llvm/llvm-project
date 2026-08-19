@@ -157,16 +157,16 @@ function (add_sphinx_target builder project)
   # critical path at the end of the build. This can speed up doc builds by
   # ~80%. Sphinx rarely consumes all cores available, so it's safe to
   # overallocate a bit.
-  if (NOT DEFINED LLVM_SPHINX_BUILD_JOBS)
+  if (NOT DEFINED LLVM_SPHINX_THREADS)
     cmake_host_system_information(RESULT number_of_logical_cores
                                   QUERY NUMBER_OF_LOGICAL_CORES)
-    math(EXPR LLVM_SPHINX_BUILD_JOBS
+    math(EXPR LLVM_SPHINX_THREADS
          "(${number_of_logical_cores} + 1) / 2")
   endif()
-  set(LLVM_SPHINX_BUILD_JOBS "${LLVM_SPHINX_BUILD_JOBS}"
+  set(LLVM_SPHINX_THREADS "${LLVM_SPHINX_BUILD_JOBS}"
       CACHE STRING "Define the number of parallel jobs for each Sphinx build.")
-  if (LLVM_SPHINX_BUILD_JOBS)
-    set(sphinx_jobs_flag -j ${LLVM_SPHINX_BUILD_JOBS})
+  if (LLVM_SPHINX_THREADS)
+    set(sphinx_jobs_flag -j ${LLVM_SPHINX_THREADS})
   endif()
 
   if ("${LLVM_VERSION_SUFFIX}" STREQUAL "git")
