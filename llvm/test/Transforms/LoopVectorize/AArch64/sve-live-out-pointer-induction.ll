@@ -6,8 +6,8 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START_22:%.*]] = ptrtoaddr ptr [[START_2:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[START_22]], [[END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP6]], -8
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[START_22]], -8
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP6]], [[END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -16,7 +16,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[N_VEC]], 3

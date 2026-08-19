@@ -118,11 +118,13 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     ## Currently disabled for failing tests.
     # math.h entrypoints
+    #libc.src.math.atan2f128
     #libc.src.math.copysign
     #libc.src.math.copysignf
     #libc.src.math.copysignl
     #libc.src.math.ceil
     #libc.src.math.ceilf
+    #libc.src.math.ceilf128
     #libc.src.math.ceill
     #libc.src.math.coshf
     #libc.src.math.cosf
@@ -146,6 +148,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.ffmal
     #libc.src.math.floor
     #libc.src.math.floorf
+    #libc.src.math.floorf128
     #libc.src.math.floorl
     #libc.src.math.fma
     #libc.src.math.fmabf16
@@ -222,6 +225,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.sinf
     #libc.src.math.sqrt
     #libc.src.math.sqrtf
+    #libc.src.math.sqrtf128
     #libc.src.math.sqrtl
     #libc.src.math.tanf
     #libc.src.math.tanhf

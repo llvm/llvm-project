@@ -59,7 +59,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;
@@ -89,8 +94,6 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_SpirFunction:
-    return llvm::CallingConv::SPIR_FUNC;
   case CC_DeviceKernel:
     return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
@@ -5446,6 +5449,23 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
                                                    const llvm::Twine &Name) {
   llvm::Function *F =
       llvm::Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID, Types);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
+}
+
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   llvm::Type *RetTy,
+                                                   const llvm::Twine &Name) {
+  SmallVector<llvm::Type *> ArgTys;
+  ArgTys.reserve(Args.size());
+  for (llvm::Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+      &CGM.getModule(), ID, RetTy, ArgTys);
   llvm::CallInst *Call =
       Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
   if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())

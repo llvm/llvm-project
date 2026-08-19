@@ -2421,6 +2421,11 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
     // source type
     unsigned DstSize = DstTy.getSizeInBits();
 
+    if (SrcTy.isFloat()) {
+      SrcReg = coerceToInteger(SrcReg);
+      SrcTy = MRI.getType(SrcReg);
+    }
+
     MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
     for (int I = 1; I != NumDst; ++I) {
       auto ShiftAmt = MIRBuilder.buildConstant(SrcTy, DstSize * I);
@@ -6084,7 +6089,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         SVOps.push_back(MIRBuilder
                             .buildExtractVectorElement(
                                 EltTy, Inputs[Input],
-                                MIRBuilder.buildConstant(LLT::scalar(32), Idx))
+                                MIRBuilder.buildConstant(LLT::integer(32), Idx))
                             .getReg(0));
       }
 
@@ -9720,14 +9725,13 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
   MachinePointerInfo ValPtrInfo =
       MachinePointerInfo::getUnknownStack(*MI.getMF());
 
-  LLT IdxTy = LLT::scalar(32);
+  LLT IdxTy = LLT::integer(32);
   LLT ValTy = VecTy.getElementType();
   Align ValAlign = getStackTemporaryAlignment(ValTy);
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru =
-      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+  bool HasPassthru = !mi_match(Passthru, MRI, m_GImplicitDef());
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
@@ -9742,7 +9746,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
   } else if (HasPassthru) {
     auto Popcount = MIRBuilder.buildZExt(MaskTy.changeElementSize(32), Mask);
     Popcount = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_ADD,
-                                     {LLT::scalar(32)}, {Popcount});
+                                     {LLT::integer(32)}, {Popcount});
 
     Register LastElmtPtr =
         getVectorElementPointer(StackPtr, VecTy, Popcount.getReg(0));
@@ -9762,7 +9766,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
     LLT MaskITy = MaskTy.getElementType();
     auto MaskI = MIRBuilder.buildExtractVectorElement(MaskITy, Mask, Idx);
     if (MaskITy.getSizeInBits() > 1)
-      MaskI = MIRBuilder.buildTrunc(LLT::scalar(1), MaskI);
+      MaskI = MIRBuilder.buildTrunc(LLT::integer(1), MaskI);
 
     MaskI = MIRBuilder.buildZExt(IdxTy, MaskI);
     OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI);
@@ -9771,7 +9775,7 @@ LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
       auto EndOfVector =
           MIRBuilder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
       auto AllLanesSelected = MIRBuilder.buildICmp(
-          CmpInst::ICMP_UGT, LLT::scalar(1), OutPos, EndOfVector);
+          CmpInst::ICMP_UGT, LLT::integer(1), OutPos, EndOfVector);
       OutPos = MIRBuilder.buildInstr(TargetOpcode::G_UMIN, {IdxTy},
                                      {OutPos, EndOfVector});
       ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
@@ -10768,7 +10772,7 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerAbsToCNeg(MachineInstr &MI) {
   Register SrcReg = MI.getOperand(1).getReg();
   Register DestReg = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(SrcReg), IType = LLT::scalar(1);
+  LLT Ty = MRI.getType(SrcReg), IType = LLT::integer(1);
   auto Zero = MIRBuilder.buildConstant(Ty, 0).getReg(0);
   auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
   auto ICmp = MIRBuilder.buildICmp(CmpInst::ICMP_SGT, IType, SrcReg, Zero);

@@ -114,12 +114,15 @@ add_object_library(
     libc.hdr.link_macros
     libc.hdr.stdint_proxy
     libc.hdr.sys_mman_macros
+    libc.hdr.types.struct_link_map
+    libc.hdr.types.struct_r_debug
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.__support.macros.config
     libc.startup.linux.${LIBC_TARGET_ARCHITECTURE}.irelative
+    libc.src.link._r_debug
     libc.src.stdlib.exit
     libc.src.stdlib.atexit
     libc.src.unistd.environ

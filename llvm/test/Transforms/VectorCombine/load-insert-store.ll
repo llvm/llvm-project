@@ -16,6 +16,26 @@ entry:
   ret void
 }
 
+declare void @may_synchronize() memory(none)
+
+define void @insert_store_across_synchronization(ptr %q, i32 %s) {
+; CHECK-LABEL: @insert_store_across_synchronization(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[Q:%.*]], align 16
+; CHECK-NEXT:    call void @may_synchronize()
+; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <4 x i32> [[V]], i32 [[S:%.*]],
+; CHECK-SAME:    i32 1
+; CHECK-NEXT:    store <4 x i32> [[VECINS]], ptr [[Q]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %v = load <4 x i32>, ptr %q, align 16
+  call void @may_synchronize()
+  %vecins = insertelement <4 x i32> %v, i32 %s, i32 1
+  store <4 x i32> %vecins, ptr %q, align 16
+  ret void
+}
+
 define void @insert_store_i16_align1(ptr %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i16_align1(
 ; CHECK-NEXT:  entry:
@@ -762,7 +782,7 @@ entry:
 
 declare void @foo()
 declare void @maywrite(ptr)
-declare void @nowrite(ptr) readonly
+declare void @nowrite(ptr) readonly nofree
 
 ; To test if number of instructions in-between exceeds the limit (default 30),
 ; the combine will quit.

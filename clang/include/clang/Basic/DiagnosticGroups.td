@@ -1206,7 +1206,6 @@ def Attributes : DiagGroup<"attributes", [UnknownAttributes,
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
 def UnnamedTypeTemplateArgs : DiagGroup<"unnamed-type-template-args",
                                         [CXX98CompatUnnamedTypeTemplateArgs]>;
-def UnsupportedFriend : DiagGroup<"unsupported-friend">;
 def UnusedArgument : DiagGroup<"unused-argument">;
 def UnusedCommandLineArgument : DiagGroup<"unused-command-line-argument">;
 def IgnoredOptimizationArgument : DiagGroup<"ignored-optimization-argument">;
@@ -1688,6 +1687,8 @@ def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
 def MicrosoftInlineOnNonFunction : DiagGroup<
     "microsoft-inline-on-non-function">;
+def MicrosoftRelaxedConstantFold :
+  DiagGroup<"relaxed-constant-fold">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -1773,6 +1774,10 @@ def OpenMP : DiagGroup<"openmp", [
 // OpenACC warnings.
 def SourceUsesOpenACC : DiagGroup<"source-uses-openacc">;
 def OpenACC : DiagGroup<"openacc", [SourceUsesOpenACC]>;
+
+// ClangIR (CIR) warnings emitted by MLIR-side passes routed through clang.
+def ClangIR : DiagGroup<"clangir">;
+def RemarkClangIR : DiagGroup<"remark-clangir">;
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
@@ -2017,3 +2022,5 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
 
 def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
+
+def DynamicDebugging : DiagGroup<"dynamic-debugging">;

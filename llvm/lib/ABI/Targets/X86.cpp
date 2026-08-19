@@ -1392,24 +1392,6 @@ ArgInfo X86_64TargetInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 }
 
-static bool classifyCXXReturnType(FunctionInfo &FI) {
-  const abi::Type *Ty = FI.getReturnType();
-
-  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
-    if (!RT->canPassInRegisters()) {
-      // A C++ record that cannot pass in registers (non-trivial copy/dtor)
-      // is returned indirectly with ByVal=false, matching
-      // ItaniumCXXABI::classifyReturnType. This is the RAA path and is distinct
-      // from getIndirectReturnResult (plain aggregates), which uses ByVal=true.
-      FI.getReturnInfo() =
-          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   CallingConv::ID CallingConv = FI.getCallingConvention();
 
@@ -1428,7 +1410,7 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
   unsigned FreeSSERegs = 8;
   unsigned NeededInt = 0, NeededSSE = 0;
 
-  if (!classifyCXXReturnType(FI)) {
+  if (!maybeCommonClassifyReturnType(FI)) {
     const Type *RetTy = FI.getReturnType();
     FI.getReturnInfo() = classifyReturnType(RetTy);
   }

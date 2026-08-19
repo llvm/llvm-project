@@ -765,6 +765,10 @@ def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],
     intrinsic's documented mask values and the AMDGPU backend's
     `SchedGroupMask` enum.
 
+    `all_vmem` and `all_ds` are supersets that also include LDSDMA
+    instructions, while `vmem_read`, `vmem_write`, `ds_read`, and `ds_write`
+    do not.
+
     Example:
     ```mlir
     // Scheduling barrier with no instructions allowed to cross.

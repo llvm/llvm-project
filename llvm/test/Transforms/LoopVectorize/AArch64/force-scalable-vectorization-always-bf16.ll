@@ -159,7 +159,7 @@ define void @bfloat_loop_sve_bf16(ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
