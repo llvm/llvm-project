@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -817,6 +818,9 @@ struct AMDGPUQueueTy {
     return Plugin::check(Status, "error in hsa_queue_destroy: %s");
   }
 
+  /// Maximum number of dependency signals a single barrier-AND packet carries.
+  static constexpr unsigned MaxBarrierDeps = 5;
+
   /// Returns the number of streams, this queue is currently assigned to.
   bool getUserCount() const { return NumUsers; }
 
@@ -898,14 +902,35 @@ struct AMDGPUQueueTy {
     return pushBarrierImpl(OutputSignal, InputSignal1, InputSignal2);
   }
 
+  /// Push a barrier packet waiting on up to MaxBarrierDeps input signals. Null
+  /// entries in \p InputSignals are skipped, so a caller can pass an optional
+  /// signal (e.g. a stream's own chain signal) without filtering it first.
+  Error pushBarrierDeps(AMDGPUSignalTy *OutputSignal,
+                        ArrayRef<const AMDGPUSignalTy *> InputSignals) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    assert(Queue && "Interacted with a non-initialized queue!");
+    return pushBarrierDepsImpl(OutputSignal, InputSignals);
+  }
+
 private:
   /// Push a barrier packet that will wait up to two input signals. Assumes the
   /// the queue lock is acquired.
   Error pushBarrierImpl(AMDGPUSignalTy *OutputSignal,
                         const AMDGPUSignalTy *InputSignal1,
                         const AMDGPUSignalTy *InputSignal2 = nullptr) {
-    // Add a queue barrier waiting on both the other stream's operation and the
-    // last operation on the current stream (if any).
+    const AMDGPUSignalTy *Deps[] = {InputSignal1, InputSignal2};
+    return pushBarrierDepsImpl(OutputSignal, Deps);
+  }
+
+  /// Push a barrier packet waiting on every non-null signal in \p InputSignals.
+  /// Assumes the queue lock is acquired.
+  Error pushBarrierDepsImpl(AMDGPUSignalTy *OutputSignal,
+                            ArrayRef<const AMDGPUSignalTy *> InputSignals) {
+    assert(InputSignals.size() <= MaxBarrierDeps &&
+           "too many dependencies for one barrier packet");
+
+    // Add a queue barrier waiting on the other streams' operations and the last
+    // operation on the current stream (if any).
     uint64_t PacketId;
     hsa_barrier_and_packet_t *Packet =
         (hsa_barrier_and_packet_t *)acquirePacket(PacketId);
@@ -913,21 +938,18 @@ private:
 
     Packet->reserved0 = 0;
     Packet->reserved1 = 0;
-    Packet->dep_signal[0] = {0};
-    Packet->dep_signal[1] = {0};
-    Packet->dep_signal[2] = {0};
-    Packet->dep_signal[3] = {0};
-    Packet->dep_signal[4] = {0};
+    for (unsigned I = 0; I < MaxBarrierDeps; ++I)
+      Packet->dep_signal[I] = {0};
     Packet->reserved2 = 0;
     Packet->completion_signal = {0};
 
     // Set input and output dependencies if needed.
     if (OutputSignal)
       Packet->completion_signal = OutputSignal->get();
-    if (InputSignal1)
-      Packet->dep_signal[0] = InputSignal1->get();
-    if (InputSignal2)
-      Packet->dep_signal[1] = InputSignal2->get();
+    unsigned Slot = 0;
+    for (const AMDGPUSignalTy *InputSignal : InputSignals)
+      if (InputSignal)
+        Packet->dep_signal[Slot++] = InputSignal->get();
 
     // Publish the packet. Do not modify the packet after this point.
     publishBarrierPacket(PacketId, Packet);
@@ -1746,6 +1768,17 @@ public:
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
 
+  /// Make the stream wait on a whole set of events at once.
+  ///
+  /// One barrier-AND packet carries several dependency signals, so a set of
+  /// events costs one packet (and one stream slot) instead of one per event as
+  /// repeated waitEvent calls would.  Taskgraph replay gates each item on at
+  /// most one event per other lane, which is exactly this shape.
+  ///
+  /// Null entries and events that need no wait (nothing recorded, already
+  /// complete, or recorded on this same stream) are skipped.
+  Error waitEvents(ArrayRef<AMDGPUEventTy *> Events);
+
 private:
   /// Lightweight sync-only recording.
   Error recordEventSyncOnly(AMDGPUEventTy &Event, AMDGPUSignalTy *ReusedSignal);
@@ -1960,6 +1993,79 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
 
   // Otherwise, make the current stream wait on the other stream's operation.
   return waitOnStreamOperation(RecordedStream, Event.RecordedSlot);
+}
+
+Error AMDGPUStreamTy::waitEvents(ArrayRef<AMDGPUEventTy *> Events) {
+  if (Queue == nullptr)
+    return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
+                         "target queue was nullptr");
+
+  // Gather the dependencies that are still outstanding.  Each producing
+  // stream's lock is taken and dropped in turn, so two stream locks are never
+  // held together and this cannot deadlock against a concurrent waitEvent.
+  // Every gathered signal has its use count raised so its producing stream
+  // cannot recycle it before the barrier below is published; the matching
+  // release is scheduled on the slot the barrier consumes.
+  SmallVector<AMDGPUSignalTy *, AMDGPUQueueTy::MaxBarrierDeps> Deps;
+  for (AMDGPUEventTy *Event : Events) {
+    if (!Event)
+      continue;
+    std::lock_guard<std::mutex> EventLock(Event->Mutex);
+    AMDGPUStreamTy *Recorded = Event->RecordedStream;
+    // Nothing recorded, or recorded on this very stream, where in-order
+    // execution already provides the ordering.
+    if (!Recorded || Recorded == this || Event->RecordedSlot < 0)
+      continue;
+
+    std::lock_guard<std::mutex> RecordedLock(Recorded->Mutex);
+    // A later synchronize already finalized the recorded operation.
+    if (Recorded->SyncCycle != (uint32_t)Event->RecordedSyncCycle)
+      continue;
+    AMDGPUSignalTy *Signal = Recorded->Slots[Event->RecordedSlot].Signal;
+    if (!Signal || !Signal->load())
+      continue; // the recorded operation has already completed.
+
+    Signal->increaseUseCount();
+    Deps.push_back(Signal);
+  }
+
+  if (Deps.empty())
+    return Plugin::success();
+
+  // One dependency slot of each packet goes to this stream's own chain signal,
+  // leaving the rest for cross-stream dependencies; a larger set is split over
+  // consecutive packets.  Splitting is sound because the packets land in order
+  // on one queue, so anything pushed afterwards is ordered after all of them.
+  const size_t DepsPerPacket = AMDGPUQueueTy::MaxBarrierDeps - 1;
+  for (size_t First = 0; First < Deps.size(); First += DepsPerPacket) {
+    ArrayRef<AMDGPUSignalTy *> Chunk = ArrayRef<AMDGPUSignalTy *>(Deps).slice(
+        First, std::min(DepsPerPacket, Deps.size() - First));
+
+    // Retrieve an available signal for the barrier's output.
+    AMDGPUSignalTy *OutputSignal = nullptr;
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Consume stream slot and compute dependencies.
+    auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Give back the borrowed signals once this barrier has completed.
+    for (AMDGPUSignalTy *Dep : Chunk)
+      if (auto Err = Slots[Curr].schedReleaseSignal(Dep, &SignalManager))
+        return Err;
+
+    SmallVector<const AMDGPUSignalTy *, AMDGPUQueueTy::MaxBarrierDeps> In;
+    In.push_back(InputSignal);
+    In.append(Chunk.begin(), Chunk.end());
+    if (auto Err = Queue->pushBarrierDeps(OutputSignal, In))
+      return Err;
+  }
+
+  return Plugin::success();
 }
 
 Error AMDGPUStreamTy::synchronizeOn(AMDGPUEventTy &Event) {
