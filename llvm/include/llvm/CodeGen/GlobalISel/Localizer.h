@@ -29,11 +29,6 @@
 namespace llvm {
 // Forward declarations.
 class AnalysisUsage;
-class MachineBasicBlock;
-class MachineInstr;
-class MachineOperand;
-class MachineRegisterInfo;
-class TargetTransformInfo;
 
 /// This pass implements the localization mechanism described at the
 /// top of this file. One specificity of the implementation is that
