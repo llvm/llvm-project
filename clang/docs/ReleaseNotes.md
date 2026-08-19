@@ -511,32 +511,6 @@ features cannot lower the translation-unit ABI level;
 
 #### Miscellaneous Clang Crashes Fixed
 
-- Fixed a crash when attempting to jump over initialization of a variable with variably modified type. (#GH175540)
-- Fixed a crash when using loop hint with a value dependent argument inside a
-  generic lambda. (#GH172289)
-- Fixed a crash in C++ overload resolution with `_Atomic`-qualified argument types. (#GH170433)
-- Fixed a crash related to missing source locations (#GH186655)
-- Fixed a crash when casting a parenthesized unresolved template-id or array section. (#GH183505)
-- Fixed a crash when initializing a `constexpr` pointer with a floating-point literal in C23. (#GH180313)
-- Fixed a lack of diagnostic for substitution failures in base classes when using `std::void_t`-like types.
-- Fixed a crash when emitting debug info for base classes with instantiation-dependent-only types (#GH193932)
-- Fixed an assertion when diagnosing address-space qualified `new`/`delete` in language-defined address spaces such as OpenCL `__local`. (#GH178319)
-- Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
-- Fixed a crash when subscripting a vector type with large unsigned integer values. (#GH180563)
-- Fixed a crash when attempting to diagnose incompatible conversions involving function types (#GH182534)
-- Fixed a crash when evaluating `__is_bitwise_cloneable` on invalid record types. (#GH183707)
-- Fixed an assertion failure when casting a function pointer with a target with a non-default program address space. (#GH186210)
-- Fixed a crash when `decltype(__builtin_FUNCTION())` is used as a template type argument. (#GH167433)
-- Fixed an assertion failure when parsing an invalid `decltype` specifier with missing parentheses or extra semicolons. (#GH188014)
-- Fixed a crash when explicitly casting a complex type to or from an atomic complex type. (#GH172208)
-- Fixed a crash when explicitly casting a scalar to an atomic complex. (#GH114885)
-- Fixed an assertion failure when parsing an invalid out-of-line enum definition with template parameters. (#GH187909)
-- Fixed an assertion failure on invalid template template parameter during typo correction. (#GH183983)
-- Fixed an assertion failure in `isAtEndOfMacroExpansion` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
-- Fixed an assertion failure when `__builtin_dump_struct` is used with an
-  immediate-escalated callable. (#GH192846)
-- Fixed a crash when passing one sized implicitly casted vector to a `abs` function. (#GH204777)
-- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 - Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
