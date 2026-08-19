@@ -746,11 +746,10 @@ define i32 @test_ctlz_sub_zero_poison(i32 %arg) {
 
 define i32 @fold_ctlz_sub_one(i32 %arg) {
 ; CHECK-LABEL: @fold_ctlz_sub_one(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 32) i32 @llvm.ctlz.i32(i32 [[CTLZ_NONZERO]], i1 true)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cmp = icmp eq i32 %arg, 0
   %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
@@ -1011,12 +1010,11 @@ define <2 x i32> @test_cttz_not_bw_odd_mul_vec_nonsplat(<2 x i32> %x) {
 
 define i64 @fold_ctlz_hex_digits(i64 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_hex_digits(
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
 ; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
 ; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISZERO]], i64 1, i64 [[DIGITS]]
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    ret i64 [[DIGITS]]
 ;
   %iszero = icmp eq i64 %x, 0
   %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
@@ -1028,12 +1026,11 @@ define i64 @fold_ctlz_hex_digits(i64 noundef %x) {
 
 define i64 @fold_ctlz_hex_digits_ne_commuted(i64 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_hex_digits_ne_commuted(
-; CHECK-NEXT:    [[ISNOTZERO_NOT:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
 ; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
 ; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
-; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISNOTZERO_NOT]], i64 1, i64 [[DIGITS]]
-; CHECK-NEXT:    ret i64 [[RESULT]]
+; CHECK-NEXT:    ret i64 [[DIGITS]]
 ;
   %isnotzero = icmp ne i64 0, %x
   %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
@@ -1045,11 +1042,10 @@ define i64 @fold_ctlz_hex_digits_ne_commuted(i64 noundef %x) {
 
 define i64 @fold_ctlz_hex_digits_exact(i64 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_hex_digits_exact(
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
 ; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
-; CHECK-NEXT:    [[DIGITS1:%.*]] = lshr exact i64 [[BIAS]], 2
-; CHECK-NEXT:    [[DIGITS:%.*]] = select i1 [[ISZERO]], i64 1, i64 [[DIGITS1]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
 ; CHECK-NEXT:    ret i64 [[DIGITS]]
 ;
   %iszero = icmp eq i64 %x, 0
@@ -1096,7 +1092,8 @@ define i64 @do_not_fold_ctlz_hex_digits_wrong_zero_value(i64 noundef %x) {
   ret i64 %result
 }
 
-; The generic equivalence fold drops nuw because it would be poison at X == 0.
+; Clearing is_zero_poison removes the select and drops nuw, so the X | 1
+; fallback is not used here.
 define i16 @fold_ctlz_drop_nuw_on_zero(i16 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_drop_nuw_on_zero(
 ; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
@@ -1112,7 +1109,8 @@ define i16 @fold_ctlz_drop_nuw_on_zero(i16 noundef %x) {
   ret i16 %result
 }
 
-; The generic equivalence fold drops nsw because it would be poison at X == 0.
+; Clearing is_zero_poison removes the select and drops nsw, so the X | 1
+; fallback is not used here.
 define i16 @fold_ctlz_drop_nsw_on_zero(i16 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_drop_nsw_on_zero(
 ; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
@@ -1128,7 +1126,8 @@ define i16 @fold_ctlz_drop_nsw_on_zero(i16 noundef %x) {
   ret i16 %result
 }
 
-; The generic equivalence fold drops exact because it would be poison at X == 0.
+; Clearing is_zero_poison removes the select and drops exact, so the X | 1
+; fallback is not used here.
 define i16 @fold_ctlz_drop_exact_on_zero(i16 noundef %x) {
 ; CHECK-LABEL: @fold_ctlz_drop_exact_on_zero(
 ; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
