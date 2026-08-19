@@ -14,13 +14,34 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <initializer_list>
 #include <ranges>
+#include <type_traits>
 
 #include "../range_adaptor_types.h"
 
 template <class T>
 concept HasSize = requires(T&& t) { t.size(); };
+
+// A sized view whose range_size_t is chosen by the caller, so the common_type_t fold in
+// cartesian_product_view::size() can be observed. Mirrors DiffTypeRange in
+// iterator/member_types.compile.pass.cpp, which does the same for difference_type.
+template <class SizeT>
+struct SizeTypeView : std::ranges::view_base {
+  int* buffer_;
+  std::size_t size_;
+
+  template <std::size_t N>
+  constexpr SizeTypeView(std::array<int, N>& a) : buffer_(a.data()), size_(N) {}
+
+  constexpr int* begin() const { return buffer_; }
+  constexpr int* end() const { return buffer_ + size_; }
+  constexpr SizeT size() const { return static_cast<SizeT>(size_); }
+};
+static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned short>>, unsigned short>);
+static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned int>>, unsigned int>);
+static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned long long>>, unsigned long long>);
 
 constexpr bool test() {
   { // example from cppreference
@@ -56,6 +77,36 @@ constexpr bool test() {
     std::array<int, 3> a;
     auto v = std::ranges::cartesian_product_view(a);
     static_assert(std::unsigned_integral<decltype(v.size())>);
+  }
+
+  { // size() folds mixed-width range_size_t values through their common type.
+    // The return type is the regression guard here: dropping the static_cast, or picking the
+    // first range's range_size_t instead of the common type, changes it. The *value* cannot
+    // be made to differ at constexpr-feasible extents, since integral promotion widens any
+    // narrow-typed multiply to int before it can wrap.
+    std::array<int, 4> buf4{};
+    std::array<int, 7> buf7{};
+    SizeTypeView<unsigned short> narrow{buf4};
+    SizeTypeView<unsigned long long> wide{buf7};
+
+    auto v = std::ranges::cartesian_product_view(narrow, wide);
+    static_assert(std::same_as<decltype(v.size()), std::common_type_t<unsigned short, unsigned long long>>);
+    static_assert(std::same_as<decltype(v.size()), unsigned long long>);
+    assert(v.size() == 28);
+  }
+
+  { // the fold runs over more than two distinct size types
+    std::array<int, 2> buf2{};
+    std::array<int, 3> buf3{};
+    std::array<int, 5> buf5{};
+    SizeTypeView<unsigned short> a{buf2};
+    SizeTypeView<unsigned int> b{buf3};
+    SizeTypeView<unsigned long long> c{buf5};
+
+    auto v = std::ranges::cartesian_product_view(a, b, c);
+    static_assert(
+        std::same_as<decltype(v.size()), std::common_type_t<unsigned short, unsigned int, unsigned long long>>);
+    assert(v.size() == 30);
   }
 
   return true;
