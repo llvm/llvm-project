@@ -748,6 +748,10 @@ The available directives are as follows:
         printed as part of the attribute dictionary unless a `prop-dict` is
         present.
     -   Discardable attributes are always part of the `attr-dict`.
+    -   For dialects that set `useStrictPropertiesInAssemblyFormat`,
+        `attr-dict` only carries discardable attributes for property-backed
+        operations. Inherent attributes must be bound directly in the format or
+        covered by `prop-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -1091,6 +1095,9 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
+1.  For dialects that set `useStrictPropertiesInAssemblyFormat`, every inherent
+    attribute and property must either appear in the format or be covered by the
+    `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.
@@ -1567,14 +1574,6 @@ namespace llvm {
 template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
 
-  static inline Outer::Inner::MyIntEnum getEmptyKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1696,14 +1695,6 @@ inline ::std::optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str
 namespace llvm {
 template<> struct DenseMapInfo<::MyBitEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
-
-  static inline ::MyBitEnum getEmptyKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));

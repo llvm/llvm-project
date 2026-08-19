@@ -30,8 +30,8 @@ define void @test(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 4, !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 4, !alias.scope [[META3]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <2 x i32> [[TMP36]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP36]], <2 x i32> [[TMP25]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -87,12 +87,15 @@ define void @different_addresses(ptr %dst, ptr %src1, ptr %src2, ptr %cond) {
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DST1]], [[COND2]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP3]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[SRC23]]
-; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = icmp ult i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = icmp ult i64 [[TMP7]], 7
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST1]], [[SRC15]]
-; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = icmp ult i64 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP2]], 1
+; CHECK-NEXT:    [[FOUND_CONFLICT9:%.*]] = icmp ult i64 [[TMP8]], 7
 ; CHECK-NEXT:    [[CONFLICT_RDX10:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT9]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX10]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -100,8 +103,6 @@ define void @different_addresses(ptr %dst, ptr %src1, ptr %src2, ptr %cond) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE13:.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
@@ -216,8 +217,6 @@ define void @non_complementary_masks(ptr %dst, ptr %src, ptr %cond1, ptr %cond2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x ptr> [[TMP10]], ptr [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[COND1]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[COND2]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP24]], align 4, !alias.scope [[META14:![0-9]+]]
@@ -334,8 +333,6 @@ define void @different_access_sizes(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> [[TMP8]], ptr [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP10]], align 4, !alias.scope [[META26:![0-9]+]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
@@ -447,8 +444,8 @@ define void @different_alignments_same_address(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP8]], align 2, !alias.scope [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP9]], align 2, !alias.scope [[META39]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i32 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> poison, i32 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> [[TMP19]], i32 [[TMP7]], i64 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = add <2 x i32> [[TMP25]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> [[TMP25]], <2 x i32> [[TMP26]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -586,8 +583,8 @@ define void @duplicate_gep(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP10]], align 4, !alias.scope [[META49:![0-9]+]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP15]], align 4, !alias.scope [[META49]]
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i32> poison, i32 [[TMP22]], i32 0
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP8]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i32> poison, i32 [[TMP22]], i64 0
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP8]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <2 x i32> [[TMP29]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP7]], <2 x i32> [[TMP29]], <2 x i32> [[TMP19]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -664,8 +661,8 @@ define void @non_unit_stride_i64(ptr %dst, ptr %src, ptr %cond) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP12]], align 4, !alias.scope [[META59:![0-9]+]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP17]], align 4, !alias.scope [[META59]]
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP24]], i32 0
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP10]], i32 1
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP24]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <2 x i32> [[TMP25]], i32 [[TMP10]], i64 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <2 x i32> [[TMP31]], splat (i32 10)
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x i32> [[TMP31]], <2 x i32> [[TMP21]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
@@ -722,7 +719,7 @@ define void @hoist_loads_in_masked_regions(ptr noalias %dst, ptr noalias %src, p
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)
@@ -780,8 +777,6 @@ define void @hoist_multiple_complementary_loads(ptr noalias %dst, ptr noalias %s
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE10:.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP43]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <2 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -924,11 +919,11 @@ define void @hoist_predicated_load_with_chained_geps1(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP20]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META68:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META71:![0-9]+]], !noalias [[META68]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP73:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP71:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META72:![0-9]+]], !noalias [[META68]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
@@ -983,11 +978,11 @@ define void @hoist_predicated_load_with_chained_geps2(ptr %dst, ptr %src, i1 %co
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [11 x i16], ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP21]], align 2, !alias.scope [[META75:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META78:![0-9]+]], !noalias [[META75]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP80:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP78:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i16 [[TMP3]], ptr [[DST]], align 2, !alias.scope [[META79:![0-9]+]], !noalias [[META75]]
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
@@ -1039,8 +1034,6 @@ define void @hoist_all_three_loads_at_same_address(ptr %dst, ptr %src, ptr noali
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x ptr> [[TMP8]], ptr [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[COND]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 11)

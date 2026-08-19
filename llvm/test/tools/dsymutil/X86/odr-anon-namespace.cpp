@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/odr-anon-namespace -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 #ifdef FILE1
 // Currently dsymutil will unique the contents of anonymous

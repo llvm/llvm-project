@@ -90,6 +90,46 @@ spirv::verifyMemorySemantics(Operation *op,
   return success();
 }
 
+LogicalResult spirv::verifyPhysicalStorageBufferDecorations(Operation *op,
+                                                            Type pointeeType) {
+  // From SPV_KHR_physical_storage_buffer:
+  // > If an OpVariable's pointee type is a pointer (or array of pointers) in
+  // > PhysicalStorageBuffer storage class, then the variable must be decorated
+  // > with exactly one of AliasedPointer or RestrictPointer.
+  auto pointeePtrType = dyn_cast<spirv::PointerType>(pointeeType);
+  if (!pointeePtrType) {
+    if (auto pointeeArrayType = dyn_cast<spirv::ArrayType>(pointeeType)) {
+      pointeePtrType =
+          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
+    }
+  }
+
+  if (!pointeePtrType || pointeePtrType.getStorageClass() !=
+                             spirv::StorageClass::PhysicalStorageBuffer)
+    return success();
+
+  auto getDecorationAttr = [op](spirv::Decoration decoration) {
+    return op->getAttr(spirv::getDecorationString(decoration));
+  };
+
+  bool hasAliasedPtr =
+      getDecorationAttr(spirv::Decoration::AliasedPointer) != nullptr;
+  bool hasRestrictPtr =
+      getDecorationAttr(spirv::Decoration::RestrictPointer) != nullptr;
+
+  if (!hasAliasedPtr && !hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must be decorated "
+              "either 'AliasedPointer' or 'RestrictPointer'";
+
+  if (hasAliasedPtr && hasRestrictPtr)
+    return op->emitOpError()
+           << " with physical buffer pointer must have exactly one "
+              "aliasing decoration";
+
+  return success();
+}
+
 void spirv::printVariableDecorations(Operation *op, OpAsmPrinter &printer,
                                      SmallVectorImpl<StringRef> &elidedAttrs) {
   // Print optional descriptor binding
@@ -555,7 +595,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
     printer << " : " << getType();
 }
 
@@ -610,10 +650,27 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     return success();
   }
   if (auto arrayAttr = dyn_cast<ArrayAttr>(value)) {
+    if (auto structType = dyn_cast<spirv::StructType>(opType)) {
+      // Identified (possibly recursive) structs are not supported as constants.
+      if (structType.isIdentified())
+        return op.emitOpError(
+            "cannot have an identified struct as a constant type");
+      if (arrayAttr.size() != structType.getNumElements())
+        return op.emitOpError("number of constituents (")
+               << arrayAttr.size()
+               << ") does not match number of struct members ("
+               << structType.getNumElements() << ")";
+      for (auto [idx, element] : llvm::enumerate(arrayAttr.getValue())) {
+        if (failed(verifyConstantType(op, element,
+                                      structType.getElementType(idx))))
+          return failure();
+      }
+      return success();
+    }
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     if (!arrayType)
       return op.emitOpError(
-          "must have spirv.array result type for array value");
+          "must have spirv.array or spirv.struct result type for array value");
     Type elemType = arrayType.getElementType();
     for (Attribute element : arrayAttr.getValue()) {
       // Verify array elements recursively.
@@ -638,7 +695,8 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
     return false;
 
   if (isa<SPIRVDialect>(type.getDialect())) {
-    // TODO: support constant struct
+    if (auto structType = dyn_cast<spirv::StructType>(type))
+      return !structType.isIdentified();
     return isa<spirv::ArrayType>(type);
   }
 
@@ -872,6 +930,59 @@ LogicalResult spirv::EntryPointOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ExecutionMode / spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+namespace {
+// Describes the extra operands a SPIR-V ExecutionMode expects: whether they
+// are <id> operands (only valid on spirv.ExecutionModeId) or literal integers
+// (only valid on spirv.ExecutionMode), and how many of them are required.
+struct ExecutionModeOperandSchema {
+  bool isIdOperand;
+  unsigned numOperands;
+};
+
+ExecutionModeOperandSchema
+getExecutionModeOperandSchema(spirv::ExecutionMode mode) {
+  switch (mode) {
+  case spirv::ExecutionMode::Invocations:
+  case spirv::ExecutionMode::OutputVertices:
+  case spirv::ExecutionMode::VecTypeHint:
+  case spirv::ExecutionMode::SubgroupSize:
+  case spirv::ExecutionMode::SubgroupsPerWorkgroup:
+  case spirv::ExecutionMode::DenormPreserve:
+  case spirv::ExecutionMode::DenormFlushToZero:
+  case spirv::ExecutionMode::SignedZeroInfNanPreserve:
+  case spirv::ExecutionMode::RoundingModeRTE:
+  case spirv::ExecutionMode::RoundingModeRTZ:
+  case spirv::ExecutionMode::OutputPrimitivesEXT:
+  case spirv::ExecutionMode::SharedLocalMemorySizeINTEL:
+  case spirv::ExecutionMode::RoundingModeRTPINTEL:
+  case spirv::ExecutionMode::RoundingModeRTNINTEL:
+  case spirv::ExecutionMode::FloatingPointModeALTINTEL:
+  case spirv::ExecutionMode::FloatingPointModeIEEEINTEL:
+  case spirv::ExecutionMode::MaxWorkDimINTEL:
+  case spirv::ExecutionMode::NumSIMDWorkitemsINTEL:
+  case spirv::ExecutionMode::SchedulerTargetFmaxMhzINTEL:
+  case spirv::ExecutionMode::StreamingInterfaceINTEL:
+  case spirv::ExecutionMode::NamedBarrierCountINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSize:
+  case spirv::ExecutionMode::LocalSizeHint:
+  case spirv::ExecutionMode::MaxWorkgroupSizeINTEL:
+    return {/*isIdOperand=*/false, /*numOperands=*/3};
+  case spirv::ExecutionMode::SubgroupsPerWorkgroupId:
+    return {/*isIdOperand=*/true, /*numOperands=*/1};
+  case spirv::ExecutionMode::LocalSizeId:
+  case spirv::ExecutionMode::LocalSizeHintId:
+    return {/*isIdOperand=*/true, /*numOperands=*/3};
+  default:
+    return {/*isIdOperand=*/false, /*numOperands=*/0};
+  }
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // spirv.ExecutionMode
 //===----------------------------------------------------------------------===//
 
@@ -919,6 +1030,23 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
     printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
 }
 
+LogicalResult spirv::ExecutionModeOp::verify() {
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (schema.isIdOperand)
+    return emitOpError("expected ExecutionMode that takes extra operands "
+                       "that are not <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.ExecutionModeId
 //===----------------------------------------------------------------------===//
@@ -960,20 +1088,18 @@ void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::ExecutionModeIdOp::verify() {
-  // Valid as of SPIRV 1.6
-  switch (getExecutionMode()) {
-  case ExecutionMode::SubgroupsPerWorkgroupId:
-  case ExecutionMode::LocalSizeId:
-  case ExecutionMode::LocalSizeHintId:
-    break;
-  default:
+  ExecutionModeOperandSchema schema =
+      getExecutionModeOperandSchema(getExecutionMode());
+
+  if (!schema.isIdOperand)
     return emitOpError("expected ExecutionMode that takes extra operands that "
                        "are <id> operands, got: ")
            << stringifyExecutionMode(getExecutionMode());
-  }
 
-  if (getValues().empty())
-    return emitOpError("expected at least one value operand");
+  if (getValues().size() != schema.numOperands)
+    return emitOpError("expected ")
+           << schema.numOperands << " value operand(s), got "
+           << getValues().size();
 
   for (Attribute value : getValues()) {
     auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
@@ -1227,6 +1353,28 @@ ParseResult spirv::GLSClampOp::parse(OpAsmParser &parser,
 void spirv::GLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
+// spirv.GLNClampOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLNClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLNClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+
+//===----------------------------------------------------------------------===//
+// spirv.GLSmoothStepOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLSmoothStepOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLSmoothStepOp::print(OpAsmPrinter &p) {
+  printOneResultOp(*this, p);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
@@ -1372,6 +1520,11 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  if (failed(
+          verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
+    return failure();
+
   return success();
 }
 
@@ -1499,6 +1652,14 @@ void spirv::UMulExtendedOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::MemoryBarrierOp::verify() {
+  return verifyMemorySemantics(getOperation(), getMemorySemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.MemoryNamedBarrierOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MemoryNamedBarrierOp::verify() {
   return verifyMemorySemantics(getOperation(), getMemorySemantics());
 }
 
@@ -1990,8 +2151,9 @@ LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
     return emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())
-    if (!isa<spirv::ConstantOp, spirv::ReferenceOfOp,
-             spirv::SpecConstantOperationOp>(operand.getDefiningOp()))
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp,
+                         spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
       return emitOpError(
           "invalid operand, must be defined by a constant operation");
 

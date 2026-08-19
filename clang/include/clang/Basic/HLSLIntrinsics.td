@@ -221,6 +221,10 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Vector sizes to generate for Varying typed arguments (e.g., [2,3,4]).
   list<int> VaryingVecSizes = [];
 
+  // Whether to generate a dependent-size vector template overload for N > 4.
+  // Sizes 1 through 4 use scalar and concrete vector overloads.
+  bit VaryingLongVector = 0;
+
   // Matrix dimensions to generate for Varying typed arguments.
   list<MatDim> VaryingMatDims = [];
 
@@ -321,6 +325,7 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 \param Val The input value.
 }];
   let VaryingTypes = SignedTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -457,7 +462,6 @@ determine the correct quadrant.
 \param x The x-coordinate.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the smallest integer value that is greater than or equal to the
@@ -553,30 +557,6 @@ def hlsl_countbits : HLSLBuiltin<"countbits"> {
   let VaryingTypes = AllIntTypes;
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
-}
-
-// Returns the cross product of two floating-point, 3D vectors.
-def hlsl_cross_float : HLSLBuiltin<"cross", "__builtin_hlsl_crossf32"> {
-  let Args = [VectorType<FloatTy, 3>, VectorType<FloatTy, 3>];
-  let ReturnType = VectorType<FloatTy, 3>;
-}
-
-def hlsl_cross_half : HLSLBuiltin<"cross", "__builtin_hlsl_crossf16"> {
-  let Doc = [{
-\fn T cross(T x, T y)
-\brief Returns the cross product of two floating-point, 3D vectors.
-\param x [in] The first floating-point, 3D vector.
-\param y [in] The second floating-point, 3D vector.
-
-Result is the cross product of x and y, i.e., the resulting
-components are, in order :
-x[1] * y[2] - y[1] * x[2]
-x[2] * y[0] - y[2] * x[0]
-x[0] * y[1] - y[0] * x[1]
-}];
-  let Args = [VectorType<HalfTy, 3>, VectorType<HalfTy, 3>];
-  let ReturnType = VectorType<HalfTy, 3>;
-  let Availability = SM6_2;
 }
 
 // Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
@@ -700,14 +680,36 @@ prevision partial derivative of the input value.
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgBuiltin<"degrees", "__builtin_hlsl_elementwise_degrees"> {
+def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
 \param x The specified input value.
 }];
+  let ParamNames = ["x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
+}
+// Returns the cross product of two floating-point, 3D vectors.
+def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
+  let Doc = [{
+\fn T cross(T x, T y)
+\brief Returns the cross product of two floating-point, 3D vectors.
+\param x [in] The first floating-point, 3D vector.
+\param y [in] The second floating-point, 3D vector.
+
+Result is the cross product of x and y, i.e., the resulting
+components are, in order :
+x[1] * y[2] - y[1] * x[2]
+x[2] * y[0] - y[2] * x[0]
+x[0] * y[1] - y[0] * x[1]
+}];
+  let ParamNames = ["x", "y"];
+  let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingScalar = 0;
+  let VaryingVecSizes = [3];
+  let VaryingMatDims = [];
+  let IsConstexpr = 1;
 }
 
 // Returns a distance scalar between X and Y.
@@ -1086,7 +1088,6 @@ to True if the x parameter is +INF or -INF. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Determines if the specified value x is Not a Number.
@@ -1101,7 +1102,6 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the result of multiplying the specified value by two raised
@@ -1149,7 +1149,7 @@ Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 }
 
 // Returns the linear interpolation of x to y by s.
-def hlsl_lerp : HLSLThreeArgBuiltin<"lerp", "__builtin_hlsl_lerp"> {
+def hlsl_lerp : HLSLThreeArgDetail<"lerp", "lerp_impl"> {
   let Doc = [{
 \fn T lerp(T x, T y, T s)
 \brief Returns the linear interpolation of x to y by s.
@@ -1161,6 +1161,7 @@ the y parameter.
 Linear interpolation is based on the following formula: x*(1-s) + y*s which
 can equivalently be written as x + s(y-x).
 }];
+  let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1320,7 +1321,6 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 \param Pow The specified power.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1336,7 +1336,7 @@ def hlsl_quad_read_across_x :
   let VaryingMatDims = [];
 }
 
-// Reads the value from the lane across the X axis of the quad.
+// Reads the value from the lane across the Y axis of the quad.
 def hlsl_quad_read_across_y :
     HLSLOneArgBuiltin<"QuadReadAcrossY",
                       "__builtin_hlsl_quad_read_across_y"> {
@@ -1349,12 +1349,24 @@ def hlsl_quad_read_across_y :
   let VaryingMatDims = [];
 }
 
+// Reads the value from the lane diagonally opposite from the current lane in the quad.
+def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal", "__builtin_hlsl_quad_read_across_diagonal"> {
+  let Doc = [{
+\brief Returns the value from the lane diagonally opposite from the current lane in the quad.
+\param Val The input value.
+}];
+  let VaryingTypes = AllNumericTypes;
+  let IsConvergent = 1;
+  let VaryingMatDims = [];
+}
+
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgBuiltin<"radians", "__builtin_hlsl_elementwise_radians"> {
+def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
+  let ParamNames = ["Val"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1556,7 +1568,7 @@ def hlsl_sqrt : HLSLOneArgBuiltin<"sqrt", "__builtin_elementwise_sqrt"> {
 
 // Returns 1 if the x parameter is greater than or equal to the y parameter;
 // otherwise, 0.
-def hlsl_step : HLSLTwoArgBuiltin<"step", "__builtin_hlsl_step"> {
+def hlsl_step : HLSLTwoArgDetail<"step", "step_impl"> {
   let Doc = [{
 \fn T step(T y, T x)
 \brief Returns 1 if the x parameter is greater than or equal to the y
@@ -1566,6 +1578,7 @@ parameter; otherwise, 0.
 
 Step is based on the following formula: (x >= y) ? 1 : 0
 }];
+  let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }

@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -1332,6 +1333,46 @@ MDNode *MDNode::getMergedCalleeTypeMetadata(const MDNode *A, const MDNode *B) {
   return MDNode::get(A->getContext(), AB);
 }
 
+MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
+  // Drop !alloc_token metadata if either instruction lacks it to avoid mis-
+  // classifying unclassified allocations, where the fallback token must be
+  // used instead.
+  if (!A || !B)
+    return nullptr;
+  if (A == B)
+    return const_cast<MDNode *>(A);
+  if (A->getNumOperands() != 2 || B->getNumOperands() != 2)
+    return nullptr;
+  auto *CIA = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(1));
+  auto *CIB = mdconst::dyn_extract_or_null<ConstantInt>(B->getOperand(1));
+  if (!CIA || !CIB)
+    return nullptr;
+
+  MDString *NameA = dyn_cast<MDString>(A->getOperand(0));
+  MDString *NameB = dyn_cast<MDString>(B->getOperand(0));
+  if (!NameA || !NameB)
+    return nullptr;
+
+  if (NameA == NameB)
+    return CIA->isOne() ? const_cast<MDNode *>(A) : const_cast<MDNode *>(B);
+
+  LLVMContext &Ctx = A->getContext();
+  StringRef StrA = NameA->getString();
+  StringRef StrB = NameB->getString();
+
+  SmallString<64> Buffer;
+  Buffer.reserve(StrA.size() + 1 + StrB.size());
+  Buffer.append(StrA);
+  Buffer.push_back('|');
+  Buffer.append(StrB);
+
+  bool MergedContainsPointer = CIA->isOne() || CIB->isOne();
+  Metadata *Ops[] = {MDString::get(Ctx, Buffer),
+                     ConstantAsMetadata::get(ConstantInt::get(
+                         Type::getInt1Ty(Ctx), MergedContainsPointer))};
+  return MDNode::get(Ctx, Ops);
+}
+
 MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   // Given two ranges, we want to compute the union of the ranges. This
   // is slightly complicated by having to combine the intervals and merge
@@ -1754,7 +1795,7 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
 
   // Handle 'dbg' as a special case since it is not stored in the hash table.
   if (KindID == LLVMContext::MD_dbg) {
-    DbgLoc = DebugLoc(Node);
+    DbgLoc = DebugLoc(cast_or_null<DILocation>(Node));
     return;
   }
 

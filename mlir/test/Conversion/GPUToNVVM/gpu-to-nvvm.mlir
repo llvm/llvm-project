@@ -85,7 +85,7 @@ gpu.module @test_module_2 {
     %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
@@ -101,7 +101,7 @@ gpu.module @test_module_3 {
     %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
@@ -185,10 +185,62 @@ gpu.module @test_module_4 {
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     gpu.barrier
     func.return
   }
+
+  // CHECK-LABEL: func @gpu_sync_subgroup()
+  func.func @gpu_sync_subgroup() {
+    // CHECK: %[[WARP_MASK:.*]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: nvvm.bar.warp.sync %[[WARP_MASK]]
+    gpu.barrier scope <subgroup>
+    func.return
+  }
+
+  // CHECK-LABEL: func @gpu_named_barriers
+  // CHECK-SAME: (%[[MEMBER_COUNT:.*]]: i32)
+  func.func @gpu_named_barriers(%member_count : i32) {
+    // CHECK: %[[ID0_ADDR:.*]] = llvm.mlir.addressof @[[$NB0:__named_barrier_id[_0-9]*]] : !llvm.ptr
+    // CHECK: %[[ID0:.*]] = llvm.load %[[ID0_ADDR]] : !llvm.ptr -> i32
+    // CHECK: %[[WARP_SIZE0:.*]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[THREADS0:.*]] = llvm.mul %[[MEMBER_COUNT]], %[[WARP_SIZE0]] : i32
+    // CHECK: %[[DESC0:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC1:.*]] = llvm.insertvalue %[[ID0]], %[[DESC0]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC2:.*]] = llvm.insertvalue %[[THREADS0]], %[[DESC1]][1] : !llvm.struct<(i32, i32)>
+    %nb0 = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+    %c2 = arith.constant 2 : i32
+    // CHECK: %[[ID1_ADDR:.*]] = llvm.mlir.addressof @[[$NB1:__named_barrier_id[_0-9]*]] : !llvm.ptr
+    // CHECK: %[[ID1:.*]] = llvm.load %[[ID1_ADDR]] : !llvm.ptr -> i32
+    // CHECK: %[[WARP_SIZE1:.*]] = llvm.mlir.constant(32 : i32) : i32
+    // CHECK: %[[THREADS1:.*]] = llvm.mul %{{.*}}, %[[WARP_SIZE1]] : i32
+    // CHECK: %[[DESC3:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC4:.*]] = llvm.insertvalue %[[ID1]], %[[DESC3]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[DESC5:.*]] = llvm.insertvalue %[[THREADS1]], %[[DESC4]][1] : !llvm.struct<(i32, i32)>
+    %nb1 = gpu.initialize_named_barrier %c2 : i32 -> !gpu.named_barrier
+    // CHECK: %[[BARRIER_ID0:.*]] = llvm.extractvalue %[[DESC2]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS0:.*]] = llvm.extractvalue %[[DESC2]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID0]] number_of_threads = %[[BARRIER_THREADS0]]
+    gpu.barrier named(%nb0 : !gpu.named_barrier)
+    // CHECK: %[[BARRIER_ID1:.*]] = llvm.extractvalue %[[DESC5]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS1:.*]] = llvm.extractvalue %[[DESC5]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID1]] number_of_threads = %[[BARRIER_THREADS1]]
+    gpu.barrier named(%nb1 : !gpu.named_barrier)
+    func.return
+  }
+
+  // CHECK-LABEL: func @gpu_named_barrier_arg
+  // CHECK-SAME: (%[[NB:.*]]: !llvm.struct<(i32, i32)>)
+  func.func @gpu_named_barrier_arg(%nb : !gpu.named_barrier) {
+    // CHECK: %[[BARRIER_ID:.*]] = llvm.extractvalue %[[NB]][0] : !llvm.struct<(i32, i32)>
+    // CHECK: %[[BARRIER_THREADS:.*]] = llvm.extractvalue %[[NB]][1] : !llvm.struct<(i32, i32)>
+    // CHECK: nvvm.barrier id = %[[BARRIER_ID]] number_of_threads = %[[BARRIER_THREADS]]
+    gpu.barrier named(%nb : !gpu.named_barrier)
+    func.return
+  }
+
+  // CHECK: llvm.mlir.global internal constant @[[$NB0]](1 : i32) {addr_space = 0 : i32} : i32
+  // CHECK: llvm.mlir.global internal constant @[[$NB1]](2 : i32) {addr_space = 0 : i32} : i32
 }
 
 
@@ -1214,4 +1266,3 @@ module attributes {gpu.container_module} {
     }
   }
 }
-

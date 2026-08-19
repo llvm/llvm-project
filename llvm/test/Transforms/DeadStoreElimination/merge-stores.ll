@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define void @byte_by_byte_replacement(ptr %ptr) {
 ; CHECK-LABEL: @byte_by_byte_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 202050057, ptr [[PTR:%.*]]
+; CHECK-NEXT:    store i32 202050057, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -30,7 +30,7 @@ entry:
 define void @word_replacement(ptr %ptr) {
 ; CHECK-LABEL: @word_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 8106482645252179720, ptr [[PTR:%.*]]
+; CHECK-NEXT:    store i64 8106482645252179720, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -51,7 +51,7 @@ entry:
 define void @differently_sized_replacements(ptr %ptr) {
 ; CHECK-LABEL: @differently_sized_replacements(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 578437695752307201, ptr [[PTR:%.*]]
+; CHECK-NEXT:    store i64 578437695752307201, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -73,7 +73,7 @@ entry:
 define void @multiple_replacements_to_same_byte(ptr %ptr) {
 ; CHECK-LABEL: @multiple_replacements_to_same_byte(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069522043393, ptr [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069522043393, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -94,7 +94,7 @@ entry:
 define void @merged_merges(ptr %ptr) {
 ; CHECK-LABEL: @merged_merges(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069572506113, ptr [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069572506113, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -141,7 +141,7 @@ entry:
 define void @foo(ptr nocapture %u) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 42, ptr [[U:%.*]], align 8
+; CHECK-NEXT:    store i64 42, ptr [[U:%.*]], align 8, !tbaa [[TBAA0:![0-9]+]], !noalias [[META3:![0-9]+]], !nontemporal [[META6:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -154,8 +154,8 @@ entry:
 
 define void @PR34074(ptr %x, ptr %y) {
 ; CHECK-LABEL: @PR34074(
-; CHECK-NEXT:    store i64 42, ptr %y
-; CHECK-NEXT:    store i32 4, ptr %x
+; CHECK-NEXT:    store i64 42, ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    store i32 4, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i64 42, ptr %y          ; independent store
@@ -176,6 +176,50 @@ define void @PR36129(ptr %P, ptr %Q) {
   store i32 1, ptr %P, align 4
   store i32 2, ptr %Q, align 4
   store i8 3, ptr %P, align 1
+  ret void
+}
+
+; Partial-overlap store merging erases the killing store and folds its bytes
+; into the preceding (wider) dead store. It is only valid when both stores
+; have matching atomic ordering, so the killing store is safely deletable and
+; its bytes keep the same atomicity after being folded into the dead store.
+
+define void @killing_store_volatile(ptr %p) {
+; CHECK-LABEL: @killing_store_volatile(
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    store volatile i16 -1, ptr [[P2]], align 2
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p, align 4
+  %p2 = getelementptr i8, ptr %p, i64 2
+  store volatile i16 -1, ptr %p2, align 2
+  ret void
+}
+
+define void @killing_store_atomic_monotonic(ptr %p) {
+; CHECK-LABEL: @killing_store_atomic_monotonic(
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    store atomic i16 -1, ptr [[P2]] monotonic, align 2
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p, align 4
+  %p2 = getelementptr i8, ptr %p, i64 2
+  store atomic i16 -1, ptr %p2 monotonic, align 2
+  ret void
+}
+
+define void @killing_store_atomic_unordered(ptr %p) {
+; CHECK-LABEL: @killing_store_atomic_unordered(
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    store atomic i16 -1, ptr [[P2]] unordered, align 2
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p, align 4
+  %p2 = getelementptr i8, ptr %p, i64 2
+  store atomic i16 -1, ptr %p2 unordered, align 2
   ret void
 }
 

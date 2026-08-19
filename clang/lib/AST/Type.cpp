@@ -93,7 +93,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          // to implicitly cast into the default address space.
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-           B == LangAS::cuda_shared)) ||
+           B == LangAS::cuda_shared || B == LangAS::amdgpu_barrier)) ||
          // In HLSL, the this pointer for member functions points to the default
          // address space. This causes a problem if the structure is in
          // a different address space. We want to allow casting from these
@@ -1639,6 +1639,24 @@ struct SubstObjCTypeArgsVisitor
   }
 };
 
+struct StripNullabilityTypeVisitor
+    : public SimpleTransformVisitor<StripNullabilityTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripNullabilityTypeVisitor>;
+
+  explicit StripNullabilityTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType type(attrType, 0);
+    if (AttributedType::stripOuterNullability(type)) {
+      while (AttributedType::stripOuterNullability(type)) {
+      }
+      return BaseType::recurse(type);
+    }
+
+    return BaseType::VisitAttributedType(attrType);
+  }
+};
+
 struct StripObjCKindOfTypeVisitor
     : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
   using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
@@ -1713,6 +1731,14 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
   StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
+}
+
+QualType QualType::stripNullability(const ASTContext &constCtx) const {
+  // FIXME: SimpleTransformVisitor currently takes a non-const ASTContext
+  // because some rebuild paths use non-const ASTContext factory APIs.
+  auto &ctx = const_cast<ASTContext &>(constCtx);
+  StripNullabilityTypeVisitor visitor(ctx);
   return visitor.recurse(*this);
 }
 
@@ -2101,6 +2127,10 @@ public:
 
   Type *VisitPackExpansionType(const PackExpansionType *T) {
     return Visit(T->getPattern());
+  }
+
+  Type *VisitAtomicType(const AtomicType *T) {
+    return Visit(T->getValueType());
   }
 };
 
@@ -2786,6 +2816,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  if (Context.getLangOpts().HLSL &&
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
+    return true;
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -2937,8 +2971,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
@@ -3662,6 +3697,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3726,8 +3765,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:
@@ -5249,6 +5286,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
@@ -5335,6 +5374,16 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   }
 
   return std::nullopt;
+}
+
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
 }
 
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
@@ -5473,6 +5522,31 @@ bool Type::isCUDADeviceBuiltinTextureType() const {
   return false;
 }
 
+static bool isAMDGPUNamedBarrierTypeImpl(const Type *Ty, bool AllowWrappers) {
+  // This query does not care about qualifiers at all.
+  Ty = Ty->getUnqualifiedDesugaredType();
+
+  // Unwrap arrays.
+  while (isa<ArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(Ty))
+    return BT->getKind() == BuiltinType::AMDGPUNamedWorkgroupBarrier;
+  if (AllowWrappers) {
+    if (const auto *RT = dyn_cast<RecordType>(Ty))
+      return RT->getDecl()->hasAttr<AMDGPUNamedBarrierWrapperAttr>();
+  }
+  return false;
+}
+
+bool Type::isAMDGPUNamedBarrierType() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/false);
+}
+
+bool Type::isAMDGPUNamedBarrierTypeOrWrapper() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/true);
+}
+
 bool Type::hasSizedVLAType() const {
   if (!isVariablyModifiedType())
     return false;
@@ -5528,6 +5602,16 @@ bool Type::isHLSLIntangibleType() const {
   return RD->isHLSLIntangible();
 }
 
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
+  const Type *BaseTy = getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
+      return true;
+  }
+  return false;
+}
+
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   switch (type.getObjCLifetime()) {
   case Qualifiers::OCL_None:
@@ -5555,6 +5639,41 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   return DK_none;
+}
+
+static bool
+requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
+                           llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Context.getAsArrayType(Ty))
+    Ty = Context.getBaseElementType(Arr);
+
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
+
+  assert(!Ty->isIncompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (requiresBuiltinLaunderImpl(Context, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+bool QualType::requiresBuiltinLaunder(const ASTContext &Context) const {
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return requiresBuiltinLaunderImpl(Context, *this, Seen);
 }
 
 bool MemberPointerType::isSugared() const {

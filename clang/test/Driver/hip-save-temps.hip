@@ -39,13 +39,7 @@
 // NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.bc"
 // RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-disable-llvm-passes" {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.tmp.bc"
 
-// NORDC: {{".*clang.*"}} "-cc1" {{.*}} "-S"
-// NORDC-SAME: "-mllvm" "-amdgpu-internalize-symbols"
-// NORDC-SAME: [[CPU]]
-// NORDC-SAME: "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.s"
-
-// RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.bc"
-// NORDC: {{".*clang.*"}} "-cc1as" {{.*}} "-filetype" "obj" {{.*}} [[CPU]] {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.o"
+// RDC: {{".*clang.*"}} "-cc1" {{.*}} "-emit-llvm-bc" {{.*}} [[CPU]] {{.*}} "-o" "hip-save-temps-hip-amdgcn-amd-amdhsa-gfx900.{{(bc|o)}}"
 // CHECK-NOT: "{{.*}}llvm-link"
 // CHECK-NOT: "{{.*}}opt"
 // CHECK-NOT: "{{.*}}llc"
@@ -62,7 +56,7 @@
 
 // -fno-gpu-rdc host object path
 // NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.hipi"
-// NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}}  "-fcuda-include-gpubinary" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"
+// NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-emit-llvm-bc" {{.*}}  "-foffload-include-binary" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.bc"
 // NORDC: "{{.*clang.*}}" "-cc1" {{.*}} "-S" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.s"
 // NORDC: "{{.*clang.*}}" "-cc1as" {{.*}} "-o" "hip-save-temps{{.*}}.o"
 

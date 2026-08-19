@@ -12,8 +12,9 @@
 #include <memory_resource>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
-static void bm_list(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void bm_list(benchmark::State& state) {
   char buffer[16384];
   std::pmr::monotonic_buffer_resource resource(buffer, sizeof(buffer));
   for (auto _ : state) {

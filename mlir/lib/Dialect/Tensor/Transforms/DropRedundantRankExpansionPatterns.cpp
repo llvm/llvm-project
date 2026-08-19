@@ -20,9 +20,14 @@ using namespace mlir::tensor;
 namespace {
 /// Drop redundant rank expansion of insert_slice that are directly followed
 /// by extract_slice. E.g.:
-/// %0 = tensor.insert_slice ... : tensor<5x10xf32> into tensor<1x1x5x10xf32>
+/// %0 = tensor.insert_slice %in... : tensor<5x10xf32> into tensor<1x1x5x10xf32>
 /// %1 = tensor.extract_slice %0[0, 0, 2, 3] [1, 1, 2, 2] [1, 1, 1, 1]
 ///     : tensor<1x1x5x10xf32> to tensor<2x2xf32>
+///
+/// can be folded into:
+///
+/// %1 = tensor.extract_slice %in[2, 3] [2, 2] [1, 1]
+///     : tensor<5x10xf32> to tensor<2x2xf32>
 struct DropRedundantRankExpansionOnExtractSliceOfInsertSlice
     : public OpRewritePattern<ExtractSliceOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -41,9 +46,8 @@ struct DropRedundantRankExpansionOnExtractSliceOfInsertSlice
       return failure();
     llvm::SmallBitVector expandedDims = insertSliceOp.getDroppedDims();
 
-    // TODO: This could be extended to support cases where the dropped dims are
-    // a subset of the expanded dims.
-    if (expandedDims != droppedDims)
+    // Support cases where the expanded dims are a subset of the droped dims.
+    if (!expandedDims.subsetOf(droppedDims))
       return failure();
 
     // The tensor.insert_slice may not be redundant if it has multiple users.
@@ -58,18 +62,21 @@ struct DropRedundantRankExpansionOnExtractSliceOfInsertSlice
     // Extract directly from the source.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(extractSliceOp);
+    SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
     SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
     for (int64_t i = 0, e = extractSliceOp.getSourceType().getRank(); i < e;
          ++i) {
-      if (droppedDims.test(i))
+      if (expandedDims.test(i))
         continue;
-      newOffsets.push_back(extractSliceOp.getMixedOffsets()[i]);
-      newSizes.push_back(extractSliceOp.getMixedSizes()[i]);
-      newStrides.push_back(extractSliceOp.getMixedStrides()[i]);
+      newOffsets.push_back(mixedOffsets[i]);
+      newSizes.push_back(mixedSizes[i]);
+      newStrides.push_back(mixedStrides[i]);
     }
     rewriter.replaceOpWithNewOp<ExtractSliceOp>(
-        extractSliceOp, /*source=*/insertSliceOp.getSource(), newOffsets,
-        newSizes, newStrides);
+        extractSliceOp, extractSliceOp.getResultType(),
+        /*source=*/insertSliceOp.getSource(), newOffsets, newSizes, newStrides);
     rewriter.eraseOp(insertSliceOp);
     return success();
   }

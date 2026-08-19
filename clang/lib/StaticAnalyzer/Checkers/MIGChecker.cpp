@@ -149,17 +149,15 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C,
 }
 
 static bool isInMIGCall(CheckerContext &C) {
-  const LocationContext *LC = C.getLocationContext();
-  assert(LC && "Unknown location context");
+  const StackFrame *SF = C.getStackFrame();
+  assert(SF && "Unknown stack frame");
 
-  const StackFrameContext *SFC;
   // Find the top frame.
-  while (LC) {
-    SFC = LC->getStackFrame();
-    LC = SFC->getParent();
+  while (SF->getParent()) {
+    SF = SF->getParent();
   }
 
-  const Decl *D = SFC->getDecl();
+  const Decl *D = SF->getDecl();
 
   if (std::optional<AnyCall> AC = AnyCall::forDecl(D)) {
     // Even though there's a Sema warning when the return type of an annotated

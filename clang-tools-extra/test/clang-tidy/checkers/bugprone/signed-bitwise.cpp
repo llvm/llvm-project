@@ -137,7 +137,6 @@ void unary_bitwise() {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use of a signed integer operand with a unary bitwise operator
 }
 
-/// HICPP uses these examples to demonstrate the rule.
 void standard_examples() {
   int i = 3;
   unsigned int k = 0u;

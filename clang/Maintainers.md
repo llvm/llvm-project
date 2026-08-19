@@ -32,8 +32,8 @@ aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](http
 
 ### AST Visitors
 
-Sirraide \
-aeternalmail@gmail.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+Ambrose Leeb \
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 ### Clang LLVM IR generation
 
@@ -61,11 +61,11 @@ yitzhakm@google.com (email), ymandel (Phabricator), [ymand](https://github.com/y
 
 ### Sema
 
-Sirraide \
-aeternalmail@gmail.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+Ambrose Leeb \
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 Mariya Podchishchaeva \
-mariya.podchishchaeva@intel.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+Mariya.Podchishchaeva@amd.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Recovery AST
 
@@ -167,7 +167,7 @@ i@maskray.me (email), MaskRay (Phabricator), [MaskRay](https://github.com/MaskRa
 ### Constant Expressions
 
 Mariya Podchishchaeva \
-mariya.podchishchaeva@intel.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
+Mariya.Podchishchaeva@amd.com (email), [Fznamznon](https://github.com/Fznamznon) (GitHub), fznamznon (Discord), Fznamznon (Discourse)
 
 ### Thread Safety Analysis
 
@@ -179,8 +179,8 @@ aaron.puchert@sap.com (email), [aaronpuchert](https://github.com/aaronpuchert) (
 Doug Wyatt \
 dwyatt@apple.com (email), [dougsonos](https://github.com/dougsonos) (GitHub), dougsonos (Discourse)
 
-Sirraide \
-aeternalmail@gmail.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+Ambrose Leeb \
+aleeb@nvidia.com (email), [Sirraide](https://github.com/Sirraide) (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 ### Code Coverage
 
@@ -234,6 +234,11 @@ components within the compiler.
 
 Aaron Ballman \
 aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](https://github.com/AaronBallman) (GitHub), AaronBallman (Discourse), aaronballman (Discord)
+
+### Floating-point and numerics
+
+Joshua Cranmer \
+joshua.cranmer@intel.com (email), [jcranmer-intel](https://github.com/jcranmer-intel) (GitHub), jcranmer (Discourse)
 
 ### Plugins
 
@@ -298,6 +303,12 @@ serebrennikov.vladislav@gmail.com (email), [Endilll](https://github.com/Endilll)
 Akira Hatanaka \
 ahatanak@gmail.com, [ahatanak](https://github.com/ahatanak) (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
 
+### Swift conformance
+
+John McCall \
+rjmccall@apple.com (email), [rjmccall](https://github.com/rjmccall) (GitHub)
+
+
 ### OpenMP conformance
 
 Alexey Bataev \
@@ -316,7 +327,10 @@ ekeane@nvidia.com (email), ErichKeane (Phabricator), [erichkeane](https://github
 ### SYCL conformance
 
 Alexey Bader \
-alexey.bader@intel.com (email), bader (Phabricator), [bader](https://github.com/bader) (GitHub)
+alexey.bader@intel.com (email), [bader](https://github.com/bader) (GitHub), bader7427 (Discord), bader (Discourse)
+
+Tom Honermann \
+tom@honermann.net (email), [tahonermann](https://github.com/tahonermann) (GitHub), tahonermann (Discord), tahonermann (Discourse)
 
 ### HLSL conformance
 

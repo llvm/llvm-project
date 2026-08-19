@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 template<typename T> struct A {
   struct B { };
-  
+
   friend struct B;
 };
 
@@ -19,7 +19,7 @@ namespace PR6770 {
   }
   using namespace N;
 
-  namespace M { 
+  namespace M {
     float f1(float);
   }
   using M::f1;
@@ -166,3 +166,30 @@ void foobar() {
   A::Bar<int> b;
 }
 }
+
+namespace InstQualifier1 {
+  template <class> struct A {
+    template <class T> void f(T);
+  };
+  void g() {
+    A<int>().f(0);
+  }
+  template <class T> template <class U> void A<T>::f(U) {
+    struct B {
+      B() {}
+    };
+  }
+} // namespace InstQualifier1
+
+namespace GH210234 {
+  template <typename T>
+  struct D {
+    friend T::S::~ffl_fusion(); // expected-error {{no type named 'ffl_fusion'}}
+  };
+
+  struct Q {
+    struct S { ~S(); };
+  };
+
+  template struct D<Q>; // expected-note {{in instantiation of template class}}
+} // namespace invalid_function_name_in_template_instantiation

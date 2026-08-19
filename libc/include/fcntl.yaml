@@ -18,14 +18,14 @@ objects: []
 functions:
   - name: creat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: mode_t
   - name: fcntl
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -33,7 +33,7 @@ functions:
       - type: '...'
   - name: open
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
@@ -41,7 +41,7 @@ functions:
       - type: '...'
   - name: openat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int

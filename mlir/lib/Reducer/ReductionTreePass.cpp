@@ -40,7 +40,6 @@ static void applyPatterns(Region &region,
                           ArrayRef<ReductionNode::Range> rangeToKeep,
                           bool eraseOpNotInRange) {
   std::vector<Operation *> opsNotInRange;
-  std::vector<Operation *> opsInRange;
   size_t keepIndex = 0;
   for (const auto &op : enumerate(region.getOps())) {
     int index = op.index();
@@ -49,22 +48,21 @@ static void applyPatterns(Region &region,
       ++keepIndex;
     if (keepIndex == rangeToKeep.size() || index < rangeToKeep[keepIndex].first)
       opsNotInRange.push_back(&op.value());
-    else
-      opsInRange.push_back(&op.value());
   }
 
   // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the
   // pattern matching in above iteration. Besides, erase op not-in-range may end
   // up in invalid module, so `applyOpPatternsGreedily` with folding should come
   // before that transform.
-  for (Operation *op : opsInRange) {
-    // `applyOpPatternsGreedily` with folding returns whether the op is
-    // converted. Omit it because we don't have expectation this reduction will
-    // be success or not.
-    (void)applyOpPatternsGreedily(op, patterns,
-                                  GreedyRewriteConfig().setStrictness(
-                                      GreedyRewriteStrictness::ExistingOps));
-  }
+  if (!eraseOpNotInRange)
+    for (Operation *op : opsNotInRange) {
+      // `applyOpPatternsGreedily` with folding returns whether the op is
+      // converted. Omit it because we don't have expectation this reduction
+      // will be success or not.
+      (void)applyOpPatternsGreedily(op, patterns,
+                                    GreedyRewriteConfig().setStrictness(
+                                        GreedyRewriteStrictness::ExistingOps));
+    }
 
   if (eraseOpNotInRange)
     for (Operation *op : opsNotInRange) {

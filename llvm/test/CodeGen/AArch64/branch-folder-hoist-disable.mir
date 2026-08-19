@@ -1,0 +1,46 @@
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -verify-machineinstrs | FileCheck %s --check-prefix=HOIST
+# RUN: llc -o - %s -mtriple=aarch64 -run-pass branch-folder -branch-folder-hoist-common-code=false -verify-machineinstrs | FileCheck %s --check-prefix=NOHOIST
+
+# Check that -branch-folder-hoist-common-code=false disables the common-code
+# hoisting sub-phase of BranchFolding. With hoisting enabled (default) the
+# common "ADDXri $x0, 1, 0" is hoisted from both successors into bb.0; with
+# hoisting disabled it must remain duplicated in bb.1 and bb.2.
+
+name: func
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; HOIST-LABEL: name: func
+    ; HOIST-LABEL: bb.0:
+    ; HOIST: $x0 = ADDXri $x0, 1, 0
+    ; HOIST: CBZX $x1, %bb.2
+    ;
+    ; NOHOIST-LABEL: name: func
+    ; NOHOIST-LABEL: bb.0:
+    ; NOHOIST-NOT: $x0 = ADDXri $x0, 1, 0
+    ; NOHOIST: CBZX $x1, %bb.2
+    liveins: $x0, $x1
+    CBZX $x1, %bb.2
+
+  bb.1:
+    ; HOIST-LABEL: bb.1:
+    ; HOIST-NOT: $x0 = ADDXri $x0, 1, 0
+    ;
+    ; NOHOIST-LABEL: bb.1:
+    ; NOHOIST: $x0 = ADDXri $x0, 1, 0
+    liveins: $x0
+    $x0 = ADDXri $x0, 1, 0
+    $x0 = ADDXri $x0, 2, 0
+    RET_ReallyLR implicit $x0
+
+  bb.2:
+    ; HOIST-LABEL: bb.2:
+    ; HOIST-NOT: $x0 = ADDXri $x0, 1, 0
+    ;
+    ; NOHOIST-LABEL: bb.2:
+    ; NOHOIST: $x0 = ADDXri $x0, 1, 0
+    liveins: $x0
+    $x0 = ADDXri $x0, 1, 0
+    $x0 = ADDXri $x0, 3, 0
+    RET_ReallyLR implicit $x0
+...

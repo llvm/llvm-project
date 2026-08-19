@@ -1,0 +1,31 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Bazel port of openmp/runtime/unittests/CMakeLists.txt. The CMake build links
+# this against an `omp_testing` library that exports all symbols (a variant of
+# libomp built from the same objects). Bazel's static-link semantics give us
+# the same access without a separate library — the unittest depends directly
+# on `//openmp/runtime/src:omp_headers` for kmp_str.h and on the runtime
+# sources via the main libomp target so that `__kmp_str_*` symbols resolve.
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_test(
+    name = "KmpStrTests",
+    size = "small",
+    srcs = ["String/TestKmpStr.cpp"],
+    deps = [
+        "//openmp/runtime/src:omp",
+        "//openmp/runtime/src:omp_headers",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)

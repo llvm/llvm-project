@@ -40,6 +40,10 @@ Notes
   -std=c++(98|11|14|17|20)-or-later:
     This flag will cause multiple runs within the same check_clang_tidy
     execution. Make sure you don't have shared state across these runs.
+
+  -std=c++(98|11|14|17|20)-or-earlier:
+    Like -or-later, but expands to the given standard and every earlier one
+    instead.
 """
 
 import argparse
@@ -459,25 +463,43 @@ CPP_STANDARDS = [
 C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 
 
+def canonical_std_spelling(entry) -> str:
+    return entry if isinstance(entry, str) else entry[0]
+
+
 def expand_std(std: str) -> List[str]:
-    split_std, or_later, _ = std.partition("-or-later")
+    for expand_suffix, expand_later in (("-or-later", True), ("-or-earlier", False)):
+        split_std, matched_suffix, remainder = std.partition(expand_suffix)
 
-    if not or_later:
-        return [split_std]
+        if not matched_suffix:
+            continue
 
-    for standard_list in (CPP_STANDARDS, C_STANDARDS):
-        item = next(
-            (
-                i
-                for i, v in enumerate(standard_list)
-                if (split_std in v if isinstance(v, (list, tuple)) else split_std == v)
-            ),
-            None,
-        )
-        if item is not None:
-            return [split_std] + [
-                x if isinstance(x, str) else x[0] for x in standard_list[item + 1 :]
-            ]
+        if remainder:
+            # Keep malformed -or-later/-or-earlier spellings unchanged so
+            # clang diagnoses them.
+            return [std]
+
+        for standard_list in (CPP_STANDARDS, C_STANDARDS):
+            item = next(
+                (
+                    i
+                    for i, v in enumerate(standard_list)
+                    if (
+                        split_std in v
+                        if isinstance(v, (list, tuple))
+                        else split_std == v
+                    )
+                ),
+                None,
+            )
+            if item is not None:
+                if expand_later:
+                    return [split_std] + [
+                        canonical_std_spelling(x) for x in standard_list[item + 1 :]
+                    ]
+                return [canonical_std_spelling(x) for x in standard_list[:item]] + [
+                    split_std
+                ]
     return [std]
 
 
@@ -522,7 +544,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
         "-std",
         type=csv,
         default=None,
-        help="Passed to clang. Special -or-later values are expanded.",
+        help="Passed to clang. Special -or-later/-or-earlier values are expanded.",
     )
     parser.add_argument(
         "--match-partial-fixes",

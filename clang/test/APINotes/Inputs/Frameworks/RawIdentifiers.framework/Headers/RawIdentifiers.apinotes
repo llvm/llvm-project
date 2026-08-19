@@ -1,0 +1,14 @@
+---
+Name: RawIdentifiers
+Classes:
+- Name: NSSomeClass
+  SwiftName: '`Some Class`'
+  Methods:
+  - Selector: 'methodWithRawName:'
+    SwiftName: '`raw method`(`raw param`:)'
+    MethodKind: Instance
+Enumerators:
+- Name: NSSomeEnumWithRed
+  SwiftName: red
+- Name: NSSomeEnumWithRawName
+  SwiftName: '`raw constant`'

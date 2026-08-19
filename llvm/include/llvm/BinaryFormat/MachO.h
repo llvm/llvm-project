@@ -922,6 +922,12 @@ struct build_version_command {
   uint32_t ntools;   // number of tool entries following this
 };
 
+struct target_triple_command {
+  uint32_t cmd;     // LC_TARGET_TRIPLE
+  uint32_t cmdsize; // including string
+  uint32_t triple;  // target triple string
+};
+
 struct dyld_env_command {
   uint32_t cmd;
   uint32_t cmdsize;
@@ -1517,6 +1523,12 @@ inline void swapStruct(build_version_command &C) {
   sys::swapByteOrder(C.ntools);
 }
 
+inline void swapStruct(target_triple_command &C) {
+  sys::swapByteOrder(C.cmd);
+  sys::swapByteOrder(C.cmdsize);
+  sys::swapByteOrder(C.triple);
+}
+
 inline void swapStruct(build_tool_version &C) {
   sys::swapByteOrder(C.tool);
   sys::swapByteOrder(C.version);
@@ -1693,7 +1705,10 @@ enum CPUSubTypeARM {
   CPU_SUBTYPE_ARM_V7K = 12,
   CPU_SUBTYPE_ARM_V6M = 14,
   CPU_SUBTYPE_ARM_V7M = 15,
-  CPU_SUBTYPE_ARM_V7EM = 16
+  CPU_SUBTYPE_ARM_V7EM = 16,
+  CPU_SUBTYPE_ARM_V8M_MAIN = 17,
+  CPU_SUBTYPE_ARM_V8M_BASE = 18,
+  CPU_SUBTYPE_ARM_V8_1M_MAIN = 19,
 };
 
 enum CPUSubTypeARM64 : uint32_t {

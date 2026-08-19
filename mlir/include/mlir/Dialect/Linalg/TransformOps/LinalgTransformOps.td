@@ -432,6 +432,12 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
     If `apply_cleanup` is true then slice canonicalization is applied between
     fusion steps. If `use_forall` is true then tiling method generates a
     `scf.forall` loop instead of `scf.for` loops.
+
+    The optional `inner_tile_alignments` attribute forwards a per-dimension
+    `InnerTileAlignment` hint to the tiling driver for pack/unpack tiling.
+    These are only used to hint alignment or equality between the pack/unpack
+    operations inner tile sizes, and the loop tile sizes. No other operation
+    needs them.
   }];
 
   let arguments =
@@ -441,6 +447,7 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
         Optional<TransformAnyParamTypeOrAnyHandle> : $packed_tile_sizes,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
         DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_interchange,
+        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments,
         UnitAttr:$apply_cleanup,
         UnitAttr:$use_forall);
   let results = (outs TransformHandleTypeInterface:$transformed,
@@ -477,6 +484,8 @@ def FuseOp : Op<Transform_Dialect, "structured.fuse",
                                                     $static_tile_sizes) |
       `interchange` custom<DynamicIndexList>($tile_interchange, $static_tile_interchange)
     )
+    (`inner_tile_alignments` `=`
+        custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
     attr-dict `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
@@ -536,14 +545,24 @@ def FuseIntoContainingOp :
 
     This operation consumes the producer handle.
     This operation only reads the containing op handle.
+
+    The optional `inner_tile_alignments` attribute forwards a per-dimension
+    `InnerTileAlignment` hint to the tiling driver for pack/unpack tiling.
+    These are only used to hint alignment or equality between the pack/unpack
+    operations inner tile sizes, and the loop tile sizes. No other operation
+    needs them.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$producer_op,
-                       TransformHandleTypeInterface:$containing_op);
+                       TransformHandleTypeInterface:$containing_op,
+                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments);
   let results = (outs TransformHandleTypeInterface:$fused_op,
                       TransformHandleTypeInterface:$new_containing_op);
-  let assemblyFormat = "$producer_op `into` $containing_op attr-dict "
-                       " `:` functional-type(operands, results)";
+  let assemblyFormat = "$producer_op `into` $containing_op "
+                       "(`inner_tile_alignments` `=` "
+                       "custom<InnerTileAlignmentArray>($inner_tile_alignments)^)? "
+                       "attr-dict `:` functional-type(operands, results)";
+  let hasVerifier = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$producerOp, "Value":$containingOp)>
@@ -1641,7 +1660,21 @@ def DecomposeInterfaceOp : Op<Transform_Dialect, "structured.decompose_interface
      TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    TODO
+    Decomposes target operations into sequences of simpler ops.
+
+    #### Return modes
+
+    This operation ignores ops that do not implement the AggregatedOpInterface
+    and drops them in the return. If any such op is encountered, the transform
+    emits a silenceable failure.
+
+    If all the operations referred to by the `target` handle decompose
+    properly, the transform succeeds. Otherwise the transform produces a
+    silenceable failure.
+    The return handle points to a subset of successfully produced operations.
+    For each target, the handle contains one value per its result. That is,
+    the handle contains at most as many ops as the targets had results.
+    The handle can be empty.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
@@ -2213,7 +2246,8 @@ def ContinuousTileSizesOp : Op<Transform_Dialect, "structured.continuous_tile_si
 //===----------------------------------------------------------------------===//
 
 def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
+       [AttrSizedOperandSegments,
+        DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -2237,6 +2271,14 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     generated loops. The number of loops is the number of tile sizes that are
     statically known to be non-zero.
 
+    Additionally, tile sizes can also be provided as a single handle containing
+    variadic number of values. In that case, all created loops are assigned to
+    a single return handle. For each target, corresponding loops are appended
+    to the return handle in the same order as target operations.
+
+    Loop interchange permutation can be provided as either static attributes,
+    dynamic values or a single handle containing variadic number of values.
+
     #### Return modes
 
     On success, the resulting handles are associated with co-indexed lists of
@@ -2252,13 +2294,23 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
 
     If the internal implementation of tiling for any of the operations fails,
     produces a definite failure.
+
+    The optional `inner_tile_alignments` attribute forwards a per-dimension
+    `InnerTileAlignment` hint to the tiling driver for pack/unpack tiling.
+    These are only used to hint alignment or equality between the pack/unpack
+    operations inner tile sizes, and the loop tile sizes. No other operation
+    needs them.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformAnyParamTypeOrAnyHandle>:$dynamic_sizes,
+                   Variadic<TransformAnyParamTypeOrAnyHandle>:$interchange,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$packed_interchange,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
-                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_interchange,
+                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes,
+                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$inner_tile_alignments);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
   let builders = [
@@ -2274,6 +2326,12 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
+    OpBuilder<(ins "TypeRange":$loopTypes,
+                   "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedInterchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
@@ -2284,15 +2342,26 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                    CArg<"ArrayRef<int64_t>", "{}">:$interchange,
                    CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
                       $scalableSizes)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   "ArrayRef<OpFoldResult>":$mixedInterchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
   ];
 
   let assemblyFormat = [{
     $target
-      `tile_sizes` custom<DynamicIndexList>(
+      `tile_sizes` custom<PackedOrDynamicIndexList>(
+        $packed_tile_sizes,
         $dynamic_sizes,
         $static_sizes,
         $scalable_sizes)
-      (`interchange` `=` $interchange^)?
+      (`interchange` `=` custom<PackedOrDynamicIndexList>(
+        $packed_interchange,
+        $interchange,
+        $static_interchange)^)?
+      (`inner_tile_alignments` `=`
+          custom<InnerTileAlignmentArray>($inner_tile_alignments)^)?
     attr-dict
     `:` functional-type(operands, results)
   }];
@@ -2303,6 +2372,10 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
     /// Returns the list of tile sizes, which may be static (Attribute) or
     /// dynamic (Value).
     SmallVector<OpFoldResult> getMixedSizes();
+
+    /// Returns the interchange, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedInterchange();
   }];
 }
 

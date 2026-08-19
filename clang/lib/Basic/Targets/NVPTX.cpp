@@ -64,15 +64,13 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   // Define available target features
   // These must be defined in sorted order!
   NoAsmVariants = true;
-  GPU = OffloadArch::Unused;
+  GPU = OffloadArch::getUnused();
 
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  // TODO: Make shortptr a proper ABI?
-  DataLayoutString =
-      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
+  DataLayoutString = Triple.computeDataLayout();
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -160,6 +158,14 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   //   do the same.
 }
 
+bool NVPTXTargetInfo::setABI(const std::string &Name) {
+  if (Name != "shortptr")
+    return false;
+
+  resetDataLayout(getTriple().computeDataLayout(Name));
+  return true;
+}
+
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {
   return llvm::ArrayRef(GCCRegNames);
 }
@@ -176,7 +182,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__NVPTX__");
 
   // Skip setting architecture dependent macros if undefined.
-  if (!IsNVIDIAOffloadArch(GPU))
+  if (!GPU.isNVPTX())
     return;
 
   if (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice || !HostTarget) {
@@ -184,9 +190,13 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
     unsigned ArchID = CudaArchToID(GPU);
     Builder.defineMacro("__CUDA_ARCH__", llvm::Twine(ArchID));
 
-    if (IsNVIDIAAcceleratedOffloadArch(GPU))
+    if (IsNVIDIAAcceleratedOffloadArch(GPU)) {
+      Builder.defineMacro("__CUDA_ARCH_SPECIFIC__", llvm::Twine(ArchID));
       Builder.defineMacro(
           "__CUDA_ARCH_FEAT_SM" + llvm::Twine(ArchID / 10) + "_ALL", "1");
+    }
+    if (IsNVIDIAFamilySpecificOffloadArch(GPU))
+      Builder.defineMacro("__CUDA_ARCH_FAMILY_SPECIFIC__", llvm::Twine(ArchID));
   }
 }
 

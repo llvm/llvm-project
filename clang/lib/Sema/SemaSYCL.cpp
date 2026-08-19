@@ -13,6 +13,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/StmtSYCL.h"
+#include "clang/AST/SubobjectVisitor.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Sema/Attr.h"
@@ -665,6 +666,109 @@ OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
   return OFD;
 }
 
+class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
+  SemaSYCL &SemaSYCLRef;
+  bool IsValid = true;
+  using ObjectAccess =
+      llvm::PointerUnion<const ParmVarDecl *, const CXXBaseSpecifier *,
+                         const FieldDecl *>;
+  SmallVector<ObjectAccess, 4> ObjectAccessPath;
+
+  void emitObjectAccessPathNotes() {
+    for (auto Parent : llvm::reverse(ObjectAccessPath)) {
+      if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
+        const CXXRecordDecl *ParentRD = cast<CXXRecordDecl>(FD->getParent());
+        if (ParentRD->isLambda()) {
+          SemaSYCLRef.Diag(ParentRD->getLocation(), diag::note_within_capture)
+              << ParentRD->getCapture(FD->getFieldIndex())->getCapturedVar();
+        } else {
+          SemaSYCLRef.Diag(ParentRD->getLocation(),
+                           diag::note_within_field_of_type)
+              << ParentRD;
+        }
+      } else if (auto *BS = Parent.dyn_cast<const CXXBaseSpecifier *>()) {
+        CXXRecordDecl *RD = BS->getType()->getAsCXXRecordDecl();
+        assert(RD);
+        SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
+            << RD;
+      } else {
+        auto *Param = cast<const ParmVarDecl *>(Parent);
+        SemaSYCLRef.Diag(Param->getBeginLoc(), diag::note_within_param_of_type)
+            << Param << Param->getType();
+      }
+    }
+  }
+
+public:
+  KernelParamsChecker(SemaSYCL &SR, SourceLocation Loc)
+      : ConstSubobjectVisitor<KernelParamsChecker>(SR.getASTContext()),
+        SemaSYCLRef(SR) {}
+
+  void checkParameter(const ParmVarDecl *PVD) {
+    ObjectAccessPath.push_back(PVD);
+    // Check the immediate type of the parameter.
+    if (checkType(PVD->getType())) {
+      // If type checking wasn't short circuited, visit subobjects to check
+      // them.
+      visit(PVD->getType());
+    }
+    ObjectAccessPath.pop_back();
+    assert(ObjectAccessPath.empty());
+  }
+
+  bool visitBaseSpecifierPre(const CXXBaseSpecifier *BS) {
+    ObjectAccessPath.push_back(BS);
+    return checkType(BS->getType());
+  }
+
+  bool visitFieldDeclPre(const FieldDecl *FD) {
+    ObjectAccessPath.push_back(FD);
+    return checkType(FD->getType());
+  }
+
+  // Returns true if subobjects should be visited and false otherwise.
+  bool checkType(QualType Ty) {
+    if (Ty->isReferenceType()) {
+      auto DirectParent = ObjectAccessPath.back();
+      // Reference cannot be a base, so just assume we came via a FieldDecl.
+      if (isa<const ParmVarDecl *>(DirectParent)) {
+        // If reference is a kernel parameter, there is nothing to do. We allow
+        // references in direct kernel parameters for better performance of the
+        // host code and we eliminate them when building actual kernel.
+        return true;
+      }
+
+      auto *DirectFieldParent = cast<const FieldDecl *>(DirectParent);
+      SemaSYCLRef.Diag(DirectFieldParent->getLocation(),
+                       diag::err_bad_kernel_param_type)
+          << DirectFieldParent->getType();
+      emitObjectAccessPathNotes();
+
+      // Don't visit the type of the reference since any further invalid
+      // kernel parameter types contained within the referenced type
+      // might not be relevant once the programmer addresses the
+      // invalid use of a reference.
+      IsValid = false;
+      return false;
+    }
+    return true;
+  }
+
+  void visitFieldDeclPost(const FieldDecl *FD) { ObjectAccessPath.pop_back(); }
+  void visitBaseSpecifierPost(const CXXBaseSpecifier *BS) {
+    ObjectAccessPath.pop_back();
+  }
+
+  bool isInvalid() { return !IsValid; }
+};
+
+bool verifyKernelParams(FunctionDecl *FD, SemaSYCL &SemaSYCLRef) {
+  KernelParamsChecker KAC(SemaSYCLRef, FD->getLocation());
+  for (auto Param : FD->parameters())
+    KAC.checkParameter(Param);
+  return KAC.isInvalid();
+}
+
 } // unnamed namespace
 
 StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
@@ -690,6 +794,8 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
+  if (verifyKernelParams(FD, *this))
+    return StmtError();
 
   // Build the outline of the synthesized device entry point function.
   OutlinedFunctionDecl *OFD =

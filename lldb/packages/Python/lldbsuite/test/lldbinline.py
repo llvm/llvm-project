@@ -197,7 +197,9 @@ def MakeInlineTest(__file, __globals, decorators=None, name=None, build_dict=Non
         file_basename = os.path.basename(__file)
         name, _ = os.path.splitext(file_basename)
 
-    test_func = ApplyDecoratorsToFunction(InlineTest._test, decorators)
+    test_func = ApplyDecoratorsToFunction(
+        FreshTestFunction(InlineTest._test), decorators
+    )
     # Build the test case
     test_class = type(
         name, (InlineTest,), dict(test=test_func, name=name, _build_dict=build_dict)

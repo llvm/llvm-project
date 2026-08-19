@@ -60,6 +60,8 @@ private:
                            MachineBasicBlock::iterator MBBI);
   bool expandPseudoReadVLENBViaVSETVLIX0(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI);
+  bool expandPseudoClearFPR64(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI);
 #ifndef NDEBUG
   unsigned getInstSizeInBytes(const MachineFunction &MF) const {
     unsigned Size = 0;
@@ -192,6 +194,8 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandVMSET_VMCLR(MBB, MBBI, RISCV::VMXNOR_MM);
   case RISCV::PseudoReadVLENBViaVSETVLIX0:
     return expandPseudoReadVLENBViaVSETVLIX0(MBB, MBBI);
+  case RISCV::PseudoClearFPR64:
+    return expandPseudoClearFPR64(MBB, MBBI);
   }
 
   return false;
@@ -349,6 +353,7 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   // Use branch opcode to select appropriate Xqcicm instruction
   unsigned BCC = MI.getOperand(MI.getNumExplicitOperands() - 3).getImm();
   std::optional<unsigned> CMovRegOpcode;
+  bool IsSigned = true;
   unsigned CMovImmOpcode;
   switch (BCC) {
   default:
@@ -378,26 +383,32 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     CMovImmOpcode = RISCV::QC_MVGEUI;
     break;
   case RISCV::QC_BEQI:
-    CMovImmOpcode = RISCV::QC_MVEQI;
-    break;
-  case RISCV::QC_BNEI:
     CMovImmOpcode = RISCV::QC_MVNEI;
     break;
-  case RISCV::QC_BLTI:
-    CMovImmOpcode = RISCV::QC_MVLTI;
+  case RISCV::QC_BNEI:
+    CMovImmOpcode = RISCV::QC_MVEQI;
     break;
-  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTI:
     CMovImmOpcode = RISCV::QC_MVGEI;
     break;
+  case RISCV::QC_BGEI:
+    CMovImmOpcode = RISCV::QC_MVLTI;
+    break;
   case RISCV::QC_BLTUI:
-    CMovImmOpcode = RISCV::QC_MVLTUI;
+    CMovImmOpcode = RISCV::QC_MVGEUI;
+    IsSigned = false;
     break;
   case RISCV::QC_BGEUI:
-    CMovImmOpcode = RISCV::QC_MVGEUI;
+    CMovImmOpcode = RISCV::QC_MVLTUI;
+    IsSigned = false;
     break;
   }
 
-  if (RHS.isImm() && isInt<5>(RHS.getImm())) {
+  if (RHS.isImm()) {
+    if ((!isInt<5>(RHS.getImm()) || !IsSigned) &&
+        (!isUInt<5>(RHS.getImm()) || IsSigned))
+      return false;
+
     // $dst = PseudoCCMOVGPR $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // $dst = PseudoCCMOVGPRNoX0 $falsev(=$dst), $truev, $opcode, $lhs, $rhs_imm
     // =>
@@ -616,6 +627,23 @@ bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
       .addReg(Dst, RegState::Define)
       .addReg(RISCV::X0, RegState::Kill)
       .addImm(VTypeImm);
+
+  MBBI->eraseFromParent();
+  return true;
+}
+
+bool RISCVExpandPseudo::expandPseudoClearFPR64(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  Register Dst = MBBI->getOperand(0).getReg();
+
+  if (STI->is64Bit()) {
+    BuildMI(MBB, MBBI, DL, TII->get(RISCV::FMV_D_X), Dst).addReg(RISCV::X0);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(RISCV::FCVT_D_W), Dst)
+        .addReg(RISCV::X0)
+        .addImm(RISCVFPRndMode::RNE);
+  }
 
   MBBI->eraseFromParent();
   return true;

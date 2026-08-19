@@ -17,7 +17,7 @@ class PassRegistry;
 
 /// Lower llvm.global_ctors and llvm.global_dtors to special kernels.
 class SPIRVCtorDtorLoweringPass
-    : public PassInfoMixin<SPIRVCtorDtorLoweringPass> {
+    : public OptionalPassInfoMixin<SPIRVCtorDtorLoweringPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

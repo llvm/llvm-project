@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
@@ -116,6 +117,7 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetSubtargetInfo *STI = nullptr;
   MachineLoopInfo *MLI = nullptr;
   TargetSchedModel TSchedModel;
 
@@ -167,6 +169,7 @@ char X86CmovConversionLegacy::ID = 0;
 void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
   AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
 }
 
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
@@ -181,11 +184,11 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
                     << "**********\n");
 
   bool Changed = false;
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  STI = &MF.getSubtarget();
   MRI = &MF.getRegInfo();
-  TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  TSchedModel.init(&STI);
+  TII = STI->getInstrInfo();
+  TRI = STI->getRegisterInfo();
+  TSchedModel.init(STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside
   // of potentially hot loops, we want to quickly remove all CMOVs (ForceAll) or
@@ -546,7 +549,7 @@ bool X86CmovConversionImpl::checkForProfitableCmovCandidates(
   //   To be conservative, the gain of such CMOV transformation should cover at
   //   at least 25% of branch-misprediction-penalty.
   //===--------------------------------------------------------------------===//
-  unsigned MispredictPenalty = TSchedModel.getMCSchedModel()->MispredictPenalty;
+  unsigned MispredictPenalty = STI->getMispredictionPenalty();
   CmovGroups TempGroups;
   std::swap(TempGroups, CmovInstGroups);
   for (auto &Group : TempGroups) {

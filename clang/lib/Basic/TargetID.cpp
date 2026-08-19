@@ -11,7 +11,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Path.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <optional>
@@ -24,15 +24,16 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
                                      llvm::StringRef Proc) {
   // Entries in returned vector should be in alphabetical order.
   llvm::SmallVector<llvm::StringRef, 4> Ret;
-  auto ProcKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Proc)
-                               : llvm::AMDGPU::parseArchR600(Proc);
+  if (!T.isAMDGCN())
+    return Ret;
+  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Proc);
   if (ProcKind == llvm::AMDGPU::GK_NONE)
     return Ret;
-  auto Features = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
-                               : llvm::AMDGPU::getArchAttrR600(ProcKind);
+  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
   if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
     Ret.push_back("sramecc");
-  if (Features & llvm::AMDGPU::FEATURE_XNACK)
+  // Only allow xnack in target ID if the processor supports on/off modes.
+  if (Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES)
     Ret.push_back("xnack");
   return Ret;
 }
@@ -89,6 +90,8 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
 
   while (!Features.empty()) {
     auto Splits = Features.split(':');
+    if (Splits.first.empty())
+      return std::nullopt;
     auto Sign = Splits.first.back();
     auto Feature = Splits.first.drop_back();
     if (Sign != '+' && Sign != '-')

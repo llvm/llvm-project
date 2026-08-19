@@ -64,7 +64,7 @@
 ; SPIRV-O0-NEXT:      SPIRV post legalizer
 ; SPIRV-O0-NEXT:      Analysis for ComputingKnownBits
 ; SPIRV-O0-NEXT:      Dominator Tree Construction
-; SPIRV-O0-NEXT:      Natural Loop Information
+; SPIRV-O0-NEXT:      Cycle Info Analysis
 ; SPIRV-O0-NEXT:      Lazy Branch Probability Analysis
 ; SPIRV-O0-NEXT:      Lazy Block Frequency Analysis
 ; SPIRV-O0-NEXT:      InstructionSelect
@@ -125,7 +125,7 @@
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
-; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Block Frequency Analysis
@@ -147,6 +147,7 @@
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Block Frequency Analysis
@@ -169,7 +170,7 @@
 ; SPIRV-Opt-NEXT:      Insert stack protectors
 ; SPIRV-Opt-NEXT:      Analysis containing CSE Info
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
-; SPIRV-Opt-NEXT:      Natural Loop Information
+; SPIRV-Opt-NEXT:      Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -197,13 +198,15 @@
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions
 ; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Natural Loop Construction
+; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
+; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Early Machine Loop Invariant Code Motion
 ; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
+; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination
 ; SPIRV-Opt-NEXT:      MachinePostDominator Tree Construction
-; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine code sinking
 ; SPIRV-Opt-NEXT:      Peephole Optimizations
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions

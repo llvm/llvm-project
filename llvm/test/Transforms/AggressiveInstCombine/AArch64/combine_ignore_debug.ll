@@ -41,11 +41,13 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)
 !1 = !DIFile(filename: "foo.c", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(scope: !4)
-!4 = distinct !DISubprogram(unit: !0)
+!4 = distinct !DISubprogram(type: !7, unit: !0)
 !5 = !DILocation(scope: !4)

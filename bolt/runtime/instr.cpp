@@ -1659,8 +1659,6 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
   TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
@@ -1694,6 +1692,12 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
         new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+
+  // Set these up after initializing indirect call counters. Otherwise,
+  // background threads spawned through global constructors might try to access
+  // uninitialized counters.
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
 
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group

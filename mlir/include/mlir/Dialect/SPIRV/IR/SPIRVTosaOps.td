@@ -223,7 +223,8 @@ class SPIRV_TosaReductionOp<string mnemonic, int opcode, list<Trait> traits = []
   SPIRV_TosaOpWithResult<mnemonic, opcode, !listconcat(traits, [
   AllElementTypesMatch<["input", "output"]>,
   AllRanksMatch<["input", "output"]>,
-  AxisValueLessThanRankOf<"input">])> {
+  AxisValueLessThanRankOf<"input">,
+  ReductionOutputShapeMatchesInputAndAxis<"input", "output">])> {
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     ::mlir::spirv::TensorArmType getInputType() {
@@ -522,7 +523,10 @@ def SPIRV_TosaDepthwiseConv2DOp : SPIRV_TosaConvolutionOp<"DepthwiseConv2D", 4, 
 }
 
 
-def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
+def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure,
+  AllShapesMatch<["input_real", "input_imag"]>,
+  Struct2TensorArmShapesMatchInput<"input_real">,
+  TensorDimsArePowerOfTwo<"input_real", [1, 2]>]> {
   let summary = "Performs FFT2D operation on the input.";
 
   let description = [{
@@ -575,6 +579,7 @@ def SPIRV_TosaFFT2DOp : SPIRV_TosaOpWithComplexResult<"FFT2D", 5, [Pure]> {
 
 
 def SPIRV_TosaMatMulOp : SPIRV_TosaOpWithResult<"MatMul", 6, [NoMemoryEffect,
+  MatMulShapesMatch<"A", "B", "output">,
   TypeConstraintImplicationOn<"A", I8, "output", [I32]>,
   TypeConstraintImplicationOn<"A", I16, "output", [I64]>,
   TypeConstraintImplicationOn<"A", BF16, "output", [F32]>,
@@ -687,7 +692,9 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
 }
 
 
-def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
+def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure,
+  Struct2TensorArmRFFT2DShapesMatchInput<"input_real">,
+  TensorDimsArePowerOfTwo<"input_real", [1, 2]>]> {
   let summary = "Performs RFFT2D operation on the input.";
 
   let description = [{
@@ -794,7 +801,9 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaConvolutionOp<"TransposeConv2D", 9, 
 
 def SPIRV_TosaClampOp : SPIRV_TosaOpWithResult<"Clamp", 10, [Pure,
   AllTypesMatch<["input", "output"]>,
-  AllElementTypesMatch<["input", "output", "min_val", "max_val"]>]> {
+  AllElementTypesMatch<["input", "output", "min_val", "max_val"]>,
+  ClampBoundsAreNotNaN<"min_val", "max_val">,
+  ClampMinValLessThanOrEqualToMaxVal<"min_val", "max_val">]> {
   let summary = "Computes Clamp(min, max).";
 
   let description = [{
@@ -2217,6 +2226,8 @@ def SPIRV_TosaConcatOp : SPIRV_TosaOpWithResult<"Concat", 54, [Pure,
       return getInput1().getTypes();
     }
   }];
+
+  let hasVerifier = 1;
 }
 
 
@@ -2633,7 +2644,8 @@ def SPIRV_TosaResizeOp : SPIRV_TosaOpWithResult<"Resize", 63, [Pure,
   TypeConstraintImplicationOn<"input", F32, "output", [F32]>,
   TypeConstraintImplicationOn<"input", BF16, "output", [BF16]>,
   TypeConstraintImplicationOn<"input", I8, "output", [I8, I32]>,
-  TypeConstraintImplicationOn<"input", I16, "output", [I16, I64]>]> {
+  TypeConstraintImplicationOn<"input", I16, "output", [I16, I64]>,
+  NHWCInputOutputShapeMatch<"input", "output">]> {
   let summary = "Resize operation, supports various resize/upsample modes.";
 
   let description = [{

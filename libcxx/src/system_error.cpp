@@ -21,14 +21,15 @@
 
 #include "include/config_elast.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  include <windows.h>
 #  include <winerror.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 namespace {
 std::optional<errc> __win_err_to_errc(int err) {
@@ -148,7 +149,7 @@ constexpr size_t strerror_buff_size = 1024;
 
 string do_strerror_r(int ev);
 
-#  if defined(_LIBCPP_MSVCRT_LIKE)
+#  ifdef _WIN32
 string do_strerror_r(int ev) {
   char buffer[strerror_buff_size];
   if (::strerror_s(buffer, strerror_buff_size, ev) == 0)
@@ -271,7 +272,7 @@ public:
 const char* __system_error_category::name() const noexcept { return "system"; }
 
 string __system_error_category::message(int ev) const {
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
   std::string result;
   char* str               = nullptr;
   unsigned long num_chars = ::FormatMessageA(
@@ -303,7 +304,7 @@ string __system_error_category::message(int ev) const {
 }
 
 error_condition __system_error_category::default_error_condition(int ev) const noexcept {
-#ifdef _LIBCPP_WIN32API
+#ifdef _WIN32
   // Remap windows error codes to generic error codes if possible.
   if (ev == 0)
     return error_condition(0, generic_category());
@@ -368,4 +369,5 @@ void __throw_system_error(int ev, const char* what_arg) {
 #endif
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

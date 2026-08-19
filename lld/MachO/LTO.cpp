@@ -39,7 +39,8 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 static lto::Config createConfig() {
   lto::Config c;
   c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe;
+  c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
+                          config->icfLevel == ICFLevel::safe_thunks;
   for (StringRef C : config->mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
   for (StringRef pluginFn : config->passPlugins)
@@ -86,6 +87,11 @@ static lto::Config createConfig() {
 static void saveOrHardlinkBuffer(StringRef buffer, const Twine &path,
                                  std::optional<StringRef> originalPath) {
   if (originalPath) {
+    // Delete the hardlink if it exists. Otherwise, it is possible for the
+    // create_hard_link to fail (as the hardlink exists already), and when
+    // saveBuffer is subsequently called the hardlink'd file may get truncated
+    // and reading from it causes a crash.
+    fs::remove(path);
     auto err = fs::create_hard_link(*originalPath, path);
     if (!err)
       return;
@@ -278,7 +284,8 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   }
 
   if (!config->thinLTOCacheDir.empty())
-    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
+    check(
+        pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files));
 
   std::vector<ObjFile *> ret;
   for (unsigned i = 0; i < maxTasks; ++i) {

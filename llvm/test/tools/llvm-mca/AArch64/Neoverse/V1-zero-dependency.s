@@ -76,4 +76,4 @@ cmp x0, #4
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     0.0    0.0    1.5       mov	x0, x1
 # CHECK-NEXT: 1.     4     1.3    1.3    0.0       cmp	x0, #4
-# CHECK-NEXT:        4     0.6    0.6    0.8       <total>
+# CHECK-NEXT:        8     0.6    0.6    0.8       <total>

@@ -164,7 +164,7 @@ end
 !contains
 ! subroutine s1(x)
 !  use m1,only:i
-!  type(t5(l=int(i,kind=4)))::x
+!  type(t5(l=__builtin_int(i,kind=4)))::x
 ! end
 ! subroutine s2(x)
 !  use m1,only:i

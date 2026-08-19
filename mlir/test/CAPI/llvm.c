@@ -276,12 +276,17 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
-      ctx, recId0, false, id, LLVMDWARFSourceLanguageC99, file, foo, false,
-      MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault, bar, 0,
-      NULL);
+  // sourceLanguageDialect 1 is DW_LLVM_LANG_DIALECT_simt, as defined by
+  // LLVM's dwarf::LanguageDialectAttribute enum.
+  MlirAttribute compile_unit =
+      mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+          ctx, recId0, false, id, LLVMDWARFSourceLanguageC99,
+          /*sourceLanguageDialect=*/1, file, foo, false,
+          MlirLLVMDIEmissionKindFull, false, MlirLLVMDINameTableKindDefault,
+          bar, 0, NULL);
 
-  // CHECK: #llvm.di_compile_unit<{{.*}}>
+  // CHECK: #llvm.di_compile_unit<{{.*}}sourceLanguageDialect =
+  // CHECK-SAME: DW_LLVM_LANG_DIALECT_simt{{.*}}>
   mlirAttributeDump(compile_unit);
 
   // CHECK: #llvm.di_compile_unit<recId = {{.*}}, isRecSelf = true>
@@ -378,10 +383,15 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_composite_type<recId = {{.*}}, isRecSelf = true>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGetRecSelf(recId1));
 
+  MlirAttribute discriminator = mlirLLVMDIDerivedTypeAttrGet(
+      ctx, /*DW_TAG_member=*/0x0d, bar, file, 1, compile_unit, di_type, 8, 0, 0,
+      MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, mlirAttributeGetNull());
+
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
       ctx, recId1, false, 0, foo, file, 1, compile_unit, di_type, 0, 64, 8, 1,
-      &di_type, expression, expression, expression, expression));
+      &di_type, expression, expression, expression, expression, bar,
+      discriminator));
 }
 
 int main(void) {

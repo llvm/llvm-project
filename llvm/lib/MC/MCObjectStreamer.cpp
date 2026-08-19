@@ -175,6 +175,7 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
+  BundleLocked = false;
   FragStorage.clear();
   FragSpace = 0;
   SpecialFragAllocator.Reset();
@@ -272,12 +273,15 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
 void MCObjectStreamer::emitPendingAssignments(MCSymbol *Symbol) {
   auto Assignments = pendingAssignments.find(Symbol);
-  if (Assignments != pendingAssignments.end()) {
-    for (const PendingAssignment &A : Assignments->second)
-      emitAssignment(A.Symbol, A.Value);
+  if (Assignments == pendingAssignments.end())
+    return;
 
-    pendingAssignments.erase(Assignments);
-  }
+  // emitAssignment can recursively re-enter emitPendingAssignments for
+  // other symbols, so move the list out and erase before iterating.
+  SmallVector<PendingAssignment, 1> Pending = std::move(Assignments->second);
+  pendingAssignments.erase(Assignments);
+  for (const PendingAssignment &A : Pending)
+    emitAssignment(A.Symbol, A.Value);
 }
 
 // Emit a label at a previously emitted fragment/offset position. This must be
@@ -412,6 +416,23 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
   MCAsmBackend &Backend = Assembler.getBackend();
+
+  auto relaxToFixpoint = [&](MCInst I) {
+    while (Backend.mayNeedRelaxation(I.getOpcode(), I.getOperands(), STI))
+      Backend.relaxInstruction(I, STI);
+    return I;
+  };
+
+  // Bundling emits one relaxable fragment per instruction so that finishLayout
+  // can fold padding into instruction encodings.
+  if (Assembler.isBundlingEnabled()) {
+    if (BundleLocked || Assembler.getRelaxAll())
+      emitInstToFragment(relaxToFixpoint(Inst), STI);
+    else
+      emitInstToFragment(Inst, STI);
+    return;
+  }
+
   if (!(Backend.mayNeedRelaxation(Inst.getOpcode(), Inst.getOperands(), STI) ||
         Backend.allowEnhancedRelaxation())) {
     emitInstToData(Inst, STI);
@@ -420,11 +441,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
 
   // Otherwise, relax and emit it as data if RelaxAll is specified.
   if (Assembler.getRelaxAll()) {
-    MCInst Relaxed = Inst;
-    while (Backend.mayNeedRelaxation(Relaxed.getOpcode(), Relaxed.getOperands(),
-                                     STI))
-      Backend.relaxInstruction(Relaxed, STI);
-    emitInstToData(Relaxed, STI);
+    emitInstToData(relaxToFixpoint(Inst), STI);
     return;
   }
 
@@ -612,7 +629,7 @@ void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           bool PrologueEnd, bool IsStmt,
                                           StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   // Emit a label at the current position and record it in the CodeViewContext.
@@ -680,12 +697,12 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
-                                         const MCSubtargetInfo *STI,
+                                         const MCSubtargetInfo &STI,
                                          unsigned MaxBytesToEmit) {
   auto *F = getCurrentFragment();
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
-  F->STI = STI;
+  F->STI = &STI;
 }
 
 void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,

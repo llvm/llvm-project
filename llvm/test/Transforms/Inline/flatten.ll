@@ -203,43 +203,5 @@ define i32 @test_mutual_recursion() flatten {
   ret i32 %r
 }
 
-; Always-inline function with flatten that becomes dead after inlining.
-define internal i32 @alwaysinline_flatten_callee() alwaysinline flatten {
-  ret i32 5
-}
-
-define i32 @test_alwaysinline_flatten() {
-; ALWAYS-LABEL: define i32 @test_alwaysinline_flatten() {
-; ALWAYS-NEXT:    ret i32 5
-;
-; INLINE-LABEL: define i32 @test_alwaysinline_flatten() {
-; INLINE-NEXT:    ret i32 5
-;
-; MANDATORY-LABEL: define i32 @test_alwaysinline_flatten() {
-; MANDATORY-NEXT:    ret i32 5
-;
-  %r = call i32 @alwaysinline_flatten_callee() alwaysinline
-  ret i32 %r
-}
-
-; Flatten with alwaysinline: callees are flattened first, then the
-; flattened function is always-inlined into callers.
-define internal i32 @inner() {
-  ret i32 7
-}
-
-define internal i32 @alwaysinline_flatten_two_levels() alwaysinline flatten {
-  %r = call i32 @inner()
-  ret i32 %r
-}
-
-define i32 @test_alwaysinline_flatten_two_levels() {
-; CHECK-LABEL: define i32 @test_alwaysinline_flatten_two_levels() {
-; CHECK-NEXT:    ret i32 7
-;
-  %r = call i32 @alwaysinline_flatten_two_levels() alwaysinline
-  ret i32 %r
-}
-
 ; Check that optimization remark is emitted for recursive calls during flattening.
 ; REMARK: remark: {{.*}} 'test_direct_recursion' is not inlined into 'test_direct_recursion': recursive call during flattening

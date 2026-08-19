@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -33,6 +34,7 @@
 using namespace llvm;
 using namespace LegalityPredicates;
 using namespace LegalizeMutations;
+using namespace MIPatternMatch;
 
 static LegalityPredicate
 typeIsLegalIntOrFPVec(unsigned TypeIdx,
@@ -176,10 +178,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customIf(typeIsLegalBoolVec(1, BoolVecTys, ST))
       .maxScalar(0, sXLen);
 
-  getActionDefinitionsBuilder(G_SEXT_INREG)
-      .customFor({sXLen})
-      .clampScalar(0, sXLen, sXLen)
-      .lower();
+  getActionDefinitionsBuilder(G_TRUNC).alwaysLegal();
+
+  {
+    LegalityPredicate ValidSextInRegWidth = all(sizeIs(0, 64), immIs(0, 32));
+
+    if (STI.hasStdExtZbb())
+      ValidSextInRegWidth =
+          LegalityPredicates::any(ValidSextInRegWidth, immInSet(0, {8, 16}));
+
+    getActionDefinitionsBuilder(G_SEXT_INREG)
+        .legalIf(all(typeIs(0, sXLen), ValidSextInRegWidth))
+        .clampScalar(0, sXLen, sXLen)
+        .lower();
+  }
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -204,7 +216,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                  {{s32, s32}})
       .lower();
 
-  getActionDefinitionsBuilder(G_BITREVERSE).maxScalar(0, sXLen).lower();
+  getActionDefinitionsBuilder(G_BITREVERSE)
+      .customFor(ST.hasStdExtZbkb(), {s8})
+      .maxScalar(0, sXLen)
+      .lower();
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
       all(LegalityPredicates::any(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
@@ -219,8 +234,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
     BSWAPActions.maxScalar(0, sXLen).lower();
 
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
-  auto &CountZerosUndefActions =
-      getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF});
+  auto &CountZerosPoisonActions =
+      getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
   if (ST.hasStdExtZbb()) {
     CountZerosActions.legalFor({{sXLen, sXLen}})
         .customFor({{s32, s32}})
@@ -229,9 +244,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         .scalarSameSizeAs(1, 0);
   } else {
     CountZerosActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0).lower();
-    CountZerosUndefActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
+    CountZerosPoisonActions.maxScalar(0, sXLen).scalarSameSizeAs(1, 0);
   }
-  CountZerosUndefActions.lower();
+  CountZerosPoisonActions.lower();
 
   auto &CountSignActions = getActionDefinitionsBuilder(G_CTLS);
   if (ST.hasStdExtP()) {
@@ -433,6 +448,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor({{p0, sXLen}})
       .clampScalar(1, sXLen, sXLen);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+
   getActionDefinitionsBuilder(G_BRCOND).legalFor({sXLen}).minScalar(0, sXLen);
 
   getActionDefinitionsBuilder(G_BRJT).customFor({{p0, sXLen}});
@@ -520,7 +537,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
-  getActionDefinitionsBuilder(G_MEMCPY_INLINE).lower();
+  getActionDefinitionsBuilder({G_MEMCPY_INLINE, G_MEMSET_INLINE}).lower();
 
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
@@ -583,7 +600,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .customFor(ST.hasStdExtF(), {{s1, s32}})
       .customFor(ST.hasStdExtD(), {{s1, s64}})
       .customFor(ST.hasStdExtZfh(), {{s1, s16}})
-      .lowerFor({{s1, s32}, {s1, s64}});
+      .lower();
 
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor(ST.hasStdExtF(), {s32})
@@ -605,6 +622,21 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
+
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .legalFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .legalFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      .widenScalarIf(typeIs(1, s16), LegalizeMutations::changeTo(1, s32))
+      .libcallFor({{s32, s32},
+                   {s64, s32},
+                   {s32, s64},
+                   {s64, s64},
+                   {s32, s128},
+                   {s64, s128}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalFor(ST.hasStdExtF(), {{s32, sXLen}})
@@ -729,7 +761,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
       .lowerIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(2, p0)));
 
-  getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD})
+  getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD,
+                               G_ATOMICRMW_XCHG, G_ATOMICRMW_AND,
+                               G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
       .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
@@ -738,6 +772,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen)
       .lower();
+
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .unsupported();
 
   LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
     LLT VecTy = Query.Types[0];
@@ -751,7 +791,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
                    typeIs(2, sXLen)));
 
-  getLegacyLegalizerInfo().computeTables();
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+
+  getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
+
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
+
   verify(*ST.getInstrInfo());
 }
 
@@ -817,6 +863,11 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::riscv_vsetvlimax:
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_atomicrmw_xchg:
+  case Intrinsic::riscv_masked_atomicrmw_max:
+  case Intrinsic::riscv_masked_atomicrmw_min:
+  case Intrinsic::riscv_masked_atomicrmw_umax:
+  case Intrinsic::riscv_masked_atomicrmw_umin:
   case Intrinsic::riscv_masked_cmpxchg:
     return true;
   }
@@ -930,7 +981,6 @@ bool RISCVLegalizerInfo::shouldBeInConstantPool(const APInt &APImm,
 
 bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
                                         MachineIRBuilder &MIB) const {
-  const LLT XLenTy(STI.getXLenVT());
   Register Dst = MI.getOperand(0).getReg();
 
   // We define our scalable vector types for lmul=1 to use a 64 bit known
@@ -947,23 +997,25 @@ bool RISCVLegalizerInfo::legalizeVScale(MachineInstr &MI,
   if (isPowerOf2_64(Val)) {
     uint64_t Log2 = Log2_64(Val);
     if (Log2 < 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(XLenTy, 3 - Log2));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildLShr(Dst, VLENB, MIB.buildConstant(sXLen, 3 - Log2),
+                    MachineInstr::IsExact);
     } else if (Log2 > 3) {
-      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-      MIB.buildShl(Dst, VLENB, MIB.buildConstant(XLenTy, Log2 - 3));
+      auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+      MIB.buildShl(Dst, VLENB, MIB.buildConstant(sXLen, Log2 - 3));
     } else {
       MIB.buildInstr(RISCV::G_READ_VLENB, {Dst}, {});
     }
   } else if ((Val % 8) == 0) {
     // If the multiplier is a multiple of 8, scale it down to avoid needing
     // to shift the VLENB value.
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    MIB.buildMul(Dst, VLENB, MIB.buildConstant(XLenTy, Val / 8));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    MIB.buildMul(Dst, VLENB, MIB.buildConstant(sXLen, Val / 8));
   } else {
-    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {XLenTy}, {});
-    auto VScale = MIB.buildLShr(XLenTy, VLENB, MIB.buildConstant(XLenTy, 3));
-    MIB.buildMul(Dst, VScale, MIB.buildConstant(XLenTy, Val));
+    auto VLENB = MIB.buildInstr(RISCV::G_READ_VLENB, {sXLen}, {});
+    auto VScale = MIB.buildLShr(sXLen, VLENB, MIB.buildConstant(sXLen, 3),
+                                MachineInstr::IsExact);
+    MIB.buildMul(Dst, VScale, MIB.buildConstant(sXLen, Val));
   }
   MI.eraseFromParent();
   return true;
@@ -1261,8 +1313,7 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   LLT BigTy = MRI.getType(BigVec);
   LLT LitTy = MRI.getType(LitVec);
 
-  if (Idx == 0 &&
-      MRI.getVRegDef(BigVec)->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+  if (Idx == 0 && mi_match(BigVec, MRI, m_GImplicitDef()))
     return true;
 
   // We don't have the ability to slide mask vectors up indexed by their i1
@@ -1374,6 +1425,29 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+bool RISCVLegalizerInfo::legalizeBitreverse(MachineInstr &MI,
+                                            MachineIRBuilder &MIB) const {
+  assert(MI.getOpcode() == TargetOpcode::G_BITREVERSE && "Unexpected opcode");
+
+  if (!STI.hasStdExtZbkb())
+    return false;
+
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  if (!MRI.getType(Dst).isScalar(8))
+    return false;
+
+  auto WideSrc = MIB.buildAnyExt(sXLen, Src);
+  auto Brev = MIB.buildInstr(RISCV::G_BREV8, {sXLen}, {WideSrc.getReg(0)});
+  MIB.buildTrunc(Dst, Brev.getReg(0));
+
+  MI.eraseFromParent();
+  return true;
+}
+
 static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -1457,19 +1531,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
-  case TargetOpcode::G_SEXT_INREG: {
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    int64_t SizeInBits = MI.getOperand(2).getImm();
-    // Source size of 32 is sext.w.
-    if (DstTy.getSizeInBits() == 64 && SizeInBits == 32)
-      return true;
-
-    if (STI.hasStdExtZbb() && (SizeInBits == 8 || SizeInBits == 16))
-      return true;
-
-    return Helper.lower(MI, 0, /* Unused hint type */ LLT()) ==
-           LegalizerHelper::Legalized;
-  }
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_SHL: {
@@ -1530,6 +1591,16 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_LROUND: {
+    // The (i32 any_lround) Pat is IsRV32-only; on RV64 lower to
+    // riscv_fcvt_w_rv64 with FRM_RMM.
+    Helper.Observer.changingInstr(MI);
+    Helper.widenScalarDst(MI, sXLen);
+    MI.setDesc(MIRBuilder.getTII().get(RISCV::G_FCVT_W_RV64));
+    MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RMM));
+    Helper.Observer.changedInstr(MI);
+    return true;
+  }
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
@@ -1565,6 +1636,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
     return legalizeExtractSubvector(MI, MIRBuilder);
   case TargetOpcode::G_INSERT_SUBVECTOR:
     return legalizeInsertSubvector(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_BITREVERSE:
+    return legalizeBitreverse(MI, MIRBuilder);
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);

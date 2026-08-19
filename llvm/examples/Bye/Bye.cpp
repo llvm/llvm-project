@@ -30,7 +30,7 @@ struct LegacyBye : public FunctionPass {
   bool runOnFunction(Function &F) override { return runBye(F); }
 };
 
-struct Bye : PassInfoMixin<Bye> {
+struct Bye : OptionalPassInfoMixin<Bye> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
     if (!runBye(F))
       return PreservedAnalyses::all();

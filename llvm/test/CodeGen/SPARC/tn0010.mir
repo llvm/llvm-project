@@ -11,6 +11,15 @@
 # CHECK:      LDrr
 # CHECK-NEXT: NOP
 # CHECK-NEXT: SWAPri
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: LDSTUBrr
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: LDSTUBri
+# CHECK:      LDrr
+# CHECK-NEXT: NOP
+# CHECK-NEXT: LDSTUBArr
 name:            er-5-1
 registers:
   - { id: 0, class: intregs }
@@ -22,6 +31,12 @@ body:             |
     %0 = SWAPrr $o2, $o3, %0
     %0 = LDrr $g0, $o0
     %0 = SWAPri $o2, 10, %0
+    %0 = LDrr $g0, $o0
+    %0 = LDSTUBrr $o2, $o3
+    %0 = LDrr $g0, $o0
+    %0 = LDSTUBri $o2, 10
+    %0 = LDrr $g0, $o0
+    %0 = LDSTUBArr $o2, $o3, 10
 
 ---
 # CHECK:      bb.2:

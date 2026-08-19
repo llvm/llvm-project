@@ -14,14 +14,13 @@
 ; CHECK-DAG: %[[#TyInt32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#TyBF16]] 16936{{$}}
 ; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TyBF16]]
-; CHECK-DAG: %[[#ScopeDevice:]] = OpConstant %[[#TyInt32]] 1{{$}}
 ; CHECK-DAG: %[[#ScopeAllSvmDevices:]] = OpConstantNull %[[#TyInt32]]
 ; CHECK-DAG: %[[#MemSem528:]] = OpConstant %[[#TyInt32]] 528{{$}}
 
 ; CHECK-DAG: %[[#Val:]] = OpVariable %[[#TyBF16Ptr]] CrossWorkgroup %[[#Const0]]
 
-; CHECK: OpAtomicLoad %[[#TyBF16]] %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]]
-; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeDevice]] %[[#MemSem528]] %[[#Const42]]
+; CHECK: OpAtomicLoad %[[#TyBF16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]]
+; CHECK: OpAtomicStore %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
 ; CHECK: OpAtomicExchange %[[#TyBF16]] %[[#Val]] %[[#ScopeAllSvmDevices]] %[[#MemSem528]] %[[#Const42]]
 
 
@@ -29,14 +28,8 @@
 
 define spir_func void @test_atomic_bfloat16_load_store_xchg() {
 entry:
-; TODO: 'load atomic'/'store atomic' LLVM instructions are not yet lowered to
-; OpAtomicLoad/OpAtomicStore by the SPIRV backend; use OCL builtins instead.
-; TODO: test Vulkan path as well once we support atomic load/store.
-  %load = call spir_func bfloat @_Z11atomic_loadPU3AS1VU7_AtomicDF16b(ptr addrspace(1) @val)
-  call spir_func void @_Z12atomic_storePU3AS1VU7_AtomicDF16bDF16b(ptr addrspace(1) @val, bfloat 42.000000e+00)
+  %load = load atomic bfloat, ptr addrspace(1) @val seq_cst, align 2
+  store atomic bfloat 42.000000e+00, ptr addrspace(1) @val seq_cst, align 2
   %xchg = atomicrmw xchg ptr addrspace(1) @val, bfloat 42.000000e+00 seq_cst
   ret void
 }
-
-declare spir_func bfloat @_Z11atomic_loadPU3AS1VU7_AtomicDF16b(ptr addrspace(1))
-declare spir_func void @_Z12atomic_storePU3AS1VU7_AtomicDF16bDF16b(ptr addrspace(1), bfloat)

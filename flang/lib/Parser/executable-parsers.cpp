@@ -14,7 +14,6 @@
 #include "stmt-parser.h"
 #include "token-parsers.h"
 #include "type-parser-implementation.h"
-#include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
 
 namespace Fortran::parser {
@@ -583,7 +582,9 @@ TYPE_PARSER("<<<" >>
 
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)),
+        // Accept !$CUF KERNEL DO, !$CUF KERNEL DO(), and
+        // !$CUF KERNEL DO(<scalar-int-constant-expr>).
+        defaulted(parenthesized(maybe(scalarIntConstantExpr))),
         maybe(Parser<CUFKernelDoConstruct::LaunchConfiguration>{}),
         many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,

@@ -705,7 +705,7 @@ to:</p>
   <li>Prefer <tt>checkPreCall</tt> and <tt>checkPostCall</tt> to
     <tt>checkPreStmt&lt;CallExpr&gt;</tt> and <tt>checkPostStmt&lt;CallExpr&gt;</tt>.</li>
   <li>Use <tt>CallDescription</tt> to detect hardcoded API calls in the program.</li>
-  <li>Simplify <tt>C.getState()->getSVal(E, C.getLocationContext())</tt> to <tt>C.getSVal(E)</tt>.</li>
+  <li>Simplify <tt>C.getState()->getSVal(E, C.getStackFrame())</tt> to <tt>C.getSVal(E)</tt>.</li>
 </ul>
 <li>Common sources of crashes:</li>
 <ul>

@@ -135,6 +135,28 @@ std::string detectStandardResourceDir() {
   return GetResourcesPath("clangd", (void *)&StaticForMainAddr);
 }
 
+std::optional<std::string>
+detectResourceDirWithClangPath(std::optional<std::string> ClangPath) {
+  std::string ResourceDir = detectStandardResourceDir();
+  if (llvm::sys::fs::exists(ResourceDir))
+    return ResourceDir;
+  vlog("Auto-detected standard resource directory '{0}' doesn't exist",
+       ResourceDir);
+
+  if (ClangPath) {
+    ResourceDir = GetResourcesPath(*ClangPath);
+    if (llvm::sys::fs::exists(ResourceDir))
+      return ResourceDir;
+    vlog("Auto-detected using clang path '{0}' "
+         "resource directory '{1}' doesn't exist",
+         *ClangPath, ResourceDir);
+  }
+
+  elog("Failed to auto-detect resource directory, "
+       "specify it manually via --resource-dir command line argument");
+  return std::nullopt;
+}
+
 // The path passed to argv[0] is important:
 //  - its parent directory is Driver::Dir, used for library discovery
 //  - its basename affects CLI parsing (clang-cl) and other settings
@@ -188,7 +210,7 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
 CommandMangler CommandMangler::detect() {
   CommandMangler Result;
   Result.ClangPath = detectClangPath();
-  Result.ResourceDir = detectStandardResourceDir();
+  Result.ResourceDir = detectResourceDirWithClangPath(Result.ClangPath);
   Result.Sysroot = detectSysroot();
   return Result;
 }
@@ -273,6 +295,19 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
       SawInput(Cmd[I]);
     Cmd.resize(DashDashIndex);
   }
+
+  llvm::SmallVector<const char *, 16> UnknownArgs;
+
+  for (auto *UnknownArg : ArgList.filtered(options::OPT_UNKNOWN)) {
+    UnknownArgs.push_back(UnknownArg->getValue());
+    IndicesToDrop.push_back(UnknownArg->getIndex());
+  }
+
+  if (!UnknownArgs.empty()) {
+    log("Warning: detected unsupported options '{0}'",
+        llvm::join(UnknownArgs, ", "));
+  }
+
   llvm::sort(IndicesToDrop);
   for (unsigned Idx : llvm::reverse(IndicesToDrop))
     // +1 to account for the executable name in Cmd[0] that
@@ -525,8 +560,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
         dlog("  {0} #={1} *={2} Mode={3}", R.Text, R.ExactArgs, R.PrefixArgs,
              int(R.Modes));
     }
-    dlog("Table spellings={0} rules={1} string-bytes={2}", Result->size(),
-         RuleCount, Result->getAllocator().getBytesAllocated());
+    dlog("Table spellings={0} rules={1} allocator-bytes={2}", Result->size(),
+         RuleCount, Result->getAllocator().getTotalMemory());
 #endif
     // The static table will never be destroyed.
     return Result.release();

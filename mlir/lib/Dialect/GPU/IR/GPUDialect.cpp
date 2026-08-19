@@ -285,6 +285,7 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
+  addTypes<NamedBarrierType>();
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addTypes<SparseSpGEMMOpHandleType>();
@@ -365,6 +366,9 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(context);
+
   if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
     return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
@@ -380,6 +384,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
+      .Case<NamedBarrierType>([&](Type) { os << "named_barrier"; })
       .Case<SparseDnTensorHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
       })
@@ -710,7 +715,7 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Value getBlockSizeX, Value getBlockSizeY,
                      Value getBlockSizeZ, Value dynamicSharedMemorySize,
                      Type asyncTokenType, ValueRange asyncDependencies,
-                     TypeRange workgroupAttributions,
+                     Value asyncObject, TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
                      Value clusterSizeY, Value clusterSizeZ,
                      FlatSymbolRefAttr module, FlatSymbolRefAttr function) {
@@ -737,6 +742,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
+  if (asyncObject)
+    result.addOperands(asyncObject);
 
   // Add optional module and function attributes.
   if (module)
@@ -758,12 +765,13 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   for (Type argTy : privateAttributions)
     body->addArgument(argTy, result.location);
   // Fill OperandSegmentSize Attribute.
-  SmallVector<int32_t, 11> segmentSizes(11, 1);
+  SmallVector<int32_t, 12> segmentSizes(12, 1);
   segmentSizes.front() = asyncDependencies.size();
-  segmentSizes.back() = dynamicSharedMemorySize ? 1 : 0;
   segmentSizes[7] = clusterSizeX ? 1 : 0;
   segmentSizes[8] = clusterSizeY ? 1 : 0;
   segmentSizes[9] = clusterSizeZ ? 1 : 0;
+  segmentSizes[10] = dynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[11] = asyncObject ? 1 : 0;
   result.addAttribute(getOperandSegmentSizeAttr(),
                       builder.getDenseI32ArrayAttr(segmentSizes));
 }
@@ -825,7 +833,23 @@ std::optional<KernelDim3> LaunchOp::getClusterSizeOperandValues() {
   return KernelDim3{operands[6], operands[7], operands[8]};
 }
 
+template <typename OpTy>
+static LogicalResult verifyLaunchAsyncModel(OpTy op) {
+  if (!op.getAsyncDependencies().empty() && !op.getAsyncToken())
+    return op.emitOpError("dependency operands require the dependency-based "
+                          "async model i.e. returning a token");
+  if (op.getAsyncToken() && op.getAsyncObject())
+    return op.emitOpError("stream-based and dependency-based async models are "
+                          "mutually exclusive");
+  if (op.getNumResults() == 0 && op.getAsyncToken())
+    return op.emitOpError("needs to be named when async keyword is specified");
+  return success();
+}
+
 LogicalResult LaunchOp::verify() {
+  if (verifyLaunchAsyncModel(*this).failed())
+    return failure();
+
   if (!(hasClusterSize()) &&
       (getClusterSizeX() || getClusterSizeY() || getClusterSizeZ()))
     return emitOpError() << "cluster size must be all present";
@@ -839,9 +863,13 @@ LogicalResult LaunchOp::verifyRegions() {
   if (getBody().empty()) {
     return emitOpError("body region is empty");
   }
-  if (getBody().getNumArguments() <
-      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
-    return emitOpError("unexpected number of region arguments");
+  unsigned actualNumRegionArgs = getBody().getNumArguments();
+  unsigned expectedNumRegionArgs =
+      getNumConfigRegionAttributes() + getNumWorkgroupAttributions();
+  if (actualNumRegionArgs < expectedNumRegionArgs) {
+    return emitOpError("expected at least ")
+           << expectedNumRegionArgs << " region arguments, but got "
+           << actualNumRegionArgs;
   }
 
   // Verify Attributions Address Spaces.
@@ -868,9 +896,6 @@ LogicalResult LaunchOp::verifyRegions() {
     }
   }
 
-  if (getNumResults() == 0 && getAsyncToken())
-    return emitOpError("needs to be named when async keyword is specified");
-
   return success();
 }
 
@@ -887,6 +912,9 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
 }
 
 void LaunchOp::print(OpAsmPrinter &p) {
+  if (auto asyncObject = getAsyncObject()) {
+    p << " <" << asyncObject << " : " << asyncObject.getType() << ">";
+  }
   if (getAsyncToken()) {
     p << " async";
     if (!getAsyncDependencies().empty())
@@ -977,8 +1005,9 @@ parseSizeAssignment(OpAsmParser &parser,
 }
 
 /// Parses a Launch operation.
-/// operation ::= `gpu.launch` (`async` `[` ssa-id-list `]`)?
-///       `clusters` `(` ssa-id-list `)` `in` ssa-reassignment (Optional)
+/// operation ::= `gpu.launch` (`<` ssa-use `:` type `>`)?
+///       (`async` `[` ssa-id-list `]`)?
+///       (`clusters` `(` ssa-id-list `)` `in` ssa-reassignment)?
 ///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       (`dynamic_shared_memory_size` ssa-use)?
@@ -995,6 +1024,17 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
   // Region arguments to be created.
   SmallVector<OpAsmParser::UnresolvedOperand, 16> regionArgs(
       LaunchOp::kNumConfigRegionAttributes);
+
+  // Parse optional asyncObject: < value : type >
+  OpAsmParser::UnresolvedOperand asyncObjectOperand;
+  Type asyncObjectType;
+  bool hasAsyncObject = false;
+  if (succeeded(parser.parseOptionalLess())) {
+    hasAsyncObject = true;
+    if (parser.parseOperand(asyncObjectOperand) || parser.parseColon() ||
+        parser.parseType(asyncObjectType) || parser.parseGreater())
+      return failure();
+  }
 
   // Parse optional async dependencies.
   SmallVector<OpAsmParser::UnresolvedOperand, 4> asyncDependencies;
@@ -1057,6 +1097,11 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
                               result.operands))
       return failure();
   }
+
+  // Resolve the asyncObject operand
+  if (hasAsyncObject && parser.resolveOperand(asyncObjectOperand,
+                                              asyncObjectType, result.operands))
+    return failure();
 
   // Parse optional module attribute.
   StringRef moduleAttrName = getModuleAttrName(result.name);
@@ -1126,7 +1171,7 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
-  SmallVector<int32_t, 11> segmentSizes(11, 1);
+  SmallVector<int32_t, 12> segmentSizes(12, 1);
   segmentSizes.front() = asyncDependencies.size();
 
   if (!hasCluster) {
@@ -1134,7 +1179,8 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
     segmentSizes[8] = 0;
     segmentSizes[9] = 0;
   }
-  segmentSizes.back() = hasDynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[10] = hasDynamicSharedMemorySize ? 1 : 0;
+  segmentSizes[11] = hasAsyncObject ? 1 : 0;
   result.addAttribute(LaunchOp::getOperandSegmentSizeAttr(),
                       parser.getBuilder().getDenseI32ArrayAttr(segmentSizes));
   return success();
@@ -1207,7 +1253,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          SymbolRefAttr kernelSymbol, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
-                         ValueRange asyncDependencies,
+                         ValueRange asyncDependencies, Value asyncObject,
                          std::optional<KernelDim3> clusterSize) {
   assert(kernelSymbol.getNestedReferences().size() == 1 &&
          "expected a symbol reference with a single nested reference");
@@ -1223,6 +1269,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
   result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
 
   Properties &prop = result.getOrAddProperties<Properties>();
   prop.kernel = kernelSymbol;
@@ -1239,14 +1287,14 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
       dynamicSharedMemorySize ? 1 : 0;
   prop.operandSegmentSizes[segmentSizesLen - 2] =
       static_cast<int32_t>(kernelOperands.size());
-  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          GPUFuncOp kernelFunc, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
-                         ValueRange asyncDependencies,
+                         ValueRange asyncDependencies, Value asyncObject,
                          std::optional<KernelDim3> clusterSize) {
   auto kernelModule = kernelFunc->getParentOfType<GPUModuleOp>();
   auto kernelSymbol =
@@ -1254,40 +1302,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
   build(builder, result, kernelSymbol, gridSize, getBlockSize,
         dynamicSharedMemorySize, kernelOperands, asyncTokenType,
-        asyncDependencies, clusterSize);
-}
-
-void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
-                         SymbolRefAttr kernel, KernelDim3 gridSize,
-                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
-                         ValueRange kernelOperands, Value asyncObject,
-                         std::optional<KernelDim3> clusterSize) {
-  // Add grid and block sizes as op operands, followed by the data operands.
-  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
-                      getBlockSize.y, getBlockSize.z});
-  if (clusterSize.has_value())
-    result.addOperands({clusterSize->x, clusterSize->y, clusterSize->z});
-  if (dynamicSharedMemorySize)
-    result.addOperands(dynamicSharedMemorySize);
-  result.addOperands(kernelOperands);
-  if (asyncObject)
-    result.addOperands(asyncObject);
-  Properties &prop = result.getOrAddProperties<Properties>();
-  prop.kernel = kernel;
-  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
-  // Initialize the segment sizes to 1.
-  llvm::fill(prop.operandSegmentSizes, 1);
-  prop.operandSegmentSizes[0] = 0;
-  if (!clusterSize.has_value()) {
-    prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
-    prop.operandSegmentSizes[segmentSizesLen - 5] = 0;
-    prop.operandSegmentSizes[segmentSizesLen - 6] = 0;
-  }
-  prop.operandSegmentSizes[segmentSizesLen - 3] =
-      dynamicSharedMemorySize ? 1 : 0;
-  prop.operandSegmentSizes[segmentSizesLen - 2] =
-      static_cast<int32_t>(kernelOperands.size());
-  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
+        asyncDependencies, asyncObject, clusterSize);
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -1324,6 +1339,9 @@ KernelDim3 LaunchFuncOp::getClusterSizeOperandValues() {
 }
 
 LogicalResult LaunchFuncOp::verify() {
+  if (verifyLaunchAsyncModel(*this).failed())
+    return failure();
+
   auto module = (*this)->getParentOfType<ModuleOp>();
   if (!module)
     return emitOpError("expected to belong to a module");
@@ -1512,11 +1530,28 @@ LogicalResult RotateOp::verify() {
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult BarrierOp::verify() {
+  BarrierScope scope = getScope();
+
+  if (getNamedBarrier() && scope != BarrierScope::Workgroup)
+    return emitOpError("named barriers require workgroup scope");
+
+  return success();
+}
+
 /// Remove gpu.barrier after gpu.barrier, the threads are already synchronized!
 static LogicalResult eraseRedundantGpuBarrierOps(BarrierOp op,
                                                  PatternRewriter &rewriter) {
   auto nextOp = dyn_cast_or_null<BarrierOp>(op->getNextNode());
   if (!nextOp)
+    return failure();
+
+  // Cannot merge barriers of different scopes.
+  if (op.getScope() != nextOp.getScope())
+    return failure();
+
+  // Cannot merge named barriers unless both refer to the same handle.
+  if (op.getNamedBarrier() != nextOp.getNamedBarrier())
     return failure();
 
   std::optional<ArrayAttr> thisMemfence = op.getAddressSpaces();
@@ -1558,7 +1593,9 @@ void BarrierOp::build(mlir::OpBuilder &odsBuilder,
   if (addressSpace)
     addressSpacesAttr = odsBuilder.getArrayAttr(
         AddressSpaceAttr::get(odsBuilder.getContext(), addressSpace.value()));
-  build(odsBuilder, odsState, addressSpacesAttr);
+  build(
+      odsBuilder, odsState, addressSpacesAttr, /*named_barrier=*/Value{},
+      BarrierScopeAttr::get(odsBuilder.getContext(), BarrierScope::Workgroup));
 }
 
 /// Builds a barrier that causes memory operations affecting `memrefToFence` to
@@ -2291,9 +2328,10 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
     if (!index)
       return failure();
 
+    int64_t indexVal = index.value();
     auto memrefType = llvm::dyn_cast<MemRefType>(dimOp.getSource().getType());
-    if (!memrefType || index.value() >= memrefType.getRank() ||
-        !memrefType.isDynamicDim(index.value()))
+    if (!memrefType || indexVal < 0 || indexVal >= memrefType.getRank() ||
+        !memrefType.isDynamicDim(indexVal))
       return failure();
 
     auto alloc = dimOp.getSource().getDefiningOp<AllocOp>();
@@ -2301,7 +2339,7 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
       return failure();
 
     Value substituteOp = *(alloc.getDynamicSizes().begin() +
-                           memrefType.getDynamicDimIndex(index.value()));
+                           memrefType.getDynamicDimIndex(indexVal));
     rewriter.replaceOp(dimOp, substituteOp);
     return success();
   }
@@ -2489,7 +2527,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -2498,7 +2536,7 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
 }
 
 ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,

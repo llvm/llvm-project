@@ -66,6 +66,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -116,9 +117,36 @@ enum FloatingRank {
 };
 
 /// \returns The locations that are relevant when searching for Doc comments
-/// related to \p D.
+/// related to \p Key.
 static SmallVector<SourceLocation, 2>
-getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
+getLocsForCommentSearch(ASTContext::RawCommentLookupKey Key,
+                        SourceManager &SourceMgr) {
+  if (const auto *MI = dyn_cast<const MacroInfo *>(Key)) {
+    SourceLocation DefLoc = MI->getDefinitionLoc();
+    if (DefLoc.isInvalid() || !DefLoc.isFileID())
+      return {};
+
+    // The macro's definition location points at its name (e.g. FOO in
+    // `#define FOO 1`). The text between a preceding documentation comment
+    // and the name contains the `#define` directive itself, which would be
+    // rejected by the preprocessor-directive guard in
+    // getRawCommentNoCacheImpl. Walk back to the leading `#` so that
+    // the guard only fires when something *else* sits between the comment
+    // and our directive.
+    FileIDAndOffset Decomposed = SourceMgr.getDecomposedLoc(DefLoc);
+    bool Invalid = false;
+    StringRef Buffer = SourceMgr.getBufferData(Decomposed.first, &Invalid);
+    if (Invalid)
+      return {};
+    unsigned Offset = Decomposed.second;
+    if (size_t Found = Buffer.find_last_of("#\n", Offset);
+        Found != StringRef::npos)
+      Offset = Found;
+    return {SourceMgr.getLocForStartOfFile(Decomposed.first)
+                .getLocWithOffset(Offset)};
+  }
+
+  const auto *D = cast<const Decl *>(Key);
   assert(D);
 
   // User can not attach documentation to implicit declarations.
@@ -214,27 +242,29 @@ getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
   return Locations;
 }
 
-RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
-    const Decl *D, const SourceLocation RepresentativeLocForDecl,
+RawComment *ASTContext::getRawCommentNoCacheImpl(
+    RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
     const std::map<unsigned, RawComment *> &CommentsInTheFile) const {
   // If the declaration doesn't map directly to a location in a file, we
   // can't find the comment.
-  if (RepresentativeLocForDecl.isInvalid() ||
-      !RepresentativeLocForDecl.isFileID())
+  if (RepresentativeLoc.isInvalid() || !RepresentativeLoc.isFileID())
     return nullptr;
 
   // If there are no comments anywhere, we won't find anything.
   if (CommentsInTheFile.empty())
     return nullptr;
 
+  const auto *D = dyn_cast<const Decl *>(Key);
+  const bool IsMacro = isa<const MacroInfo *>(Key);
+
   // Decompose the location for the declaration and find the beginning of the
   // file buffer.
-  const FileIDAndOffset DeclLocDecomp =
-      SourceMgr.getDecomposedLoc(RepresentativeLocForDecl);
+  const FileIDAndOffset LocDecomp =
+      SourceMgr.getDecomposedLoc(RepresentativeLoc);
 
   // Slow path.
   auto OffsetCommentBehindDecl =
-      CommentsInTheFile.lower_bound(DeclLocDecomp.second);
+      CommentsInTheFile.lower_bound(LocDecomp.second);
 
   // First check whether we have a trailing comment.
   if (OffsetCommentBehindDecl != CommentsInTheFile.end()) {
@@ -242,13 +272,14 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
     if ((CommentBehindDecl->isDocumentation() ||
          LangOpts.CommentOpts.ParseAllComments) &&
         CommentBehindDecl->isTrailingComment() &&
-        (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) || isa<VarDecl>(D) ||
-         isa<ObjCMethodDecl>(D) || isa<ObjCPropertyDecl>(D))) {
+        (IsMacro || (D && (isa<FieldDecl>(D) || isa<EnumConstantDecl>(D) ||
+                           isa<VarDecl>(D) || isa<ObjCMethodDecl>(D) ||
+                           isa<ObjCPropertyDecl>(D))))) {
 
       // Check that Doxygen trailing comment comes after the declaration, starts
       // on the same line and in the same file as the declaration.
-      if (SourceMgr.getLineNumber(DeclLocDecomp.first, DeclLocDecomp.second) ==
-          Comments.getCommentBeginLine(CommentBehindDecl, DeclLocDecomp.first,
+      if (SourceMgr.getLineNumber(LocDecomp.first, LocDecomp.second) ==
+          Comments.getCommentBeginLine(CommentBehindDecl, LocDecomp.first,
                                        OffsetCommentBehindDecl->first)) {
         return CommentBehindDecl;
       }
@@ -275,14 +306,14 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
 
   // Get the corresponding buffer.
   bool Invalid = false;
-  const char *Buffer = SourceMgr.getBufferData(DeclLocDecomp.first,
-                                               &Invalid).data();
+  const char *Buffer =
+      SourceMgr.getBufferData(LocDecomp.first, &Invalid).data();
   if (Invalid)
     return nullptr;
 
   // Extract text between the comment and declaration.
   StringRef Text(Buffer + CommentEndOffset,
-                 DeclLocDecomp.second - CommentEndOffset);
+                 LocDecomp.second - CommentEndOffset);
 
   // There should be no other declarations or preprocessor directives between
   // comment and declaration.
@@ -292,13 +323,13 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
   return CommentBeforeDecl;
 }
 
-RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
-  const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
+RawComment *ASTContext::getRawCommentNoCache(RawCommentLookupKey Key) const {
+  const auto Locs = getLocsForCommentSearch(Key, SourceMgr);
 
-  for (const auto DeclLoc : DeclLocs) {
-    // If the declaration doesn't map directly to a location in a file, we
-    // can't find the comment.
-    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+  for (const auto Loc : Locs) {
+    // If the declaration or macro doesn't map directly to a location in a file,
+    // we can't find the comment.
+    if (Loc.isInvalid() || !Loc.isFileID())
       continue;
 
     if (ExternalSource && !CommentsLoaded) {
@@ -309,7 +340,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
     if (Comments.empty())
       continue;
 
-    const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+    const FileID File = SourceMgr.getDecomposedLoc(Loc).first;
     if (!File.isValid())
       continue;
 
@@ -318,7 +349,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
       continue;
 
     if (RawComment *Comment =
-            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile))
+            getRawCommentNoCacheImpl(Key, Loc, *CommentsInThisFile))
       return Comment;
   }
 
@@ -331,21 +362,37 @@ void ASTContext::addComment(const RawComment &RC) {
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
 
-const RawComment *ASTContext::getRawCommentForAnyRedecl(
-                                                const Decl *D,
-                                                const Decl **OriginalDecl) const {
-  if (!D) {
+const RawComment *
+ASTContext::getRawCommentForAnyRedecl(RawCommentLookupKey Key,
+                                      const Decl **OriginalDecl) const {
+  if (Key.isNull()) {
     if (OriginalDecl)
-      OriginalDecl = nullptr;
+      *OriginalDecl = nullptr;
     return nullptr;
   }
 
+  // Macros have no redeclaration chain: look up directly, populate the cache,
+  // and return.
+  if (const auto *MI = dyn_cast<const MacroInfo *>(Key)) {
+    if (OriginalDecl)
+      *OriginalDecl = nullptr;
+    auto Existing = RawComments.find(Key);
+    if (Existing != RawComments.end())
+      return Existing->second;
+    if (const RawComment *RC = getRawCommentNoCache(Key)) {
+      cacheRawComment(MI, *RC);
+      return RC;
+    }
+    return nullptr;
+  }
+
+  const Decl *D = cast<const Decl *>(Key);
   D = &adjustDeclToTemplate(*D);
 
   // Any comment directly attached to D?
   {
-    auto DeclComment = DeclRawComments.find(D);
-    if (DeclComment != DeclRawComments.end()) {
+    auto DeclComment = RawComments.find(D);
+    if (DeclComment != RawComments.end()) {
       if (OriginalDecl)
         *OriginalDecl = D;
       return DeclComment->second;
@@ -362,8 +409,8 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
     if (RedeclComment != RedeclChainComments.end()) {
       if (OriginalDecl)
         *OriginalDecl = RedeclComment->second;
-      auto CommentAtRedecl = DeclRawComments.find(RedeclComment->second);
-      assert(CommentAtRedecl != DeclRawComments.end() &&
+      auto CommentAtRedecl = RawComments.find(RedeclComment->second);
+      assert(CommentAtRedecl != RawComments.end() &&
              "This decl is supposed to have comment attached.");
       return CommentAtRedecl->second;
     }
@@ -398,9 +445,9 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
       }
       continue;
     }
-    const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
+    const RawComment *RedeclComment = getRawCommentNoCache(Redecl);
     if (RedeclComment) {
-      cacheRawCommentForDecl(*Redecl, *RedeclComment);
+      cacheRawComment(Redecl, *RedeclComment);
       if (OriginalDecl)
         *OriginalDecl = Redecl;
       return RedeclComment;
@@ -413,13 +460,15 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
   return nullptr;
 }
 
-void ASTContext::cacheRawCommentForDecl(const Decl &OriginalD,
-                                        const RawComment &Comment) const {
+void ASTContext::cacheRawComment(RawCommentLookupKey Original,
+                                 const RawComment &Comment) const {
   assert(Comment.isDocumentation() || LangOpts.CommentOpts.ParseAllComments);
-  DeclRawComments.try_emplace(&OriginalD, &Comment);
-  const Decl *const CanonicalDecl = OriginalD.getCanonicalDecl();
-  RedeclChainComments.try_emplace(CanonicalDecl, &OriginalD);
-  CommentlessRedeclChains.erase(CanonicalDecl);
+  RawComments.try_emplace(Original, &Comment);
+  if (const auto *D = dyn_cast<const Decl *>(Original)) {
+    const Decl *const CanonicalDecl = D->getCanonicalDecl();
+    RedeclChainComments.try_emplace(CanonicalDecl, D);
+    CommentlessRedeclChains.erase(CanonicalDecl);
+  }
 }
 
 static void addRedeclaredMethods(const ObjCMethodDecl *ObjCMethod,
@@ -481,18 +530,18 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
 
     D = &adjustDeclToTemplate(*D);
 
-    if (DeclRawComments.count(D) > 0)
+    if (RawComments.count(D) > 0)
       continue;
 
-    const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
+    const auto DeclLocs = getLocsForCommentSearch(D, SourceMgr);
 
     for (const auto DeclLoc : DeclLocs) {
       if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
         continue;
 
-      if (RawComment *const DocComment = getRawCommentForDeclNoCacheImpl(
-              D, DeclLoc, *CommentsInThisFile)) {
-        cacheRawCommentForDecl(*D, *DocComment);
+      if (RawComment *const DocComment =
+              getRawCommentNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
+        cacheRawComment(D, *DocComment);
         comments::FullComment *FC = DocComment->parse(*this, PP, D);
         ParsedComments[D->getCanonicalDecl()] = FC;
         break;
@@ -517,7 +566,7 @@ comments::FullComment *ASTContext::cloneFullComment(comments::FullComment *FC,
 }
 
 comments::FullComment *ASTContext::getLocalCommentForDeclUncached(const Decl *D) const {
-  const RawComment *RC = getRawCommentForDeclNoCache(D);
+  const RawComment *RC = getRawCommentNoCache(D);
   return RC ? RC->parse(*this, nullptr, D) : nullptr;
 }
 
@@ -888,9 +937,10 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
-      DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
-      DeducedTemplates(this_()), ArrayParameterTypes(this_()),
-      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
+      AttributedTypes(this_()), DependentBitIntTypes(this_()),
+      SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
+      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
+      SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -938,6 +988,8 @@ void ASTContext::cleanup() {
        A != AEnd; ++A)
     A->second->~AttrVec();
   DeclAttrs.clear();
+
+  CtorClosureDefaultArgs.clear();
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
@@ -1426,16 +1478,17 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Target.getTriple().isAMDGPU() ||
-      (Target.getTriple().isSPIRV() &&
-       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
-      (AuxTarget &&
-       (AuxTarget->getTriple().isAMDGPU() ||
-        ((AuxTarget->getTriple().isSPIRV() &&
-          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
+  if (Target.hasAMDGPUTypes() || (AuxTarget && (AuxTarget->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"
+  }
+
+  if (Target.getTriple().isSPIRV() ||
+      (AuxTarget && AuxTarget->getTriple().isSPIRV())) {
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   // Builtin type for __objc_yes and __objc_no
@@ -1495,6 +1548,17 @@ void ASTContext::eraseDeclAttrs(const Decl *D) {
     Pos->second->~AttrVec();
     DeclAttrs.erase(Pos);
   }
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+ASTContext::getCtorClosureDefaultArgs(const CXXConstructorDecl *CD) {
+  return CtorClosureDefaultArgs.lookup(CD);
+}
+
+void ASTContext::setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                           ArrayRef<CXXDefaultArgExpr *> Args) {
+  assert(!CtorClosureDefaultArgs.contains(CD));
+  CtorClosureDefaultArgs[CD] = Args;
 }
 
 ArrayRef<ExplicitInstantiationDecl *>
@@ -2388,6 +2452,12 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(LangAS::Default);
       Align = Target->getPointerAlign(LangAS::Default);
       break;
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case BuiltinType::Id:                                                        \
+    Width = Target->getPointerWidth(LangAS::Default);                          \
+    Align = Target->getPointerAlign(LangAS::Default);                          \
+    break;
+#include "clang/Basic/SPIRVTypes.def"
     }
     break;
   case Type::ObjCObjectPointer:
@@ -2530,6 +2600,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::CountAttributed:
     return getTypeInfo(cast<CountAttributedType>(T)->desugar().getTypePtr());
+
+  case Type::LateParsedAttr:
+    return getTypeInfo(cast<LateParsedAttrType>(T)->desugar().getTypePtr());
 
   case Type::BTFTagAttributed:
     return getTypeInfo(
@@ -3300,13 +3373,17 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
 }
 
 uint16_t
-ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
+ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                     bool IsVTTEntry) {
   assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
+
   std::unique_ptr<MangleContext> MC(createMangleContext());
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
   MC->mangleCXXVTable(RD, Out);
+  if (IsVTTEntry)
+    Out << VTTVTablePointerDiscriminatorSuffix;
   return llvm::getPointerAuthStableSipHash(Str);
 }
 
@@ -3534,6 +3611,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::WasmExternRef:
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       llvm_unreachable("not yet implemented");
     }
     llvm_unreachable("should never get here");
@@ -3699,6 +3778,17 @@ QualType ASTContext::getCountAttributedType(
   CountAttributedTypes.InsertNode(CATy, InsertPos);
 
   return QualType(CATy, 0);
+}
+
+QualType ASTContext::getLateParsedAttrType(
+    QualType WrappedTy, LateParsedTypeAttribute *LateParsedAttr) const {
+  QualType CanonTy = getCanonicalType(WrappedTy);
+
+  auto *LPATy = new (*this, alignof(LateParsedAttrType))
+      LateParsedAttrType(WrappedTy, CanonTy, LateParsedAttr);
+
+  Types.push_back(LPATy);
+  return QualType(LPATy, 0);
 }
 
 QualType
@@ -5692,7 +5782,8 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType equivalentType,
                                        const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
+  AttributedType::Profile(id, *this, attrKind, modifiedType, equivalentType,
+                          attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
@@ -5717,7 +5808,7 @@ QualType ASTContext::getAttributedType(const Attr *attr, QualType modifiedType,
 
 QualType ASTContext::getAttributedType(NullabilityKind nullability,
                                        QualType modifiedType,
-                                       QualType equivalentType) {
+                                       QualType equivalentType) const {
   switch (nullability) {
   case NullabilityKind::NonNull:
     return getAttributedType(attr::TypeNonNull, modifiedType, equivalentType);
@@ -5952,9 +6043,12 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
 /// Retrieve the template type parameter type for a template
 /// parameter or parameter pack with the given depth, index, and (optionally)
 /// name.
-QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                                             bool ParameterPack,
-                                             TemplateTypeParmDecl *TTPDecl) const {
+QualType
+ASTContext::getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
+                                    TemplateTypeParmDecl *TTPDecl) const {
+  assert(Depth >= 0 && "Depth must be non-negative");
+  assert(Index >= 0 && "Index must be non-negative");
+
   llvm::FoldingSetNodeID ID;
   TemplateTypeParmType::Profile(ID, Depth, Index, ParameterPack, TTPDecl);
   void *InsertPos = nullptr;
@@ -6891,11 +6985,6 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
 QualType ASTContext::getDeducedTemplateSpecializationType(
     DeducedKind DK, QualType DeducedAsType, ElaboratedTypeKeyword Keyword,
     TemplateName Template) const {
-  // DeducedAsPack only ever occurs for lambda init-capture pack, which always
-  // use AutoType.
-  assert(DK != DeducedKind::DeducedAsPack &&
-         "unexpected DeducedAsPack for DeducedTemplateSpecializationType");
-
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -7899,6 +7988,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     return NAX->getNamespace()->Equals(NAY->getNamespace());
   }
 
+  if (const auto *UX = dyn_cast<UsingEnumDecl>(X)) {
+    const auto *UY = cast<UsingEnumDecl>(Y);
+    return isSameQualifier(UX->getQualifier(), UY->getQualifier()) &&
+           declaresSameEntity(UX->getEnumDecl(), UY->getEnumDecl());
+  }
+
   return false;
 }
 
@@ -8113,8 +8208,7 @@ QualType ASTContext::getArrayDecayedType(QualType Ty) const {
 
   // int x[_Nullable] -> int * _Nullable
   if (auto Nullability = Ty->getNullability()) {
-    Result = const_cast<ASTContext *>(this)->getAttributedType(*Nullability,
-                                                               Result, Result);
+    Result = getAttributedType(*Nullability, Result, Result);
   }
   return Result;
 }
@@ -9232,6 +9326,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       {
         DiagnosticsEngine &Diags = C->getDiagnostics();
         Diags.Report(diag::err_unsupported_objc_primitive_encoding)
@@ -9946,6 +10042,15 @@ static TypedefDecl *CreateMSVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_ms_va_list");
 }
 
+static TypedefDecl *CreateZOSVaListDecl(const ASTContext *Context) {
+  // typedef char *__builtin_zos_va_list[2];
+  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 2);
+  QualType T = Context->getPointerType(Context->CharTy);
+  QualType ArrayType = Context->getConstantArrayType(
+      T, Size, nullptr, ArraySizeModifier::Normal, 0);
+  return Context->buildImplicitTypedef(ArrayType, "__builtin_zos_va_list");
+}
+
 static TypedefDecl *CreateCharPtrBuiltinVaListDecl(const ASTContext *Context) {
   return CreateCharPtrNamedVaListDecl(Context, "__builtin_va_list");
 }
@@ -10371,6 +10476,13 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
     BuiltinMSVaListDecl = CreateMSVaListDecl(this);
 
   return BuiltinMSVaListDecl;
+}
+
+TypedefDecl *ASTContext::getBuiltinZOSVaListDecl() const {
+  if (!BuiltinZOSVaListDecl)
+    BuiltinZOSVaListDecl = CreateZOSVaListDecl(this);
+
+  return BuiltinZOSVaListDecl;
 }
 
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {
@@ -12534,6 +12646,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Modifiers.
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
+  bool IsChar = false, IsShort = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12557,8 +12670,29 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
       break;
+    case 'B':
+      // This modifier represents int8 type (byte-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'B' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsChar = true;
+      break;
+    case 'T':
+      // This modifier represents int16 type (short-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'T' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsShort = true;
+      break;
     case 'L':
-      assert(!IsSpecial && "Can't use 'L' with 'W', 'N', 'Z' or 'O' modifiers");
+      assert(!IsSpecial &&
+             "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
@@ -12674,7 +12808,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.ShortTy;
     break;
   case 'i':
-    if (HowLong == 3)
+    if (IsChar)
+      Type = Unsigned ? Context.UnsignedCharTy : Context.SignedCharTy;
+    else if (IsShort)
+      Type = Unsigned ? Context.UnsignedShortTy : Context.ShortTy;
+    else if (HowLong == 3)
       Type = Unsigned ? Context.UnsignedInt128Ty : Context.Int128Ty;
     else if (HowLong == 2)
       Type = Unsigned ? Context.UnsignedLongLongTy : Context.LongLongTy;
@@ -13012,7 +13150,8 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
     // GNU or C99 inline semantics. Determine whether this symbol should be
     // externally visible.
-    if (FD->isInlineDefinitionExternallyVisible())
+    if (auto *Def = FD->getDefinition();
+        Def && Def->isInlineDefinitionExternallyVisible())
       return External;
 
     // C99 inline semantics, where the symbol is not externally visible.
@@ -13487,6 +13626,12 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   if (!QualTy && DestWidth == 128)
     return Signed ? Int128Ty : UnsignedInt128Ty;
   return QualTy;
+}
+
+QualType ASTContext::getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                                unsigned Signed) const {
+  return getFromTargetType(
+      getTargetInfo().getLeastIntTypeByWidth(DestWidth, Signed));
 }
 
 /// getRealTypeForBitwidth -
@@ -14838,6 +14983,10 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                                       DX->isCountInBytes(), DX->isOrNull(),
                                       CDX);
   }
+
+  case Type::LateParsedAttr:
+    return QualType();
+
   case Type::PredefinedSugar:
     assert(cast<PredefinedSugarType>(X)->getKind() !=
            cast<PredefinedSugarType>(Y)->getKind());
@@ -15580,4 +15729,286 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
     return;
   if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
     PFPFieldsWithEvaluatedOffset.insert(FD);
+}
+
+namespace {
+// PaddingCalculator is a utility class that calculates the padding bits in a
+// c/c++ type. It traverses the type recursively, collecting occupied
+// bit intervals, and then computes the padding intervals.
+// If a byte only contains some padding bits, it gets intervals for only those
+// bits. This is the case for bit-fields.
+struct PaddingCalculator {
+  PaddingCalculator(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  void run(QualType Ty) {
+    OccuppiedIntervals.clear();
+    Stack.clear();
+
+    TySizeInBits = Ctx.getTypeSize(Ty);
+
+    Stack.push_back(Data{0, Ty.getCanonicalType(), true});
+    while (!Stack.empty()) {
+      Data Current = Stack.back();
+      Stack.pop_back();
+      Visit(Current);
+    }
+    MergeOccuppiedIntervals();
+  }
+
+  llvm::SmallVector<ASTContext::BitInterval> GetPaddingIntervals() {
+    llvm::SmallVector<ASTContext::BitInterval> Results;
+    if (OccuppiedIntervals.size() == 1 &&
+        OccuppiedIntervals.front().First == 0 &&
+        OccuppiedIntervals.front().Last == TySizeInBits) {
+      return Results;
+    }
+    Results.reserve(OccuppiedIntervals.size() + 1);
+    uint64_t CurrentPos = 0;
+    for (const ASTContext::BitInterval &OccupiedInterval : OccuppiedIntervals) {
+      if (OccupiedInterval.First > CurrentPos) {
+        Results.push_back(
+            ASTContext::BitInterval{CurrentPos, OccupiedInterval.First});
+      }
+      CurrentPos = OccupiedInterval.Last;
+    }
+    if (TySizeInBits > CurrentPos) {
+      Results.push_back(ASTContext::BitInterval{CurrentPos, TySizeInBits});
+    }
+    return Results;
+  }
+
+private:
+  struct Data {
+    uint64_t StartBitOffset;
+    QualType Ty;
+    bool VisitVirtualBase;
+  };
+
+  // Return the number of non padding bits of a scalar type.
+  //
+  // The property that we specifically care about here is whether the scalar
+  // type has padding bits, i.e. are there bits in the type which are not
+  // specified by the ABI.
+  //
+  // We currently don't care about this anywhere else in clang: layout cares
+  // about the ABI size, calling convention code cares about specific types,
+  // but nothing cares about padding specifically. And it's not something we can
+  // easily query from LLVM due to the type system mismatches.
+  // DL.getTypeSizeInBits(convertTypeForLoadStore(T)) is probably close, but the
+  // DataLayout methods aren't really designed for this usage.
+  //
+  // Therefore, it is better to explicitly list all the scalar types
+  // containing padding bits that we know of, namely, _BitInt(N) and x87 long
+  // double.
+  //
+  // FIXME: There are likely other scalar types we need to think about here, as
+  // brought up in review for #215823:
+  //  - bool
+  //  - enums(both with/without fixed underlying type)
+  //  - nullptr_t
+  //  - more?
+  uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
+    if (const auto *BIT = Ty->getAs<BitIntType>())
+      return BIT->getNumBits();
+
+    if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &Ctx.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return llvm::APFloat::getSizeInBits(
+            Ctx.getTargetInfo().getLongDoubleFormat());
+    }
+
+    return Ctx.getTypeSize(Ty);
+  }
+
+  void Visit(const Data &D) {
+    if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
+      VisitArray(AT, D.StartBitOffset);
+      return;
+    }
+
+    if (auto *Record = D.Ty->getAsRecordDecl()) {
+      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      return;
+    }
+
+    if (D.Ty->isAtomicType()) {
+      auto Unwrapped = D;
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType().getCanonicalType();
+      Stack.push_back(Unwrapped);
+      return;
+    }
+
+    if (const auto *Complex = D.Ty->getAs<ComplexType>()) {
+      VisitComplex(Complex, D.StartBitOffset);
+      return;
+    }
+
+    if (const auto *VT = D.Ty->getAs<clang::VectorType>()) {
+      VisitVector(VT, D.StartBitOffset);
+      return;
+    }
+
+    uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
+    OccuppiedIntervals.push_back(
+        ASTContext::BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
+  }
+
+  void VisitArray(const ConstantArrayType *AT, uint64_t StartBitOffset) {
+    for (uint64_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
+         ++ArrIndex) {
+
+      QualType ElementQualType = AT->getElementType();
+      auto ElementSize = Ctx.getTypeSizeInChars(ElementQualType);
+      auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
+      auto Offset = ElementSize.alignTo(ElementAlign);
+
+      Stack.push_back(Data{
+          StartBitOffset + ArrIndex * Offset.getQuantity() * Ctx.getCharWidth(),
+          ElementQualType.getCanonicalType(), /*VisitVirtualBase*/ true});
+    }
+  }
+
+  void VisitStruct(const RecordDecl *R, uint64_t StartBitOffset,
+                   bool VisitVirtualBase) {
+    const ASTRecordLayout &ASTLayout = Ctx.getASTRecordLayout(R);
+    auto *CXXRecord = dyn_cast<CXXRecordDecl>(R);
+
+    unsigned PointerSizeInBits = Ctx.getTypeSize(Ctx.NullPtrTy);
+
+    if (CXXRecord) {
+      if (ASTLayout.hasOwnVFPtr()) {
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartBitOffset, StartBitOffset + PointerSizeInBits});
+      }
+
+      if (ASTLayout.hasOwnVBPtr()) {
+        auto Offset = ASTLayout.getVBPtrOffset().getQuantity();
+        auto StartVBPtr = StartBitOffset + Offset * Ctx.getCharWidth();
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartVBPtr, StartVBPtr + PointerSizeInBits});
+      }
+
+      const auto VisitBase = [&ASTLayout, StartBitOffset, this](
+                                 const CXXBaseSpecifier &Base, auto GetOffset) {
+        auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+        if (!BaseRecord) {
+          return;
+        }
+        auto BaseOffset =
+            std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
+
+        Stack.push_back(
+            Data{StartBitOffset + BaseOffset * Ctx.getCharWidth(),
+                 Base.getType().getCanonicalType(), /*VisitVirtualBase*/
+                 false});
+      };
+
+      for (auto Base : CXXRecord->bases()) {
+        if (!Base.isVirtual()) {
+          VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+        }
+      }
+
+      if (VisitVirtualBase) {
+        for (auto VBase : CXXRecord->vbases()) {
+          VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+        }
+      }
+    }
+
+    for (auto *Field : R->fields()) {
+      // Treat unnamed bitfields as padding.
+      if (Field->isUnnamedBitField())
+        continue;
+
+      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
+      if (Field->isBitField()) {
+        OccuppiedIntervals.push_back(ASTContext::BitInterval{
+            StartBitOffset + FieldOffset,
+            StartBitOffset + FieldOffset + Field->getBitWidthValue()});
+      } else {
+        Stack.push_back(Data{StartBitOffset + FieldOffset,
+                             Field->getType().getCanonicalType(),
+                             /*VisitVirtualBase*/ true});
+      }
+    }
+  }
+
+  void VisitComplex(const ComplexType *CT, uint64_t StartBitOffset) {
+    QualType ElementQualType = CT->getElementType().getCanonicalType();
+    auto ElementSize = Ctx.getTypeSizeInChars(ElementQualType);
+    auto ElementAlign = Ctx.getTypeAlignInChars(ElementQualType);
+    auto ImgOffset = ElementSize.alignTo(ElementAlign);
+
+    Stack.push_back(
+        Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
+    Stack.push_back(
+        Data{StartBitOffset + ImgOffset.getQuantity() * Ctx.getCharWidth(),
+             ElementQualType, /*VisitVirtualBase*/ true});
+  }
+
+  void VisitVector(const clang::VectorType *VT, uint64_t StartBitOffset) {
+    uint64_t SizeBit = [&]() -> uint64_t {
+      if (VT->isPackedVectorBoolType(Ctx))
+        return VT->getNumElements();
+      return getScalarOccupiedSizeInBits(VT->getElementType()) *
+             VT->getNumElements();
+    }();
+    OccuppiedIntervals.push_back(
+        ASTContext::BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
+  void MergeOccuppiedIntervals() {
+    std::sort(OccuppiedIntervals.begin(), OccuppiedIntervals.end(),
+              [](const ASTContext::BitInterval &lhs,
+                 const ASTContext::BitInterval &rhs) {
+                return std::tie(lhs.First, lhs.Last) <
+                       std::tie(rhs.First, rhs.Last);
+              });
+
+    llvm::SmallVector<ASTContext::BitInterval> Merged;
+    Merged.reserve(OccuppiedIntervals.size());
+
+    for (const ASTContext::BitInterval &NextInterval : OccuppiedIntervals) {
+      if (Merged.empty()) {
+        Merged.push_back(NextInterval);
+        continue;
+      }
+      auto &LastInterval = Merged.back();
+
+      if (NextInterval.First > LastInterval.Last) {
+        Merged.push_back(NextInterval);
+      } else {
+        LastInterval.Last = std::max(LastInterval.Last, NextInterval.Last);
+      }
+    }
+
+    OccuppiedIntervals = Merged;
+  }
+
+  const ASTContext &Ctx;
+  //  unsigned PointerSizeInBits;
+  uint64_t TySizeInBits = 0;
+  llvm::SmallVector<Data> Stack;
+  llvm::SmallVector<ASTContext::BitInterval> OccuppiedIntervals;
+};
+} // namespace
+
+llvm::ArrayRef<ASTContext::BitInterval>
+ASTContext::getPaddingIntervals(QualType Ty) const {
+  Ty = Ty.getCanonicalType();
+  auto cached = PaddingIntervalCache.find(Ty);
+  if (cached != PaddingIntervalCache.end())
+    return cached->second;
+
+  PaddingCalculator pc{*this};
+  pc.run(Ty);
+
+  auto [itr, res] =
+      PaddingIntervalCache.insert_or_assign(Ty, pc.GetPaddingIntervals());
+  assert(res && "Failed to insert?");
+
+  return itr->second;
 }

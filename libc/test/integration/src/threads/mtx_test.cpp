@@ -10,6 +10,7 @@
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
+#include "src/threads/mtx_trylock.h"
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
@@ -230,10 +231,36 @@ void multiple_waiters() {
   LIBC_NAMESPACE::mtx_destroy(&counter_lock);
 }
 
+void trylock_test() {
+  mtx_t plain_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&plain_mutex, mtx_plain),
+            int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&plain_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&plain_mutex), int(thrd_busy));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&plain_mutex), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&plain_mutex);
+
+  mtx_t recursive_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&recursive_mutex, mtx_recursive),
+            int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&recursive_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_trylock(&recursive_mutex), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&recursive_mutex), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
+}
+
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
   recursive_mutex_test();
   multiple_waiters();
+  trylock_test();
   return 0;
 }

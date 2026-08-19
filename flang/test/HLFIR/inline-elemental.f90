@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-obj -flang-experimental-hlfir -o /dev/null %s
+! RUN: %flang_fc1 -emit-obj -o /dev/null %s
 
 ! Regression test: ensure we can compile this without crashing
 ! this results in a hlfir.elemental with mismatched types in the hlfir.apply

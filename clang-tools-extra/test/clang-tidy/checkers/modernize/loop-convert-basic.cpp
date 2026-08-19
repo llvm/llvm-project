@@ -1009,3 +1009,205 @@ void test() {
   }
 }
 } // namespace GH109083
+
+namespace GH105508 {
+void test() {
+  Nested<int*> v1;
+  for (auto it=v1.begin(); it != v1.end(); ++it) {
+    delete* it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v1) {
+  // CHECK-FIXES-NEXT: delete it;
+
+  Nested<int*> v2;
+  for (auto it=v2.begin(); it != v2.end(); ++it) {
+    delete*       it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v2) {
+  // CHECK-FIXES-NEXT: delete it;
+
+  Nested<int*> v3;
+  for (auto it=v3.begin(); it != v3.end(); ++it) {
+    delete/* random comment */*it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v3) {
+  // CHECK-FIXES-NEXT: delete/* random comment */it;
+
+  Nested<int*> v4;
+  for (auto it=v4.begin(); it != v4.end(); ++it) {
+    sizeof* it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v4) {
+  // CHECK-FIXES-NEXT: sizeof it;
+
+  Nested<int*> v5;
+  for (auto it=v5.begin(); it != v5.end(); ++it) {
+    sizeof*       it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v5) {
+  // CHECK-FIXES-NEXT: sizeof it;
+
+  Nested<int*> v6;
+  for (auto it=v6.begin(); it != v6.end(); ++it) {
+    sizeof/* random comment */*it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v6) {
+  // CHECK-FIXES-NEXT: sizeof/* random comment */it;
+
+  Nested<Val> v7;
+  for (auto it=v7.begin(); it != v7.end(); ++it) {
+    delete *it->f();
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v7) {
+  // CHECK-FIXES-NEXT: delete *it.f();
+
+  Nested<Val> v8;
+  for (auto it=v8.begin(); it != v8.end(); ++it) {
+    delete*it->f();
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v8) {
+  // CHECK-FIXES-NEXT: delete*it.f();
+
+  Nested<Val> v9;
+  for (auto it=v9.begin(); it != v9.end(); ++it) {
+    sizeof *it->f();
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v9) {
+  // CHECK-FIXES-NEXT: sizeof *it.f();
+
+  Nested<Val> v10;
+  for (auto it=v10.begin(); it != v10.end(); ++it) {
+    sizeof*it->f();
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v10) {
+  // CHECK-FIXES-NEXT: sizeof*it.f();
+
+  Nested<int*> v11;
+  for (auto it = v11.begin(); it != v11.end(); ++it) {
+    auto H1 = [&it]() { delete*it; };
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v11) {
+  // CHECK-FIXES-NEXT: auto H1 = [&it]() { delete it; };
+
+  Nested<int*> v12;
+  for (auto it = v12.begin(); it != v12.end(); ++it) {
+    auto H1 = [&it]() { return*it; };
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v12) {
+  // CHECK-FIXES-NEXT: auto H1 = [&it]() { return it; };
+
+  Nested<int*> v13;
+  for (auto it=v13.begin(); it != v13.end(); ++it) {
+    sizeof(*it);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v13) {
+  // CHECK-FIXES-NEXT: sizeof(it);
+
+  Nested<int*> v14;
+  for (auto it=v14.begin(); it != v14.end(); ++it) {
+    sizeof((*it));
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v14) {
+  // CHECK-FIXES-NEXT: sizeof(it);
+
+  Nested<int*> v15;
+  for (auto it=v15.begin(); it != v15.end(); ++it) {
+    delete(*it);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v15) {
+  // CHECK-FIXES-NEXT: delete(it);
+
+  Nested<int*> v16;
+  for (auto it=v16.begin(); it != v16.end(); ++it) {
+    delete((*it));
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v16) {
+  // CHECK-FIXES-NEXT: delete(it);
+}
+
+int* test2() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return*it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return it;
+}
+
+int* test3() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return*     it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return it;
+}
+
+int* test4() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return *it;
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return it;
+}
+
+int* test5() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return(*it);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return(it);
+}
+
+int* test6() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return((*it));
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return(it);
+}
+
+int* test7() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return((*it) + 1);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return(it + 1);
+}
+
+int* test8() {
+  Nested<int*> v;
+  for (auto it=v.begin(); it != v.end(); ++it) {
+    return(1 + (*it));
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead [modernize-loop-convert]
+  // CHECK-FIXES: for (auto & it : v) {
+  // CHECK-FIXES-NEXT: return(1 + it);
+}
+} // namespace GH105508

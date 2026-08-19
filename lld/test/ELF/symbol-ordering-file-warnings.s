@@ -11,8 +11,7 @@
 
 # Check that the warning can be disabled.
 # RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt \
-# RUN:   --unresolved-symbols=ignore-all --no-warn-symbol-ordering 2>&1 | \
-# RUN:   FileCheck %s --check-prefixes=WARN --allow-empty
+# RUN:   --unresolved-symbols=ignore-all --no-warn-symbol-ordering 2>&1 | count 0
 
 # Check that the warning can be re-enabled
 # RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-missing.txt \
@@ -50,19 +49,20 @@
 # RUN: ld.lld %t1.o -o %t --symbol-ordering-file %t-order-discard.txt -T %t.script \
 # RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,DISCARD
 
-# Check that LLD does not warn for discarded COMDAT symbols, if they are present in the kept instance.
-# RUN: echo "comdat" > %t-order-comdat.txt
-# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt \
-# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN --allow-empty
+## No warning for symbols that resolve cleanly: a common symbol
+## (replaceCommonSymbols turns it into a Defined before
+## --symbol-ordering-file is processed), a discarded COMDAT whose kept
+## instance is in %t2.o, and a weak symbol replaced by an equivalent global.
+# RUN: echo "common" > %t-order-clean.txt
+# RUN: echo "comdat" >> %t-order-clean.txt
+# RUN: echo "glob_or_wk" >> %t-order-clean.txt
+# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-clean.txt \
+# RUN:   --unresolved-symbols=ignore-all 2>&1 | count 0
 
 # Check that if a COMDAT was unused and discarded via --gc-sections, warn for each instance.
+# RUN: echo "comdat" > %t-order-comdat.txt
 # RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-comdat.txt --gc-sections \
 # RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN,COMDAT
-
-# Check that if a weak symbol is not kept, because of an equivalent global symbol, no warning is emitted.
-# RUN: echo "glob_or_wk" > %t-order-weak.txt
-# RUN: ld.lld %t1.o %t2.o -o %t --symbol-ordering-file %t-order-weak.txt \
-# RUN:   --unresolved-symbols=ignore-all 2>&1 | FileCheck %s --check-prefixes=WARN --allow-empty
 
 # Check that symbols only in unused archive members does not result in a warning.
 # RUN: rm -f %t.a
@@ -125,6 +125,8 @@ _start:
   callq shared
 
 absolute = 0x1234
+
+.comm common,4,4
 
 .section .text.comdat,"axG",@progbits,comdat,comdat
 .weak comdat

@@ -1492,15 +1492,6 @@ Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
   return Error::success();
 }
 
-template <typename Ty>
-static Ty getWithDefault(const StringMap<Ty> &Map, StringRef Key,
-                         const Ty &Default) {
-  auto Iter = Map.find(Key);
-  if (Iter != Map.end())
-    return Iter->getValue();
-  return Default;
-}
-
 Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {
   auto *Res = cast<VersionInfoResource>(Base);
 

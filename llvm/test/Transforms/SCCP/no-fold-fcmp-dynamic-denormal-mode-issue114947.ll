@@ -5,7 +5,7 @@
 define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_undef() #0 {
 ; CHECK-LABEL: define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_undef(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, undef
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double f0x0008000000000000, undef
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x8000000000000, undef
@@ -15,7 +15,7 @@ define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_undef() #0 {
 define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_poison() #0 {
 ; CHECK-LABEL: define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_poison(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, poison
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double f0x0008000000000000, poison
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x8000000000000, poison
@@ -25,7 +25,7 @@ define i1 @no_fold_fcmp_denormal_double_ieee_dynamic_denormal_poison() #0 {
 define i1 @no_fold_fcmp_denormal_double_ieee_dynamic() #0 {
 ; CHECK-LABEL: define i1 @no_fold_fcmp_denormal_double_ieee_dynamic(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double f0x0008000000000000, 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une double 0x8000000000000, 0.0
@@ -44,7 +44,7 @@ define i1 @fold_fcmp_nondenormal_double_ieee_dynamic() #0 {
 define <2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_vector_splat() #0 {
 ; CHECK-LABEL: define <2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_vector_splat(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> splat (double 0x8000000000000), zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> splat (double f0x0008000000000000), zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = fcmp une <2 x double> splat (double 0x8000000000000), zeroinitializer
@@ -90,7 +90,7 @@ define <2 x i1> @fold_fcmp_nondenormal_double_ieee_dynamic_zero() #0 {
 define <2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_vector_nonsplat() #0 {
 ; CHECK-LABEL: define <2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_vector_nonsplat(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> <double 0x8000000000000, double 1.000000e+00>, zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x double> <double f0x0008000000000000, double 1.000000e+00>, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %cmp = fcmp une <2 x double> <double 0x8000000000000, double 1.0>, zeroinitializer
@@ -109,7 +109,7 @@ define <vscale x 2 x i1> @fold_fcmp_nondenormal_double_ieee_dynamic_scalable_vec
 define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalable_vector_splat() #0 {
 ; CHECK-LABEL: define <vscale x 2 x i1> @no_fold_fcmp_denormal_double_ieee_dynamic_scalable_vector_splat(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <vscale x 2 x double> splat (double 0x8000000000000), zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <vscale x 2 x double> splat (double f0x0008000000000000), zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
 ;
   %cmp = fcmp une <vscale x 2 x double> splat (double 0x8000000000000), zeroinitializer

@@ -6,7 +6,7 @@ subroutine test_dimag(r, c)
 
 ! CHECK-LABEL: func @_QPtest_dimag(
 ! CHECK-SAME: %[[ARG_0:.*]]: !fir.ref<f64> {fir.bindc_name = "r"},
-! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c"}) {
+! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c", fir.read_only}) {
 ! CHECK:   %[[DS:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:   %[[C_DECL:.*]]:2 = hlfir.declare %[[ARG_1]] dummy_scope %[[DS]] {{.*}}
 ! CHECK:   %[[R_DECL:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[DS]] {{.*}}

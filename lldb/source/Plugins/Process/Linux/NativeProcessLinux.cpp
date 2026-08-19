@@ -285,7 +285,7 @@ NativeProcessLinux::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   UNUSED_IF_ASSERT_DISABLED(wpid);
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -1093,7 +1093,7 @@ Status NativeProcessLinux::Signal(int signo) {
   Status error;
 
   Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "sending signal {0} ({1}) to pid {1}", signo,
+  LLDB_LOG(log, "sending signal {0} ({1}) to pid {2}", signo,
            Host::GetSignalAsCString(signo), GetID());
 
   if (kill(GetID(), signo))
@@ -1311,14 +1311,6 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
   // We support memory retrieval, remember that.
   m_supports_mem_region = LazyBool::eLazyBoolYes;
   return Status();
-}
-
-void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
-  Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "newBumpId={0}", newBumpId);
-  LLDB_LOG(log, "clearing {0} entries from memory region cache",
-           m_mem_region_cache.size());
-  m_mem_region_cache.clear();
 }
 
 llvm::Expected<uint64_t>
@@ -1622,8 +1614,10 @@ NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   }
 }
 
-Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
+Status NativeProcessLinux::ReadMemory(const ProcessAddress &process_addr,
+                                      void *buf, size_t size,
                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   Log *log = GetLog(POSIXLog::Memory);
   LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
 
@@ -1939,14 +1933,13 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
 
   // Clear any temporary breakpoints we used to implement software single
   // stepping.
-  for (const auto &thread_info : m_threads_stepping_with_breakpoint) {
-    for (auto &&bp_addr : thread_info.second) {
-      Status error = RemoveBreakpoint(bp_addr);
-      if (error.Fail())
-        LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                 thread_info.first, error);
-    }
+  for (addr_t bp_addr : m_step_breakpoints) {
+    Status error = RemoveBreakpoint(bp_addr);
+    if (error.Fail())
+      LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}", bp_addr,
+               error);
   }
+  m_step_breakpoints.clear();
   m_threads_stepping_with_breakpoint.clear();
 
   // Notify the delegate about the stop

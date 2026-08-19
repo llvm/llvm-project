@@ -70,12 +70,6 @@ static cl::opt<cl::boolOrDefault>
 // need to create a DenseMapInfo wrapper around the specified underlying type.
 template <> struct llvm::DenseMapInfo<VariableID> {
   using Wrapped = DenseMapInfo<unsigned>;
-  static inline VariableID getEmptyKey() {
-    return static_cast<VariableID>(Wrapped::getEmptyKey());
-  }
-  static inline VariableID getTombstoneKey() {
-    return static_cast<VariableID>(Wrapped::getTombstoneKey());
-  }
   static unsigned getHashValue(const VariableID &Val) {
     return Wrapped::getHashValue(static_cast<unsigned>(Val));
   }
@@ -543,18 +537,15 @@ class MemLocFragmentFill {
     // Meet A and B.
     //
     // Result = meet(a, b) for a in A, b in B where Var(a) == Var(b)
-    for (auto It = A.begin(), End = A.end(); It != End; ++It) {
-      unsigned AVar = It->first;
-      FragsInMemMap &AFrags = It->second;
-      auto BIt = B.find(AVar);
-      if (BIt == B.end()) {
-        A.erase(It);
-        continue; // Var has no bits defined in B.
-      }
+    A.remove_if([&](auto &Entry) {
+      auto BIt = B.find(Entry.first);
+      if (BIt == B.end())
+        return true; // Var has no bits defined in B.
       LLVM_DEBUG(dbgs() << "meet fragment maps for "
-                        << Aggregates[AVar].first->getName() << "\n");
-      AFrags = meetFragments(AFrags, BIt->second);
-    }
+                        << Aggregates[Entry.first].first->getName() << "\n");
+      Entry.second = meetFragments(Entry.second, BIt->second);
+      return false;
+    });
   }
 
   bool meet(const BasicBlock &BB,

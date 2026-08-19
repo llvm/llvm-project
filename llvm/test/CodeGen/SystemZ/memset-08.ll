@@ -359,10 +359,8 @@ define void @reg18(ptr %Dst, i8 %val) {
 define void @reg18_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg18_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 0(%r2)
-; CHECK-NEXT:    vsteh %v0, 16(%r2), 0
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(17,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 18, i1 false)
   ret void
@@ -383,10 +381,8 @@ define void @reg19(ptr %Dst, i8 %val) {
 define void @reg19_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg19_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vstef %v0, 15(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(18,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 19, i1 false)
   ret void
@@ -407,10 +403,8 @@ define void @reg20(ptr %Dst, i8 %val) {
 define void @reg20_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg20_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vstef %v0, 16(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(19,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 20, i1 false)
   ret void
@@ -447,10 +441,8 @@ define void @reg21(ptr %Dst, i8 %val) {
 define void @reg21_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg21_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vsteg %v0, 13(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(20,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 21, i1 false)
   ret void
@@ -471,10 +463,8 @@ define void @reg22(ptr %Dst, i8 %val) {
 define void @reg22_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg22_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vsteg %v0, 14(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(21,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 22, i1 false)
   ret void
@@ -495,10 +485,8 @@ define void @reg23(ptr %Dst, i8 %val) {
 define void @reg23_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg23_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vsteg %v0, 15(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(22,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 23, i1 false)
   ret void
@@ -519,10 +507,8 @@ define void @reg24(ptr %Dst, i8 %val) {
 define void @reg24_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg24_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vsteg %v0, 16(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(23,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 24, i1 false)
   ret void
@@ -531,10 +517,8 @@ define void @reg24_unaligned(ptr %Dst, i8 %val) {
 define void @reg25(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg25:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(24,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 25, i1 false)
   ret void
@@ -543,10 +527,8 @@ define void @reg25(ptr %Dst, i8 %val) {
 define void @reg25_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg25_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(24,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 25, i1 false)
   ret void
@@ -555,10 +537,8 @@ define void @reg25_unaligned(ptr %Dst, i8 %val) {
 define void @reg26(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg26:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(25,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 26, i1 false)
   ret void
@@ -567,10 +547,8 @@ define void @reg26(ptr %Dst, i8 %val) {
 define void @reg26_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg26_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(25,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 26, i1 false)
   ret void
@@ -579,10 +557,8 @@ define void @reg26_unaligned(ptr %Dst, i8 %val) {
 define void @reg27(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg27:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(26,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 27, i1 false)
   ret void
@@ -591,10 +567,8 @@ define void @reg27(ptr %Dst, i8 %val) {
 define void @reg27_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg27_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(26,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 27, i1 false)
   ret void
@@ -603,10 +577,8 @@ define void @reg27_unaligned(ptr %Dst, i8 %val) {
 define void @reg28(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg28:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(27,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 28, i1 false)
   ret void
@@ -615,10 +587,8 @@ define void @reg28(ptr %Dst, i8 %val) {
 define void @reg28_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg28_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(27,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 28, i1 false)
   ret void
@@ -627,10 +597,8 @@ define void @reg28_unaligned(ptr %Dst, i8 %val) {
 define void @reg29(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg29:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(28,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 29, i1 false)
   ret void
@@ -639,10 +607,8 @@ define void @reg29(ptr %Dst, i8 %val) {
 define void @reg29_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg29_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(28,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 29, i1 false)
   ret void
@@ -651,10 +617,8 @@ define void @reg29_unaligned(ptr %Dst, i8 %val) {
 define void @reg30(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg30:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(29,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 30, i1 false)
   ret void
@@ -663,10 +627,8 @@ define void @reg30(ptr %Dst, i8 %val) {
 define void @reg30_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg30_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(29,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 30, i1 false)
   ret void
@@ -675,10 +637,8 @@ define void @reg30_unaligned(ptr %Dst, i8 %val) {
 define void @reg31(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg31:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(30,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 31, i1 false)
   ret void
@@ -687,10 +647,8 @@ define void @reg31(ptr %Dst, i8 %val) {
 define void @reg31_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg31_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(30,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 31, i1 false)
   ret void
@@ -711,10 +669,8 @@ define void @reg32(ptr %Dst, i8 %val) {
 define void @reg32_unaligned(ptr %Dst, i8 %val) {
 ; CHECK-LABEL: reg32_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vlvgp %v0, %r3, %r3
-; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 16(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    stc %r3, 0(%r2)
+; CHECK-NEXT:    mvc 1(31,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 %val, i64 32, i1 false)
   ret void
@@ -1092,9 +1048,8 @@ define void @imm18(ptr %Dst) {
 define void @imm18_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm18_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 18
-; CHECK-NEXT:    vst %v0, 0(%r2)
-; CHECK-NEXT:    mvhhi 16(%r2), 4626
+; CHECK-NEXT:    mvi 0(%r2), 18
+; CHECK-NEXT:    mvc 1(17,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 18, i64 18, i1 false)
   ret void
@@ -1114,9 +1069,8 @@ define void @imm19(ptr %Dst) {
 define void @imm19_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm19_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 19
-; CHECK-NEXT:    vstef %v0, 15(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 19
+; CHECK-NEXT:    mvc 1(18,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 19, i64 19, i1 false)
   ret void
@@ -1136,9 +1090,8 @@ define void @imm20(ptr %Dst) {
 define void @imm20_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm20_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 20
-; CHECK-NEXT:    vstef %v0, 16(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 20
+; CHECK-NEXT:    mvc 1(19,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 20, i64 20, i1 false)
   ret void
@@ -1173,9 +1126,8 @@ define void @imm21(ptr %Dst) {
 define void @imm21_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm21_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 21
-; CHECK-NEXT:    vsteg %v0, 13(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 21
+; CHECK-NEXT:    mvc 1(20,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 21, i64 21, i1 false)
   ret void
@@ -1195,9 +1147,8 @@ define void @imm22(ptr %Dst) {
 define void @imm22_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm22_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 22
-; CHECK-NEXT:    vsteg %v0, 14(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 22
+; CHECK-NEXT:    mvc 1(21,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 22, i64 22, i1 false)
   ret void
@@ -1217,9 +1168,8 @@ define void @imm23(ptr %Dst) {
 define void @imm23_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm23_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 23
-; CHECK-NEXT:    vsteg %v0, 15(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 23
+; CHECK-NEXT:    mvc 1(22,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 23, i64 23, i1 false)
   ret void
@@ -1239,9 +1189,8 @@ define void @imm24(ptr %Dst) {
 define void @imm24_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm24_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 24
-; CHECK-NEXT:    vsteg %v0, 16(%r2), 0
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 24
+; CHECK-NEXT:    mvc 1(23,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 24, i64 24, i1 false)
   ret void
@@ -1250,9 +1199,8 @@ define void @imm24_unaligned(ptr %Dst) {
 define void @imm25(ptr %Dst) {
 ; CHECK-LABEL: imm25:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 25
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 25
+; CHECK-NEXT:    mvc 1(24,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 25, i64 25, i1 false)
   ret void
@@ -1261,9 +1209,8 @@ define void @imm25(ptr %Dst) {
 define void @imm25_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm25_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 25
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 25
+; CHECK-NEXT:    mvc 1(24,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 25, i64 25, i1 false)
   ret void
@@ -1272,9 +1219,8 @@ define void @imm25_unaligned(ptr %Dst) {
 define void @imm26(ptr %Dst) {
 ; CHECK-LABEL: imm26:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 26
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 26
+; CHECK-NEXT:    mvc 1(25,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 26, i64 26, i1 false)
   ret void
@@ -1283,9 +1229,8 @@ define void @imm26(ptr %Dst) {
 define void @imm26_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm26_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 26
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 26
+; CHECK-NEXT:    mvc 1(25,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 26, i64 26, i1 false)
   ret void
@@ -1294,9 +1239,8 @@ define void @imm26_unaligned(ptr %Dst) {
 define void @imm27(ptr %Dst) {
 ; CHECK-LABEL: imm27:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 27
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 27
+; CHECK-NEXT:    mvc 1(26,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 27, i64 27, i1 false)
   ret void
@@ -1305,9 +1249,8 @@ define void @imm27(ptr %Dst) {
 define void @imm27_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm27_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 27
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 27
+; CHECK-NEXT:    mvc 1(26,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 27, i64 27, i1 false)
   ret void
@@ -1316,9 +1259,8 @@ define void @imm27_unaligned(ptr %Dst) {
 define void @imm28(ptr %Dst) {
 ; CHECK-LABEL: imm28:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 28
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 28
+; CHECK-NEXT:    mvc 1(27,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 28, i64 28, i1 false)
   ret void
@@ -1327,9 +1269,8 @@ define void @imm28(ptr %Dst) {
 define void @imm28_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm28_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 28
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 28
+; CHECK-NEXT:    mvc 1(27,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 28, i64 28, i1 false)
   ret void
@@ -1338,9 +1279,8 @@ define void @imm28_unaligned(ptr %Dst) {
 define void @imm29(ptr %Dst) {
 ; CHECK-LABEL: imm29:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 29
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 29
+; CHECK-NEXT:    mvc 1(28,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 29, i64 29, i1 false)
   ret void
@@ -1349,9 +1289,8 @@ define void @imm29(ptr %Dst) {
 define void @imm29_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm29_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 29
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 29
+; CHECK-NEXT:    mvc 1(28,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 29, i64 29, i1 false)
   ret void
@@ -1360,9 +1299,8 @@ define void @imm29_unaligned(ptr %Dst) {
 define void @imm30(ptr %Dst) {
 ; CHECK-LABEL: imm30:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 30
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 30
+; CHECK-NEXT:    mvc 1(29,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 30, i64 30, i1 false)
   ret void
@@ -1371,9 +1309,8 @@ define void @imm30(ptr %Dst) {
 define void @imm30_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm30_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 30
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 30
+; CHECK-NEXT:    mvc 1(29,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 30, i64 30, i1 false)
   ret void
@@ -1382,9 +1319,8 @@ define void @imm30_unaligned(ptr %Dst) {
 define void @imm31(ptr %Dst) {
 ; CHECK-LABEL: imm31:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 31
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvi 0(%r2), 31
+; CHECK-NEXT:    mvc 1(30,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 31, i64 31, i1 false)
   ret void
@@ -1393,9 +1329,8 @@ define void @imm31(ptr %Dst) {
 define void @imm31_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm31_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 31
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 31
+; CHECK-NEXT:    mvc 1(30,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 31, i64 31, i1 false)
   ret void
@@ -1415,9 +1350,8 @@ define void @imm32(ptr %Dst) {
 define void @imm32_unaligned(ptr %Dst) {
 ; CHECK-LABEL: imm32_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vrepib %v0, 32
-; CHECK-NEXT:    vst %v0, 16(%r2)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvi 0(%r2), 32
+; CHECK-NEXT:    mvc 1(31,%r2), 0(%r2)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 1 %Dst, i8 32, i64 32, i1 false)
   ret void

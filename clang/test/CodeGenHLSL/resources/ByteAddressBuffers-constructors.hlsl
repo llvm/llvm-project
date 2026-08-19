@@ -33,6 +33,7 @@ export void foo() {
 // Buf1 initialization part 1 - global init function that calls ByteAddressBuffer::__createFromBinding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::ByteAddressBuffer::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @Buf1, i32 noundef 1, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
@@ -50,6 +51,7 @@ export void foo() {
 // Buf2 initialization part 1 - global init function that calls RWByteAddressBuffer::__createFromImplicitBinding
 // CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @hlsl::RWByteAddressBuffer::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
 // CHECK-SAME: (ptr {{.*}} @Buf2, i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
@@ -68,6 +70,7 @@ export void foo() {
 // RasterizerOrderedByteAddressBuffer C1 default constructor
 // CHECK: define void @foo()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: %Buf3 = alloca %"class.hlsl::RasterizerOrderedByteAddressBuffer", align 4
 // CHECK-NEXT: call void @hlsl::RasterizerOrderedByteAddressBuffer::RasterizerOrderedByteAddressBuffer()(ptr {{.*}} %Buf3)
 
@@ -86,5 +89,6 @@ export void foo() {
 // Module initialization
 // CHECK: define internal void @_GLOBAL__sub_I_ByteAddressBuffers_constructors.hlsl()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: call void @__cxx_global_var_init()
 // CHECK-NEXT: call void @__cxx_global_var_init.1()

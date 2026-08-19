@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=verde -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck -check-prefix=GCN %s
-; XUN: llc -mtriple=amdgcn -mcpu=tonga -amdgpu-early-ifcvt=1 < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.01 -amdgpu-early-ifcvt=1 -amdgpu-codegenprepare-break-large-phis=0 < %s | FileCheck -check-prefix=GCN %s
+; XUN: llc -mtriple=amdgpu8.02 -amdgpu-early-ifcvt=1 < %s | FileCheck -check-prefix=GCN %s
 
 ; Note: breaking up large PHIs is disabled to prevent some testcases from becoming
 ;  branchless.

@@ -14,7 +14,7 @@
 
 #include "WebAssemblyCallLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "Utils/WasmAddressSpaces.h"
+#include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
@@ -58,22 +58,18 @@ static unsigned extendOpFromFlags(ISD::ArgFlagsTy Flags) {
   return TargetOpcode::G_ANYEXT;
 }
 
-static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
-  if (Ty == MVT::externref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
-  }
-
-  if (Ty == MVT::funcref) {
-    return LLT::pointer(
-        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
-        DL.getPointerSizeInBits(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
-  }
-
-  return llvm::getLLTForMVT(Ty);
+// GlobalISel doesn't handle reference types. We bail out of GlobalISel for
+// functions passing/returning references and fall back to SDAG.
+static bool typeContainsReference(const Type *Ty) {
+  if (WebAssembly::isWebAssemblyReferenceType(Ty))
+    return true;
+  if (const auto *ArrTy = dyn_cast<ArrayType>(Ty))
+    return typeContainsReference(ArrTy->getElementType());
+  if (const auto *StructTy = dyn_cast<StructType>(Ty))
+    return any_of(StructTy->elements(), [](const Type *ElemTy) {
+      return typeContainsReference(ElemTy);
+    });
+  return false;
 }
 
 WebAssemblyCallLowering::WebAssemblyCallLowering(
@@ -98,6 +94,9 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
   const DataLayout &DL = F.getDataLayout();
+
+  if (Val && typeContainsReference(Val->getType()))
+    return false;
 
   MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(WebAssembly::RETURN);
 
@@ -134,7 +133,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
         const LLT OrigLLT =
             getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-        const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+        const LLT NewLLT = getLLTForMVT(NewVT);
 
         const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -276,6 +275,12 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   if (!callingConvSupported(CallConv))
     return false;
 
+  if (typeContainsReference(F.getReturnType()))
+    return false;
+  for (const Argument &Arg : F.args())
+    if (typeContainsReference(Arg.getType()))
+      return false;
+
   MF.getRegInfo().addLiveIn(WebAssembly::ARGUMENTS);
   MF.front().addLiveIn(WebAssembly::ARGUMENTS);
 
@@ -308,7 +313,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
@@ -410,8 +415,14 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!callingConvSupported(CallConv))
     return false;
 
+  if (typeContainsReference(Info.OrigRet.Ty))
+    return false;
+  for (const ArgInfo &Arg : Info.OrigArgs)
+    if (typeContainsReference(Arg.Ty))
+      return false;
+
   // TODO: tail calls
-  if (Info.CB->isMustTailCall())
+  if (Info.IsMustTailCall)
     return false;
 
   // TODO: varargs
@@ -429,14 +440,6 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     return false;
 
   CallInst = MIRBuilder.buildInstrNoInsert(WebAssembly::CALL);
-
-  if (Info.Callee.isGlobal()) {
-    CallInst.addGlobalAddress(Info.Callee.getGlobal());
-  } else if (Info.Callee.isSymbol()) {
-    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
-  } else {
-    return false;
-  }
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -457,12 +460,14 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(Arg, SplitArgs, DL, CallConv);
   }
 
+  SmallVector<Register> CallUseRegs;
+
   for (ArgInfo &Arg : SplitArgs) {
     const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -499,14 +504,14 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         Register NewReg = MRI.createVirtualRegister(&NewRegClass);
         MRI.setType(NewReg, NewLLT);
-        CallInst.addUse(NewReg);
+        CallUseRegs.push_back(NewReg);
         Arg.Regs[Part] = NewReg;
       }
 
       buildCopyToRegs(MIRBuilder, Arg.Regs, Arg.OrigRegs[0], OrigLLT, NewLLT,
                       extendOpFromFlags(Arg.Flags[0]));
     } else {
-      CallInst.addUse(Arg.Regs[0]);
+      CallUseRegs.push_back(Arg.Regs[0]);
     }
   }
 
@@ -558,7 +563,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
       const LLT OrigLLT =
           getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-      const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
+      const LLT NewLLT = getLLTForMVT(NewVT);
 
       const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -603,9 +608,22 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         buildCopyFromRegs(MIRBuilder, Ret.OrigRegs, Ret.Regs, OrigLLT, NewLLT,
                           Ret.Flags[0]);
       } else {
+        MRI.setRegClass(Ret.Regs[0], &NewRegClass);
         CallInst.addDef(Ret.Regs[0]);
       }
     }
+  }
+
+  if (Info.Callee.isGlobal()) {
+    CallInst.addGlobalAddress(Info.Callee.getGlobal());
+  } else if (Info.Callee.isSymbol()) {
+    CallInst.addExternalSymbol(Info.Callee.getSymbolName());
+  } else {
+    return false;
+  }
+
+  for (Register Reg : CallUseRegs) {
+    CallInst.addUse(Reg);
   }
 
   if (!Info.CanLowerReturn)

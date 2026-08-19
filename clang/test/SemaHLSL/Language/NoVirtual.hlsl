@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -verify %s
 
 struct Base {
   int X;

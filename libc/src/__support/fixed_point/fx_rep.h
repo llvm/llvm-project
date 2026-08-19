@@ -51,6 +51,7 @@ template <> struct FXRep<short fract> {
   LIBC_INLINE static constexpr Type EPS() { return SFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25HR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125HR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -71,6 +72,7 @@ template <> struct FXRep<unsigned short fract> {
   LIBC_INLINE static constexpr Type EPS() { return USFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UHR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UHR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -91,6 +93,7 @@ template <> struct FXRep<fract> {
   LIBC_INLINE static constexpr Type EPS() { return FRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5R; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25R; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125R; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -111,6 +114,7 @@ template <> struct FXRep<unsigned fract> {
   LIBC_INLINE static constexpr Type EPS() { return UFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -131,6 +135,7 @@ template <> struct FXRep<long fract> {
   LIBC_INLINE static constexpr Type EPS() { return LFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25LR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125LR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -151,6 +156,7 @@ template <> struct FXRep<unsigned long fract> {
   LIBC_INLINE static constexpr Type EPS() { return ULFRACT_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULR; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25ULR; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125ULR; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -171,6 +177,7 @@ template <> struct FXRep<short accum> {
   LIBC_INLINE static constexpr Type EPS() { return SACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5HK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25HK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125HK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -191,6 +198,7 @@ template <> struct FXRep<unsigned short accum> {
   LIBC_INLINE static constexpr Type EPS() { return USACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UHK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UHK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UHK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -211,6 +219,7 @@ template <> struct FXRep<accum> {
   LIBC_INLINE static constexpr Type EPS() { return ACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5K; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25K; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125K; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -231,6 +240,7 @@ template <> struct FXRep<unsigned accum> {
   LIBC_INLINE static constexpr Type EPS() { return UACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5UK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25UK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125UK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;
@@ -251,6 +261,7 @@ template <> struct FXRep<long accum> {
   LIBC_INLINE static constexpr Type EPS() { return LACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5LK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25LK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125LK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_signed_t<StorageType>;
@@ -271,6 +282,7 @@ template <> struct FXRep<unsigned long accum> {
   LIBC_INLINE static constexpr Type EPS() { return ULACCUM_EPSILON; }
   LIBC_INLINE static constexpr Type ONE_HALF() { return 0.5ULK; }
   LIBC_INLINE static constexpr Type ONE_FOURTH() { return 0.25ULK; }
+  LIBC_INLINE static constexpr Type ONE_EIGHTH() { return 0.125ULK; }
 
   using StorageType = typename internal::Storage<TOTAL_LEN>::Type;
   using CompType = cpp::make_unsigned_t<StorageType>;

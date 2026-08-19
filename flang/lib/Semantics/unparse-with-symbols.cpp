@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/unparse-with-symbols.h"
+
 #include "mod-file.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
@@ -49,16 +50,20 @@ public:
     return true;
   }
   void Post(const parser::OmpClause &) { currStmt_ = std::nullopt; }
-  bool Pre(const parser::OpenMPGroupprivate &dir) {
+  bool Pre(const parser::OmpGroupprivateDirective &dir) {
     currStmt_ = dir.source;
     return true;
   }
-  void Post(const parser::OpenMPGroupprivate &) { currStmt_ = std::nullopt; }
-  bool Pre(const parser::OpenMPThreadprivate &dir) {
+  void Post(const parser::OmpGroupprivateDirective &) {
+    currStmt_ = std::nullopt;
+  }
+  bool Pre(const parser::OmpThreadprivateDirective &dir) {
     currStmt_ = dir.source;
     return true;
   }
-  void Post(const parser::OpenMPThreadprivate &) { currStmt_ = std::nullopt; }
+  void Post(const parser::OmpThreadprivateDirective &) {
+    currStmt_ = std::nullopt;
+  }
 
   bool Pre(const parser::OmpDeclareMapperDirective &x) {
     currStmt_ = x.source;

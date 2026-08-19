@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
+#include <type_traits>
 #include <utility>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -65,6 +66,21 @@ static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
+}
+
+static IntegerAttr andIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_and<APInt>());
+}
+
+static IntegerAttr orIntegerAttrs(PatternRewriter &builder, Value res,
+                                  Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_or<APInt>());
+}
+
+static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
 }
 
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
@@ -163,6 +179,19 @@ static Attribute getBoolAttribute(Type type, bool value) {
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
+/// Return a scalar or splat integer attribute of `type` (an integer/index type
+/// or a shaped type thereof) holding `value`. Returns a null attribute for
+/// shaped types with a dynamic shape, so callers can bail out of folding.
+static Attribute getIntegerAttrOfType(Type type, int64_t value) {
+  auto scalarAttr = IntegerAttr::get(getElementTypeOrSelf(type), value);
+  ShapedType shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return scalarAttr;
+  if (!shapedType.hasStaticShape())
+    return {};
+  return DenseElementsAttr::get(shapedType, scalarAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd canonicalization patterns
 //===----------------------------------------------------------------------===//
@@ -216,8 +245,8 @@ void arith::ConstantOp::getAsmResultNames(
 LogicalResult arith::ConstantOp::verify() {
   auto type = getType();
   // Integer values must be signless.
-  if (llvm::isa<IntegerType>(type) &&
-      !llvm::cast<IntegerType>(type).isSignless())
+  if (auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(type));
+      intType && !intType.isSignless())
     return emitOpError("integer return type must be signless");
   // Any float or elements attribute are acceptable.
   if (!llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(getValue())) {
@@ -492,6 +521,85 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>>
+arith::SubUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+// Returns the borrow bit, assuming `lhs` and `rhs` are operands of an unsigned
+// subtraction whose mathematical result underflows iff `lhs < rhs`.
+static APInt calculateUnsignedBorrow(const APInt &lhs, const APInt &rhs) {
+  return lhs.ult(rhs) ? APInt::getAllOnes(1) : APInt::getZero(1);
+}
+
+LogicalResult
+arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  Type borrowTy = getBorrow().getType();
+  // subui_extended(x, 0) -> x, false
+  if (matchPattern(getRhs(), m_Zero())) {
+    Builder builder(getContext());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+
+    results.push_back(getLhs());
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(x, x) -> 0, false
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getDiff().getType());
+    if (shapedType && !shapedType.hasStaticShape())
+      return failure();
+    Builder builder(getContext());
+    auto zeroDiff = builder.getZeroAttr(getDiff().getType());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+    if (!zeroDiff)
+      return failure();
+
+    results.push_back(zeroDiff);
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(constant_a, constant_b) -> constant_diff, constant_borrow
+  if (Attribute diffAttr = constFoldBinaryOp<IntegerAttr>(
+          adaptor.getOperands(),
+          [](APInt a, const APInt &b) { return std::move(a) - b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (matchPattern(diffAttr, ub::m_Poison())) {
+      results.push_back(diffAttr);
+      results.push_back(diffAttr);
+      return success();
+    }
+    Attribute borrowAttr = constFoldBinaryOp<IntegerAttr>(
+        adaptor.getOperands(),
+        getI1SameShape(llvm::cast<TypedAttr>(diffAttr).getType()),
+        calculateUnsignedBorrow);
+    if (!borrowAttr)
+      return failure();
+
+    results.push_back(diffAttr);
+    results.push_back(borrowAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::SubUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<SubUIExtendedToSubI>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
 
@@ -702,9 +810,21 @@ static Value foldDivMul(Value lhs, Value rhs,
 }
 
 OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divui (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nuw))
@@ -742,9 +862,21 @@ Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: divsi (x, 0) -> poison. Division by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // divsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // divsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // divsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // (a * b) / b -> a
   if (Value val = foldDivMul(getLhs(), getRhs(), IntegerOverflowFlags::nsw))
@@ -782,25 +914,25 @@ Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
 }
 
 //===----------------------------------------------------------------------===//
-// Ceil and floor division folding helpers
-//===----------------------------------------------------------------------===//
-
-static APInt signedCeilNonnegInputs(const APInt &a, const APInt &b,
-                                    bool &overflow) {
-  // Returns (a-1)/b + 1
-  APInt one(a.getBitWidth(), 1, true); // Signed value 1.
-  APInt val = a.ssub_ov(one, overflow).sdiv_ov(b, overflow);
-  return val.sadd_ov(one, overflow);
-}
-
-//===----------------------------------------------------------------------===//
 // CeilDivUIOp
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivui (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivui (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // ceildivui (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivui (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -828,61 +960,53 @@ Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: ceildivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // ceildivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
 
+  // ceildivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // ceildivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
+
   // Don't fold if it would overflow or if it requires a division by zero.
-  // TODO: This hook won't fold operations where a = MININT, because
-  // negating MININT overflows. This can be improved.
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
-      adaptor.getOperands(), [&](APInt a, const APInt &b) {
+      adaptor.getOperands(), [&](const APInt &a, const APInt &b) {
         if (overflowOrDiv0 || !b) {
           overflowOrDiv0 = true;
           return a;
         }
-        if (!a)
-          return a;
-        // After this point we know that neither a or b are zero.
-        unsigned bits = a.getBitWidth();
-        APInt zero = APInt::getZero(bits);
-        bool aGtZero = a.sgt(zero);
-        bool bGtZero = b.sgt(zero);
-        if (aGtZero && bGtZero) {
-          // Both positive, return ceil(a, b).
-          return signedCeilNonnegInputs(a, b, overflowOrDiv0);
-        }
-
-        // No folding happens if any of the intermediate arithmetic operations
-        // overflows.
-        bool overflowNegA = false;
-        bool overflowNegB = false;
+        // Compute the ceiling without negating either operand, so that MININT
+        // operands still fold whenever the result is representable.
+        //
+        // sdiv truncates towards zero, so it already rounds up whenever the
+        // exact quotient is negative. When the exact quotient is positive, i.e.
+        // when the operands have the same sign, an inexact division has to be
+        // corrected by one. This mirrors the expansion in ExpandOps.cpp.
         bool overflowDiv = false;
-        bool overflowNegRes = false;
-        if (!aGtZero && !bGtZero) {
-          // Both negative, return ceil(-a, -b).
-          APInt posA = zero.ssub_ov(a, overflowNegA);
-          APInt posB = zero.ssub_ov(b, overflowNegB);
-          APInt res = signedCeilNonnegInputs(posA, posB, overflowDiv);
-          overflowOrDiv0 = (overflowNegA || overflowNegB || overflowDiv);
-          return res;
+        APInt quotient = a.sdiv_ov(b, overflowDiv);
+        if (overflowDiv) {
+          // MININT / -1. The exact result is -MININT, which is not
+          // representable.
+          overflowOrDiv0 = true;
+          return a;
         }
-        if (!aGtZero && bGtZero) {
-          // A is negative, b is positive, return - ( -a / b).
-          APInt posA = zero.ssub_ov(a, overflowNegA);
-          APInt div = posA.sdiv_ov(b, overflowDiv);
-          APInt res = zero.ssub_ov(div, overflowNegRes);
-          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegRes);
-          return res;
-        }
-        // A is positive, b is negative, return - (a / -b).
-        APInt posB = zero.ssub_ov(b, overflowNegB);
-        APInt div = a.sdiv_ov(posB, overflowDiv);
-        APInt res = zero.ssub_ov(div, overflowNegRes);
+        if (a.isNegative() != b.isNegative() || quotient * b == a)
+          return quotient;
 
-        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegRes);
-        return res;
+        // The correction cannot overflow: it only applies when the exact
+        // quotient is positive and the division is inexact, which bounds the
+        // quotient well below the maximum. Check anyway, at no cost.
+        APInt one(a.getBitWidth(), 1, /*isSigned=*/true);
+        return quotient.sadd_ov(one, overflowOrDiv0);
       });
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -897,9 +1021,21 @@ Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: floordivsi (x, 0) -> poison. Division by zero is undefined behaviour
+  // and could fold to poison, but that would make the arith dialect depend on
+  // the ub dialect to materialize ub.poison; left out for now.
+
   // floordivsi (x, 1) -> x.
   if (matchPattern(adaptor.getRhs(), m_One()))
     return getLhs();
+
+  // floordivsi (0, x) -> 0. Division by zero is UB, so refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+
+  // floordivsi (x, x) -> 1.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 1);
 
   // Don't fold if it would overflow or if it requires a division by zero.
   bool overflowOrDiv = false;
@@ -920,9 +1056,18 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remui (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remui (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remui (0, x) -> 0 and remui (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -947,9 +1092,18 @@ Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: remsi (x, 0) -> poison. Remainder by zero is undefined behaviour and
+  // could fold to poison, but that would make the arith dialect depend on the
+  // ub dialect to materialize ub.poison; left out for now.
+
   // remsi (x, 1) -> 0.
   if (matchPattern(adaptor.getRhs(), m_One()))
-    return Builder(getContext()).getZeroAttr(getType());
+    return getIntegerAttrOfType(getType(), 0);
+
+  // remsi (0, x) -> 0 and remsi (x, x) -> 0. Division by zero is UB, so
+  // refining to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()) || getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
 
   // Don't fold if it would require a division by zero.
   bool div0 = false;
@@ -1064,8 +1218,13 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
   /// xor(x, x) -> 0
-  if (getLhs() == getRhs())
-    return Builder(getContext()).getZeroAttr(getType());
+  if (getLhs() == getRhs()) {
+    // A dynamically-shaped result cannot be a constant; bail before
+    // getZeroAttr, which would assert on a non-static shape.
+    auto shapedType = dyn_cast<ShapedType>(getType());
+    if (!shapedType || shapedType.hasStaticShape())
+      return Builder(getContext()).getZeroAttr(getType());
+  }
   /// xor(xor(x, a), a) -> x
   /// xor(xor(a, x), a) -> x
   if (arith::XOrIOp prev = getLhs().getDefiningOp<arith::XOrIOp>()) {
@@ -1090,7 +1249,8 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1135,6 +1295,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   // addf(x, -0) -> x
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1145,6 +1308,11 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<AddFOfNegFLhs, AddFOfNegFRhs>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // SubFOp
 //===----------------------------------------------------------------------===//
@@ -1152,6 +1320,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
+    return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
     return getLhs();
 
   auto rm = getRoundingmode();
@@ -1167,6 +1338,137 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
   patterns.add<SubFOfNegZero>(context);
 }
+
+namespace {
+
+// A helper for the conversion:
+//
+//    trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
+//
+// To make sure that type conversion won't lose information.
+//
+// For floating point conversion, we can't allow conversion between
+// -0 and +0. More importantly, we can't allow a conversion from
+// sNaN to qNaN. That changes semantics.
+// When `ignoreNaNs` is set, differences between NaN representations
+// may be ignored, but source non-finite values must not become
+// finite.
+static bool isLosslesslyConvertibleTo(const llvm::fltSemantics &from,
+                                      const llvm::fltSemantics &to,
+                                      bool ignoreNaNs = false) {
+  if (!llvm::APFloatBase::isRepresentableBy(from, to))
+    return false;
+
+  if ((from.hasZero && !to.hasZero) ||
+      (from.hasSignedRepr && !to.hasSignedRepr))
+    return false;
+
+  // NegativeZero NaN encoding repurposes the negative-zero bit pattern, so a
+  // conversion to such a format cannot preserve a source negative zero.
+  bool fromHasSignedZero =
+      from.hasZero && from.hasSignedRepr &&
+      from.nanEncoding != llvm::fltNanEncoding::NegativeZero;
+  bool toHasSignedZero = to.hasZero && to.hasSignedRepr &&
+                         to.nanEncoding != llvm::fltNanEncoding::NegativeZero;
+  if (fromHasSignedZero && !toHasSignedZero)
+    return false;
+
+  // isRepresentableBy compares the normalized exponent ranges. Also ensure
+  // that the smallest source value, which may be denormal, is represented
+  // exactly by the destination semantics.
+  llvm::APFloat smallestFrom = llvm::APFloat::getSmallest(from);
+  bool losesInfo = false;
+  (void)smallestFrom.convert(to, llvm::APFloat::rmNearestTiesToEven,
+                             &losesInfo);
+  if (losesInfo)
+    return false;
+
+  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::FiniteOnly)
+    return true;
+
+  // If we're ignoring NaNs, we can return early if the nonFiniteBehavior
+  // matches.
+  if (ignoreNaNs)
+    return to.nonFiniteBehavior != llvm::fltNonfiniteBehavior::FiniteOnly;
+
+  if (from.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754) {
+    // Converting an IEEE signaling NaN to another semantics quiets it, so the
+    // original value cannot be recovered by converting it back.
+    return false;
+  }
+
+  // NanOnly formats have no signaling NaNs. IEEE semantics can represent
+  // their quiet NaNs; conversions between NanOnly formats are conservatively
+  // accepted only when they use the same NaN encoding.
+  if (to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::IEEE754)
+    return true;
+  return to.nonFiniteBehavior == llvm::fltNonfiniteBehavior::NanOnly &&
+         from.nanEncoding == to.nanEncoding;
+}
+
+/// Narrow an extremum whose operands were extended from the result type:
+///
+///   trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
+///
+/// The concrete extension is part of the pattern so each extremum is only
+/// registered with extensions that preserve its ordering.
+/// For floating-point types, also require the extension to preserve every
+/// source value relevant under the extremum's fast-math flags.
+template <typename TruncOp, typename ExtOp, typename ExtremumOp>
+struct NarrowExtremum final : OpRewritePattern<TruncOp> {
+  using OpRewritePattern<TruncOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(TruncOp truncOp,
+                                PatternRewriter &rewriter) const override {
+    auto extremumOp = truncOp.getIn().template getDefiningOp<ExtremumOp>();
+    if (!extremumOp || !extremumOp->hasOneUse())
+      return failure();
+
+    auto lhsExt = extremumOp.getLhs().template getDefiningOp<ExtOp>();
+    auto rhsExt = extremumOp.getRhs().template getDefiningOp<ExtOp>();
+    if (!lhsExt || !rhsExt)
+      return failure();
+
+    Value lhs = lhsExt.getIn();
+    Value rhs = rhsExt.getIn();
+    Type narrowType = truncOp.getType();
+    if (lhs.getType() != narrowType || rhs.getType() != narrowType)
+      return failure();
+
+    // A floating-point extension is not necessarily lossless between arbitrary
+    // floating-point semantics, even when the destination has a larger bit
+    // width. In particular, it may lose the sign of zero or quiet a signaling
+    // NaN, either of which can change an extremum's result. `nnan` lets us
+    // disregard NaN representation differences, but all other relevant source
+    // values must be preserved.
+    if (auto narrowFloatType =
+            dyn_cast<FloatType>(getElementTypeOrSelf(narrowType))) {
+      auto wideFloatType =
+          dyn_cast<FloatType>(getElementTypeOrSelf(extremumOp.getType()));
+      if (!wideFloatType)
+        return failure();
+
+      const llvm::fltSemantics &narrowSemantics =
+          narrowFloatType.getFloatSemantics();
+      const llvm::fltSemantics &wideSemantics =
+          wideFloatType.getFloatSemantics();
+      bool ignoreNaNs = false;
+      if constexpr (std::is_same_v<TruncOp, TruncFOp>)
+        ignoreNaNs =
+            bitEnumContainsAll(extremumOp.getFastmath(), FastMathFlags::nnan);
+      if (!isLosslesslyConvertibleTo(narrowSemantics, wideSemantics,
+                                     ignoreNaNs))
+        return failure();
+    }
+
+    rewriter.replaceOpWithNewOp<ExtremumOp>(truncOp, TypeRange{narrowType},
+                                            ValueRange{lhs, rhs},
+                                            extremumOp->getAttrs());
+    return success();
+  }
+};
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // MaximumFOp
@@ -1526,6 +1828,9 @@ convertFloatValue(APFloat sourceValue,
 
 OpFoldResult arith::ExtUIOp::fold(FoldAdaptor adaptor) {
   if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
+    // Only the inner extension's nneg speaks about the surviving source; the
+    // outer flag described the already-extended value.
+    setNonNeg(lhs.getNonNeg());
     getInMutable().assign(lhs.getIn());
     return getResult();
   }
@@ -1680,9 +1985,11 @@ bool arith::TruncIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
 void arith::TruncIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
-  patterns
-      .add<TruncIExtSIToExtSI, TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI>(
-          context);
+  patterns.add<NarrowExtremum<TruncIOp, ExtSIOp, MaxSIOp>,
+               NarrowExtremum<TruncIOp, ExtSIOp, MinSIOp>,
+               NarrowExtremum<TruncIOp, ExtUIOp, MaxUIOp>,
+               NarrowExtremum<TruncIOp, ExtUIOp, MinUIOp>, TruncIExtSIToExtSI,
+               TruncIExtUIToExtUI, TruncIShrSIToTrunciShrUI>(context);
 }
 
 LogicalResult arith::TruncIOp::verify() {
@@ -1702,10 +2009,10 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
     auto srcType = cast<FloatType>(getElementTypeOrSelf(src.getType()));
     auto intermediateType =
         cast<FloatType>(getElementTypeOrSelf(extOp.getType()));
-    // Check if the srcType is representable in the intermediateType.
-    if (llvm::APFloatBase::isRepresentableBy(
-            srcType.getFloatSemantics(),
-            intermediateType.getFloatSemantics())) {
+    // Check whether every source value round-trips through the intermediate
+    // type, including signaling NaNs and signed zero.
+    if (isLosslesslyConvertibleTo(srcType.getFloatSemantics(),
+                                  intermediateType.getFloatSemantics())) {
       // truncf(extf(a)) -> truncf(a)
       if (srcType.getWidth() > resElemType.getWidth()) {
         setOperand(src);
@@ -1736,7 +2043,11 @@ OpFoldResult arith::TruncFOp::fold(FoldAdaptor adaptor) {
 
 void arith::TruncFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                   MLIRContext *context) {
-  patterns.add<TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
+  patterns.add<NarrowExtremum<TruncFOp, ExtFOp, MaximumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MaxNumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MinimumFOp>,
+               NarrowExtremum<TruncFOp, ExtFOp, MinNumFOp>,
+               TruncFSIToFPToSIToFP, TruncFUIToFPToUIToFP>(context);
 }
 
 bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -1813,7 +2124,7 @@ LogicalResult arith::ScalingTruncFOp::verify() {
 
 void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<AndOfExtUI, AndOfExtSI>(context);
+  patterns.add<AndIAndIConstant, AndOfExtUI, AndOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,7 +2133,7 @@ void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 void arith::OrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                MLIRContext *context) {
-  patterns.add<OrOfExtUI, OrOfExtSI>(context);
+  patterns.add<OrIOrIConstant, OrOfExtUI, OrOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2074,6 +2385,9 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
     return ub::PoisonAttr::get(getContext());
 
   /// Bitcast integer or float to integer or float.
+  if (!llvm::isa<FloatAttr, IntegerAttr>(operand))
+    return {};
+
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
                    : llvm::cast<IntegerAttr>(operand).getValue();
@@ -2634,7 +2948,13 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
 void arith::SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RedundantSelectFalse, RedundantSelectTrue, SelectNotCond,
-              SelectI1ToNot, SelectToExtUI>(context);
+              SelectI1ToNot, SelectCmpISgeToMaxSI, SelectCmpISgeToMinSI,
+              SelectCmpISgtToMaxSI, SelectCmpISgtToMinSI, SelectCmpISleToMaxSI,
+              SelectCmpISleToMinSI, SelectCmpISltToMaxSI, SelectCmpISltToMinSI,
+              SelectCmpIUgeToMaxUI, SelectCmpIUgeToMinUI, SelectCmpIUgtToMaxUI,
+              SelectCmpIUgtToMinUI, SelectCmpIUleToMaxUI, SelectCmpIUleToMinUI,
+              SelectCmpIUltToMaxUI, SelectCmpIUltToMinUI, SelectToExtUI>(
+      context);
 }
 
 OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
@@ -2773,8 +3093,17 @@ LogicalResult arith::SelectOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shli(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shli(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shli(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
@@ -2791,9 +3120,22 @@ OpFoldResult arith::ShLIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrui(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrui(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
     return getLhs();
+  // shrui(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrui(x, x) -> 0. For any in-range shift amount v < bitwidth, v >> v == 0
+  // (v < 2^v); out-of-range amounts yield poison, so 0 is a valid refinement.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
@@ -2809,8 +3151,26 @@ OpFoldResult arith::ShRUIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::ShRSIOp::fold(FoldAdaptor adaptor) {
+  // TODO: shrsi(x, c) -> poison when c is out of range (c >= bit width). An
+  // out-of-range shift amount is undefined behaviour and could fold to poison,
+  // but that would make the arith dialect depend on the ub dialect to
+  // materialize ub.poison; left out for now.
+
   // shrsi(x, 0) -> x
   if (matchPattern(adaptor.getRhs(), m_Zero()))
+    return getLhs();
+  // shrsi(0, x) -> 0. An out-of-range shift amount yields poison, so refining
+  // it to 0 is valid.
+  if (matchPattern(adaptor.getLhs(), m_Zero()))
+    return getLhs();
+  // shrsi(x, x) -> 0. For any in-range shift amount v < bitwidth, v is a small
+  // non-negative value and v >> v == 0; out-of-range amounts yield poison.
+  if (getLhs() == getRhs())
+    return getIntegerAttrOfType(getType(), 0);
+  // shrsi(-1, x) -> -1. Arithmetic shift of all-ones is all-ones for any
+  // in-range amount; out-of-range amounts yield poison.
+  if (APInt val;
+      matchPattern(adaptor.getLhs(), m_ConstantInt(&val)) && val.isAllOnes())
     return getLhs();
   // Don't fold if shifting more or equal than the bit width.
   bool bounded = false;
@@ -2886,11 +3246,11 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     return builder.getIntegerAttr(resultType, 1);
   case AtomicRMWKind::mulf:
     return builder.getFloatAttr(resultType, 1);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
+  // `assign` is not a reduction and has no identity element.
+  case AtomicRMWKind::assign:
     break;
   }
+  (void)emitOptionalError(loc, "Reduction operation type not supported");
   return nullptr;
 }
 
@@ -2981,11 +3341,11 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return arith::AndIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::xori:
     return arith::XOrIOp::create(builder, loc, lhs, rhs);
-  // TODO: Add remaining reduction operations.
-  default:
-    (void)emitOptionalError(loc, "Reduction operation type not supported");
+  // `assign` is not a reduction and has no corresponding binary operation.
+  case AtomicRMWKind::assign:
     break;
   }
+  (void)emitOptionalError(loc, "Reduction operation type not supported");
   return nullptr;
 }
 

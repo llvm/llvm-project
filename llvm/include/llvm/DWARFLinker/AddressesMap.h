@@ -83,20 +83,50 @@ public:
   /// Erases all data.
   virtual void clear() = 0;
 
-  /// This is used for assembly files where labels may not have high_pc
-  /// but the debug map has range information from symbols.
-  struct AssemblyRange {
-    AssemblyRange(uint64_t LowPC, uint64_t HighPC)
+  /// The extent the linker gave a symbol, in source address space.
+  struct SymbolRange {
+    SymbolRange(uint64_t LowPC, uint64_t HighPC)
         : LowPC(LowPC), HighPC(HighPC) {}
     uint64_t LowPC;
     uint64_t HighPC;
   };
 
-  /// Returns the address range containing \p Addr if available.
-  /// \returns the range [LowPC, HighPC) containing Addr.
-  virtual std::optional<AssemblyRange>
-  getAssemblyRangeForAddress(uint64_t Addr) {
+  /// Returns the symbol range [LowPC, HighPC) containing \p Addr, if known.
+  virtual std::optional<SymbolRange> getSymbolRangeForAddress(uint64_t Addr) {
     return std::nullopt;
+  }
+
+  /// Returns the linked address of the first symbol placed at or after
+  /// \p LinkedAddr, if one is known.
+  virtual std::optional<uint64_t>
+  getNextLinkedSymbolStart(uint64_t LinkedAddr) {
+    return std::nullopt;
+  }
+
+  /// Constrains the end of the code range starting at \p LowPC, whose addresses
+  /// shift by \p Adjustment in the output. \p HighPC is an address, not a
+  /// length.
+  ///
+  /// The linker places symbols independently, so a range overrunning the symbol
+  /// it starts in can cover a different one once linked. Only that overlap is
+  /// repaired.
+  uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
+                                    int64_t Adjustment) {
+    std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
+    if (!Symbol)
+      return HighPC;
+    assert(Symbol->LowPC <= LowPC && LowPC < Symbol->HighPC &&
+           "Symbol range must contain the address it was looked up for");
+    uint64_t LinkedSymbolHighPC = Symbol->HighPC + Adjustment;
+    assert(LinkedSymbolHighPC > Symbol->LowPC + Adjustment &&
+           "Adjusting a symbol range must preserve its order");
+    std::optional<uint64_t> NextStart =
+        getNextLinkedSymbolStart(LinkedSymbolHighPC);
+    if (!NextStart)
+      return HighPC;
+    assert(*NextStart >= LinkedSymbolHighPC &&
+           "A range must never be cut short of its own symbol");
+    return std::min(HighPC, *NextStart - Adjustment);
   }
 
   /// This function checks whether variable has DWARF expression containing
@@ -138,8 +168,7 @@ public:
       return std::make_pair(false, std::nullopt);
 
     // Parse 'exprloc' expression.
-    DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(*Expr, U->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 

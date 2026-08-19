@@ -25,7 +25,7 @@ public:
   }
 };
 
-class SPIRVObjectWriter final : public MCObjectWriter {
+class LLVM_ABI SPIRVObjectWriter final : public MCObjectWriter {
   support::endian::Writer W;
   std::unique_ptr<MCSPIRVObjectTargetWriter> TargetObjectWriter;
 
@@ -52,7 +52,7 @@ private:
 /// \param MOTW - The target specific SPIR-V writer subclass.
 /// \param OS - The stream to write to.
 /// \returns The constructed object writer.
-std::unique_ptr<MCObjectWriter>
+LLVM_ABI std::unique_ptr<MCObjectWriter>
 createSPIRVObjectWriter(std::unique_ptr<MCSPIRVObjectTargetWriter> MOTW,
                         raw_pwrite_stream &OS);
 

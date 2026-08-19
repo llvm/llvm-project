@@ -20,10 +20,12 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __check_grouping(const string& __grouping, unsigned* __g, unsigned* __g_end, ios_base::iostate& __err);
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

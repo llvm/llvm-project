@@ -386,6 +386,18 @@ namespace CopyCtor {
   static_assert(y.a == 42, "");
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
+
+  /// Non-defaulted copy ctor.
+  union U2 {
+    int a;
+    constexpr U2() : a(100) {}
+    constexpr U2(const U2 &u) {
+      a = 20;
+    };
+  };
+  constexpr U2 u2;
+  constexpr U2 u22(u2);
+  static_assert(u22.a == 20, "");
 }
 
 namespace UnionInBase {
@@ -1071,4 +1083,36 @@ namespace Revive {
   static_assert(h() == 20); // both-error {{not an integral constant expression}} \
                             // both-note {{in call to}}
 }
+
+namespace GH197403 {
+  struct Inner {
+    constexpr ~Inner() noexcept {}
+  };
+  struct Outer {
+    Inner inner;
+  };
+  template<typename T>
+  struct BugTrigger {
+    union { T value; int dummy; };
+    constexpr BugTrigger() : value{} {}
+    constexpr ~BugTrigger() noexcept { value.~T(); }
+  };
+  consteval int test() {
+    BugTrigger<Outer> bt;
+    return 0;
+  }
+  static_assert(test() == 0);
+}
 #endif
+
+namespace TrivialDtorInEvaluateDtor{
+  template <class T> void foo() {
+    union { // both-error {{attempt to use a deleted function}}
+      T t; // both-note {{implicitly deleted}}
+    };
+  }
+  struct S {
+    ~S();
+  };
+  template void foo<S>(); // both-note {{in instantiation of function template specialization}}
+}

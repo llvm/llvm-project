@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmulf128.h"
-#include "src/__support/FPUtil/generic/mul.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fmulf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fmulf128, (float128 x, float128 y)) {
-  return fputil::generic::mul<float>(x, y);
+  return math::fmulf128(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

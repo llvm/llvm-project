@@ -81,12 +81,12 @@ define void @vf2(ptr) {
   ret void
 }
 
-; CHECK: define hidden void @vf3.llvm.merged(ptr %0) {
+; CHECK: define hidden void @vf3.llvm.merged(ptr %0)
 define internal void @vf3(ptr) {
   ret void
 }
 
-; CHECK: define hidden void @vf4.llvm.merged(ptr %0) comdat {
+; CHECK: define hidden void @vf4.llvm.merged(ptr %0) comdat
 define internal void @vf4(ptr) comdat {
   ret void
 }

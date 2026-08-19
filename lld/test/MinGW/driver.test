@@ -501,3 +501,11 @@ NO-FAT-LTO: -fat-lto-objects:no
 
 RUN: ld.lld -### -m i386pep foo.o --no-fat-lto-objects --fat-lto-objects 2>&1 | FileCheck -check-prefix FAT-LTO %s
 FAT-LTO: -fat-lto-objects{{ }}
+
+RUN: ld.lld -### -m i386pep foo.o --push-state --whole-archive bar.a --pop-state baz.a 2>&1 | FileCheck -check-prefix PUSH-POP-STATE %s
+RUN: ld.lld -### -m i386pep foo.o -push-state -whole-archive bar.a -pop-state baz.a 2>&1 | FileCheck -check-prefix PUSH-POP-STATE %s
+PUSH-POP-STATE: foo.o -wholearchive:bar.a baz.a
+
+RUN: not ld.lld -m i386pep foo.o --pop-state 2>&1 | FileCheck -check-prefix PUSH-POP-STATE-UNBALANCED %s
+RUN: not ld.lld -m i386pep foo.o --push-state --pop-state --pop-state 2>&1 | FileCheck -check-prefix PUSH-POP-STATE-UNBALANCED %s
+PUSH-POP-STATE-UNBALANCED: error: unbalanced --push-state/--pop-state

@@ -48,8 +48,7 @@ define void @wombat(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %a
 ; CHECK-NEXT:    [[CONFLICT_RDX27:%.*]] = or i1 [[CONFLICT_RDX23]], [[FOUND_CONFLICT26]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX27]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[ZEXT]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[ZEXT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[ARG6]], i64 0
@@ -163,8 +162,8 @@ attributes #0 = { uwtable vscale_range(1,16) "aarch64_pstate_sm_body" "target-fe
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 16}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
+!4 = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

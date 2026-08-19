@@ -513,22 +513,17 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
         ->ReadDefinedMacros();
   }
 
-  for (clang::Preprocessor::macro_iterator
-           mi = m_compiler_instance->getPreprocessor().macro_begin(),
-           me = m_compiler_instance->getPreprocessor().macro_end();
-       mi != me; ++mi) {
+  for (const auto &m : m_compiler_instance->getPreprocessor().macros()) {
     const clang::IdentifierInfo *ii = nullptr;
 
-    {
-      if (clang::IdentifierInfoLookup *lookup =
-              m_compiler_instance->getPreprocessor()
-                  .getIdentifierTable()
-                  .getExternalIdentifierLookup()) {
-        lookup->get(mi->first->getName());
-      }
-      if (!ii)
-        ii = mi->first;
+    if (clang::IdentifierInfoLookup *lookup =
+            m_compiler_instance->getPreprocessor()
+                .getIdentifierTable()
+                .getExternalIdentifierLookup()) {
+      lookup->get(m.first->getName());
     }
+    if (!ii)
+      ii = m.first;
 
     ssize_t found_priority = -1;
     clang::MacroInfo *macro_info = nullptr;
@@ -562,7 +557,7 @@ void ClangModulesDeclVendorImpl::ForEachMacro(
 
     if (macro_info) {
       std::string macro_expansion = "#define ";
-      llvm::StringRef macro_identifier = mi->first->getName();
+      llvm::StringRef macro_identifier = m.first->getName();
       macro_expansion.append(macro_identifier.str());
 
       {

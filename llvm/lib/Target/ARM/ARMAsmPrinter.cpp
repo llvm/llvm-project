@@ -698,8 +698,9 @@ void ARMAsmPrinter::emitAttributes() {
   }
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
+  FloatABI::ABIType FloatABI = ATM.getFloatABI(*MMI->getModule());
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian());
+                         ATM.isLittleEndian(), FloatABI);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);
@@ -807,7 +808,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (getTM().isAAPCS_ABI() && STI.isTargetHardFloat())
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -1016,6 +1017,41 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     unsigned char TF =
         TM.getTargetTriple().isOSBinFormatMachO() ? ARMII::MO_NONLAZY : 0;
     MCSym = GetARMGVSymbol(GV, TF);
+
+    // For dso_local weak symbols in ELF PIC mode, the assembler would eagerly
+    // resolve a PC-relative expression like sym-(LPC+8) when the symbol and
+    // reference are in the same section, preventing the linker from overriding
+    // a weak definition with a non-weak definition from another section. Use a
+    // .reloc directive rather than a fixup to force the generation of a
+    // relocation (R_ARM_REL32) so the linker can perform the override. This is
+    // restricted to dso_local, non-TLS symbols: a preemptible/external weak
+    // symbol (e.g. an extern_weak reference) must use the GOT, as R_ARM_REL32
+    // against an external symbol cannot be used when making a shared object;
+    // and TLS symbols require TLS-specific relocations, not R_ARM_REL32.
+    if (GV->isWeakForLinker() && GV->isDSOLocal() && !GV->isThreadLocal() &&
+        TM.getTargetTriple().isOSBinFormatELF() && TM.isPositionIndependent() &&
+        ACPV->getPCAdjustment() != 0) {
+      MCSymbol *CPILabel = OutContext.createTempSymbol();
+      OutStreamer->emitLabel(CPILabel);
+      // Emit local-only expression: CPILabel - (LPC+PCAdj)
+      const MCExpr *LocalExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
+      MCSymbol *PCLabel =
+          getPICLabel(DL.getInternalSymbolPrefix(), getFunctionNumber(),
+                      ACPV->getLabelId(), OutContext);
+      const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);
+      PCRelExpr = MCBinaryExpr::createAdd(
+          PCRelExpr,
+          MCConstantExpr::create(ACPV->getPCAdjustment(), OutContext),
+          OutContext);
+      LocalExpr = MCBinaryExpr::createSub(LocalExpr, PCRelExpr, OutContext);
+      OutStreamer->emitValue(LocalExpr, Size);
+      // Emit .reloc to force linker resolution of the weak symbol.
+      const MCExpr *CPIExpr = MCSymbolRefExpr::create(CPILabel, OutContext);
+      const MCExpr *SymExpr = MCSymbolRefExpr::create(MCSym, OutContext);
+      OutStreamer->emitRelocDirective(*CPIExpr, "R_ARM_REL32", SymExpr,
+                                      SMLoc());
+      return;
+    }
   } else if (ACPV->isMachineBasicBlock()) {
     const MachineBasicBlock *MBB = cast<ARMConstantPoolMBB>(ACPV)->getMBB();
     MCSym = MBB->getSymbol();
@@ -2403,7 +2439,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(4), getSubtargetInfo());
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)
