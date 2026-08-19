@@ -121,8 +121,8 @@ add_or_sub(InType x, InType y) {
         InType tmp = y;
 #else
         // This prevents it from declaring Intype as volatile for emulated types
-        using InTypeTemp =
-            cpp::conditional_t<cpp::is_class_v<InType>, InType, volatile InType>;
+        using InTypeTemp = cpp::conditional_t<cpp::is_class_v<InType>, InType,
+                                              volatile InType>;
         InTypeTemp tmp = y;
         // volatile prevents Clang from converting tmp to OutType and then
         // immediately back to InType before negating it, resulting in double
