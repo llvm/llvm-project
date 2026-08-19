@@ -184,7 +184,7 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 
-  MachineFunctionProperties getRequiredProperties() const override {
+  MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setIsSSA();
   }
 };
