@@ -251,7 +251,7 @@ define void @u_2(ptr %cond) {
 ; CHECK-NEXT:    %iv.inc = add i32 %iv, -2
 ; CHECK-NEXT:    --> {29998,+,-2}<%loop> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.zext = zext i32 %iv to i64
-; CHECK-NEXT:    --> {30000,+,-2}<nw><%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {30000,+,-2}<%loop> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = load volatile i1, ptr %cond, align 1
 ; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @u_2
