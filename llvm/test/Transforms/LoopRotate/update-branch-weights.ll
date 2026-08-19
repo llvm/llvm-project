@@ -41,11 +41,11 @@ define void @func0() !prof !0 {
 ; IR-NEXT:    store volatile i32 [[I11]], ptr @g, align 4
 ; IR-NEXT:    [[I1_INC]] = add i32 [[I11]], 1
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I1_INC]], 3
-; IR-NEXT:    br i1 [[CMP1]], label %[[INNER_LOOP_BODY]], label %[[INNER_LOOP_EXIT]], !prof [[PROF1:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[INNER_LOOP_BODY]], label %[[INNER_LOOP_EXIT]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; IR:       [[INNER_LOOP_EXIT]]:
 ; IR-NEXT:    [[I0_INC]] = add i32 [[I02]], 1
 ; IR-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[I0_INC]], 1000
-; IR-NEXT:    br i1 [[CMP0]], label %[[OUTER_LOOP_BODY]], label %[[OUTER_LOOP_EXIT:.*]], !prof [[PROF2:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP0]], label %[[OUTER_LOOP_BODY]], label %[[OUTER_LOOP_EXIT:.*]], !prof [[PROF4:![0-9]+]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IR:       [[OUTER_LOOP_EXIT]]:
 ; IR-NEXT:    ret void
 ;
@@ -95,10 +95,10 @@ outer_loop_exit:
 ; executed more often than header.
 define void @func1(i32 %n) !prof !3 {
 ; IR-LABEL: define void @func1(
-; IR-SAME: i32 [[N:%.*]]) !prof [[PROF3:![0-9]+]] {
+; IR-SAME: i32 [[N:%.*]]) !prof [[PROF7:![0-9]+]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N]]
-; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_BODY_LR_PH:.*]], label %[[LOOP_EXIT:.*]], !prof [[PROF4:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_BODY_LR_PH:.*]], label %[[LOOP_EXIT:.*]], !prof [[PROF8:![0-9]+]]
 ; IR:       [[LOOP_BODY_LR_PH]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -106,7 +106,7 @@ define void @func1(i32 %n) !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I2]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I2]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[N]]
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], !prof [[PROF4]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], !prof [[PROF8]], !llvm.loop [[LOOP9:![0-9]+]]
 ; IR:       [[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE]]:
 ; IR-NEXT:    br label %[[LOOP_EXIT]]
 ; IR:       [[LOOP_EXIT]]:
@@ -145,10 +145,10 @@ loop_exit:
 ; loop-exit count is higher than backedge count.
 define void @func2(i32 %n) !prof !3 {
 ; IR-LABEL: define void @func2(
-; IR-SAME: i32 [[N:%.*]]) !prof [[PROF3]] {
+; IR-SAME: i32 [[N:%.*]]) !prof [[PROF7]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N]]
-; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF5:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF11:![0-9]+]]
 ; IR:       [[LOOP_BODY_LR_PH]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -156,7 +156,7 @@ define void @func2(i32 %n) !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I2]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I2]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[N]]
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF5]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF11]], !llvm.loop [[LOOP12:![0-9]+]]
 ; IR:       [[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE]]:
 ; IR-NEXT:    br label %[[LOOP_EXIT]]
 ; IR:       [[LOOP_EXIT]]:
@@ -194,10 +194,10 @@ loop_exit:
 
 define void @func3_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-LABEL: define void @func3_zero_branch_weight(
-; IR-SAME: i32 [[N:%.*]]) !prof [[PROF3]] {
+; IR-SAME: i32 [[N:%.*]]) !prof [[PROF7]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N]]
-; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF6:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF14:![0-9]+]]
 ; IR:       [[LOOP_BODY_LR_PH]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -205,7 +205,7 @@ define void @func3_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I2]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I2]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[N]]
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF6]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF14]]
 ; IR:       [[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE]]:
 ; IR-NEXT:    br label %[[LOOP_EXIT]]
 ; IR:       [[LOOP_EXIT]]:
@@ -230,10 +230,10 @@ loop_exit:
 
 define void @func4_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-LABEL: define void @func4_zero_branch_weight(
-; IR-SAME: i32 [[N:%.*]]) !prof [[PROF3]] {
+; IR-SAME: i32 [[N:%.*]]) !prof [[PROF7]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N]]
-; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF7:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF15:![0-9]+]]
 ; IR:       [[LOOP_BODY_LR_PH]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -241,7 +241,7 @@ define void @func4_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I2]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I2]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[N]]
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF7]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF15]], !llvm.loop [[LOOP16:![0-9]+]]
 ; IR:       [[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE]]:
 ; IR-NEXT:    br label %[[LOOP_EXIT]]
 ; IR:       [[LOOP_EXIT]]:
@@ -266,10 +266,10 @@ loop_exit:
 
 define void @func5_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-LABEL: define void @func5_zero_branch_weight(
-; IR-SAME: i32 [[N:%.*]]) !prof [[PROF3]] {
+; IR-SAME: i32 [[N:%.*]]) !prof [[PROF7]] {
 ; IR-NEXT:  [[ENTRY:.*:]]
 ; IR-NEXT:    [[CMP1:%.*]] = icmp slt i32 0, [[N]]
-; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF8:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP1]], label %[[LOOP_EXIT:.*]], label %[[LOOP_BODY_LR_PH:.*]], !prof [[PROF17:![0-9]+]]
 ; IR:       [[LOOP_BODY_LR_PH]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -277,7 +277,7 @@ define void @func5_zero_branch_weight(i32 %n) !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I2]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I2]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[N]]
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF8]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_BODY]], !prof [[PROF17]]
 ; IR:       [[LOOP_HEADER_LOOP_EXIT_CRIT_EDGE]]:
 ; IR-NEXT:    br label %[[LOOP_EXIT]]
 ; IR:       [[LOOP_EXIT]]:
@@ -317,7 +317,7 @@ loop_exit:
 ; However this may not hold for Sample-based PGO.
 define void @func6_inaccurate_branch_weight() !prof !3 {
 ; IR-LABEL: define void @func6_inaccurate_branch_weight(
-; IR-SAME: ) !prof [[PROF3]] {
+; IR-SAME: ) !prof [[PROF7]] {
 ; IR-NEXT:  [[ENTRY:.*]]:
 ; IR-NEXT:    br label %[[LOOP_BODY:.*]]
 ; IR:       [[LOOP_BODY]]:
@@ -325,7 +325,7 @@ define void @func6_inaccurate_branch_weight() !prof !3 {
 ; IR-NEXT:    store volatile i32 [[I1]], ptr @g, align 4
 ; IR-NEXT:    [[I_INC]] = add i32 [[I1]], 1
 ; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], 2
-; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF9:![0-9]+]]
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF18:![0-9]+]], !llvm.loop [[LOOP19:![0-9]+]]
 ; IR:       [[LOOP_EXIT]]:
 ; IR-NEXT:    ret void
 ;
@@ -346,6 +346,102 @@ loop_exit:
   ret void
 }
 
+; Record the reduced trip count when rotation folds a single-exit guard.
+
+define void @folded_single_exit_inferred_trip_count() {
+; IR-LABEL: define void @folded_single_exit_inferred_trip_count() {
+; IR-NEXT:  [[ENTRY:.*]]:
+; IR-NEXT:    br label %[[LOOP_BODY:.*]]
+; IR:       [[LOOP_BODY]]:
+; IR-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_BODY]] ]
+; IR-NEXT:    store volatile i32 [[I1]], ptr @g, align 4
+; IR-NEXT:    [[I_INC]] = add i32 [[I1]], 1
+; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], 10
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF4]], !llvm.loop [[LOOP21:![0-9]+]]
+; IR:       [[LOOP_EXIT]]:
+; IR-NEXT:    ret void
+;
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop_body ]
+  %cmp = icmp slt i32 %i, 10
+  br i1 %cmp, label %loop_body, label %loop_exit, !prof !1
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i.inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
+; Decrement an explicit trip count when rotation folds the guard.
+
+define void @folded_single_exit_explicit_trip_count() {
+; IR-LABEL: define void @folded_single_exit_explicit_trip_count() {
+; IR-NEXT:  [[ENTRY:.*]]:
+; IR-NEXT:    br label %[[LOOP_BODY:.*]]
+; IR:       [[LOOP_BODY]]:
+; IR-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_BODY]] ]
+; IR-NEXT:    store volatile i32 [[I1]], ptr @g, align 4
+; IR-NEXT:    [[I_INC]] = add i32 [[I1]], 1
+; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], 10
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF4]], !llvm.loop [[LOOP22:![0-9]+]]
+; IR:       [[LOOP_EXIT]]:
+; IR-NEXT:    ret void
+;
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop_body ]
+  %cmp = icmp slt i32 %i, 10
+  br i1 %cmp, label %loop_body, label %loop_exit, !prof !1, !llvm.loop !10
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i.inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
+; Do not underflow an explicit zero trip count.
+
+define void @folded_single_exit_zero_trip_count() {
+; IR-LABEL: define void @folded_single_exit_zero_trip_count() {
+; IR-NEXT:  [[ENTRY:.*]]:
+; IR-NEXT:    br label %[[LOOP_BODY:.*]]
+; IR:       [[LOOP_BODY]]:
+; IR-NEXT:    [[I1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_INC:%.*]], %[[LOOP_BODY]] ]
+; IR-NEXT:    store volatile i32 [[I1]], ptr @g, align 4
+; IR-NEXT:    [[I_INC]] = add i32 [[I1]], 1
+; IR-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], 10
+; IR-NEXT:    br i1 [[CMP]], label %[[LOOP_BODY]], label %[[LOOP_EXIT:.*]], !prof [[PROF4]], !llvm.loop [[LOOP24:![0-9]+]]
+; IR:       [[LOOP_EXIT]]:
+; IR-NEXT:    ret void
+;
+entry:
+  br label %loop_header
+
+loop_header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %loop_body ]
+  %cmp = icmp slt i32 %i, 10
+  br i1 %cmp, label %loop_body, label %loop_exit, !prof !1, !llvm.loop !12
+
+loop_body:
+  store volatile i32 %i, ptr @g, align 4
+  %i.inc = add i32 %i, 1
+  br label %loop_header
+
+loop_exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 1000, i32 1}
 !2 = !{!"branch_weights", i32 3000, i32 1000}
@@ -356,16 +452,35 @@ loop_exit:
 !7 = !{!"branch_weights", i32 1, i32 0}
 !8 = !{!"branch_weights", i32 0, i32 0}
 !9 = !{!"branch_weights", i32 1023, i32 1024}
+!10 = distinct !{!10, !11}
+!11 = !{!"llvm.loop.estimated_trip_count", i32 10}
+!12 = distinct !{!12, !13}
+!13 = !{!"llvm.loop.estimated_trip_count", i32 0}
 
 ;.
 ; IR: [[PROF0]] = !{!"function_entry_count", i64 1}
 ; IR: [[PROF1]] = !{!"branch_weights", i32 2000, i32 1000}
-; IR: [[PROF2]] = !{!"branch_weights", i32 999, i32 1}
-; IR: [[PROF3]] = !{!"function_entry_count", i64 1024}
-; IR: [[PROF4]] = !{!"branch_weights", i32 40, i32 2}
-; IR: [[PROF5]] = !{!"branch_weights", i32 10240, i32 320}
-; IR: [[PROF6]] = !{!"branch_weights", i32 0, i32 1}
-; IR: [[PROF7]] = !{!"branch_weights", i32 1, i32 0}
-; IR: [[PROF8]] = !{!"branch_weights", i32 0, i32 0}
-; IR: [[PROF9]] = !{!"branch_weights", i32 0, i32 1024}
+; IR: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
+; IR: [[META3]] = !{!"llvm.loop.estimated_trip_count", i32 3}
+; IR: [[PROF4]] = !{!"branch_weights", i32 999, i32 1}
+; IR: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]]}
+; IR: [[META6]] = !{!"llvm.loop.estimated_trip_count", i32 1000}
+; IR: [[PROF7]] = !{!"function_entry_count", i64 1024}
+; IR: [[PROF8]] = !{!"branch_weights", i32 40, i32 2}
+; IR: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]]}
+; IR: [[META10]] = !{!"llvm.loop.estimated_trip_count", i32 20}
+; IR: [[PROF11]] = !{!"branch_weights", i32 10240, i32 320}
+; IR: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]]}
+; IR: [[META13]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; IR: [[PROF14]] = !{!"branch_weights", i32 0, i32 1}
+; IR: [[PROF15]] = !{!"branch_weights", i32 1, i32 0}
+; IR: [[LOOP16]] = distinct !{[[LOOP16]], [[META13]]}
+; IR: [[PROF17]] = !{!"branch_weights", i32 0, i32 0}
+; IR: [[PROF18]] = !{!"branch_weights", i32 0, i32 1024}
+; IR: [[LOOP19]] = distinct !{[[LOOP19]], [[META20:![0-9]+]]}
+; IR: [[META20]] = !{!"llvm.loop.estimated_trip_count", i32 1}
+; IR: [[LOOP21]] = distinct !{[[LOOP21]], [[META6]]}
+; IR: [[LOOP22]] = distinct !{[[LOOP22]], [[META23:![0-9]+]]}
+; IR: [[META23]] = !{!"llvm.loop.estimated_trip_count", i32 9}
+; IR: [[LOOP24]] = distinct !{[[LOOP24]], [[META13]]}
 ;.

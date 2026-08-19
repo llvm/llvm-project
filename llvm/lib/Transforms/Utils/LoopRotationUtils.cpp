@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
+
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -33,8 +35,10 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
@@ -697,6 +701,17 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       !isa<ConstantInt>(Cond) ||
       PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
 
+  // Save the trip count before updating branch weights. Only infer it from
+  // profile weights for single-exit loops, but still read and decrement
+  // explicit llvm.loop.estimated_trip_count on any loop.
+  // getExitingBlock() is null when there is no unique dedicated exit block.
+  bool IsMultiExitLoop = !L->getExitingBlock();
+  bool HasExplicitEstimatedTripCount =
+      getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount).has_value();
+  std::optional<unsigned> EstimatedTripCount;
+  if (!IsMultiExitLoop || HasExplicitEstimatedTripCount)
+    EstimatedTripCount = getLoopEstimatedTripCount(L);
+
   updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
 
   if (HasConditionalPreHeader) {
@@ -747,6 +762,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Update MSSA too, if available.
     if (MSSAU)
       MSSAU->removeEdge(OrigPreheader, Exit);
+  }
+
+  if (EstimatedTripCount) {
+    // One header test moved to the preheader and no longer counts as a trip.
+    // Record the decremented count in loop metadata only; updateBranchWeights()
+    // already handled branch weights above.
+    if (!setLoopEstimatedTripCount(
+            L, *EstimatedTripCount == 0 ? 0 : *EstimatedTripCount - 1))
+      LLVM_DEBUG(dbgs() << "LoopRotation: failed to set estimated trip "
+                        << "count after rotation\n");
   }
 
   assert(L->getLoopPreheader() && "Invalid loop preheader after loop rotation");
