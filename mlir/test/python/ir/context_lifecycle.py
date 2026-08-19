@@ -136,5 +136,3 @@ transient_f32 = None
 transient_vec = None
 gc.collect()
 assert mlir.ir.Context._get_live_count() == 0
-
-
