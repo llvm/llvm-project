@@ -316,15 +316,26 @@ define <vscale x 8 x i16> @deinterleave2_intersect_flags_interleave2(<vscale x 8
   ret <vscale x 8 x i16> %r
 }
 
+; TODO: Handle non-speculatable instructions.
+; We can only support these when all non-speculatable instructions are in the same block.
 define <vscale x 16 x i16> @control_flow_sdiv(<vscale x 16 x i16> %v, i1 %cond, i16 %splat_value) {
 ; CHECK-LABEL: define <vscale x 16 x i16> @control_flow_sdiv(
 ; CHECK-SAME: <vscale x 16 x i16> [[V:%.*]], i1 [[COND:%.*]], i16 [[SPLAT_VALUE:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave4.nxv16i16(<vscale x 16 x i16> [[V]])
+; CHECK-NEXT:    [[F0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 0
+; CHECK-NEXT:    [[F1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 1
+; CHECK-NEXT:    [[F2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 2
+; CHECK-NEXT:    [[F3:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 3
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[SPLAT_VALUE]], i64 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[INSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[SPLAT_VALUE]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i16> [[DOTSPLATINSERT]], <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = sdiv <vscale x 16 x i16> [[V]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[A0:%.*]] = sdiv <vscale x 4 x i16> [[F0]], [[SPLAT]]
+; CHECK-NEXT:    [[A1:%.*]] = sdiv <vscale x 4 x i16> [[F1]], [[SPLAT]]
+; CHECK-NEXT:    [[A2:%.*]] = sdiv <vscale x 4 x i16> [[F2]], [[SPLAT]]
+; CHECK-NEXT:    [[A3:%.*]] = sdiv <vscale x 4 x i16> [[F3]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i16> @llvm.vector.interleave4.nxv16i16(<vscale x 4 x i16> [[A0]], <vscale x 4 x i16> [[A1]], <vscale x 4 x i16> [[A2]], <vscale x 4 x i16> [[A3]])
 ; CHECK-NEXT:    ret <vscale x 16 x i16> [[R]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret <vscale x 16 x i16> zeroinitializer
@@ -654,6 +665,51 @@ define <vscale x 8 x i16> @negative_deinterleave2(
   %u = add <vscale x 4 x i16> %f0, %f1
   %r = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %u, <vscale x 4 x i16> %u)
   ret <vscale x 8 x i16> %r
+}
+
+; Negative test: Don't allow non-speculatable users in different blocks.
+define <vscale x 16 x i16> @non_speculatable_uses_mixed_blocks(<vscale x 16 x i16> %v, i1 %cond, i16 %splat_value) {
+; CHECK-LABEL: define <vscale x 16 x i16> @non_speculatable_uses_mixed_blocks(
+; CHECK-SAME: <vscale x 16 x i16> [[V:%.*]], i1 [[COND:%.*]], i16 [[SPLAT_VALUE:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[D:%.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave4.nxv16i16(<vscale x 16 x i16> [[V]])
+; CHECK-NEXT:    [[F0:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 0
+; CHECK-NEXT:    [[F1:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 1
+; CHECK-NEXT:    [[F2:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 2
+; CHECK-NEXT:    [[F3:%.*]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } [[D]], 3
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[SPLAT_VALUE]], i64 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[INSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[A0:%.*]] = sdiv <vscale x 4 x i16> [[F0]], [[SPLAT]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[A1:%.*]] = sdiv <vscale x 4 x i16> [[F1]], [[SPLAT]]
+; CHECK-NEXT:    [[A2:%.*]] = sdiv <vscale x 4 x i16> [[F2]], [[SPLAT]]
+; CHECK-NEXT:    [[A3:%.*]] = sdiv <vscale x 4 x i16> [[F3]], [[SPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 16 x i16> @llvm.vector.interleave4.nxv16i16(<vscale x 4 x i16> [[A0]], <vscale x 4 x i16> [[A1]], <vscale x 4 x i16> [[A2]], <vscale x 4 x i16> [[A3]])
+; CHECK-NEXT:    ret <vscale x 16 x i16> [[R]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    ret <vscale x 16 x i16> zeroinitializer
+;
+entry:
+  %d = call { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave4.nxv16i16(<vscale x 16 x i16> %v)
+  %f0 = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } %d, 0
+  %f1 = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } %d, 1
+  %f2 = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } %d, 2
+  %f3 = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16> } %d, 3
+  %insert = insertelement <vscale x 4 x i16> poison, i16 %splat_value, i64 0
+  %splat = shufflevector <vscale x 4 x i16> %insert, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
+  %a0 = sdiv <vscale x 4 x i16> %f0, %splat
+  br i1 %cond, label %then, label %else
+
+then:
+  %a1 = sdiv <vscale x 4 x i16> %f1, %splat
+  %a2 = sdiv <vscale x 4 x i16> %f2, %splat
+  %a3 = sdiv <vscale x 4 x i16> %f3, %splat
+  %r = call <vscale x 16 x i16> @llvm.vector.interleave4.nxv16i16(<vscale x 4 x i16> %a0, <vscale x 4 x i16> %a1, <vscale x 4 x i16> %a2, <vscale x 4 x i16> %a3)
+  ret <vscale x 16 x i16> %r
+
+else:
+  ret <vscale x 16 x i16> zeroinitializer
 }
 
 ;.

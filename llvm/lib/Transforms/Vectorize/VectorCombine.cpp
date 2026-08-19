@@ -5947,7 +5947,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
 
   auto IsSupportedElementwise = [&](Instruction *Inst) {
     auto *ResultTy = dyn_cast<VectorType>(Inst->getType());
-    if (!ResultTy)
+    if (!ResultTy || !isSafeToSpeculativelyExecute(Inst))
       return false;
 
     if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
