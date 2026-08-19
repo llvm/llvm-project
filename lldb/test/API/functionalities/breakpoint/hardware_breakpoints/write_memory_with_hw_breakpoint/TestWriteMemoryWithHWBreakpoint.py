@@ -46,4 +46,4 @@ class WriteMemoryWithHWBreakpoint(HardwareBreakpointTestBase):
 
         result = process.WriteMemory(address, data, error)
         self.assertTrue(error.Success())
-        self.assertEquals(result, len(data))
+        self.assertEqual(result, len(data))
