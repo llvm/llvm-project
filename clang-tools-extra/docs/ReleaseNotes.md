@@ -102,6 +102,12 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`misc-header-guard
+  <clang-tidy/checks/misc/header-guard>` check.
+
+  Finds and fixes header guards that do not conform to the configured style
+  options.
+
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 

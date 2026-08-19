@@ -35,6 +35,12 @@ public:
   /// Returns ``true`` if the check should add a header guard to the file
   /// if it has none.
   virtual bool shouldSuggestToAddHeaderGuard(StringRef Filename);
+  /// Returns the location of an existing ``#pragma once`` directive in the
+  /// file \p Filename, so that it can be removed when a header guard is
+  /// inserted in its place. Returns an invalid location if there is none.
+  virtual SourceLocation getPragmaOnceLoc(StringRef Filename) const {
+    return {};
+  }
   /// Returns a replacement for the ``#endif`` line with a comment mentioning
   /// \p HeaderGuard. The replacement should start with ``endif``.
   virtual std::string formatEndIf(StringRef HeaderGuard);

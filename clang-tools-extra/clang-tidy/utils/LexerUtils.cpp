@@ -371,4 +371,15 @@ SourceLocation getLocationForNoexceptSpecifier(const FunctionDecl *FuncDecl,
   return {};
 }
 
+bool isPragmaOnce(SourceLocation Loc, const SourceManager &SM) {
+  auto Str = StringRef(SM.getCharacterData(Loc));
+  if (!Str.consume_front("#"))
+    return false;
+  Str = Str.trim();
+  if (!Str.consume_front("pragma"))
+    return false;
+  Str = Str.trim();
+  return Str.starts_with("once");
+}
+
 } // namespace clang::tidy::utils::lexer

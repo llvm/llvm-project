@@ -241,7 +241,8 @@ public:
 
       const StringRef LineEnding = SM.getBufferData(FID).detectEOL();
 
-      Check->diag(StartLoc, "header is missing header guard")
+      auto Diag =
+          Check->diag(StartLoc, "header is missing header guard")
           << FixItHint::CreateInsertion(
                  StartLoc, (Twine("#ifndef ") + CPPVar + LineEnding +
                             "#define " + CPPVar + LineEnding + LineEnding)
@@ -254,6 +255,18 @@ public:
                        : "endif") +
                   LineEnding)
                      .str());
+
+      // Remove a pre-existing `#pragma once` so we don't end up with both a
+      // pragma and a header guard protecting the same file.
+      const SourceLocation PragmaOnceLoc = Check->getPragmaOnceLoc(FileName);
+      if (PragmaOnceLoc.isValid()) {
+        const char *Data = SM.getCharacterData(PragmaOnceLoc);
+        size_t Len = std::strcspn(Data, "\r\n");
+        while (Data[Len] == '\r' || Data[Len] == '\n')
+          ++Len;
+        Diag << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+            PragmaOnceLoc, PragmaOnceLoc.getLocWithOffset(Len)));
+      }
     }
   }
 
