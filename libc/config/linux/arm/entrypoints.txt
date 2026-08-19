@@ -524,6 +524,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintf
     libc.src.math.rintl
     libc.src.math.round
+    libc.src.math.roundevenf128
     libc.src.math.roundf
     libc.src.math.roundf128
     libc.src.math.roundl
