@@ -127,10 +127,9 @@ TEST_F(TargetAPIMutexTargetTest, BareHandleDoesNotAutoUnlockOnDestruction) {
   // thread (incrementing the recursive count), so we unlock twice to fully
   // release both acquisitions.
   TargetAPIMutex cleanup_lock(target_sp);
-  if (cleanup_lock.try_lock()) {
-    cleanup_lock.unlock();
-    cleanup_lock.unlock();
-  }
+  ASSERT_TRUE(cleanup_lock.try_lock());
+  cleanup_lock.unlock();
+  cleanup_lock.unlock();
 }
 
 TEST_F(TargetAPIMutexTargetTest, LockGuardReleasesOnScopeExit) {
