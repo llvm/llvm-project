@@ -11,9 +11,9 @@
 // <ranges>
 
 //   V models only input_range:
-//     using inner_iterator::iterator_concept = input_iterator_tag;
-//     using inner_iterator::difference_type = range_difference_t<V>;
-//     using inner_iterator::value_type = range_value_t<V>;
+//     using iterator_concept = input_iterator_tag;
+//     using difference_type = range_difference_t<V>;
+//     using value_type = range_value_t<V>;
 
 #include <concepts>
 #include <iterator>
@@ -21,14 +21,14 @@
 
 #include "test_iterators.h"
 
-// Test `using inner_iterator::iterator_concept = input_iterator_tag`
+// Test `using iterator_concept = input_iterator_tag`
 static_assert(std::same_as<
               typename std::ranges::iterator_t< std::ranges::range_reference_t< std::ranges::chunk_view<
                   std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::
                   iterator_concept,
               std::input_iterator_tag>);
 
-// Test `using inner_iterator::difference_type = range_difference_t<V>`
+// Test `using difference_type = range_difference_t<V>`
 static_assert(std::same_as<
               typename std::ranges::iterator_t<std::ranges::range_reference_t< std::ranges::chunk_view<
                   std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::
@@ -36,7 +36,7 @@ static_assert(std::same_as<
               std::ranges::range_difference_t<
                   std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
 
-// Test `using inner_iterator::value_type = range_value_t<V>`
+// Test `using value_type = range_value_t<V>`
 static_assert(std::same_as<
               typename std::ranges::iterator_t<std::ranges::range_reference_t< std::ranges::chunk_view<
                   std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>::

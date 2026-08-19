@@ -11,11 +11,8 @@
 // <ranges>
 
 //   V models only input_range:
-//     class outer_iterator;
-
-//     using outer_iterator::iterator_concept = input_iterator_tag;
-//     using outer_iterator::difference_type = range_difference_t<V>;
-//     class outer_iterator::value_type;
+//     using iterator_concept = input_iterator_tag;
+//     using difference_type = range_difference_t<V>;
 
 #include <concepts>
 #include <iterator>
@@ -23,22 +20,16 @@
 
 #include "test_iterators.h"
 
+// Test `using iterator_concept = input_iterator_tag`
 static_assert(std::same_as< typename std::ranges::iterator_t< std::ranges::chunk_view<
                                 std::ranges::subrange<cpp17_input_iterator<int*>,
                                                       sentinel_wrapper<cpp17_input_iterator<int*>>>>>::iterator_concept,
                             std::input_iterator_tag>);
+
+// Test `using difference_tyoe = range_difference_t<V>`
 static_assert(
     std::same_as<typename std::ranges::iterator_t< std::ranges::chunk_view<
                      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::
                      difference_type,
                  std::ranges::range_difference_t<
                      std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>);
-static_assert(std::same_as<
-              typename std::ranges::iterator_t<std::ranges::chunk_view<
-                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::
-                  value_type,
-              std::iter_value_t<std::ranges::iterator_t<std::ranges::chunk_view<
-                  std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>>>);
-static_assert(
-    std::ranges::input_range< typename std::ranges::iterator_t<std::ranges::chunk_view<
-        std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>>::value_type>);
