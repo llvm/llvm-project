@@ -452,9 +452,9 @@ public:
   /// \returns A value to be added to the inlining threshold.
   LLVM_ABI unsigned adjustInliningThreshold(const CallBase *CB) const;
 
-  /// \returns Whether inlining a call site located in an unreachable-terminated
-  /// block is allowed to grow code size.
-  LLVM_ABI bool allowInliningSizeGrowthInUnreachableBlock() const;
+  /// \return true if size growth is allowed when inlining the callee at \p
+  /// Call.
+  LLVM_ABI bool allowSizeGrowth(const CallBase &Call) const;
 
   /// \returns The cost of having an Alloca in the caller if not inlined, to be
   /// added to the threshold

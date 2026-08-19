@@ -1678,8 +1678,8 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   return Threshold;
 }
 
-bool GCNTTIImpl::allowInliningSizeGrowthInUnreachableBlock() const {
-  // The allowSizeGrowth call will avoid growing the code size if the call
+bool GCNTTIImpl::allowSizeGrowth(const CallBase &Call) const {
+  // The default allowSizeGrowth will avoid growing the code size if the call
   // itself ends up with an unreachable instruction as terminator. However, for
   // amdgpu, the uninlined call results in extra scratch/private use regardless
   // of whether the call will be made. To decrease the unnecessary scratch use,
