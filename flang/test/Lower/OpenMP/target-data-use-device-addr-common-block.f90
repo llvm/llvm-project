@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=50 %s -o /dev/null
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 %s -o /dev/null
 
 ! CHECK-LABEL: func.func @_QPstandalone_common
 ! CHECK: %[[STANDALONE_X_MAP:.*]] = omp.map.info {{.*}} map_clauses(return_param) {{.*}} {name = "x"}
