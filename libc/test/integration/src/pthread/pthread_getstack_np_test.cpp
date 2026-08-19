@@ -23,14 +23,13 @@
 #include "src/pthread/pthread_self.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
+#include "src/unistd/sysconf.h"
 #include "test/IntegrationTest/test.h"
 
-#include <linux/param.h> // For EXEC_PAGESIZE.
-#include <pthread.h>
-
 static void check_readable(const void *start, size_t size) {
+  size_t pagesize = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
   auto *bytes = static_cast<const volatile char *>(start);
-  for (size_t offset = 0; offset < size; offset += EXEC_PAGESIZE)
+  for (size_t offset = 0; offset < size; offset += pagesize)
     (void)bytes[offset];
   if (size > 0)
     (void)bytes[size - 1];
@@ -65,7 +64,8 @@ static void test_main_thread() {
             0);
   ASSERT_NE(stackaddr, static_cast<void *>(nullptr));
   ASSERT_EQ(stacksize, static_cast<size_t>(PTHREAD_STACK_DYNAMIC_NP));
-  ASSERT_EQ(reinterpret_cast<uintptr_t>(stackaddr) % EXEC_PAGESIZE,
+  ASSERT_EQ(reinterpret_cast<uintptr_t>(stackaddr) %
+                LIBC_NAMESPACE::sysconf(_SC_PAGESIZE),
             static_cast<uintptr_t>(0));
 
   // Stack grows downwards on linux, so local variables on the main thread stack

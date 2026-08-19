@@ -302,7 +302,6 @@ add_integration_test(
     libc.hdr.pthread_macros
     libc.hdr.stdint_proxy
     libc.hdr.sys_mman_macros
-    libc.include.pthread
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setstack
@@ -312,6 +311,7 @@ add_integration_test(
     libc.src.pthread.pthread_self
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+    libc.src.unistd.sysconf
 )
 
 add_integration_test(
