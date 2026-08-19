@@ -163,7 +163,7 @@ function (add_sphinx_target builder project)
     math(EXPR LLVM_SPHINX_THREADS
          "(${number_of_logical_cores} + 1) / 2")
   endif()
-  set(LLVM_SPHINX_THREADS "${LLVM_SPHINX_BUILD_JOBS}"
+  set(LLVM_SPHINX_THREADS "${LLVM_SPHINX_THREADS}"
       CACHE STRING "Define the number of parallel jobs for each Sphinx build.")
   if (LLVM_SPHINX_THREADS)
     set(sphinx_jobs_flag -j ${LLVM_SPHINX_THREADS})
