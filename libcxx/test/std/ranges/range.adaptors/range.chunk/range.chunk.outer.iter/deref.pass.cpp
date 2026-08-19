@@ -23,9 +23,10 @@
 #include "test_iterators.h"
 
 constexpr bool test() {
+  std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+  
   // Test `constexpr value_type outer_iterator::operator*() const`
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
         chunked =
@@ -42,7 +43,6 @@ constexpr bool test() {
 
   // Test `constexpr inner_iterator outer_iterator::value_type::begin() const noexcept`
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
         chunked =
@@ -59,7 +59,6 @@ constexpr bool test() {
 
   // Test `constexpr default_sentinel_t outer_iterator::value_type::end() const noexcept`
   {
-    std::vector<int> vector = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     std::ranges::chunk_view<
         std::ranges::subrange<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>
         chunked =
