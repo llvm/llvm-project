@@ -22,7 +22,10 @@
 #define LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 // Forward declarations.
@@ -40,15 +43,24 @@ class TargetTransformInfo;
 /// Moreover, it only materializes constants in blocks where they
 /// are used. PHI uses are considered happening at the end of the
 /// related predecessor.
-class LLVM_ABI Localizer : public MachineFunctionPass {
+class LLVM_ABI LocalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-private:
-  /// An input function to decide if the pass should run or not
-  /// on the given MachineFunction.
-  std::function<bool(const MachineFunction &)> DoNotRunPass;
+  LocalizerLegacy();
 
+  StringRef getPassName() const override { return "Localizer"; }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class LocalizerImpl {
   /// MRI contains all the register class/bank information that this
   /// pass uses and updates.
   MachineRegisterInfo *MRI = nullptr;
@@ -63,7 +75,7 @@ private:
                          MachineBasicBlock *&InsertMBB);
 
   /// Initialize the field members using \p MF.
-  void init(MachineFunction &MF);
+  void init(MachineFunction &MF, function_ref<TargetTransformInfo *()> GetTTI);
 
   typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
 
@@ -79,18 +91,18 @@ private:
   bool localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs);
 
 public:
-  Localizer();
-  Localizer(std::function<bool(const MachineFunction &)>);
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<TargetTransformInfo *()> GetTTI);
+};
 
-  StringRef getPassName() const override { return "Localizer"; }
+class LocalizerPass : public RequiredPassInfoMixin<LocalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 
-  MachineFunctionProperties getRequiredProperties() const override {
+  MachineFunctionProperties getRequiredProperties() const {
     return MachineFunctionProperties().setIsSSA();
   }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // End namespace llvm.
