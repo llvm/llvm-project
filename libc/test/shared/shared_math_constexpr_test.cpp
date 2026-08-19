@@ -382,8 +382,6 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
-              LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
-static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaxf128(Float128(0.0), Float128(0.0)));
@@ -393,6 +391,8 @@ static_assert(0LL == LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
 
