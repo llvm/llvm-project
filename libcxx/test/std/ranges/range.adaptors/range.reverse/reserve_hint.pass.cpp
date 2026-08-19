@@ -14,6 +14,7 @@
 //     requires approximately_sized_range<const V>
 
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <ranges>
 #include <utility>
@@ -55,29 +56,39 @@ constexpr bool test() {
   // Non-common, non-const bidirectional range.
   {
     auto rev = std::ranges::reverse_view(BidirApproxSizedRange<Copyable>{buffer, 4});
-    assert(std::ranges::reserve_hint(rev) == 4);
-    assert(rev.reserve_hint() == 4);
-    assert(std::move(rev).reserve_hint() == 4);
+    std::same_as<std::size_t> decltype(auto) member_result = rev.reserve_hint();
+    assert(member_result == 4);
 
-    ASSERT_SAME_TYPE(decltype(rev.reserve_hint()), std::size_t);
-    ASSERT_SAME_TYPE(decltype(std::move(rev).reserve_hint()), std::size_t);
+    std::same_as<std::size_t> decltype(auto) reserve_hint_result = std::ranges::reserve_hint(rev);
+    assert(reserve_hint_result == 4);
+
+    std::same_as<std::size_t> decltype(auto) move_member_result = std::move(rev).reserve_hint();
+    assert(move_member_result == 4);
+
+    std::same_as<std::size_t> decltype(auto) move_reserve_hint_result = std::ranges::reserve_hint(std::move(rev));
+    assert(move_reserve_hint_result == 4);
   }
   // Non-common, const bidirectional range.
   {
     const auto rev = std::ranges::reverse_view(BidirApproxSizedRange<Copyable>{buffer, 4});
-    assert(std::ranges::reserve_hint(rev) == 4);
-    assert(rev.reserve_hint() == 4);
-    assert(std::move(rev).reserve_hint() == 4);
 
-    ASSERT_SAME_TYPE(decltype(rev.reserve_hint()), std::size_t);
-    ASSERT_SAME_TYPE(decltype(std::move(rev).reserve_hint()), std::size_t);
+    std::same_as<std::size_t> decltype(auto) member_result = rev.reserve_hint();
+    assert(member_result == 4);
+
+    std::same_as<std::size_t> decltype(auto) reserve_hint_result = std::ranges::reserve_hint(rev);
+    assert(reserve_hint_result == 4);
+
+    std::same_as<std::size_t> decltype(auto) move_member_result = std::move(rev).reserve_hint();
+    assert(move_member_result == 4);
+
+    std::same_as<std::size_t> decltype(auto) move_reserve_hint_result = std::ranges::reserve_hint(std::move(rev));
+    assert(move_reserve_hint_result == 4);
   }
   // Non-common, non-const (move only) bidirectional range.
   {
     auto rev = std::ranges::reverse_view(BidirApproxSizedRange<MoveOnly>{buffer, 4});
-    assert(std::move(rev).reserve_hint() == 4);
-
-    ASSERT_SAME_TYPE(decltype(std::move(rev).reserve_hint()), std::size_t);
+    std::same_as<std::size_t> decltype(auto) move_result = std::move(rev).reserve_hint();
+    assert(move_result == 4);
   }
 
   return true;

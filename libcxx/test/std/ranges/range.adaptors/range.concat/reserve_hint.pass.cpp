@@ -14,6 +14,7 @@
 //     requires (approximately_sized_range<const Views> && ...);
 
 #include <cassert>
+#include <concepts>
 #include <ranges>
 #include <utility>
 
@@ -91,8 +92,8 @@ constexpr bool test() {
   {
     // two ranges with different hint types: common type of int and unsigned int is unsigned int
     std::ranges::concat_view v(IntHintView{}, UnsignedHintView{});
-    assert(v.reserve_hint() == 9);
-    ASSERT_SAME_TYPE(decltype(v.reserve_hint()), unsigned int);
+    std::same_as<unsigned int> decltype(auto) result = v.reserve_hint();
+    assert(result == 9);
   }
 
   return true;

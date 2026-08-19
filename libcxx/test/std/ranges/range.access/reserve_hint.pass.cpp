@@ -11,6 +11,7 @@
 // std::ranges::reserve_hint
 
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <ranges>
 #include <type_traits>
@@ -56,30 +57,30 @@ struct ReserveHintMemberBool {
 
 static_assert(!std::is_invocable_v<RangeReserveHintT, ReserveHintMemberBool>);
 
-static_assert(std::ranges::reserve_hint(bounded_array) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(bounded_array)), std::size_t);
+constexpr std::same_as<std::size_t> decltype(auto) bounded_hint = std::ranges::reserve_hint(bounded_array);
+static_assert(bounded_hint == 42);
 
 static_assert(!std::is_invocable_v<RangeReserveHintT, decltype(unbounded_array)>);
 
 bool constexpr test_sized_sentinel_range() {
   SizedSentinelRange b;
-  assert(std::ranges::reserve_hint(b) == 42);
-  ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(b)), std::size_t);
+  std::same_as<std::size_t> decltype(auto) hint = std::ranges::reserve_hint(b);
+  assert(hint == 42);
 
   return true;
 }
 
-static_assert(std::ranges::reserve_hint(SizeMember{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(SizeMember{})), std::size_t);
+constexpr std::same_as<std::size_t> decltype(auto) size_member_hint = std::ranges::reserve_hint(SizeMember{});
+static_assert(size_member_hint == 42);
 
-static_assert(std::ranges::reserve_hint(SizeFunction{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(SizeFunction{})), std::size_t);
+constexpr std::same_as<std::size_t> decltype(auto) size_function_hint = std::ranges::reserve_hint(SizeFunction{});
+static_assert(size_function_hint == 42);
 
-static_assert(std::ranges::reserve_hint(ReserveHintMember{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(ReserveHintMember{})), std::size_t);
+constexpr std::same_as<std::size_t> decltype(auto) member_hint = std::ranges::reserve_hint(ReserveHintMember{});
+static_assert(member_hint == 42);
 
-static_assert(std::ranges::reserve_hint(ReserveHintFunction{}) == 42);
-ASSERT_SAME_TYPE(decltype(std::ranges::reserve_hint(ReserveHintFunction{})), std::size_t);
+constexpr std::same_as<std::size_t> decltype(auto) function_hint = std::ranges::reserve_hint(ReserveHintFunction{});
+static_assert(function_hint == 42);
 
 // test that the order of preference is ranges::size, then member reserve_hint,
 // then function reserve_hint
