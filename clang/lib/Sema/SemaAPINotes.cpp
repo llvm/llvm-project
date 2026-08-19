@@ -1451,13 +1451,17 @@ void Sema::ProcessAPINotes(Decl *D) {
               processExactAPINotes<api_notes::CXXMethodInfo>(
                   *this, CXXMethod, *ParameterSelectorCandidates,
                   [&](ArrayRef<std::string> Parameters) {
+                    api_notes::FunctionSelector Selector;
+                    Selector.setParameters(Parameters);
                     return Reader->lookupCXXMethod(Context->id, MethodName,
-                                                   Parameters);
+                                                   Selector);
                   });
               DiagnosticState.markCandidatesUsed(
                   [&](ArrayRef<std::string> Parameters) {
+                    api_notes::FunctionSelector Selector;
+                    Selector.setParameters(Parameters);
                     return Reader->getCXXMethodSelectorKey(
-                        Context->id, MethodName, Parameters);
+                        Context->id, MethodName, Selector);
                   },
                   *ParameterSelectorCandidates);
             }
@@ -1466,9 +1470,11 @@ void Sema::ProcessAPINotes(Decl *D) {
               SmallVector<api_notes::FunctionObjectSelector, 7> ObjectSelectors;
               getAPINotesObjectSelectorSubsets(
                   getAPINotesObjectSelector(CXXMethod), ObjectSelectors);
-              // Apply every matching object selector in increasing specificity.
-              // Wildcard object constraints are broad refinements. Selectors
-              // that also constrain explicit parameters are applied last.
+              // Apply broad object-selector matches before more specific ones.
+              // For example, Object:{Const:true} can provide defaults for all
+              // const methods. Object:{Const:true, Ref:lvalue} is more
+              // specific for a const lvalue-ref-qualified method, so if both
+              // notes set the same field, the more specific selector wins.
               for (api_notes::FunctionObjectSelector ObjectSelector :
                    ObjectSelectors) {
                 api_notes::FunctionSelector Selector;
@@ -1488,8 +1494,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                       *this, CXXMethod, *ParameterSelectorCandidates,
                       [&](ArrayRef<std::string> Parameters) {
                         api_notes::FunctionSelector Selector;
-                        Selector.Parameters.emplace(Parameters.begin(),
-                                                    Parameters.end());
+                        Selector.setParameters(Parameters);
                         Selector.Object = ObjectSelector;
                         return Reader->lookupCXXMethod(Context->id, MethodName,
                                                        Selector);
@@ -1497,8 +1502,7 @@ void Sema::ProcessAPINotes(Decl *D) {
                   DiagnosticState.markCandidatesUsed(
                       [&](ArrayRef<std::string> Parameters) {
                         api_notes::FunctionSelector Selector;
-                        Selector.Parameters.emplace(Parameters.begin(),
-                                                    Parameters.end());
+                        Selector.setParameters(Parameters);
                         Selector.Object = ObjectSelector;
                         return Reader->getCXXMethodSelectorKey(
                             Context->id, MethodName, Selector);

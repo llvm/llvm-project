@@ -1065,6 +1065,10 @@ struct FunctionSelector {
   std::optional<llvm::SmallVector<std::string, 4>> Parameters;
   std::optional<FunctionObjectSelector> Object;
 
+  void setParameters(llvm::ArrayRef<std::string> NewParameters) {
+    Parameters.emplace(NewParameters.begin(), NewParameters.end());
+  }
+
   std::string format() const;
 };
 

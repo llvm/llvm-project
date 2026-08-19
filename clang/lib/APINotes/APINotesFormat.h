@@ -379,98 +379,28 @@ constexpr unsigned FunctionTableKeyBaseLength =
 
 inline std::optional<FunctionTableKey> getFunctionKeyImpl(
     uint32_t ParentContextID, llvm::StringRef Name,
-    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
-        GetIdentifier) {
-  std::optional<IdentifierID> NameID = GetIdentifier(Name);
-  if (!NameID)
-    return std::nullopt;
-
-  return FunctionTableKey(ParentContextID, *NameID);
-}
-
-inline std::optional<FunctionTableKey> getFunctionKeyImpl(
-    uint32_t ParentContextID, llvm::StringRef Name,
-    FunctionObjectSelector ObjectSelector,
-    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
-        GetIdentifier) {
-  std::optional<IdentifierID> NameID = GetIdentifier(Name);
-  if (!NameID)
-    return std::nullopt;
-
-  FunctionTableSelectorKey Selector;
-  Selector.Object = ObjectSelector;
-  return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
-}
-
-template <typename ParameterT>
-std::optional<FunctionTableKey> getFunctionKeyImpl(
-    uint32_t ParentContextID, llvm::StringRef Name,
-    llvm::ArrayRef<ParameterT> Parameters,
-    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
-        GetIdentifier) {
-  std::optional<IdentifierID> NameID = GetIdentifier(Name);
-  if (!NameID)
-    return std::nullopt;
-
-  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
-  ParameterTypeIDs.reserve(Parameters.size());
-  for (const ParameterT &Parameter : Parameters) {
-    std::optional<IdentifierID> ParameterID =
-        GetIdentifier(llvm::StringRef(Parameter));
-    if (!ParameterID)
-      return std::nullopt;
-    ParameterTypeIDs.push_back(*ParameterID);
-  }
-  FunctionTableSelectorKey Selector;
-  Selector.Parameters.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
-  return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
-}
-
-template <typename ParameterT>
-std::optional<FunctionTableKey> getFunctionKeyImpl(
-    uint32_t ParentContextID, llvm::StringRef Name,
-    llvm::ArrayRef<ParameterT> Parameters,
-    FunctionObjectSelector ObjectSelector,
-    llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
-        GetIdentifier) {
-  std::optional<IdentifierID> NameID = GetIdentifier(Name);
-  if (!NameID)
-    return std::nullopt;
-
-  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
-  ParameterTypeIDs.reserve(Parameters.size());
-  for (const ParameterT &Parameter : Parameters) {
-    std::optional<IdentifierID> ParameterID =
-        GetIdentifier(llvm::StringRef(Parameter));
-    if (!ParameterID)
-      return std::nullopt;
-    ParameterTypeIDs.push_back(*ParameterID);
-  }
-  FunctionTableSelectorKey Selector;
-  Selector.Parameters.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
-  Selector.Object = ObjectSelector;
-  return FunctionTableKey(ParentContextID, *NameID, std::move(Selector));
-}
-
-inline std::optional<FunctionTableKey> getFunctionKeyImpl(
-    uint32_t ParentContextID, llvm::StringRef Name,
     const FunctionSelector &Selector,
     llvm::function_ref<std::optional<IdentifierID>(llvm::StringRef)>
         GetIdentifier) {
+  std::optional<IdentifierID> NameID = GetIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  FunctionTableSelectorKey KeySelector;
   if (Selector.Parameters) {
-    if (Selector.Object)
-      return getFunctionKeyImpl(
-          ParentContextID, Name,
-          llvm::ArrayRef<std::string>(*Selector.Parameters), *Selector.Object,
-          GetIdentifier);
-    return getFunctionKeyImpl(ParentContextID, Name,
-                              llvm::ArrayRef<std::string>(*Selector.Parameters),
-                              GetIdentifier);
+    llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
+    ParameterTypeIDs.reserve(Selector.Parameters->size());
+    for (const std::string &Parameter : *Selector.Parameters) {
+      std::optional<IdentifierID> ParameterID = GetIdentifier(Parameter);
+      if (!ParameterID)
+        return std::nullopt;
+      ParameterTypeIDs.push_back(*ParameterID);
+    }
+    KeySelector.Parameters.emplace(ParameterTypeIDs.begin(),
+                                   ParameterTypeIDs.end());
   }
-  if (Selector.Object)
-    return getFunctionKeyImpl(ParentContextID, Name, *Selector.Object,
-                              GetIdentifier);
-  return getFunctionKeyImpl(ParentContextID, Name, GetIdentifier);
+  KeySelector.Object = Selector.Object;
+  return FunctionTableKey(ParentContextID, *NameID, std::move(KeySelector));
 }
 
 } // namespace api_notes
