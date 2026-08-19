@@ -1078,13 +1078,13 @@ public:
   }
 
   bool runOnModuleNormal(Module &M) {
-    bool Changed = superAlignLDSGlobals(M);
-
     // Nothing left to lower on the codegen-partition rerun.
     if (none_of(M.globals(), isNotYetLoweredLDSVariable))
-      return Changed;
+      return false;
 
-    CallGraph CG = CallGraph(M);
+    bool Changed = superAlignLDSGlobals(M);
+
+    CallGraph CG(M);
 
     Changed |= eliminateGVConstantExprUsesFromAllInstructions(
         M, isNotYetLoweredLDSVariable);
@@ -1093,8 +1093,7 @@ public:
 
     // For each kernel, what variables does it access directly or through
     // callees
-    GVUsesInfoTy LDSUsesInfo =
-        getTransitiveUsesOfGV(CG, M, isNotYetLoweredLDSVariable);
+    GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
     // For each variable accessed through callees, which kernels access it
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
