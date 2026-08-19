@@ -10622,15 +10622,35 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       }
     }
 
-    // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     // Unless we have the short forward branch optimization, or we are
     // optimizing for size.
-    if (!Subtarget.hasConditionalMoveFusion() && !DAG.shouldOptForSize())
+    if (!Subtarget.hasConditionalMoveFusion() && !DAG.shouldOptForSize()) {
+      using namespace llvm::SDPatternMatch;
+
+      // (select c, x, -x) -> (sub (czero_eqz x, c), (czero_nez x, c))
+      if (sd_match(FalseV, m_Neg(m_Specific(TrueV)))) {
+        TrueV = DAG.getFreeze(TrueV);
+        return DAG.getNode(
+            ISD::SUB, DL, VT,
+            DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
+            DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, CondV));
+      }
+      // (select c, -x, x) -> (sub (czero_nez x, c), (czero_eqz x, c))
+      if (sd_match(TrueV, m_Neg(m_Specific(FalseV)))) {
+        FalseV = DAG.getFreeze(FalseV);
+        return DAG.getNode(
+            ISD::SUB, DL, VT,
+            DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV),
+            DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, CondV));
+      }
+
+      // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
       return DAG.getNode(
           ISD::OR, DL, VT,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV),
           SDNodeFlags::Disjoint);
+    }
   }
 
   if (Op.hasOneUse()) {
