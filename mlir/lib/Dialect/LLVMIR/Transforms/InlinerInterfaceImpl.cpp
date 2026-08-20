@@ -307,9 +307,12 @@ static void createNewAliasScopesFromNoAliasParameter(
     return;
 
   // Create a new domain for this specific inlining and a new scope for every
-  // noalias parameter.
+  // noalias parameter. The scopes are disjoint, since an access based on one
+  // noalias parameter can't reach memory an access based on another one
+  // reaches.
   auto functionDomain = LLVM::AliasScopeDomainAttr::get(
-      call->getContext(), cast<LLVM::CallOp>(call).getCalleeAttr().getAttr());
+      call->getContext(), cast<LLVM::CallOp>(call).getCalleeAttr().getAttr(),
+      /*disjointScopes=*/true);
   DenseMap<Value, LLVM::AliasScopeAttr> pointerScopes;
   for (LLVM::SSACopyOp copyOp : noAliasParams) {
     auto scope = LLVM::AliasScopeAttr::get(functionDomain);
@@ -367,21 +370,6 @@ static void createNewAliasScopesFromNoAliasParameter(
           }))
         return;
 
-      // Add all noalias parameter scopes to the noalias scope list that we are
-      // not based on.
-      SmallVector<Attribute> noAliasScopes;
-      for (LLVM::SSACopyOp noAlias : noAliasParams) {
-        if (basedOnPointers.contains(noAlias))
-          continue;
-
-        noAliasScopes.push_back(pointerScopes[noAlias]);
-      }
-
-      if (!noAliasScopes.empty())
-        aliasInterface.setNoAliasScopes(
-            concatArrayAttr(aliasInterface.getNoAliasScopesOrNull(),
-                            ArrayAttr::get(call->getContext(), noAliasScopes)));
-
       // Don't add alias scopes to call operations or operations that might
       // operate on pointers not based on any noalias parameter.
       // Since we add all scopes to an operation's noalias list that it
@@ -406,19 +394,34 @@ static void createNewAliasScopesFromNoAliasParameter(
       // Call operations are included in this list since we do not know whether
       // the callee accesses any memory besides the ones passed as its
       // arguments.
-      if (aliasesOtherKnownObject ||
-          isa<LLVM::CallOp>(aliasInterface.getOperation()))
-        return;
-
       SmallVector<Attribute> aliasScopes;
-      for (LLVM::SSACopyOp noAlias : noAliasParams)
-        if (basedOnPointers.contains(noAlias))
-          aliasScopes.push_back(pointerScopes[noAlias]);
+      if (!aliasesOtherKnownObject &&
+          !isa<LLVM::CallOp>(aliasInterface.getOperation()))
+        for (LLVM::SSACopyOp noAlias : noAliasParams)
+          if (basedOnPointers.contains(noAlias))
+            aliasScopes.push_back(pointerScopes[noAlias]);
 
-      if (!aliasScopes.empty())
+      if (!aliasScopes.empty()) {
         aliasInterface.setAliasScopes(
             concatArrayAttr(aliasInterface.getAliasScopesOrNull(),
                             ArrayAttr::get(call->getContext(), aliasScopes)));
+        return;
+      }
+
+      // Add all noalias parameter scopes to the noalias scope list that we are
+      // not based on.
+      SmallVector<Attribute> noAliasScopes;
+      for (LLVM::SSACopyOp noAlias : noAliasParams) {
+        if (basedOnPointers.contains(noAlias))
+          continue;
+
+        noAliasScopes.push_back(pointerScopes[noAlias]);
+      }
+
+      if (!noAliasScopes.empty())
+        aliasInterface.setNoAliasScopes(
+            concatArrayAttr(aliasInterface.getNoAliasScopesOrNull(),
+                            ArrayAttr::get(call->getContext(), noAliasScopes)));
     });
   }
 }
