@@ -400,11 +400,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     # FIXME: Broken.
     # libc.src.math.fromfp
     # libc.src.math.fromfpf
-    #libc.src.math.fromfpf128
+    # libc.src.math.fromfpf128
     # libc.src.math.fromfpl
     # libc.src.math.fromfpx
     # libc.src.math.fromfpxf
-    #libc.src.math.fromfpxf128
+    # libc.src.math.fromfpxf128
     # libc.src.math.fromfpxl
     libc.src.math.fsqrt
     libc.src.math.fsqrtl
