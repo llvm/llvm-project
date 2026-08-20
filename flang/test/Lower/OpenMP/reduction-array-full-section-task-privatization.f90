@@ -36,6 +36,14 @@
 ! TASK: omp.taskgroup task_reduction(byref @add_reduction_byref_box_4xi32
 ! TASK: omp.task in_reduction(byref @add_reduction_byref_box_4xi32
 
+! TASK-LABEL: func.func @_QPtask_dynamic_full_section
+! TASK: omp.taskgroup task_reduction(byref @add_reduction_byref_box_Uxi32 {{.*}} -> %[[DYNAMIC_TASKGROUP_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<?xi32>>>)
+! TASK: %[[DYNAMIC_TASKGROUP_DECL:.*]]:2 = hlfir.declare %[[DYNAMIC_TASKGROUP_ARG]]
+! TASK: omp.task in_reduction(byref @add_reduction_byref_box_Uxi32 %[[DYNAMIC_TASKGROUP_DECL]]#0 -> %[[DYNAMIC_TASK_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<?xi32>>>)
+! TASK: %[[DYNAMIC_TASK_DECL:.*]]:2 = hlfir.declare %[[DYNAMIC_TASK_ARG]]
+! TASK: %[[DYNAMIC_TASK_BOX:.*]] = fir.load %[[DYNAMIC_TASK_DECL]]#0
+! TASK: hlfir.designate %[[DYNAMIC_TASK_BOX]]
+
 ! TASK-DEFAULT-LABEL: func.func @_QPtask_default_firstprivate_full_section
 ! TASK-DEFAULT: omp.task in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[FIRSTPRIVATE_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! TASK-DEFAULT: %[[FIRSTPRIVATE_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_ARG]]
@@ -116,6 +124,15 @@ subroutine task_explicit_full_section(a)
   !$omp taskgroup task_reduction(+: a(-2:1))
   !$omp task in_reduction(+: a(-2:1))
   a(-2:1) = a(-2:1) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+subroutine task_dynamic_full_section(a)
+  integer :: a(:)
+  !$omp taskgroup task_reduction(+: a(lbound(a, 1):ubound(a, 1)))
+  !$omp task shared(a) in_reduction(+: a(lbound(a, 1):ubound(a, 1)))
+  a(lbound(a, 1):ubound(a, 1)) = a(lbound(a, 1):ubound(a, 1)) + 1
   !$omp end task
   !$omp end taskgroup
 end subroutine

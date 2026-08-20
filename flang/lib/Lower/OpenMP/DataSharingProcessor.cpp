@@ -267,7 +267,7 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   auto collectWholeArrayReductionSymbols = [&](const auto &reductionClause) {
     const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
     for (const Object &object : objects)
-      if (object.sym() && isWholeArraySection(object))
+      if (object.sym() && isWholeArraySection(object, semaCtx))
         wholeArrayReductionSymbols.insert(&object.sym()->GetUltimate());
   };
 

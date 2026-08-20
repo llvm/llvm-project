@@ -14,6 +14,7 @@
 
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -74,7 +75,8 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
-bool isWholeArraySection(const Object &object) {
+bool isWholeArraySection(const Object &object,
+                         semantics::SemanticsContext &semaCtx) {
   if (!object.sym() || !object.ref())
     return false;
 
@@ -91,26 +93,30 @@ bool isWholeArraySection(const Object &object) {
   if (!shape || shape->size() != arrayRef->subscript().size())
     return false;
 
-  auto matchesDeclaredBound = [](const auto *sectionBound,
-                                 const auto &declaredBound) {
+  auto matchesBaseBound = [&](const auto *sectionBound,
+                              evaluate::MaybeExtentExpr baseBound) {
     if (!sectionBound)
       return true;
-    const auto &explicitDeclaredBound = declaredBound.GetExplicit();
-    if (!explicitDeclaredBound)
+    if (!baseBound)
       return false;
-    std::optional<std::int64_t> sectionValue = evaluate::ToInt64(*sectionBound);
-    std::optional<std::int64_t> declaredValue =
-        evaluate::ToInt64(*explicitDeclaredBound);
-    return sectionValue && declaredValue && sectionValue == declaredValue;
+    evaluate::ExtentExpr foldedSectionBound = evaluate::Fold(
+        semaCtx.foldingContext(), evaluate::ExtentExpr{*sectionBound});
+    evaluate::ExtentExpr foldedBaseBound =
+        evaluate::Fold(semaCtx.foldingContext(), std::move(*baseBound));
+    return evaluate::IsSameOrConvertOf(
+        evaluate::AsGenericExpr(std::move(foldedSectionBound)),
+        evaluate::AsGenericExpr(std::move(foldedBaseBound)));
   };
 
-  for (auto [subscript, declaredDimension] :
-       llvm::zip_equal(arrayRef->subscript(), *shape)) {
+  for (auto [dimension, subscript] : llvm::enumerate(arrayRef->subscript())) {
     const auto *triplet = std::get_if<evaluate::Triplet>(&subscript.u);
     if (!triplet || evaluate::ToInt64(triplet->GetStride()) != 1 ||
-        !matchesDeclaredBound(triplet->GetLower(),
-                              declaredDimension.lbound()) ||
-        !matchesDeclaredBound(triplet->GetUpper(), declaredDimension.ubound()))
+        !matchesBaseBound(triplet->GetLower(),
+                          evaluate::GetLBOUND(semaCtx.foldingContext(),
+                                              arrayRef->base(), dimension)) ||
+        !matchesBaseBound(triplet->GetUpper(),
+                          evaluate::GetUBOUND(semaCtx.foldingContext(),
+                                              arrayRef->base(), dimension)))
       return false;
   }
   return true;

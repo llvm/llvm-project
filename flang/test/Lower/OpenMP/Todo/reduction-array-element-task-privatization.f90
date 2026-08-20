@@ -23,6 +23,8 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-REDUCTION-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-udr-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-UDR-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-udr-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-UDR-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-cross-scope-bounds.f90 2>&1 | FileCheck %s --check-prefix=TASK-CROSS-SCOPE-BOUNDS
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-cross-scope-bounds.f90 2>&1 | FileCheck %s --check-prefix=TASK-CROSS-SCOPE-BOUNDS
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -40,6 +42,7 @@
 ! EAGER-TASKLOOP-IN-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-REDUCTION-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-UDR-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
+! TASK-CROSS-SCOPE-BOUNDS: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -116,4 +119,22 @@ subroutine taskloop_reduction_element(a, n)
   do i = 1, n
     a(2) = a(2) + i
   end do
+end subroutine
+
+!--- task-cross-scope-bounds.f90
+subroutine task_cross_scope_bounds(n)
+  integer :: n
+  integer :: a(n)
+
+contains
+  subroutine inner(m)
+    integer :: m
+    !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+    !$omp& initializer(omp_priv = 1)
+    !$omp taskgroup task_reduction(+: a(1:m))
+    !$omp task in_reduction(+: a(1:m))
+    a(1:m) = a(1:m) + 1
+    !$omp end task
+    !$omp end taskgroup
+  end subroutine
 end subroutine

@@ -29,6 +29,7 @@ class RecordType;
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
 namespace omp {
 class OmpVariantMatchContext;
@@ -137,7 +138,8 @@ void generateMemberPlacementIndices(
 bool isMemberOrParentAllocatableOrPointer(
     const Object &object, Fortran::semantics::SemanticsContext &semaCtx);
 
-bool isWholeArraySection(const Object &object);
+bool isWholeArraySection(const Object &object,
+                         semantics::SemanticsContext &semaCtx);
 
 mlir::Value createParentSymAndGenIntermediateMaps(
     mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
