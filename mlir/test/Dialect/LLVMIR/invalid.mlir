@@ -2058,7 +2058,7 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 // -----
 
 llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op dst should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
   llvm.return
 }
@@ -2066,7 +2066,7 @@ llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
 // -----
 
 llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op dst should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
   %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (f16) -> vector<8xi8>
   llvm.return
 }
@@ -2074,7 +2074,7 @@ llvm.func @invalid_xevm_truncf_2(%arg0: f16) {
 // -----
 
 llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op src should be 8 bits wide to hold 1 value(s) of 8 bits, but it is 64}}
   %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (vector<8xi8>) -> f16
   llvm.return
 }
@@ -2082,7 +2082,7 @@ llvm.func @invalid_xevm_extf_1(%arg0: vector<8xi8>) {
 // -----
 
 llvm.func @invalid_xevm_extf_2(%arg0: i8) {
-  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  // expected-error@+1 {{op src should be 64 bits wide to hold 8 value(s) of 8 bits, but it is 8}}
   %0 = xevm.extf %arg0 { src_etype = bf8, dst_etype = f16 } : (i8) -> vector<8xf16>
   llvm.return
 }
