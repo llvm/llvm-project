@@ -919,7 +919,7 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   if (!LibcallResult)
     reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
-  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+  const LibcallLoweringInfo &Libcalls = getLibcallLowering(*LibcallResult, ST);
 
   bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 

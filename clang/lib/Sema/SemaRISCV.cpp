@@ -1660,6 +1660,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
+  bool ReportedDuplicateType = false;
 
   SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
@@ -1697,7 +1698,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       break;
     }
 
-    Types.insert(Type);
+    if (!Types.insert(Type).second && !ReportedDuplicateType) {
+      Diag(Loc, diag::warn_riscv_attribute_interrupt_duplicate_type)
+          << TypeString;
+      ReportedDuplicateType = true;
+    }
   }
 
   if (HasUnaryType && Types.size() > 1) {

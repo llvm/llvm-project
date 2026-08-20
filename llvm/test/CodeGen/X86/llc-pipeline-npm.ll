@@ -66,7 +66,7 @@
 ; O0-NEXT:     x86-insert-vzeroupper
 ; O0-NEXT:     x86-compress-evex
 ; O0-NEXT:     x86-insert-x87-wait
-; O0-NEXT:     FuncletLayoutPass
+; O0-NEXT:     funclet-layout
 ; O0-NEXT:     remove-loads-into-fake-uses
 ; O0-NEXT:     StackMapLivenessPass
 ; O0-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -192,7 +192,7 @@
 ; O2-NEXT:     x86-fixup-inst-tuning
 ; O2-NEXT:     x86-compress-evex
 ; O2-NEXT:     x86-insert-x87-wait
-; O2-NEXT:     FuncletLayoutPass
+; O2-NEXT:     funclet-layout
 ; O2-NEXT:     remove-loads-into-fake-uses
 ; O2-NEXT:     StackMapLivenessPass
 ; O2-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -264,7 +264,7 @@
 ; O0-WINDOWS-NEXT:     x86-insert-vzeroupper
 ; O0-WINDOWS-NEXT:     x86-compress-evex
 ; O0-WINDOWS-NEXT:     x86-insert-x87-wait
-; O0-WINDOWS-NEXT:     FuncletLayoutPass
+; O0-WINDOWS-NEXT:     funclet-layout
 ; O0-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT:     StackMapLivenessPass
 ; O0-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -393,7 +393,7 @@
 ; O3-WINDOWS-NEXT:     x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT:     x86-compress-evex
 ; O3-WINDOWS-NEXT:     x86-insert-x87-wait
-; O3-WINDOWS-NEXT:     FuncletLayoutPass
+; O3-WINDOWS-NEXT:     funclet-layout
 ; O3-WINDOWS-NEXT:     remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT:     StackMapLivenessPass
 ; O3-WINDOWS-NEXT:     live-debug-values<emit-debug-entry-values>

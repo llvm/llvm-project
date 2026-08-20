@@ -7894,6 +7894,9 @@ public:
   QualType CheckSizelessVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               BinaryOperatorKind Opc);
+  QualType CheckMatrixCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                      SourceLocation Loc,
+                                      BinaryOperatorKind Opc);
   QualType CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                       SourceLocation Loc,
                                       BinaryOperatorKind Opc);
