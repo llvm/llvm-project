@@ -5512,6 +5512,69 @@ TEST(Hover, HLSLRegisterAttributeRange) {
   }
 }
 
+TEST(Hover, HLSLSemanticAnnotations) {
+  struct {
+    const char *const Code;
+    const char *const ExpectedName;
+    const char *const ExpectedDefinition;
+  } Cases[] = {
+      {R"hlsl(
+         typedef float float4 __attribute__((ext_vector_type(4)));
+         float4 main(float4 pos : ^SV_Position) : SV_Target {
+           return pos;
+         }
+       )hlsl",
+       "SV_Position", "[SV_Position(\"SV_Position\", 0)]"},
+      {R"hlsl(
+         typedef float float4 __attribute__((ext_vector_type(4)));
+         float4 main(float4 pos : SV_Position) : ^SV_Target {
+           return pos;
+         }
+       )hlsl",
+       "SV_Target", "[SV_Target(\"SV_Target\", 0)]"},
+      {R"hlsl(
+         typedef float float4 __attribute__((ext_vector_type(4)));
+         float4 main(float4 pos : SV_Position) : ^SV_Target1 {
+           return pos;
+         }
+       )hlsl",
+       "SV_Target", "[SV_Target(\"SV_Target\", 1)]"},
+      {R"hlsl(
+         typedef float float4 __attribute__((ext_vector_type(4)));
+         float4 main(float4 uv : ^TEXCOORD0) : SV_Target {
+           return uv;
+         }
+       )hlsl",
+       "TEXCOORD0", "[TEXCOORD0]"},
+      {R"hlsl(
+         typedef float float4 __attribute__((ext_vector_type(4)));
+         float4 main(float4 uv : ^TEXCOORD) : SV_Target {
+           return uv;
+         }
+       )hlsl",
+       "TEXCOORD", "[TEXCOORD]"},
+  };
+  
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Code);
+    Annotations T(Case.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    configureHLSL(TU);
+    auto AST = TU.build();
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H) << "Hover should have been returned for "
+                   << Case.ExpectedName;
+    EXPECT_EQ(H->Name, Case.ExpectedName);
+    EXPECT_EQ(H->Definition, Case.ExpectedDefinition);
+    
+    if (llvm::StringRef(Case.ExpectedDefinition).contains("TEXCOORD")) {
+      EXPECT_EQ(H->Definition.find("\""), std::string::npos)
+          << "Definition leaked internal semantic arguments: "
+          << H->Definition;
+    }
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

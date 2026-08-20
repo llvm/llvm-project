@@ -175,16 +175,20 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     return;
   }
 
+  IdentifierInfo *SemanticII = II;
+  Parser::ParsedSemantic Semantic;
+  if (Tok.is(tok::identifier)) {
+    Semantic = ParseHLSLSemantic();
+    SemanticII = PP.getIdentifierInfo(Semantic.Name);
+  }
+
   ParsedAttr::Kind AttrKind =
-    ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_Microsoft);
+      ParsedAttr::getParsedKind(SemanticII, nullptr, ParsedAttr::AS_Microsoft);
   if (AttrKind != ParsedAttr::AT_HLSLParsedSemantic)
     AttrKind =
         ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
-  Parser::ParsedSemantic Semantic;
-  if (AttrKind == ParsedAttr::AT_HLSLUnparsedSemantic ||
-      AttrKind == ParsedAttr::AT_HLSLParsedSemantic)
-    Semantic = ParseHLSLSemantic();
-  SourceLocation Loc = ConsumeToken();
+
+SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
 
