@@ -98,8 +98,7 @@ define void @bfloat_loop_sve(ptr noalias nocapture %a, ptr noalias nocapture rea
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 4096, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP2]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -109,7 +108,7 @@ define void @bfloat_loop_sve(ptr noalias nocapture %a, ptr noalias nocapture rea
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <vscale x 8 x bfloat> [[WIDE_LOAD]], splat (bfloat 1.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 8 x bfloat> [[TMP4]], ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -159,8 +158,7 @@ define void @bfloat_loop_sve_bf16(ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 4096, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 4096, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -175,7 +173,7 @@ define void @bfloat_loop_sve_bf16(ptr noalias nocapture %a, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds bfloat, ptr [[TMP8]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 8 x bfloat> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <vscale x 8 x bfloat> [[TMP7]], ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

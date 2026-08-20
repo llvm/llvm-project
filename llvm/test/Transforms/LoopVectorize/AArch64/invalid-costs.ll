@@ -16,8 +16,7 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP11]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -80,7 +79,7 @@ define void @replicate_sdiv_conditional(ptr noalias %a, ptr noalias %b, ptr noal
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI7]], ptr [[TMP44]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI8]], ptr [[TMP45]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[PREDPHI9]], ptr [[TMP46]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

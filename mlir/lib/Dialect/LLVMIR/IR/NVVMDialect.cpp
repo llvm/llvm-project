@@ -5892,6 +5892,28 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
 // NVVM tcgen05.mma functions
 //===----------------------------------------------------------------------===//
 
+static llvm::nvvm::Tcgen05MMAKind
+getNVVMTcgen05MMAKind(NVVM::Tcgen05MMAKind kind) {
+  switch (kind) {
+  case NVVM::Tcgen05MMAKind::F16:
+    return llvm::nvvm::Tcgen05MMAKind::F16;
+  case NVVM::Tcgen05MMAKind::TF32:
+    return llvm::nvvm::Tcgen05MMAKind::TF32;
+  case NVVM::Tcgen05MMAKind::F8F6F4:
+    return llvm::nvvm::Tcgen05MMAKind::F8F6F4;
+  case NVVM::Tcgen05MMAKind::I8:
+    return llvm::nvvm::Tcgen05MMAKind::I8;
+  case NVVM::Tcgen05MMAKind::TI16:
+    return llvm::nvvm::Tcgen05MMAKind::TI16;
+  case NVVM::Tcgen05MMAKind::MXF8F6F4:
+  case NVVM::Tcgen05MMAKind::MXF4:
+  case NVVM::Tcgen05MMAKind::MXF4NVF4:
+    // Block-scale kinds are handled by the tcgen05.mma.block_scale
+    // lowering paths and are not valid for plain tcgen05.mma.
+    llvm_unreachable("Unsupported tcgen05.mma kind");
+  }
+}
+
 mlir::NVVM::IDArgPair
 Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                     llvm::IRBuilderBase &builder) {
@@ -6023,7 +6045,8 @@ Tcgen05MMAOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   if (hasDisableOutputLane)
     args.push_back(DisableOutputLane);
 
-  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMTcgen05MMAKind(thisOp.getKind()))));
 
   if (!hasDisableOutputLane)
     args.push_back(builder.getInt32(ctaGroup));
@@ -6211,7 +6234,8 @@ mlir::NVVM::IDArgPair Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
   if (hasDisableOutputLane)
     args.push_back(DisableOutputLane);
 
-  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMTcgen05MMAKind(thisOp.getKind()))));
 
   if (!hasDisableOutputLane)
     args.push_back(builder.getInt32(ctaGroup));
@@ -6444,7 +6468,8 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsOp::getIntrinsicIDAndArgs(
     ID = isATensor ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_tensor
                    : llvm::Intrinsic::nvvm_tcgen05_mma_ws_shared;
 
-  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMTcgen05MMAKind(thisOp.getKind()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorBBuffer())));
   args.push_back(
@@ -6485,7 +6510,8 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
     ID = isATensor ? llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_tensor
                    : llvm::Intrinsic::nvvm_tcgen05_mma_ws_sp_shared;
 
-  args.push_back(builder.getInt32(static_cast<unsigned>(thisOp.getKind())));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMTcgen05MMAKind(thisOp.getKind()))));
   args.push_back(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorBBuffer())));
   args.push_back(

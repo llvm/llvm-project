@@ -55,6 +55,15 @@ module {}
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
+// expected-error @below {{a union's tail padding takes no kind mark}}
+!rec_U = !cir.union<"U" {data !s32i}, padding = {bitfield !cir.array<!u8i x 4>}>
+
+module {}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
 // expected-error @below {{a union member cannot be marked pad}}
 !rec_U = !cir.union<"U" {data !s32i, pad !u8i}>
 

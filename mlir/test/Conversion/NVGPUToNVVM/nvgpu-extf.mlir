@@ -431,7 +431,7 @@ func.func @fpext_v3x1_f8_to_f16(%in : vector<3x1xf8E4M3FN>) -> vector<3x1xf16> {
 func.func @fpext_f8_to_f16_relu(%in : vector<8xf8E4M3FN>) {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK-SAME: relu
-  %out = nvgpu.extf %in {relu = true}
+  %out = nvgpu.extf %in <{relu = true}>
       : vector<8xf8E4M3FN> to vector<8xf16>
   return
 }

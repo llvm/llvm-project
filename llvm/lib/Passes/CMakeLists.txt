@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMPasses
   LINK_COMPONENTS
   AggressiveInstCombine
   Analysis
+  AsmPrinter
   CFGuard
   CodeGen
   GlobalISel
