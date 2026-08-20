@@ -3,13 +3,13 @@
 
 
 void test_clip_scalar(float Buf) {
-  // CHECK:      define hidden void @{{.*}}test_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
+  // CHECK:      define hidden void @{{.*}}test_clip_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load float, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt float [[LOAD]], 0.000000e+00
   // CHECK-NO:   call i1 @llvm.dx.any
   // CHECK-NEXT: call void @llvm.dx.discard(i1 [[FCMP]])
   //
-  // SPIRV:      define hidden spir_func void @{{.*}}test_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
+  // SPIRV:      define hidden spir_func void @{{.*}}test_clip_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
   // SPIRV:      [[LOAD:%.*]] = load float, ptr [[VALP]].addr
   // SPIRV-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt float [[LOAD]], 0.000000e+00
   // SPIRV-NO:   call i1 @llvm.spv.any
@@ -21,13 +21,13 @@ void test_clip_scalar(float Buf) {
 }
 
 void test_clip_vector4(float4 Buf) {
-  // CHECK:      define hidden void @{{.*}}test_vector{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
+  // CHECK:      define hidden void @{{.*}}test_clip_vector4{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load <4 x float>, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <4 x float> [[LOAD]], zeroinitializer
   // CHECK-NEXT: [[ANYC:%.*]] = call i1 @llvm.dx.any.v4i1(<4 x i1> [[FCMP]])
   // CHECK-NEXT: call void @llvm.dx.discard(i1 [[ANYC]])
   //
-  // SPIRV:      define hidden spir_func void @{{.*}}test_vector{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
+  // SPIRV:      define hidden spir_func void @{{.*}}test_clip_vector4{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
   // SPIRV:      [[LOAD:%.*]] = load <4 x float>, ptr [[VALP]].addr
   // SPIRV-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <4 x float> [[LOAD]], zeroinitializer
   // SPIRV-NEXT: [[ANYC:%.*]] = call i1 @llvm.spv.any.v4i1(<4 x i1> [[FCMP]])
@@ -39,13 +39,13 @@ void test_clip_vector4(float4 Buf) {
 }
 
 void test_clip_vector5(vector<float, 5> Buf) {
-  // CHECK:      define hidden void @{{.*}}test_vector5{{.*}}(<5 x float> {{.*}} [[VALP:%.*]])
+  // CHECK:      define hidden void @{{.*}}test_clip_vector5{{.*}}(<5 x float> {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load <5 x float>, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <5 x float> [[LOAD]], zeroinitializer
   // CHECK-NEXT: [[ANYC:%.*]] = call i1 @llvm.dx.any.v5i1(<5 x i1> [[FCMP]])
   // CHECK-NEXT: call void @llvm.dx.discard(i1 [[ANYC]])
   //
-  // SPIRV:      define hidden spir_func void @{{.*}}test_vector5{{.*}}(<5 x float> {{.*}} [[VALP:%.*]])
+  // SPIRV:      define hidden spir_func void @{{.*}}test_clip_vector5{{.*}}(<5 x float> {{.*}} [[VALP:%.*]])
   // SPIRV:      [[LOAD:%.*]] = load <5 x float>, ptr [[VALP]].addr
   // SPIRV-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <5 x float> [[LOAD]], zeroinitializer
   // SPIRV-NEXT: [[ANYC:%.*]] = call i1 @llvm.spv.any.v5i1(<5 x i1> [[FCMP]])
