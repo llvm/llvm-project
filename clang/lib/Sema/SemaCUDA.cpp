@@ -13,7 +13,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetInfo.h"
@@ -790,24 +790,24 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
         VD->setInvalidDecl();
       }
     }
-    struct GlobVarInitChecker : DynamicRecursiveASTVisitor {
+    struct GlobVarInitChecker : ConstEvaluatedExprVisitor<GlobVarInitChecker> {
+      using Base = ConstEvaluatedExprVisitor<GlobVarInitChecker>;
       SemaCUDA &SCRef;
       SourceLocation InitLoc;
 
       GlobVarInitChecker(SemaCUDA &S, SourceLocation L)
-          : SCRef(S), InitLoc(L) {}
-      bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+          : Base(S.getASTContext()), SCRef(S), InitLoc(L) {}
+      void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         if (auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
             VarD && VarD->hasAttr<HIPManagedAttr>()) {
           SCRef.Diag(DRE->getLocation(),
                      diag::err_cuda_invalid_use_of_managedvar);
           SCRef.Diag(InitLoc, diag::note_cuda_managed_var_in_glob_init);
         }
-        return true;
       }
     };
     GlobVarInitChecker Checker(*this, VD->getLocation());
-    Checker.TraverseStmt(VD->getInit());
+    Checker.Visit(Init);
   }
 }
 
