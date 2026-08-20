@@ -2873,9 +2873,8 @@ void RISCVFrameLowering::orderFrameObjects(
 
   for (int FI : ObjectsToAllocate) {
     int64_t Size = MFI.getObjectSize(FI);
-    RISCVFrameSortingObject Obj{
-        FI, Size > 0 ? static_cast<uint64_t>(Size) : 1,
-        MFI.getObjectAlign(FI)};
+    RISCVFrameSortingObject Obj{FI, Size > 0 ? static_cast<uint64_t>(Size) : 1,
+                                MFI.getObjectAlign(FI)};
     Index[FI] = Sorting.size();
     Sorting.push_back(Obj);
   }
@@ -2899,15 +2898,14 @@ void RISCVFrameLowering::orderFrameObjects(
   // Sort by NumUses / ObjectSize using cross multiplication. High-density
   // objects are placed at the end of the list, which puts them closest to SP
   // or BP when PEI allocates objects on the downward-growing stack.
-  llvm::stable_sort(
-      Sorting, [](const RISCVFrameSortingObject &A,
-                  const RISCVFrameSortingObject &B) {
-        uint64_t DensityA = A.NumUses * B.ObjectSize;
-        uint64_t DensityB = B.NumUses * A.ObjectSize;
-        if (DensityA != DensityB)
-          return DensityA < DensityB;
-        return A.ObjectAlign < B.ObjectAlign;
-      });
+  llvm::stable_sort(Sorting, [](const RISCVFrameSortingObject &A,
+                                const RISCVFrameSortingObject &B) {
+    uint64_t DensityA = A.NumUses * B.ObjectSize;
+    uint64_t DensityB = B.NumUses * A.ObjectSize;
+    if (DensityA != DensityB)
+      return DensityA < DensityB;
+    return A.ObjectAlign < B.ObjectAlign;
+  });
 
   for (auto [Idx, Obj] : llvm::enumerate(Sorting))
     ObjectsToAllocate[Idx] = Obj.ObjectIndex;
