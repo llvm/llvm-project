@@ -3,6 +3,9 @@ name: Libc Full Codebase Coverage
 permissions:
   contents: write # Required to publish live HTML dashboard to gh-pages branch
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 on:
   # Daily overnight run at 02:00 UTC
   schedule:
