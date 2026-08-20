@@ -37,8 +37,8 @@ func.func @threadprivate(%host: memref<i32>) {
 func.func @dynamic_threadprivate(%n: index) {
   %c4 = arith.constant 4 : index
   %c128 = arith.constant 128 : index
-  %bx = acc.par_width %c4 {par_dim = #acc.par_dim<block_x>}
-  %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+  %bx = acc.par_width %c4 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
   %private = acc.privatize(%n) [#acc<par_dims[block_x, thread_x]>]
       : (index) -> !acc.private_type<memref<?xi32>>
 

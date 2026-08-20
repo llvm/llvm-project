@@ -92,7 +92,7 @@ func.func @privatize_inside_compute_region(%data : memref<64xf32>) {
   %copy = acc.copyin varPtr(%data : memref<64xf32>) -> memref<64xf32>
   acc.kernel_environment dataOperands(%copy : memref<64xf32>) {
     %c64_kw = arith.constant 64 : index
-    %w = acc.par_width %c64_kw {par_dim = #acc.par_dim<thread_x>}
+    %w = acc.par_width %c64_kw par_dim(#acc.par_dim<thread_x>)
     acc.compute_region launch(%lw = %w) ins(%d = %copy) : (memref<64xf32>) {
       %priv = acc.privatize [#acc<par_dims[thread_x]>] : () -> !acc.private_type<memref<f32>>
       %c0 = arith.constant 0 : index
