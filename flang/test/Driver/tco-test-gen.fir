@@ -68,6 +68,7 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 
 // CHECK:           %[[VAL_10:.*]] = llvm.sext %[[VAL_9]] : i32 to i64
 // CHECK:           %[[VAL_11:.*]] = llvm.trunc %[[VAL_6]] : i64 to i32
+// CHECK:           %[[VAL_21:.*]] = llvm.trunc %[[VAL_10]] : i64 to i32
 // CHECK:           %[[VAL_12:.*]] = llvm.sub %[[VAL_8]], %[[VAL_6]] : i64
 // CHECK:           %[[VAL_13:.*]] = llvm.add %[[VAL_12]], %[[VAL_10]] : i64
 // CHECK:           %[[VAL_14:.*]] = llvm.sdiv %[[VAL_13]], %[[VAL_10]] : i64
@@ -89,8 +90,6 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 // CHECK:           %[[VAL_20:.*]] = llvm.add %[[VAL_18]], %[[VAL_19]] : i32
 // AA:              llvm.store %[[VAL_20]], %[[ARG0]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "dummy arg data/_QFtestEnum", members = {<#llvm.tbaa_type_desc<id = "dummy arg data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "dummy arg data/_QFtestEnum", members = {<#llvm.tbaa_type_desc<id = "dummy arg data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : i32, !llvm.ptr
 // NOAA:            llvm.store %[[VAL_20]], %[[ARG0]] : i32, !llvm.ptr
-
-// CHECK:           %[[VAL_21:.*]] = llvm.trunc %[[VAL_10]] : i64 to i32
 
 // AA:              %[[VAL_22:.*]] = llvm.load %[[VAL_1]] {tbaa = [#llvm.tbaa_tag<base_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, access_type = <id = "allocated data/_QFtestEi", members = {<#llvm.tbaa_type_desc<id = "allocated data", members = {<#llvm.tbaa_type_desc<id = "any data access", members = {<#llvm.tbaa_type_desc<id = "any access", members = {<#llvm.tbaa_root<id = "Flang function root _QPtest">, 0>}>, 0>}>, 0>}>, 0>}>, offset = 0>]} : !llvm.ptr -> i32
 // NOAA:            %[[VAL_22:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32

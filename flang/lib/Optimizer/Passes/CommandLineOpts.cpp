@@ -60,7 +60,7 @@ cl::opt<bool> useOldAliasTags(
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
-EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
+DisableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
 EnableOption(AllocationPlacement, "allocation-placement",
              "unified array allocation placement (experimental; replaces "
              "stack-arrays and memory-allocation-opt)");
