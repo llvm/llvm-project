@@ -3243,7 +3243,7 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
     mlir::Value minusOne;
     if (isVector) {
       const uint64_t numElements =
-          mlir::dyn_cast<cir::VectorType>(op.getType()).getSize();
+          mlir::cast<cir::VectorType>(op.getType()).getSize();
       SmallVector<int32_t> values(numElements, -1);
       mlir::DenseIntElementsAttr denseVec = rewriter.getI32VectorAttr(values);
       minusOne =
@@ -3255,11 +3255,22 @@ mlir::LogicalResult CIRToLLVMNotOpLowering::matchAndRewrite(
                                                    minusOne);
     return mlir::success();
   }
+
   if (mlir::isa<cir::BoolType>(elementType)) {
-    auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+    mlir::Value one;
+    if (isVector) {
+      const uint64_t numElements =
+          mlir::cast<cir::VectorType>(op.getType()).getSize();
+      SmallVector<bool> values(numElements, true);
+      mlir::DenseIntElementsAttr denseVec = rewriter.getBoolVectorAttr(values);
+      one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, denseVec);
+    } else {
+      one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, adaptor.getInput(), one);
     return mlir::success();
   }
+
   return op.emitError() << "Unsupported type for bitwise NOT";
 }
 

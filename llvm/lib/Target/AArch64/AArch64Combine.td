@@ -406,6 +406,7 @@ def AArch64PostLegalizerCombiner
                         extractvecelt_pairwise_add, redundant_or,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
+                        redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
                         select_combines, select_zero_true, select_zero_false, select_not,

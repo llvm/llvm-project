@@ -162,3 +162,44 @@ TEST(StringOutputStreamTest, RealisticMessage) {
      << ", flags=" << hex(0x1Bu) << ")";
   EXPECT_EQ(OS.str(), "map failed at 0x1000 (errno=-22, flags=0x1b)");
 }
+
+TEST(StringOutputStreamTest, LeftJustifyPadsOnRight) {
+  StringOutputStream OS;
+  OS << '[' << ljust("ab", 5) << ']';
+  EXPECT_EQ(OS.str(), "[ab   ]");
+}
+
+TEST(StringOutputStreamTest, RightJustifyPadsOnLeft) {
+  StringOutputStream OS;
+  OS << '[' << rjust("ab", 5) << ']';
+  EXPECT_EQ(OS.str(), "[   ab]");
+}
+
+TEST(StringOutputStreamTest, JustifyCustomFill) {
+  StringOutputStream OS;
+  OS << ljust("ab", 5, '.') << rjust("cd", 5, '.');
+  EXPECT_EQ(OS.str(), "ab......cd");
+}
+
+// A field at least as wide as the requested width is emitted in full, never
+// truncated, and adds no padding.
+TEST(StringOutputStreamTest, JustifyNoTruncationAtOrOverWidth) {
+  {
+    StringOutputStream OS;
+    OS << '[' << ljust("exact", 5) << ']';
+    EXPECT_EQ(OS.str(), "[exact]");
+  }
+  {
+    StringOutputStream OS;
+    OS << '[' << rjust("toolong", 3) << ']';
+    EXPECT_EQ(OS.str(), "[toolong]");
+  }
+}
+
+// Mirrors printHelp's column layout: a left-justified flag field followed by
+// its description, so descriptions align regardless of flag length.
+TEST(StringOutputStreamTest, JustifyAlignsColumns) {
+  StringOutputStream OS;
+  OS << ljust("--a", 10) << "first\n" << ljust("--bbbbb", 10) << "second\n";
+  EXPECT_EQ(OS.str(), "--a       first\n--bbbbb   second\n");
+}

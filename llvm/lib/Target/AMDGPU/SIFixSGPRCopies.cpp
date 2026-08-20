@@ -370,7 +370,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
   if (Copy->getOpcode() != AMDGPU::COPY)
     return false;
 
-  if (!MoveImm->isMoveImmediate())
+  if (!MoveImm || !MoveImm->isMoveImmediate())
     return false;
 
   const MachineOperand *ImmOp =

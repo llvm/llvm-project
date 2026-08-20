@@ -741,6 +741,7 @@ def hlsl_dot : HLSLTwoArgBuiltin<"dot", "__builtin_hlsl_dot"> {
 }];
   let ReturnType = VaryingElemType;
   let VaryingTypes = NumericTypesNoDbl;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
