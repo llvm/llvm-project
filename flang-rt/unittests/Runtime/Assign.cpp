@@ -390,9 +390,8 @@ TEST(AssignSimpleCrash, ElementBytesMismatch) {
   // 4-byte integers vs 8-byte integers
   auto dest{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{3}, std::vector<int>{1, 2, 3}, sizeof(int))};
-  auto source{MakeArray<TypeCategory::Integer, 8>(
-      std::vector<int>{3}, std::vector<std::int64_t>{1, 2, 3},
-      sizeof(std::int64_t))};
+  auto source{MakeArray<TypeCategory::Integer, 8>(std::vector<int>{3},
+      std::vector<std::int64_t>{1, 2, 3}, sizeof(std::int64_t))};
   ASSERT_DEATH(RTNAME(AssignSimple)(*dest, *source, __FILE__, __LINE__),
       "AssignSimple: ElementBytes mismatch");
 }
