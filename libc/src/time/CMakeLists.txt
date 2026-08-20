@@ -38,6 +38,24 @@ add_object_library(
     libc.src.__support.uint128
 )
 
+add_subdirectory(strftime_core) #TODO: Move to top
+
+add_header_library(
+  asctime_utils
+  HDRS
+    asctime_utils.h
+  DEPENDS
+    .time_constants
+    .time_utils
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.printf_core.writer
+    libc.src.time.strftime_core.strftime_main
+)
+
 add_entrypoint_object(
   asctime
   SRCS
@@ -45,7 +63,7 @@ add_entrypoint_object(
   HDRS
     asctime.h
   DEPENDS
-    .time_utils
+    .asctime_utils
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
@@ -60,7 +78,7 @@ add_entrypoint_object(
   HDRS
     asctime_r.h
   DEPENDS
-    .time_utils
+    .asctime_utils
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
@@ -75,6 +93,7 @@ add_entrypoint_object(
   HDRS
     ctime.h
   DEPENDS
+    .asctime_utils
     .time_utils
     .time_constants
     libc.hdr.types.time_t
@@ -90,6 +109,7 @@ add_entrypoint_object(
   HDRS
     ctime_r.h
   DEPENDS
+    .asctime_utils
     .time_utils
     .time_constants
     libc.hdr.types.time_t
@@ -182,8 +202,6 @@ add_entrypoint_object(
     libc.hdr.types.struct_tm
     libc.src.__support.macros.null_check
 )
-
-add_subdirectory(strftime_core) #TODO: Move to top
 
 add_entrypoint_object(
   strftime
@@ -281,4 +299,3 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.clock_settime
 )
-

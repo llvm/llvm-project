@@ -73,8 +73,7 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
 
   if (Module *exe_module = target_sp->GetExecutableModulePointer()) {
     if (ObjectFile *exe_objfile = exe_module->GetObjectFile())
-      return exe_objfile->GetArchitecture().GetMachine() ==
-             llvm::Triple::wasm32;
+      return exe_objfile->GetArchitecture().GetTriple().isWasm();
   }
 
   // However, if there is no wasm module, we return false, otherwise,
@@ -83,6 +82,9 @@ bool ProcessWasm::CanDebug(lldb::TargetSP target_sp,
 }
 
 std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
+  if (!GetTarget().GetArchitecture().GetTriple().isWasm())
+    return ProcessGDBRemote::CreateThread(tid);
+
   return std::make_shared<ThreadWasm>(*this, tid);
 }
 
@@ -125,8 +127,9 @@ size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
   return size;
 }
 
-size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                               Status &error) {
+size_t ProcessWasm::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                               size_t size, Status &error) {
+  lldb::addr_t vm_addr = process_addr.GetValue();
   wasm_addr_t wasm_addr(vm_addr);
 
   switch (wasm_addr.GetType()) {

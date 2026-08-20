@@ -12,11 +12,12 @@
 #include <locale>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 struct num_put : std::num_put<char, std::string::iterator> {};
 
 template <class T>
-void BM_num_put(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_num_put(benchmark::State& state) {
   auto val = T(123);
   std::ios ios(nullptr);
   num_put np;

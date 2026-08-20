@@ -77,8 +77,8 @@ public:
   LogicalResult matchAndRewrite(FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
-    std::string className =
-        llvm::formatv(classNameFormat.c_str(), funcOp.getName());
+    std::string className = llvm::formatv(
+        /*Validate=*/false, classNameFormat.c_str(), funcOp.getName());
     ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
@@ -114,6 +114,15 @@ public:
     Location loc = funcOp.getLoc();
     FuncOp newFuncOp = FuncOp::create(rewriter, loc, (funcName), funcType);
 
+    // Rewrite globals while they are still descendants of the matched op.
+    funcOp.walk([&](GetGlobalOp getGlobalOp) {
+      rewriter.setInsertionPoint(getGlobalOp);
+      GetFieldOp getFieldOp =
+          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
+                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
+      rewriter.replaceOp(getGlobalOp, getFieldOp);
+    });
+
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
 
@@ -135,14 +144,6 @@ public:
     if (failed(newFuncOp.eraseArguments(argsToErase)))
       newFuncOp->emitOpError("failed to erase all arguments using BitVector");
 
-    newFuncOp.walk([&](GetGlobalOp getGlobalOp) {
-      rewriter.setInsertionPoint(getGlobalOp);
-      GetFieldOp getFieldOp =
-          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
-                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
-      rewriter.replaceOp(getGlobalOp, getFieldOp);
-    });
-
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
@@ -152,8 +153,8 @@ private:
   /// function.
   std::string funcName;
 
-  /// Format string used to create the wrapper class name where '{}' is
-  /// replaced with the original function name.
+  /// Format string used to create the wrapper class name where the
+  /// function-name placeholder '{}' is optional.
   std::string classNameFormat;
 
   /// Map of FuncOp and the GlobalOps it uses which need to be moved into the

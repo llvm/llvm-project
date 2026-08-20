@@ -2158,14 +2158,9 @@ public:
     case Intrinsic::experimental_cttz_elts: {
       EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
 
-      // If we're not expanding the intrinsic then we assume this is cheap
-      // to implement.
-      if (!getTLI()->shouldExpandCttzElements(ArgType))
-        return getTypeLegalizationCost(RetTy).first;
-
       // TODO: The costs below reflect the expansion code in
-      // SelectionDAGBuilder, but we may want to sacrifice some accuracy in
-      // favour of compile time.
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
 
       // Find the smallest "sensible" element type to use for the expansion.
       bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
@@ -2572,14 +2567,8 @@ public:
       auto *NeedleTy = cast<FixedVectorType>(ICA.getArgTypes()[1]);
       unsigned SearchSize = NeedleTy->getNumElements();
 
-      // If we're not expanding the intrinsic then we assume this is cheap to
-      // implement.
-      EVT SearchVT = getTLI()->getValueType(DL, SearchTy);
-      if (!getTLI()->shouldExpandVectorMatch(SearchVT, SearchSize))
-        return getTypeLegalizationCost(RetTy).first;
-
       // Approximate the cost based on the expansion code in
-      // SelectionDAGBuilder.
+      // TargetLowering::expandVectorMatch.
       InstructionCost Cost = 0;
       Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, NeedleTy,
                                           CostKind, 1, nullptr, nullptr);

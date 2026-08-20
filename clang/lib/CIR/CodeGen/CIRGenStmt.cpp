@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -89,20 +90,29 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
-  const CallExpr *musttail = nullptr;
+  bool noinline = inNoInlineAttributedStmt;
+  bool alwaysinline = inAlwaysInlineAttributedStmt;
+  const CallExpr *musttail = mustTailCall;
 
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
       break;
     case attr::NoMerge:
-    case attr::NoInline:
-    case attr::AlwaysInline:
     case attr::NoConvergent:
     case attr::Atomic:
+    case attr::AMDGPUAvailableVisible:
     case attr::HLSLControlFlowHint:
       cgm.errorNYI(s.getSourceRange(),
                    "Unimplemented statement attribute: ", attr->getKind());
+      break;
+    case attr::NoInline:
+      noinline = true;
+      alwaysinline = false;
+      break;
+    case attr::AlwaysInline:
+      alwaysinline = true;
+      noinline = false;
       break;
     case attr::MustTail: {
       const Stmt *sub = s.getSubStmt();
@@ -122,6 +132,12 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
+
+  SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
+  SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
 
   SaveAndRestore save_musttail(mustTailCall, musttail);
 
@@ -210,6 +226,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::CoreturnStmtClass:
     return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -299,8 +317,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
   case Stmt::OMPScanDirectiveClass:
     return emitOMPScanDirective(cast<OMPScanDirective>(*s));
-  case Stmt::OMPOrderedDirectiveClass:
-    return emitOMPOrderedDirective(cast<OMPOrderedDirective>(*s));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    return emitOMPOrderedStandaloneDirective(
+        cast<OMPOrderedStandaloneDirective>(*s));
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    return emitOMPOrderedBlockAssocDirective(
+        cast<OMPOrderedBlockAssocDirective>(*s));
   case Stmt::OMPAtomicDirectiveClass:
     return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
   case Stmt::OMPTargetDirectiveClass:
@@ -431,7 +453,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:

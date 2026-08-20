@@ -83,8 +83,6 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
         return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
       };
-
-  Initialize();
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -580,6 +578,9 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
+
+  // Prime the lexer look-ahead.
+  ConsumeToken();
 }
 
 void Parser::DestroyTemplateIds() {

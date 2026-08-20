@@ -20,6 +20,7 @@ module std_config {
 
 module std_core {
   module cmath {
+    module lerp              { header "__cmath/lerp.h" }
     module special_functions { header "__cmath/special_functions.h" }
   }
 
@@ -2435,6 +2436,12 @@ module std {
       }
       module reverse {
         header "__pstl/cpu_algos/reverse.h"
+      }
+      module search {
+        header "__pstl/cpu_algos/search.h"
+      }
+      module search_n {
+        header "__pstl/cpu_algos/search_n.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"

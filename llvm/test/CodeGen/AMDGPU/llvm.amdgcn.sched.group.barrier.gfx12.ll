@@ -104,11 +104,13 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ;
 ; COEXEC-LABEL: test_sched_group_barrier_pipeline_SWMMAC_cluster:
 ; COEXEC:       ; %bb.0: ; %entry
-; COEXEC-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; COEXEC-NEXT:    s_mov_b64 s[64:65], 0
+; COEXEC-NEXT:    v_nop
+; COEXEC-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; COEXEC-NEXT:    v_mov_b32_e32 v48, 0
 ; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; COEXEC-NEXT:    v_dual_mov_b32 v48, 0 :: v_dual_lshlrev_b32 v0, 4, v0
+; COEXEC-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; COEXEC-NEXT:    v_and_b32_e32 v0, 0x3ff0, v0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
@@ -323,11 +325,12 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ;
 ; COEXEC-LABEL: test_sched_group_barrier_pipeline_SWMMAC_interleaved:
 ; COEXEC:       ; %bb.0: ; %entry
-; COEXEC-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; COEXEC-NEXT:    v_nop
 ; COEXEC-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; COEXEC-NEXT:    s_mov_b64 s[64:65], 0
+; COEXEC-NEXT:    v_nop
+; COEXEC-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; COEXEC-NEXT:    v_mov_b32_e32 v16, 0
+; COEXEC-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; COEXEC-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    v_mov_b32_e32 v17, s1
