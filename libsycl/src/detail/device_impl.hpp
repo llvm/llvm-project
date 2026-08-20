@@ -45,10 +45,9 @@ public:
   explicit DeviceImpl(ol_device_handle_t Device, PlatformImpl &Platform,
                       PrivateTag)
       : MOffloadDevice(Device), MPlatform(Platform) {
-    ol_result_t Res =
-        callNoCheck(olGetDeviceInfo, MOffloadDevice,
-                    OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
-                    sizeof(MContextGroupIndex), &MContextGroupIndex);
+    ol_result_t Res = callNoCheck(
+        olGetDeviceInfo, MOffloadDevice, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
+        sizeof(MContextGroupIndex), &MContextGroupIndex);
     if (isFailed(Res))
       MContextGroupIndex = 0;
   }
