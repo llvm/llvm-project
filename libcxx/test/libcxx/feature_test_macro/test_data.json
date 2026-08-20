@@ -221,6 +221,6 @@
         ]
       }
     },
-    "headers": ["ranges"],
+    "headers": ["ranges"]
   }
 ]
