@@ -64,6 +64,21 @@ struct CIRRecordLowering final {
       return offset < other.offset;
     }
   };
+
+  static bool isZeroWidthBitField(const MemberInfo &member) {
+    return cir::isZeroWidthBitField(member.data, member.memberKind);
+  }
+
+  /// A zero-width bit-field contributes nothing to a run of bit-fields, so it
+  /// would otherwise leave no member at all.  The array's element type is what
+  /// the ABI counts as user data, and its zero length keeps the member out of
+  /// the record's storage.
+  MemberInfo makeZeroWidthBitFieldInfo(const FieldDecl *field) {
+    return makeStorageInfo(
+        bitsToCharUnits(getFieldBitOffset(field)),
+        cir::ArrayType::get(cirGenTypes.convertTypeForMem(field->getType()), 0),
+        cir::RecordMemberKind::BitField);
+  }
   // The constructor.
   CIRRecordLowering(CIRGenTypes &cirGenTypes, const RecordDecl *recordDecl,
                     bool packed);
@@ -412,6 +427,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
     for (; field != fieldEnd && field->isBitField(); ++field) {
       // Zero-width bitfields end runs.
       if (field->isZeroLengthBitField()) {
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
         run = fieldEnd;
         continue;
       }
@@ -634,6 +650,8 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
       assert(field != fieldEnd && field->isBitField() &&
              "Accumulating past end of bitfields");
       assert(!barrier && "Accumulating across barrier");
+      if (field->isZeroLengthBitField())
+        members.push_back(makeZeroWidthBitFieldInfo(*field));
       // Accumulate this bitfield into the current (potential) span.
       bitSizeSinceBegin += field->getBitWidthValue();
       ++field;
@@ -722,7 +740,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
                          : CharUnits::Zero();
 
   for (const MemberInfo &member : members) {
-    if (!member.data)
+    if (!member.data || isZeroWidthBitField(member))
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
@@ -752,6 +770,19 @@ void CIRRecordLowering::insertPadding() {
   for (const MemberInfo &member : members) {
     if (!member.data)
       continue;
+    // A consumer recovers each member's offset by accumulating the sizes of the
+    // members before it, so the padding this one sits inside has to be split at
+    // its offset for that sum to come out right.
+    if (isZeroWidthBitField(member)) {
+      // The offset can sit behind the running size, since the access unit
+      // covering the bits around it may be wider than the offset it was
+      // declared at.
+      if (member.offset > size) {
+        padding.push_back(std::make_pair(size, member.offset - size));
+        size = member.offset;
+      }
+      continue;
+    }
     CharUnits offset = member.offset;
     assert(offset >= size);
     // Insert padding if we need to.
@@ -868,44 +899,11 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     if (auto *cxxRD = dyn_cast<CXXRecordDecl>(rd))
       hasTrivialDestructor = cxxRD->hasTrivialDestructor();
     const auto &astLayout = astContext.getASTRecordLayout(rd);
+    uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
 
-    // A zero-width bit-field occupies no storage, so the record type has no
-    // member for it, but its declared type still counts as user data for
-    // argument passing.  The member list cannot carry it: a member's offset
-    // comes from the members before it, so adding one would move the rest.
-    SmallVector<int64_t> zeroWidthOffsets;
-    SmallVector<int64_t> zeroWidthWidths;
-    for (const FieldDecl *field : rd->fields()) {
-      if (!field->isZeroLengthBitField())
-        continue;
-      zeroWidthOffsets.push_back(
-          astLayout.getFieldOffset(field->getFieldIndex()));
-      zeroWidthWidths.push_back(astContext.getTypeSize(field->getType()));
-    }
-
-    mlir::DenseI64ArrayAttr offsetsAttr;
-    mlir::DenseI64ArrayAttr widthsAttr;
-    if (!zeroWidthOffsets.empty()) {
-      offsetsAttr = mlir::DenseI64ArrayAttr::get(mlirCtx, zeroWidthOffsets);
-      widthsAttr = mlir::DenseI64ArrayAttr::get(mlirCtx, zeroWidthWidths);
-    }
-
-    auto layoutForAlign = [&](uint64_t alignInBytes) {
-      return cir::RecordLayoutAttr::get(mlirCtx, apk, hasTrivialDestructor,
-                                        alignInBytes, offsetsAttr, widthsAttr);
-    };
-
-    cgm.addRecordLayout(ty->getName(),
-                        layoutForAlign(astLayout.getAlignment().getQuantity()));
-
-    // A base subobject is a separate type under its own name, so a lookup for
-    // it misses the entry above.  Its fields sit where the complete object
-    // puts them, so the bit-field lists carry over, but it covers only the
-    // non-virtual part and so takes getNonVirtualAlignment().
-    if (baseTy && baseTy.getName() && baseTy.getName() != ty->getName())
-      cgm.addRecordLayout(
-          baseTy.getName(),
-          layoutForAlign(astLayout.getNonVirtualAlignment().getQuantity()));
+    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
+                                           mlirCtx, apk, hasTrivialDestructor,
+                                           recordAlignInBytes));
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

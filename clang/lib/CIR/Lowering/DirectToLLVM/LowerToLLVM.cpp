@@ -3928,7 +3928,16 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
-    for (mlir::Type ty : type.getMembers()) {
+    for (auto [ty, kind] :
+         llvm::zip_equal(type.getMembers(), type.getMemberKinds())) {
+      // Argument passing has already read the declared type, and carrying it
+      // into LLVM would apply the element's alignment and grow the record.  The
+      // member stays, since the members after it are numbered from it.
+      if (cir::isZeroWidthBitField(ty, kind)) {
+        llvmMembers.push_back(mlir::LLVM::LLVMArrayType::get(
+            mlir::IntegerType::get(type.getContext(), 8), 0));
+        continue;
+      }
       mlir::Type memberTy = convertTypeForMemory(converter, dataLayout, ty);
       // A null member means an unsupported type (e.g. a _BitInt with byte-array
       // storage); propagate the conversion failure instead of building an

@@ -3,6 +3,7 @@
 !s8i = !cir.int<s, 8>
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
@@ -13,7 +14,8 @@
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_anon_pad = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
 !rec_UnnamedUnit = !cir.struct<"UnnamedUnit" {data !s32i, empty !u32i, pad !cir.array<!u8i x 8>}>
-!rec_Zw = !cir.struct<"Zw" {data !s32i, pad !cir.array<!u8i x 12>}>
+!rec_Zw = !cir.struct<"Zw" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
+!rec_ZwWide = !cir.struct<"ZwWide" {data !s8i, pad !cir.array<!u8i x 7>, bitfield !cir.array<!s64i x 0>, data !s8i}>
 !rec_UnitSSE = !cir.struct<"UnitSSE" {data !cir.double, empty !u32i, pad !cir.array<!u8i x 4>}>
 !rec_PadByte = !cir.struct<"PadByte" {data !u8i, pad !cir.array<!u8i x 3>}>
 !rec_PadByte2 = !cir.struct<"PadByte2" {data !u8i, pad !u8i}>
@@ -39,9 +41,9 @@ module attributes {
     UnitSSE = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
                                  has_trivial_dtor = true, record_align = 16>,
     Zw = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
-                            has_trivial_dtor = true, record_align = 16,
-                            zero_width_bitfield_offsets = [32],
-                            zero_width_bitfield_widths = [32]>
+                            has_trivial_dtor = true, record_align = 16>,
+    ZwWide = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                has_trivial_dtor = true, record_align = 1>
   },
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
@@ -111,13 +113,21 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_unnamed_unit(%arg0: !u64i)
 
-  // `Zw` has the same members as `Ov`, so only the zero-width bit-field in the
-  // layout metadata keeps the eightbyte from narrowing to !s32i.
+  // `Zw` holds the same storage as `Ov`, so only the zero-width bit-field keeps
+  // the eightbyte from narrowing to !s32i.
   cir.func @take_zw(%arg0: !rec_Zw) {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_zw(%arg0: !u64i)
+
+  // The declared type is wider than the byte the record ends on, so the first
+  // eightbyte stays i64 while the second narrows to the trailing char.
+  cir.func @take_zw_wide(%arg0: !rec_ZwWide) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_zw_wide(%arg0: !u64i, %arg1: !s8i)
 
   // The unit occupies the four bytes at offset 8.  Counting it as data would
   // split this into a double and an !u32i.

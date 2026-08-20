@@ -12,6 +12,10 @@
 !rec_SWrapsOverAligned = !cir.struct<"SWrapsOverAligned" {data !cir.double, data !rec_UOverAligned}>
 !rec_UEmptyLarge = !cir.union<"UEmptyLarge" {}, padding = {!cir.array<!u8i x 32>}>
 !rec_P = !cir.struct<"P" packed {data !s8i, data !s32i}>
+!rec_NamedPlusZeroWidth =
+    !cir.struct<"NamedPlusZeroWidth" {bitfield !u8i, pad !cir.array<!u8i x 3>,
+                                      bitfield !cir.array<!s32i x 0>,
+                                      data !s32i, pad !cir.array<!u8i x 8>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
 !rec_EOver = !cir.struct<"EOver" {pad !cir.array<!u8i x 16>}>
 !rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
@@ -62,12 +66,9 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UShortStorage"
 
-  // This is the shape CIRGen produces for a union of narrow bitfields, where
-  // the byte-sized members understate a wider storage unit that is all user
-  // data.  It is also the shape of a union of two `unsigned char` members
-  // carrying an alignment attribute, where the same bytes really are padding.
-  // The two coerce differently in classic CodeGen and are identical here, which
-  // is why neither is accepted.
+  // A union of narrow bit-fields and a union of two aligned `unsigned char`
+  // members produce this same shape, and classic CodeGen coerces them
+  // differently, so neither can be accepted.
   cir.func @take_byte_blob_union(%arg0: !rec_UByteBlobs) {
     cir.return
   }
@@ -83,10 +84,9 @@ module attributes {
   // CHECK: not yet implemented for type '!cir.struct<"SWrapsOverAligned"
 
   // A member-less union past two eightbytes still classifies Indirect in
-  // classic CodeGen (SysV's MEMORY rule applies unconditionally above that
-  // size, regardless of content), but this bridge has no member to build an
-  // Indirect coercion from.  Below the threshold the same shape is accepted
-  // and classifies Ignore, matching classic; see x86_64-union.cir take_empty.
+  // classic CodeGen, but this bridge has no member to build an Indirect
+  // coercion from.  Below the threshold the same shape is accepted and
+  // classifies Ignore, matching classic; see x86_64-union.cir take_empty.
   cir.func @take_empty_large_union(%arg0: !rec_UEmptyLarge) {
     cir.return
   }
@@ -224,4 +224,12 @@ module attributes {
   }
 
   // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
+
+  // A zero-width bit-field no longer refuses a padded record, but a named
+  // access unit still does, and one record can carry both.
+  cir.func @take_named_plus_zero_width(%arg0: !rec_NamedPlusZeroWidth) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.struct<"NamedPlusZeroWidth"
 }

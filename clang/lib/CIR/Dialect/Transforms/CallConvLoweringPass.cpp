@@ -117,49 +117,21 @@ static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
   return llvm::Align(layout.getRecordAlign());
 }
 
-/// Adds a field for each zero-width bit-field \p recTy declares, taking the bit
-/// offset and declared bit width from the module's record-layout metadata.
-/// Such a bit-field has no member to map, so the field is synthesized here and
-/// flagged as an unnamed bit-field, which the classifier skips when assigning
-/// eightbyte classes and counts when picking the coerce type.  Returns whether
-/// any were added.
-static bool
-appendZeroWidthBitFields(cir::RecordType recTy, llvm::abi::TypeBuilder &tb,
-                         ModuleOp modOp,
-                         SmallVectorImpl<llvm::abi::FieldInfo> &out) {
-  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
-  if (!layout)
-    return false;
-  mlir::DenseI64ArrayAttr offsets = layout.getZeroWidthBitfieldOffsets();
-  mlir::DenseI64ArrayAttr widths = layout.getZeroWidthBitfieldWidths();
-  if (!offsets || !widths)
-    return false;
-
-  // The classifier reads a bit-field field's width but not its alignment, so
-  // the declared alignment need not be reproduced.  The union reduction is its
-  // one reader, and a synthesized field never reaches a union.
-  for (auto [offsetBits, widthBits] :
-       llvm::zip_equal(offsets.asArrayRef(), widths.asArrayRef()))
-    out.push_back(
-        llvm::abi::FieldInfo(tb.getIntegerType(widthBits, llvm::Align(1),
-                                               /*Signed=*/false),
-                             offsetBits, /*IsBitField=*/true, widthBits,
-                             /*IsUnnamedBitField=*/true));
-  return true;
-}
-
-/// Whether \p ty contains a bit-field access unit holding a named bit-field,
-/// looking through member records and array element types.  A unit of only
-/// unnamed bit-fields is left out, since it reaches the classifier flagged as
-/// an unnamed bit-field and is handled the way classic CodeGen handles one.
+/// Whether \p ty reaches a bit-field access unit holding a named bit-field,
+/// looking through member records and array element types.
 static bool reachesNamedBitFieldUnit(mlir::Type ty) {
   if (auto arrTy = dyn_cast<cir::ArrayType>(ty))
     return reachesNamedBitFieldUnit(arrTy.getElementType());
   auto recTy = dyn_cast<cir::RecordType>(ty);
   if (!recTy)
     return false;
-  if (llvm::any_of(recTy.getMemberKinds(), cir::isBitFieldAccessUnit))
-    return true;
+  // A zero-length array under the bit-field mark is a zero-width bit-field, not
+  // an access unit, and it carries its declared type rather than a unit width.
+  for (auto [memberTy, kind] :
+       llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
+    if (cir::isBitFieldAccessUnit(kind) &&
+        !cir::isZeroWidthBitField(memberTy, kind))
+      return true;
   return llvm::any_of(recTy.getMembers(), reachesNamedBitFieldUnit);
 }
 
@@ -267,14 +239,13 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
       // A named access unit can be narrower than the type its bit-fields were
       // declared with, and that declared type is what classic CodeGen coerces
       // from.  CIR does not record it, so classifying here would coerce to the
-      // unit's width instead.  Nested and array members count, not just this
-      // record.
+      // unit's width instead.
       return false;
     }
-    // Below, an `empty` member that occupies bytes is read as an unnamed access
-    // unit.  A member that is itself empty for the ABI can occupy bytes too, by
-    // holding a unit of its own, and classic CodeGen reaches those bytes
-    // through the member's own fields rather than as a single unit.
+    // An `empty` member that occupies bytes is later read as an unnamed access
+    // unit.  One that is itself an empty-for-ABI record can occupy bytes by
+    // holding a unit of its own, which classic CodeGen reaches through the
+    // member's fields rather than as one unit.
     for (auto [memberTy, kind] :
          llvm::zip_equal(recTy.getMembers(), recTy.getMemberKinds()))
       if (kind == cir::RecordMemberKind::Empty &&
@@ -413,38 +384,36 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
         }
 
         // Padding is dropped, so the eightbyte rules see its bytes as holding
-        // nothing, while the record's full size set above still spans them.
-        //
-        // An unnamed bit-field access unit is passed along flagged instead,
-        // since classic CodeGen ignores it when assigning eightbyte classes
-        // and counts it when choosing the coerce type.  A member's presence
+        // nothing, while the record's full size set above still spans them.  An
+        // unnamed bit-field access unit is flagged rather than dropped, since
+        // classic CodeGen ignores it when assigning eightbyte classes but
+        // counts it when choosing the coerce type, and a member's presence
         // alone cannot say both.
         for (auto [idx, fieldTy, kind] :
              llvm::enumerate(recTy.getMembers(), recTy.getMemberKinds())) {
           if (kind == cir::RecordMemberKind::Pad)
             continue;
-          uint64_t widthBits = dl.getTypeSizeInBits(fieldTy).getFixedValue();
+          // A zero-width bit-field occupies nothing, so its declared type is
+          // what the ABI counts, and that is the element type it carries.
+          mlir::Type countedTy = fieldTy;
           bool isUnnamedUnit = kind == cir::RecordMemberKind::Empty;
+          if (cir::isZeroWidthBitField(fieldTy, kind)) {
+            countedTy = cast<cir::ArrayType>(fieldTy).getElementType();
+            isUnnamedUnit = true;
+          }
+          uint64_t widthBits = dl.getTypeSizeInBits(countedTy).getFixedValue();
           if (isUnnamedUnit && widthBits == 0)
             continue;
-          assert((!isUnnamedUnit || !memberIsEmptyRecord(fieldTy)) &&
+          assert((!isUnnamedUnit || !memberIsEmptyRecord(countedTy)) &&
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
           fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(fieldTy, typeMapper, dl, modOp),
+              mapCIRType(countedTy, typeMapper, dl, modOp),
               recTy.getElementOffset(dl, idx) * 8,
               /*IsBitField=*/isUnnamedUnit, isUnnamedUnit ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamedUnit));
         }
 
-        // The classifier stops walking fields at the first one past the range
-        // it is asked about, so a synthesized field appended out of order would
-        // hide the fields behind it.
-        if (appendZeroWidthBitFields(recTy, tb, modOp, fields))
-          llvm::stable_sort(fields, [](const llvm::abi::FieldInfo &lhs,
-                                       const llvm::abi::FieldInfo &rhs) {
-            return lhs.OffsetInBits < rhs.OffsetInBits;
-          });
         return tb.getRecordType(
             fields, sizeBits, align, llvm::abi::StructPacking::Default,
             /*BaseClasses=*/{}, /*VirtualBaseClasses=*/{}, flags);

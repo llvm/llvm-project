@@ -54,6 +54,13 @@ inline bool isBitFieldAccessUnit(RecordMemberKind kind) {
   return kind == RecordMemberKind::BitField;
 }
 
+/// Whether a record member is a zero-width bit-field, spelled as a zero-length
+/// array of the bit-field's declared type under the bit-field mark.  The ABI
+/// counts that declared type as user data, while the zero length keeps the
+/// member out of the record's storage, so it contributes neither size nor
+/// alignment to the record's layout.
+bool isZeroWidthBitField(mlir::Type memberTy, RecordMemberKind kind);
+
 /// Returns true if the type is a CIR sized type.
 ///
 /// Types are sized if they implement SizedTypeInterface and

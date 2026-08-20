@@ -128,22 +128,7 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     // non-zero power of two.
     PredAttrTrait<"record_align must be a non-zero power of two",
                   CPred<"$record_align != 0 && "
-                        "::llvm::isPowerOf2_64($record_align)">>,
-    PredAttrTrait<"zero_width_bitfield offsets and widths must be parallel",
-                  CPred<"!$zero_width_bitfield_offsets == "
-                        "!$zero_width_bitfield_widths && "
-                        "(!$zero_width_bitfield_offsets || "
-                        "$zero_width_bitfield_offsets.size() == "
-                        "$zero_width_bitfield_widths.size())">>,
-    PredAttrTrait<"a zero_width_bitfield width must be a positive multiple of 8",
-                  CPred<"!$zero_width_bitfield_widths || "
-                        "::llvm::all_of($zero_width_bitfield_widths.asArrayRef(),"
-                        " [](int64_t w) { return w > 0 && w % 8 == 0; })">>,
-    PredAttrTrait<"a zero_width_bitfield offset must not be negative",
-                  CPred<"!$zero_width_bitfield_offsets || "
-                        "::llvm::all_of("
-                        "$zero_width_bitfield_offsets.asArrayRef(),"
-                        " [](int64_t o) { return o >= 0; })">>
+                        "::llvm::isPowerOf2_64($record_align)">>
   ]> {
   let summary = "ABI layout metadata for a record type";
   let description = [{
@@ -158,12 +143,6 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     - `record_align_in_bytes`: from `ASTRecordLayout::getAlignment()`.
       Needed because CIR's DataLayout cannot account for
       `__attribute__((aligned(N)))`.
-    - `zero_width_bitfield_offsets` and `zero_width_bitfield_widths`: the
-      bit offset and declared bit width of each zero-width bit-field, one
-      entry per bit-field in each list.  A zero-width bit-field occupies no
-      storage and so has no member in the record type, but x86_64 counts its
-      declared type as user data.  Both lists are omitted from a record that
-      declares no zero-width bit-field.
 
     Example:
     ```
@@ -176,13 +155,7 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
         "NonTrivialDtor" = #cir.record_layout<
           arg_passing_kind = cannot_pass_in_regs,
           has_trivial_dtor = false,
-          record_align = 4>,
-        "ZeroWidth" = #cir.record_layout<
-          arg_passing_kind = can_pass_in_regs,
-          has_trivial_dtor = true,
-          record_align = 16,
-          zero_width_bitfield_offsets = [64],
-          zero_width_bitfield_widths = [32]>
+          record_align = 4>
       }
     }
     ```
@@ -191,9 +164,7 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
   let parameters = (ins
     EnumParameter<CIR_ArgPassingKind>:$arg_passing_kind,
     "bool":$has_trivial_dtor,
-    "uint64_t":$record_align,
-    OptionalParameter<"mlir::DenseI64ArrayAttr">:$zero_width_bitfield_offsets,
-    OptionalParameter<"mlir::DenseI64ArrayAttr">:$zero_width_bitfield_widths
+    "uint64_t":$record_align
   );
 
   let assemblyFormat = [{
@@ -201,8 +172,6 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
       `arg_passing_kind` `=` $arg_passing_kind `,`
       `has_trivial_dtor` `=` $has_trivial_dtor `,`
       `record_align` `=` $record_align
-      (`,` `zero_width_bitfield_offsets` `=` $zero_width_bitfield_offsets^)?
-      (`,` `zero_width_bitfield_widths` `=` $zero_width_bitfield_widths^)?
     `>`
   }];
 
