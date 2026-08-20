@@ -1024,38 +1024,31 @@ define amdgpu_kernel void @combine_v4f32_to_v8i16(
 ; CHECK-OPT-LABEL: define amdgpu_kernel void @combine_v4f32_to_v8i16(
 ; CHECK-OPT-SAME: ptr addrspace(1) [[OUT:%.*]], <4 x float> [[SRC:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-OPT-NEXT:  [[ENTRY:.*:]]
-; CHECK-OPT-NEXT:    [[HALVES:%.*]] = bitcast <4 x float> [[SRC]] to <8 x i16>
-; CHECK-OPT-NEXT:    [[E0:%.*]] = extractelement <8 x i16> [[HALVES]], i64 0
-; CHECK-OPT-NEXT:    [[E1:%.*]] = extractelement <8 x i16> [[HALVES]], i64 1
-; CHECK-OPT-NEXT:    [[E2:%.*]] = extractelement <8 x i16> [[HALVES]], i64 2
-; CHECK-OPT-NEXT:    [[E3:%.*]] = extractelement <8 x i16> [[HALVES]], i64 3
-; CHECK-OPT-NEXT:    [[E4:%.*]] = extractelement <8 x i16> [[HALVES]], i64 4
-; CHECK-OPT-NEXT:    [[E5:%.*]] = extractelement <8 x i16> [[HALVES]], i64 5
-; CHECK-OPT-NEXT:    [[E6:%.*]] = extractelement <8 x i16> [[HALVES]], i64 6
-; CHECK-OPT-NEXT:    [[E7:%.*]] = extractelement <8 x i16> [[HALVES]], i64 7
-; CHECK-OPT-NEXT:    [[S0:%.*]] = select i1 [[COND]], i16 [[E0]], i16 0
-; CHECK-OPT-NEXT:    [[S1:%.*]] = select i1 [[COND]], i16 [[E1]], i16 0
-; CHECK-OPT-NEXT:    [[S2:%.*]] = select i1 [[COND]], i16 [[E2]], i16 0
-; CHECK-OPT-NEXT:    [[S3:%.*]] = select i1 [[COND]], i16 [[E3]], i16 0
-; CHECK-OPT-NEXT:    [[S4:%.*]] = select i1 [[COND]], i16 [[E4]], i16 0
-; CHECK-OPT-NEXT:    [[S5:%.*]] = select i1 [[COND]], i16 [[E5]], i16 0
-; CHECK-OPT-NEXT:    [[S6:%.*]] = select i1 [[COND]], i16 [[E6]], i16 0
-; CHECK-OPT-NEXT:    [[S7:%.*]] = select i1 [[COND]], i16 [[E7]], i16 0
-; CHECK-OPT-NEXT:    store i16 [[S0]], ptr addrspace(1) [[OUT]], align 2
+; CHECK-OPT-NEXT:    [[COMBINED_SEL:%.*]] = select i1 [[COND]], <4 x float> [[SRC]], <4 x float> zeroinitializer
+; CHECK-OPT-NEXT:    [[COMBINED_BC:%.*]] = bitcast <4 x float> [[COMBINED_SEL]] to <8 x i16>
+; CHECK-OPT-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 0
+; CHECK-OPT-NEXT:    [[TMP3:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 1
+; CHECK-OPT-NEXT:    [[TMP5:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 2
+; CHECK-OPT-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 3
+; CHECK-OPT-NEXT:    [[TMP2:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 4
+; CHECK-OPT-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 5
+; CHECK-OPT-NEXT:    [[TMP6:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 6
+; CHECK-OPT-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[COMBINED_BC]], i64 7
+; CHECK-OPT-NEXT:    store i16 [[TMP0]], ptr addrspace(1) [[OUT]], align 2
 ; CHECK-OPT-NEXT:    [[PTR1:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 1
-; CHECK-OPT-NEXT:    store i16 [[S1]], ptr addrspace(1) [[PTR1]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP3]], ptr addrspace(1) [[PTR1]], align 2
 ; CHECK-OPT-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 2
-; CHECK-OPT-NEXT:    store i16 [[S2]], ptr addrspace(1) [[PTR2]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP5]], ptr addrspace(1) [[PTR2]], align 2
 ; CHECK-OPT-NEXT:    [[PTR3:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 3
-; CHECK-OPT-NEXT:    store i16 [[S3]], ptr addrspace(1) [[PTR3]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP7]], ptr addrspace(1) [[PTR3]], align 2
 ; CHECK-OPT-NEXT:    [[PTR4:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 4
-; CHECK-OPT-NEXT:    store i16 [[S4]], ptr addrspace(1) [[PTR4]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP2]], ptr addrspace(1) [[PTR4]], align 2
 ; CHECK-OPT-NEXT:    [[PTR5:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 5
-; CHECK-OPT-NEXT:    store i16 [[S5]], ptr addrspace(1) [[PTR5]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP4]], ptr addrspace(1) [[PTR5]], align 2
 ; CHECK-OPT-NEXT:    [[PTR6:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 6
-; CHECK-OPT-NEXT:    store i16 [[S6]], ptr addrspace(1) [[PTR6]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP6]], ptr addrspace(1) [[PTR6]], align 2
 ; CHECK-OPT-NEXT:    [[PTR7:%.*]] = getelementptr i16, ptr addrspace(1) [[OUT]], i64 7
-; CHECK-OPT-NEXT:    store i16 [[S7]], ptr addrspace(1) [[PTR7]], align 2
+; CHECK-OPT-NEXT:    store i16 [[TMP1]], ptr addrspace(1) [[PTR7]], align 2
 ; CHECK-OPT-NEXT:    ret void
 ;
 ; CHECK-NOOPT-LABEL: define amdgpu_kernel void @combine_v4f32_to_v8i16(

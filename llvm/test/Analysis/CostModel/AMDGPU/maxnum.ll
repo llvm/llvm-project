@@ -3,7 +3,7 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgpu9.00-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=ALL,GFX9,FASTF64 %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgpu6.01-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=ALL,SLOWF64 %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu9.0a-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=SIZE,GFX9-SIZE,GFX90A-SIZE %s
-; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu9.00-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=SIZE,GFX9-SIZE,GFX900-SIZE %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu9.00-unknown-amdhsa -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=SIZE,GFX9-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu6.01-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=SIZE,SLOW-SIZE %s
 
 define void @maxnum_f16() {
@@ -115,59 +115,23 @@ define void @maxnum_bf16() {
 }
 
 define void @maxnum_f32() {
-; GFX90A-FASTF64-LABEL: 'maxnum_f32'
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; GFX90A-FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; ALL-LABEL: 'maxnum_f32'
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; FASTF64-LABEL: 'maxnum_f32'
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; FASTF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
-;
-; SLOWF64-LABEL: 'maxnum_f32'
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
-;
-; GFX90A-SIZE-LABEL: 'maxnum_f32'
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
-;
-; GFX900-SIZE-LABEL: 'maxnum_f32'
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
-;
-; SLOW-SIZE-LABEL: 'maxnum_f32'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; SIZE-LABEL: 'maxnum_f32'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.maxnum.f32(float undef, float undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.maxnum.v3f32(<3 x float> undef, <3 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> undef, <4 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> undef, <8 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f32 = call <16 x float> @llvm.maxnum.v16f32(<16 x float> undef, <16 x float> undef)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f32 = call float @llvm.maxnum.f32(float undef, float undef)
   %v2f32 = call <2 x float> @llvm.maxnum.v2f32(<2 x float> undef, <2 x float> undef)
@@ -205,3 +169,7 @@ define void @maxnum_f64() {
   %v16f64 = call <16 x double> @llvm.maxnum.v16f64(<16 x double> undef, <16 x double> undef)
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; FASTF64: {{.*}}
+; GFX90A-FASTF64: {{.*}}
+; GFX90A-SIZE: {{.*}}

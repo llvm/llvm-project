@@ -7,83 +7,49 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgpu8.03-unknown-amdhsa -cost-kind=code-size -S | FileCheck -check-prefixes=VI-SIZE %s
 ; END.
 
-; Costs for legal <2 x f32> shuffles used to form v_pk_*_f32 sources. Identity and
-; broadcasts are free via op_sel; high-to-low lane swap needs v_pk_mov_b32.
+; Wider f32 shuffles must not inherit InsertElement legalization costs from the
+; packed-f32 pair-formation model: a splat of an f32 vector is not a scalarized
+; buildvector, so it stays free rather than being priced as N inserts.
 
-define amdgpu_kernel void @packed_fp32_shufflevector(<2 x float> %vec1, <2 x float> %vec2) {
-; GFX90A-LABEL: 'packed_fp32_shufflevector'
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+define amdgpu_kernel void @packed_fp32_wide_shufflevector(<4 x float> %vec4, <8 x float> %vec8, <16 x float> %vec16) {
+; GFX90A-LABEL: 'packed_fp32_wide_shufflevector'
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; GFX90A-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; GFX90A-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; GFX900-LABEL: 'packed_fp32_shufflevector'
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+; GFX900-LABEL: 'packed_fp32_wide_shufflevector'
+; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; GFX900-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; GFX900-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; VI-LABEL: 'packed_fp32_shufflevector'
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+; VI-LABEL: 'packed_fp32_wide_shufflevector'
+; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; VI-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; VI-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
-; GFX90A-SIZE-LABEL: 'packed_fp32_shufflevector'
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+; GFX90A-SIZE-LABEL: 'packed_fp32_wide_shufflevector'
+; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; GFX90A-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; GFX900-SIZE-LABEL: 'packed_fp32_shufflevector'
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+; GFX900-SIZE-LABEL: 'packed_fp32_wide_shufflevector'
+; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; GFX900-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; VI-SIZE-LABEL: 'packed_fp32_shufflevector'
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+; VI-SIZE-LABEL: 'packed_fp32_wide_shufflevector'
+; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
 ; VI-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %shuf00 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> zeroinitializer
-  %shuf01 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 0, i32 1>
-  %shuf10 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 0>
-  %shuf11 = shufflevector <2 x float> %vec1, <2 x float> %vec1, <2 x i32> <i32 1, i32 1>
-  %shuf00_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> zeroinitializer
-  %shuf01_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 0, i32 1>
-  %shuf10_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 0>
-  %shuf11_2 = shufflevector <2 x float> %vec1, <2 x float> %vec2, <2 x i32> <i32 1, i32 1>
+  %shuf4 = shufflevector <4 x float> %vec4, <4 x float> %vec4, <4 x i32> zeroinitializer
+  %shuf8 = shufflevector <8 x float> %vec8, <8 x float> %vec8, <8 x i32> zeroinitializer
+  %shuf16 = shufflevector <16 x float> %vec16, <16 x float> %vec16, <16 x i32> zeroinitializer
   ret void
 }
