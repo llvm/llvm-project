@@ -369,9 +369,6 @@ protected:
   };
 
 private:
-  /// Double the size of the hash table and rehash everything.
-  void GrowHashTable(const FoldingSetInfo &Info);
-
   /// Resize the hash table and rehash everything. \p NewBucketCount must be a
   /// power of two, and must be greater than the old bucket count.
   void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);

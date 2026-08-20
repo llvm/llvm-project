@@ -8660,11 +8660,14 @@ void SIInstrInfo::moveToVALUImpl(
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
         unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
+        bool IsUndef = Inst.getOperand(1).isUndef();
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
           UseMO.setSubReg(
               RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
           UseMO.setReg(NewDstReg);
+          if (IsUndef)
+            UseMO.setIsUndef();
         }
         MRI.clearKillFlags(NewDstReg);
 

@@ -7438,6 +7438,9 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
       : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
                        DeducedAsTypeOrCanon),
         Template(Template) {
+
+    assert(!Template.isNull());
+
     auto Dep = toTypeDependence(Template.getDependence());
     // A deduced AutoType only syntactically depends on its template name.
     if (DK == DeducedKind::Deduced)
