@@ -22,7 +22,7 @@ define i32 @load_local_volatile(ptr addrspace(5) %p) {
 ; PTX91-EMPTY:
 ; PTX91-NEXT:  // %bb.0:
 ; PTX91-NEXT:    ld.param::func.b64 %rd1, [load_local_volatile_param_0];
-; PTX91-NEXT:    ld.local.b32 %r1, [%rd1];
+; PTX91-NEXT:    ld.volatile.local.b32 %r1, [%rd1];
 ; PTX91-NEXT:    st.param::func.b32 [func_retval0], %r1;
 ; PTX91-NEXT:    ret;
   %v = load volatile i32, ptr addrspace(5) %p, align 4
@@ -49,7 +49,7 @@ define void @store_local_volatile(ptr addrspace(5) %p, i32 %v) {
 ; PTX91-NEXT:  // %bb.0:
 ; PTX91-NEXT:    ld.param::func.b64 %rd1, [store_local_volatile_param_0];
 ; PTX91-NEXT:    ld.param::func.b32 %r1, [store_local_volatile_param_1];
-; PTX91-NEXT:    st.local.b32 [%rd1], %r1;
+; PTX91-NEXT:    st.volatile.local.b32 [%rd1], %r1;
 ; PTX91-NEXT:    ret;
   store volatile i32 %v, ptr addrspace(5) %p, align 4
   ret void
