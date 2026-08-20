@@ -20,6 +20,8 @@ namespace pisa {
 
 // The enum values must match the Clang preprocessor definitions in
 // lib/Frontend/InitPreprocessor.cpp.
+// See the PISA memory-scope specification:
+// https://intel.github.io/pisa/virtual_machine.html#memory-scope
 namespace MemoryScope {
 enum : unsigned {
   none = 255,
@@ -31,6 +33,8 @@ enum : unsigned {
 };
 } // namespace MemoryScope
 
+// Integer reduction operations:
+// https://intel.github.io/pisa/instructions_cross_lane.html#ired
 namespace IRedOp {
 enum : unsigned {
   SUM = 0,
@@ -46,10 +50,14 @@ enum : unsigned {
 };
 } // namespace IRedOp
 
+// Floating-point reduction operations:
+// https://intel.github.io/pisa/instructions_cross_lane.html#fred
 namespace FRedOp {
 enum : unsigned { MIN = 0, MAX = 1, ABSMAX = 2, Last };
 } // namespace FRedOp
 
+// Sub-group shuffle modes:
+// https://intel.github.io/pisa/instructions_cross_lane.html#shfl
 namespace SHFLMode {
 enum : unsigned { UP = 0, DOWN = 1, XOR = 2, IDX = 3, Last };
 } // namespace SHFLMode
