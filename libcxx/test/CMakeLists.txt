@@ -53,7 +53,7 @@ endif()
 
 serialize_lit_params_list(SERIALIZED_LIT_PARAMS LIBCXX_TEST_PARAMS)
 
-include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
+include(AddLit) # for configure_lit_site_cfg and add_lit_testsuite
 
 # The test suite is driven by a generated lit.site.cfg that loads the various other configuration
 # files needed by it. In order:

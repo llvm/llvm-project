@@ -1,4 +1,4 @@
-include(AddLLVM) # for add_lit_testsuite
+include(AddLit) # for add_lit_testsuite
 include(HandleLitArguments)
 macro(pythonize_bool var)
   if (${var})

@@ -223,7 +223,7 @@ endif()
 set(LLVM_COMPILER_CHECKED ON)
 
 # Handle common options used by all runtimes.
-include(AddLLVM)
+include(AddLit)
 include(HandleLLVMOptions)
 
 # Loot at the PATH first to avoid a version mismatch between the command-line

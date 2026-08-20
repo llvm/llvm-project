@@ -919,7 +919,7 @@ if(COMPILER_RT_INCLUDE_TESTS)
     # by specifying -DLLVM_EXTERNAL_LIT, but we generate it regardless.
     if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)
       # Needed for lit support in standalone builds.
-      include(AddLLVM)
+      include(AddLit)
       add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/llvm-lit ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
       # Ensure that the testsuite uses the local lit rather than
       # LLVM_INSTALL_DIR/bin/llvm-lit (which probably does not exist).

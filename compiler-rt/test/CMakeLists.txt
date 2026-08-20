@@ -1,5 +1,5 @@
 # Needed for lit support in standalone builds.
-include(AddLLVM)
+include(AddLit)
 
 pythonize_bool(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
 

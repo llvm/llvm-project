@@ -56,13 +56,7 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   set( LIBCLC_STANDALONE_BUILD TRUE )
 
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
-  include(AddLLVM)
-
-  foreach( tool IN ITEMS llvm-link opt )
-    find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    set( ${tool}_exe ${LLVM_TOOL_${tool}} )
-    set( ${tool}_target )
-  endforeach()
+  include(AddLit)
 
   # Setup the paths where libclc runtimes should be stored.
   set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
@@ -82,9 +76,6 @@ else()
     set( PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" )
   endif()
 
-  get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
-  get_host_tool_path( opt OPT opt_exe opt_target )
-
   # Setup the paths where libclc runtimes should be stored. By default, in an
   # in-tree build we place the libraries in clang's resource driectory.
   include(GetClangResourceDir)
@@ -95,16 +86,20 @@ else()
   )
 endif()
 
+foreach( tool IN ITEMS llvm-link opt )
+  find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+  if( NOT LLVM_TOOL_${tool} )
+    message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
+  endif()
+  set( ${tool}_exe ${LLVM_TOOL_${tool}} )
+endforeach()
+
 if( NOT LIBCLC_USE_SPIRV_BACKEND )
   # llvm-spirv is an optional dependency, used to build spirv-* targets when
   # the SPIR-V backend hasn't been requested. It may be provided in-tree or
   # externally.
-  if( TARGET llvm-spirv )
-    get_host_tool_path( llvm-spirv LLVM_SPIRV llvm-spirv_exe llvm-spirv_target )
-  else()
-    find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
-    set( llvm-spirv_exe "${LLVM_SPIRV}" )
-  endif()
+  find_program( LLVM_SPIRV llvm-spirv HINTS ${LLVM_TOOLS_BINARY_DIR} )
+  set( llvm-spirv_exe "${LLVM_SPIRV}" )
 endif()
 
 message(STATUS "libclc target '${LIBCLC_TARGET}' is enabled")
@@ -123,12 +118,6 @@ if(LIBCLC_TARGET_ARCH IN_LIST LIBCLC_ARCHS_SPIRV)
     message(FATAL_ERROR "SPIR-V backend or llvm-spirv is required for libclc ${LIBCLC_TARGET}")
   endif()
 endif()
-
-foreach( tool IN ITEMS opt llvm-link )
-  if( NOT EXISTS "${${tool}_exe}" AND "${${tool}_target}" STREQUAL "" )
-    message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
-  endif()
-endforeach()
 
 # Determine the clang target triple.
 set(clang_triple ${LIBCLC_TARGET})
