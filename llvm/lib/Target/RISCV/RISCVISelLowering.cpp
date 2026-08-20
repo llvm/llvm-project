@@ -22033,8 +22033,9 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
     // common constant stride, then return the constant stride.
     BaseIndexOffset BIO1 = BaseIndexOffset::match(Ld1, DAG);
     BaseIndexOffset BIO2 = BaseIndexOffset::match(Ld2, DAG);
-    if (BIO1.equalBaseIndex(BIO2, DAG))
-      return {{BIO2.getOffset() - BIO1.getOffset(), false}};
+    int64_t PtrDiff;
+    if (BIO1.equalBaseIndex(BIO2, DAG, PtrDiff))
+      return {{PtrDiff, false}};
 
     // Otherwise try to match (add LastPtr, Stride) or (add NextPtr, Stride)
     SDValue P1 = Ld1->getBasePtr();
