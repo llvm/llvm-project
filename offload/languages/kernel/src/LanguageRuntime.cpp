@@ -52,7 +52,8 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
       return convertAndSetLastError(Result);
   }
   ol_device_handle_t Device = ThreadState::getDefaultDevice();
-  ol_queue_handle_t Queue = ThreadState::getDefaultQueue();
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  ol_queue_handle_t Queue = DefaultStream->Queue;
   ol_result_t Result;
   switch (Kind) {
   case MemcpyHostToHost: {
@@ -83,18 +84,16 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
   if (Result != OL_SUCCESS)
     return convertAndSetLastError(Result);
 
-  if (!Queue)
-    return convertAndSetLastError(Result);
-
-  Result = olSyncQueue(Queue);
+  Result = DefaultStream->syncStream();
   return convertAndSetLastError(Result);
 }
 
 Error_t DeviceSynchronize() {
   // TODO: This is not correct. We likely want to pipe this through to the
   // plugins.
-  ol_queue_handle_t Queue = ThreadState::getDefaultQueue();
-  ol_result_t Result = olSyncQueue(Queue);
+  StreamTy *DefaultStream = ThreadState::getDefaultStream();
+  ol_result_t Result =
+      DefaultStream ? DefaultStream->syncStream() : olSyncQueue(nullptr);
   return convertAndSetLastError(Result);
 }
 
@@ -189,11 +188,14 @@ Error_t StreamDestroy(Stream_t Stream) {
 }
 
 Error_t StreamSynchronize(Stream_t Stream) {
-  ol_queue_handle_t Queue;
-  Error_t Err = getQueueFromStream(Stream, &Queue);
-  if (Err != Success)
-    return setLastError(Err);
-  ol_result_t Result = olSyncQueue(Queue);
+  if (!Stream)
+    return setLastError(ErrorInvalidValue);
+
+  llvm::offload::StreamTy *InternalStream = getInternalStream(Stream);
+  if (!llvm::offload::StateTy::isStreamRegistered(InternalStream))
+    return setLastError(ErrorInvalidResourceHandle);
+
+  ol_result_t Result = InternalStream->syncStream();
   return convertAndSetLastError(Result);
 }
 

@@ -13,6 +13,7 @@
 #include "OffloadAPI.h"
 #include "State.h"
 #include "Stream.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 using RuntimeState = llvm::offload::StateTy;
@@ -63,24 +64,49 @@ static inline llvm::offload::StreamTy *getInternalStream(Stream_t Stream) {
   return reinterpret_cast<StreamTy *>(Stream);
 }
 
+static inline ol_result_t
+syncAndDestroyEvents(llvm::SmallVectorImpl<ol_event_handle_t> &Events) {
+  ol_result_t FirstError = OL_SUCCESS;
+  for (ol_event_handle_t Event : Events) {
+    if (!Event)
+      continue;
+
+    ol_result_t SyncResult = olSyncEvent(Event);
+    if (FirstError == OL_SUCCESS && SyncResult != OL_SUCCESS)
+      FirstError = SyncResult;
+
+    ol_result_t DestroyResult = olDestroyEvent(Event);
+    if (FirstError == OL_SUCCESS && DestroyResult != OL_SUCCESS)
+      FirstError = DestroyResult;
+  }
+  Events.clear();
+  return FirstError;
+}
+
 /// Wait for blocking streams before executing if we are legacy default stream.
 static inline ol_result_t waitOnBlockingStreams() {
   ol_device_handle_t Device = ThreadState::getDefaultDevice();
-  if (!RuntimeState::hasLegacyDefaultStream(Device) ||
-      RuntimeState::getBlockingStreams(Device).empty())
+  llvm::SmallPtrSet<StreamTy *, 8> BlockingStreams =
+      RuntimeState::getBlockingStreams(Device);
+  if (!RuntimeState::hasLegacyDefaultStream(Device) || BlockingStreams.empty())
     return OL_SUCCESS;
+
   StreamTy *DefaultStream = ThreadState::getDefaultStream();
   llvm::SmallVector<ol_event_handle_t, 8> Events;
-  for (StreamTy *BlockingStream : RuntimeState::getBlockingStreams(Device)) {
+  for (StreamTy *BlockingStream : BlockingStreams) {
     ol_event_handle_t Event = nullptr;
     ol_result_t Result =
         olCreateEvent(BlockingStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
-    if (Result != OL_SUCCESS)
+    if (Result != OL_SUCCESS) {
+      if (Event)
+        Events.push_back(Event);
+      syncAndDestroyEvents(Events);
       return Result;
+    }
     Events.push_back(Event);
   }
 
-  return olWaitEvents(DefaultStream->Queue, Events.data(), Events.size());
+  return DefaultStream->waitOnAndTrackDependencyEvents(Events);
 }
 
 /// Wait for the legacy default stream to complete before launching a kernel on
@@ -97,23 +123,15 @@ static inline ol_result_t waitOnLegacyDefaultStream(StreamTy *SourceStream,
   ol_event_handle_t Event = nullptr;
   ol_result_t Result =
       olCreateEvent(DefaultStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
-  if (Result != OL_SUCCESS)
+  if (Result != OL_SUCCESS) {
+    if (Event) {
+      llvm::SmallVector<ol_event_handle_t, 1> Events = {Event};
+      syncAndDestroyEvents(Events);
+    }
     return Result;
-  return olWaitEvents(SourceStream->Queue, &Event, 1);
-}
-
-/// Convert a Stream_t to an ol_queue_handle_t.
-static inline Error_t getQueueFromStream(Stream_t Stream,
-                                         ol_queue_handle_t *Queue) {
-  if (!Stream)
-    return ErrorInvalidValue;
-
-  llvm::offload::StreamTy *InternalStream = getInternalStream(Stream);
-  if (!llvm::offload::StateTy::isStreamRegistered(InternalStream))
-    return ErrorInvalidResourceHandle;
-
-  *Queue = InternalStream->Queue;
-  return Success;
+  }
+  return SourceStream->waitOnAndTrackDependencyEvents(
+      llvm::ArrayRef<ol_event_handle_t>(&Event, 1));
 }
 
 #endif // LLVM_OFFLOAD_LANGUAGES_KERNEL_INCLUDE_LANGUAGE_UTILS_H
