@@ -2114,21 +2114,15 @@ class TemplateDiff {
   }
 
 public:
-
   TemplateDiff(raw_ostream &OS, ASTContext &Context, QualType FromType,
                QualType ToType, bool PrintTree, bool PrintFromType,
                bool ElideType, bool ShowColor)
-    : Context(Context),
-      Policy(Context.getPrintingPolicy()),
-      ElideType(ElideType),
-      PrintTree(PrintTree),
-      ShowColor(ShowColor),
-      // When printing a single type, the FromType is the one printed.
-      FromTemplateType(PrintFromType ? FromType : ToType),
-      ToTemplateType(PrintFromType ? ToType : FromType),
-      OS(OS),
-      IsBold(false) {
-  }
+      : Context(Context), Policy(Context.getPrintingPolicy()),
+        ElideType(ElideType), PrintTree(PrintTree), ShowColor(ShowColor),
+        // When printing a single type, the FromType is the one printed.
+        FromTemplateType(PrintFromType ? FromType : ToType),
+        ToTemplateType(PrintFromType ? ToType : FromType), OS(OS),
+        IsBold(false) {}
 
   /// DiffTemplate - Start the template type diffing.
   void DiffTemplate() {
