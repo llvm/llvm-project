@@ -9668,12 +9668,36 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
 
     // Otherwise, if this is a vector with i32 or f32 elements, and the element
     // is a non-constant being inserted into an element other than the low one,
-    // we can't use a constant pool load.  Instead, use SCALAR_TO_VECTOR (aka
-    // movd/movss) to move this into the low element, then shuffle it into
-    // place.
+    // we can't use a constant pool load.
     if (EVTBits == 32) {
+      // If the element is a load, we can emit a VZEXT_LOAD to zero-extend the
+      // scalar into a 128-bit vector, and then shuffle the element into place.
+      // This avoids needing to blend with a separate zero vector and avoids
+      // cross-domain penalties.
+      if (!Subtarget.hasSSE41() && NumZero > 0 &&
+          Item.getOpcode() == ISD::LOAD && Item.hasOneUse() &&
+          VT.is128BitVector() &&
+          cast<LoadSDNode>(Item)->getMemoryVT().getSizeInBits() == 32) {
+        auto *LN = cast<LoadSDNode>(Item);
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+        SDValue VZLoad = DAG.getMemIntrinsicNode(
+            X86ISD::VZEXT_LOAD, dl, Tys, Ops, LN->getMemoryVT(),
+            LN->getPointerInfo(), LN->getBaseAlign(),
+            LN->getMemOperand()->getFlags());
+        DAG.makeEquivalentMemoryOrdering(LN, VZLoad);
+        SmallVector<int, 16> MaskVec(NumElems);
+        for (unsigned i = 0; i != NumElems; ++i)
+          MaskVec[i] = (i == Idx) ? 0 : 1;
+        return DAG.getVectorShuffle(VT, dl, VZLoad, VZLoad, MaskVec);
+      }
+
+      // For non-loads (or if the VZEXT_LOAD path isn't applicable), we fallback
+      // to using SCALAR_TO_VECTOR (aka movd/movss) to move this into the low
+      // element, then shuffle it into place.
       Item = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Item);
-      return getShuffleVectorZeroOrUndef(Item, Idx, NumZero > 0, Subtarget, DAG);
+      return getShuffleVectorZeroOrUndef(Item, Idx, NumZero > 0, Subtarget,
+                                         DAG);
     }
   }
 

@@ -3626,19 +3626,17 @@ define <8 x float> @PR213251() {
 ; SSE2-LABEL: PR213251:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl $1, (%rax)
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: PR213251:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movl $1, (%rax)
-; SSSE3-NEXT:    movd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
+; SSSE3-NEXT:    movss {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR213251:
