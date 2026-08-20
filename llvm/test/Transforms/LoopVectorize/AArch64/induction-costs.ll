@@ -984,9 +984,9 @@ exit:
   ret i64 %ptr.int
 }
 
-define i32 @scev_usub_sat_n_2(i32 %n) {
+define i32 @scev_usub_sat_n_2(ptr %ptr, i32 %n) {
 ; CHECK-LABEL: define i32 @scev_usub_sat_n_2(
-; CHECK-SAME: i32 [[N:%.*]]) {
+; CHECK-SAME: ptr [[PTR:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 2)
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[UMAX]] to i64
@@ -1012,7 +1012,7 @@ define i32 @scev_usub_sat_n_2(i32 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP11]], 4294967292
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr null, i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP13]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -1029,7 +1029,7 @@ define i32 @scev_usub_sat_n_2(i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[IV]], 2
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SHL]], 4294967292
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr null, i64 [[AND]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[AND]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -1047,7 +1047,7 @@ loop:
   %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
   %shl = shl i64 %iv, 2
   %and = and i64 %shl, 4294967292
-  %gep = getelementptr i8, ptr null, i64 %and
+  %gep = getelementptr i8, ptr %ptr, i64 %and
   %load = load i32, ptr %gep, align 1
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %wide.trip.count
