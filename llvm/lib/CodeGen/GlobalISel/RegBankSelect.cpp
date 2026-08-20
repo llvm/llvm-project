@@ -240,8 +240,7 @@ class RegBankSelectImpl {
     /// Does the insertion point is at the beginning or end of MBB.
     bool Beginning;
 
-    void materialize() override { /*Nothing to do to materialize*/
-    }
+    void materialize() override { /*Nothing to do to materialize*/ }
 
     MachineBasicBlock::iterator getPointImpl() override {
       return Beginning ? MBB.begin() : MBB.end();
