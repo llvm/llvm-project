@@ -50804,10 +50804,25 @@ static SDValue combineIntDivRemViaFPReciprocal(SDNode *N, bool IsSigned,
   SDValue Dividend = N->getOperand(0);
   SDValue Divisor = N->getOperand(1);
 
-  if (VT != MVT::v2i64 && VT != MVT::v4i64 && VT != MVT::v8i64)
-    return SDValue();
   if (!Subtarget.hasDQI() || !Subtarget.useAVX512Regs())
     return SDValue();
+
+  // Widen to the next power of two to get a machine type.
+  unsigned NumElts = VT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElts) && VT.getSizeInBits() < 512) {
+    SDValue WideDividend = DAG.WidenVector(Dividend, DL);
+    EVT WideVT = WideDividend.getValueType();
+    SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
+    SDValue Wide =
+        DAG.getNode(N->getOpcode(), DL, WideVT, WideDividend, WideDivisor);
+    return DAG.getExtractSubvector(DL, VT, Wide, 0);
+  }
+
+  // The rounded FP steps below run in a zmm so VT has to widen into one, and
+  // one lane does not pay for the chain.
+  if (VT.getSizeInBits() > 512 || NumElts < 2)
+    return SDValue();
+
   bool Widen = VT != MVT::v8i64;
   // The chain multiplies twice on its critical path, so v2i64 only pays
   // off where vpmullq is fast.
