@@ -22,6 +22,8 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/readable_traits.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
@@ -63,6 +65,17 @@ struct _IterOps<_RangeAlgPolicy> {
   static constexpr auto next         = ranges::next;
   static constexpr auto prev         = ranges::prev;
   static constexpr auto __advance_to = ranges::advance;
+
+  template <ranges::forward_range _Range>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __end(_Range&& __range) {
+    if constexpr (ranges::common_range<_Range>) {
+      return ranges::end(__range);
+    } else if constexpr (ranges::random_access_range<_Range> && ranges::sized_range<_Range>) {
+      return ranges::next(ranges::begin(__range), ranges::distance(__range));
+    } else {
+      return ranges::end(__range);
+    }
+  }
 };
 
 #endif

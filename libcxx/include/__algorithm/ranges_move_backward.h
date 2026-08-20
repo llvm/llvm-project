@@ -49,7 +49,10 @@ struct __move_backward {
     requires indirectly_movable<iterator_t<_Range>, _Iter>
   _LIBCPP_HIDE_FROM_ABI constexpr move_backward_result<borrowed_iterator_t<_Range>, _Iter>
   operator()(_Range&& __range, _Iter __result) const {
-    return std::__move_backward<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), std::move(__result));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return std::__move_backward<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
   }
 };
 

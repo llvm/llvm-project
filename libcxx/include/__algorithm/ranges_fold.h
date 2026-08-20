@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_RANGES_FOLD_H
 
 #include <__algorithm/for_each.h>
+#include <__algorithm/iterator_operations.h>
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
@@ -231,7 +232,10 @@ struct __fold_right {
 
   template <bidirectional_range _Range, class _Tp, __indirectly_binary_right_foldable<_Tp, iterator_t<_Range>> _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Tp __init, _Func __func) {
-    return operator()(ranges::begin(__range), ranges::end(__range), std::move(__init), std::ref(__func));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return operator()(std::move(__first), std::move(__last), std::move(__init), std::ref(__func));
   }
 };
 
@@ -255,7 +259,10 @@ struct __fold_right_last {
   template <bidirectional_range _Range,
             __indirectly_binary_right_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Func __func) {
-    return operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return operator()(std::move(__first), std::move(__last), std::ref(__func));
   }
 };
 

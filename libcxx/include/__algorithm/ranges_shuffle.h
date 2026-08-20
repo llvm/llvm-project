@@ -50,7 +50,10 @@ struct __shuffle {
   template <random_access_range _Range, class _Gen>
     requires permutable<iterator_t<_Range>> && uniform_random_bit_generator<remove_reference_t<_Gen>>
   _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_Range> operator()(_Range&& __range, _Gen&& __gen) const {
-    return (*this)(ranges::begin(__range), ranges::end(__range), std::forward<_Gen>(__gen));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return (*this)(std::move(__first), std::move(__last), std::forward<_Gen>(__gen));
   }
 };
 

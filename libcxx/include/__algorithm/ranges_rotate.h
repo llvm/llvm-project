@@ -49,7 +49,10 @@ struct __rotate {
     requires permutable<iterator_t<_Range>>
   _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
   operator()(_Range&& __range, iterator_t<_Range> __middle) const {
-    return __rotate_fn_impl(ranges::begin(__range), std::move(__middle), ranges::end(__range));
+    auto __first = ranges::begin(__range);
+    auto __last  = _IterOps<_RangeAlgPolicy>::__end(__range);
+
+    return __rotate_fn_impl(std::move(__first), std::move(__middle), std::move(__last));
   }
 };
 
