@@ -180,6 +180,18 @@ static bool hasPrivatizedArrayReductionObject(
   return false;
 }
 
+static bool
+hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
+                               semantics::SemanticsContext &semaCtx) {
+  for (const Object &object : reductionObjects) {
+    if (!object.ref() || isWholeArraySection(object, semaCtx))
+      continue;
+    if (evaluate::IsArraySection(*object.ref()))
+      return true;
+  }
+  return false;
+}
+
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to a single clause during OpenMP lowering.
 struct ObjectEntryBlockArgsEntry {
@@ -4981,7 +4993,11 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
     TODO(loc,
          "TASKLOOP construct with REDUCTION of an array element or section "
          "whose base array is privatized");
-
+  if (hasPartialArrayReductionObject(inReductionObjects, semaCtx))
+    TODO(loc,
+         "TASKLOOP construct with IN_REDUCTION of a partial array section");
+  if (hasPartialArrayReductionObject(reductionObjects, semaCtx))
+    TODO(loc, "TASKLOOP construct with REDUCTION of a partial array section");
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,

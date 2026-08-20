@@ -25,6 +25,14 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-udr-section.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASKLOOP-UDR-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-cross-scope-bounds.f90 2>&1 | FileCheck %s --check-prefix=TASK-CROSS-SCOPE-BOUNDS
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/task-cross-scope-bounds.f90 2>&1 | FileCheck %s --check-prefix=TASK-CROSS-SCOPE-BOUNDS
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-udr-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-udr-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-udr-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-udr-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-UDR-SHARED-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -43,6 +51,8 @@
 ! EAGER-TASKLOOP-REDUCTION-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-UDR-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! TASK-CROSS-SCOPE-BOUNDS: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
+! TASKLOOP-UDR-SHARED-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of a partial array section
+! TASKLOOP-IN-SHARED-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of a partial array section
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -101,6 +111,34 @@ subroutine taskloop_udr_section(a)
   do i = 1, 1
     a(2:3) = a(2:3) + i
   end do
+end subroutine
+
+!--- taskloop-udr-shared-section.f90
+subroutine taskloop_udr_shared_section(a)
+  integer :: a(4), i
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop reduction(myred : a(2:3))
+  do i = 1, 1
+    a(2:3) = a(2:3) + i
+  end do
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+!--- taskloop-in-shared-section.f90
+subroutine taskloop_in_reduction_shared_section(a)
+  integer :: a(4, 4), i
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop in_reduction(+: a(:, 2))
+  do i = 1, 1
+    a(:, 2) = a(:, 2) + i
+  end do
+  !$omp end single
+  !$omp end parallel
 end subroutine
 
 !--- taskloop-in.f90
