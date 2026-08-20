@@ -1342,7 +1342,8 @@ _mm_cvtepi32_pd(__m128i __a) {
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector of [4 x i32] whose lower 64 bits contain the
 ///    converted values. The upper 64 bits are set to zero.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtpd_epi32(__m128d __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtpd_epi32(__m128d __a) {
   return (__m128i)__builtin_ia32_cvtpd2dq((__v2df)__a);
 }
 
@@ -1361,7 +1362,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtpd_epi32(__m128d __a) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
 ///    conversion.
 /// \returns A 32-bit signed integer containing the converted value.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsd_si32(__m128d __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_cvtsd_si32(__m128d __a) {
   return __builtin_ia32_cvtsd2si((__v2df)__a);
 }
 
@@ -1455,7 +1456,8 @@ _mm_cvtss_sd(__m128d __a, __m128 __b) {
 ///    A 128-bit vector of [2 x double].
 /// \returns A 128-bit vector of [4 x i32] whose lower 64 bits contain the
 ///    converted values. The upper 64 bits are set to zero.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttpd_epi32(__m128d __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvttpd_epi32(__m128d __a) {
   return (__m128i)__builtin_ia32_cvttpd2dq((__v2df)__a);
 }
 
@@ -1475,7 +1477,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttpd_epi32(__m128d __a) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
 ///    conversion.
 /// \returns A 32-bit signed integer containing the converted value.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_cvttsd_si32(__m128d __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvttsd_si32(__m128d __a) {
   return __builtin_ia32_cvttsd2si((__v2df)__a);
 }
 
@@ -1494,7 +1497,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvttsd_si32(__m128d __a) {
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_cvtpd_pi32(__m128d __a) {
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtpd_pi32(__m128d __a) {
   return __trunc64(__builtin_ia32_cvtpd2dq((__v2df)__a));
 }
 
@@ -1513,7 +1517,8 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_cvtpd_pi32(__m128d __a) {
 /// \param __a
 ///    A 128-bit vector of [2 x double].
 /// \returns A 64-bit vector of [2 x i32] containing the converted values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_cvttpd_pi32(__m128d __a) {
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvttpd_pi32(__m128d __a) {
   return __trunc64(__builtin_ia32_cvttpd2dq((__v2df)__a));
 }
 
@@ -3287,7 +3292,8 @@ _mm_cvtsi64_sd(__m128d __a, long long __b) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
 ///    conversion.
 /// \returns A 64-bit signed integer containing the converted value.
-static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvtsd_si64(__m128d __a) {
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsd_si64(__m128d __a) {
   return __builtin_ia32_cvtsd2si64((__v2df)__a);
 }
 
@@ -3307,7 +3313,8 @@ static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvtsd_si64(__m128d __a) {
 ///    A 128-bit vector of [2 x double]. The lower 64 bits are used in the
 ///    conversion.
 /// \returns A 64-bit signed integer containing the converted value.
-static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvttsd_si64(__m128d __a) {
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvttsd_si64(__m128d __a) {
   return __builtin_ia32_cvttsd2si64((__v2df)__a);
 }
 #endif
@@ -3340,7 +3347,8 @@ _mm_cvtepi32_ps(__m128i __a) {
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit integer vector of [4 x i32] containing the converted
 ///    values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtps_epi32(__m128 __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtps_epi32(__m128 __a) {
   return (__m128i)__builtin_ia32_cvtps2dq((__v4sf)__a);
 }
 
@@ -3359,7 +3367,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtps_epi32(__m128 __a) {
 /// \param __a
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [4 x i32] containing the converted values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttps_epi32(__m128 __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvttps_epi32(__m128 __a) {
   return (__m128i)__builtin_ia32_cvttps2dq((__v4sf)__a);
 }
 

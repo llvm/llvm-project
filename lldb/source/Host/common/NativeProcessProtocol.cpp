@@ -649,13 +649,15 @@ Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
     return RemoveSoftwareBreakpoint(addr);
 }
 
-Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
-                                                    void *buf, size_t size,
-                                                    size_t &bytes_read) {
-  Status error = ReadMemory(addr, buf, size, bytes_read);
+Status
+NativeProcessProtocol::ReadMemoryWithoutTrap(const ProcessAddress &process_addr,
+                                             void *buf, size_t size,
+                                             size_t &bytes_read) {
+  Status error = ReadMemory(process_addr, buf, size, bytes_read);
   if (error.Fail())
     return error;
 
+  lldb::addr_t addr = process_addr.GetValue();
   llvm::MutableArrayRef data(static_cast<uint8_t *>(buf), bytes_read);
   for (const auto &pair : m_software_breakpoints) {
     lldb::addr_t bp_addr = pair.first;

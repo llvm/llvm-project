@@ -732,7 +732,7 @@ template <>
 struct __padding<0> {};
 
 template <class _CharT, class _Traits, class _Allocator>
-class basic_string {
+class _LIBCPP_WARN_UNUSED basic_string {
 public:
   using __self _LIBCPP_NODEBUG         = basic_string;
   using __self_view _LIBCPP_NODEBUG    = basic_string_view<_CharT, _Traits>;
@@ -756,10 +756,10 @@ public:
   //
   // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
   // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<allocator_type>::value && __libcpp_is_trivially_relocatable<pointer>::value,
-      basic_string,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<allocator_type> && __is_trivially_relocatable_v<pointer>,
+                      basic_string,
+                      void>;
 
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");

@@ -4497,6 +4497,7 @@ CXCursorKind clang::getCursorKindForDecl(const Decl *D) {
   case Decl::StaticAssert:
     return CXCursor_StaticAssert;
   case Decl::Friend:
+  case Decl::FriendTemplate:
     return CXCursor_FriendDecl;
   case Decl::TranslationUnit:
     return CXCursor_TranslationUnit;

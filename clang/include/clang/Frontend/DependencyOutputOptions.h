@@ -10,6 +10,7 @@
 #define LLVM_CLANG_FRONTEND_DEPENDENCYOUTPUTOPTIONS_H
 
 #include "clang/Basic/HeaderInclude.h"
+#include "clang/Basic/MakeSupport.h"
 #include <string>
 #include <vector>
 
@@ -17,9 +18,6 @@ namespace clang {
 
 /// ShowIncludesDestination - Destination for /showIncludes output.
 enum class ShowIncludesDestination { None, Stdout, Stderr };
-
-/// DependencyOutputFormat - Format for the compiler dependency file.
-enum class DependencyOutputFormat { Make, NMake };
 
 /// ExtraDepKind - The kind of extra dependency file.
 enum ExtraDepKind {

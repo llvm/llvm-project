@@ -501,3 +501,52 @@ class TestWasm(GDBRemoteTestBase):
         # Likewise for a global that does not exist.
         process.ReadMemory(globals_addr + 99, 4, error)
         self.assertFalse(error.Success())
+
+    @skipIfXmlSupportMissing
+    def test_non_wasm_process(self):
+        """Test that the plugin falls back to plain GDB remote debugging when
+        it is requested by name for a process that isn't WebAssembly."""
+
+        class NonWasmResponder(MockGDBServerResponder):
+            def qHostInfo(self):
+                return "triple:%s;ptrsize:8;endian:little;" % hex_encode_bytes(
+                    "x86_64-unknown-linux-gnu"
+                )
+
+            def qfThreadInfo(self):
+                return "m1"
+
+            def haltReason(self):
+                return "T02thread:1;threads:1;thread-pcs:10001bc00;"
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return (
+                        """<?xml version="1.0"?>
+                        <target version="1.0">
+                          <architecture>i386:x86-64</architecture>
+                          <feature name="org.gnu.gdb.i386.core">
+                            <reg name="rip" bitsize="64" regnum="0" type="code_ptr" group="general"/>
+                          </feature>
+                        </target>""",
+                        False,
+                    )
+                return None, False
+
+        self.server.responder = NonWasmResponder()
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        self.assertEqual(process.GetPluginName(), "wasm")
+        self.assertIn("x86_64", target.GetTriple())
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+        self.assertEqual(thread.GetFrameAtIndex(0).GetPC(), 0x10001BC00)
+        self.assertNotIn(
+            "qWasmCallStack", "".join(self.server.responder.packetLog.get_received())
+        )
