@@ -381,7 +381,7 @@ public:
       if (MinEC == 1)
         return VScale;
       // TODO: Move this optimization into createOverflowingOp directly.
-      else if (isPowerOf2_32(MinEC)) {
+      if (isPowerOf2_32(MinEC)) {
         VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
         return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
                                    {true, false});
@@ -983,10 +983,6 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
-
-  /// Returns true if \p Plan requires a scalar epilogue after the vector
-  /// loop. Asserts that the VPlan decision matches the legacy cost model.
-  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

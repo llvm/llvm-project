@@ -1052,6 +1052,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::Range:
       case Attribute::Initializes:
       case Attribute::NoExt:
+      case Attribute::NoFreeObj:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:

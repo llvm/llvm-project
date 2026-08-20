@@ -1374,15 +1374,16 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     return false;
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  const ASTContext &ASTCtx = S.getASTContext();
   CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer()) {
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = S.getASTContext().getDeclAlign(VD);
+      BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
@@ -1392,8 +1393,11 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     }
   }
 
-  APValue AV = Ptr.toAPValue(S.getASTContext());
-  CharUnits AVOffset = AV.getLValueOffset();
+  std::optional<size_t> LayoutOffset = Ptr.computeLayoutOffset(ASTCtx);
+  if (!LayoutOffset)
+    return false;
+
+  CharUnits AVOffset = CharUnits::fromQuantity(*LayoutOffset);
   if (ExtraOffset)
     AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
   if (AVOffset.alignTo(Align) != AVOffset) {
@@ -4671,6 +4675,67 @@ static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  const Floating &FloatElem = SrcVecPtr.elem<Floating>(0);
+
+  unsigned BitWidth = S.getASTContext().getIntWidth(E->getType());
+  bool IsUnsigned = E->getType()->isUnsignedIntegerType();
+
+  llvm::APSInt IntResult(BitWidth, IsUnsigned);
+  bool IsExact = false;
+  // We only allow exact conversions so rounding mode does not matter for cvt*
+  // and cvtt* builtins
+  FloatElem.getAPFloat().convertToInteger(
+      IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return false;
+
+  pushInteger(S, IntResult, E->getType());
+  return true;
+}
+
+static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumSrcElems = SrcVecPtr.getNumElems();
+  unsigned NumDstElems = Dst.getNumElems();
+
+  if (NumSrcElems > NumDstElems)
+    return false;
+
+  QualType ElemType = Dst.getFieldDesc()->getElemQualType();
+  unsigned BitWidth = S.getASTContext().getIntWidth(ElemType);
+  bool IsUnsigned = ElemType->isUnsignedIntegerType();
+
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  for (unsigned I = 0; I != NumSrcElems; ++I) {
+    const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
+    llvm::APSInt IntResult(BitWidth, IsUnsigned);
+
+    bool IsExact = false;
+    // We only allow exact conversions so rounding mode does not matter for
+    // cvt* and cvtt* builtins
+    FloatElem.getAPFloat().convertToInteger(
+        IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+    if (!IsExact)
+      return false;
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { Dst.elem<T>(I) = T::from(IntResult.getZExtValue()); });
+  }
+
+  // Zero out remaining elements if the destination has more elements
+  // (e.g., cvtpd2dq converting 2 doubles(_m128d) to 2 ints stored in _m128i).
+  for (unsigned I = NumSrcElems; I != NumDstElems; ++I)
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(I) = T::from(0); });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const ASTContext &ASTCtx = S.getASTContext();
@@ -6777,6 +6842,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64:
+    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq:
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256:
+    return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)

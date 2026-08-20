@@ -83,6 +83,13 @@ int main() {
   auto c = count(s.begin(), s.end(), 43);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: this STL algorithm call should be
   // CHECK-FIXES: auto c = s.count(43);
+  auto p = std::find(s.begin(), s.end(), (43));
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: this STL algorithm call should be
+  // CHECK-FIXES: auto p = s.find((43));
+  int i = 1, j = 2;
+  auto q = std::find(s.begin(), s.end(), (i++, j));
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: this STL algorithm call should be
+  // CHECK-FIXES: auto q = s.find((i++, j));
 
 #define SECOND(x, y, z) y
   SECOND(q,std::count(s.begin(), s.end(), 22),w);
@@ -163,4 +170,35 @@ void g(std::set<Value, Ordering> container, int value) {
   lower_bound(container.begin(), container.end(), value, Ordering());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
   // CHECK-FIXES: lower_bound(container.begin(), container.end(), value, Ordering());
+}
+
+#define PAREN_VALUE (43)
+#define VALUE_OF(x) ((x) + 1)
+#define PLAIN_VALUE 43
+#define VAL_AND_END s.end(), 46
+
+// The searched-for value is copied as written, so a whole macro expansion is
+// kept intact, and so is a range that just starts or ends inside one. A value
+// that covers only part of an expansion has no source text of its own, and the
+// call is then diagnosed without a fix.
+void macroExpansion(std::set<int> s, int i) {
+  find(s.begin(), s.end(), PAREN_VALUE);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: s.find(PAREN_VALUE);
+
+  count(s.begin(), s.end(), VALUE_OF(i));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: s.count(VALUE_OF(i));
+
+  find(s.begin(), s.end(), PLAIN_VALUE);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: s.find(PLAIN_VALUE);
+
+  find(s.begin(), s.end(), PLAIN_VALUE + i);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: s.find(PLAIN_VALUE + i);
+
+  find(s.begin(), VAL_AND_END);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this STL algorithm call should be
+  // CHECK-FIXES: find(s.begin(), VAL_AND_END);
 }

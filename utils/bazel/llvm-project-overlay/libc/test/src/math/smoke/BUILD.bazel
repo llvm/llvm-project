@@ -532,6 +532,9 @@ math_test(
 math_test(
     name = "fmaxf128",
     hdrs = ["FMaxTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -657,6 +660,9 @@ math_test(
 math_test(
     name = "fminf128",
     hdrs = ["FMinTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1398,6 +1404,9 @@ math_test(
 math_test(
     name = "roundevenf128",
     hdrs = ["RoundEvenTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(

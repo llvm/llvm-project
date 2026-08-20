@@ -8,9 +8,9 @@ func.func @worker_reduction_private() {
   %c2 = arith.constant 2 : index
   %c4 = arith.constant 4 : index
   %c32 = arith.constant 32 : index
-  %block = acc.par_width %c2 {par_dim = #acc.par_dim<block_x>}
-  %worker = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %vector = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block = acc.par_width %c2 par_dim(#acc.par_dim<block_x>)
+  %worker = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %vector = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     %private = acc.privatize [#acc<par_dims[thread_y]>] : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%bx = %block, %wy = %worker, %vx = %vector)
@@ -29,7 +29,7 @@ func.func @worker_reduction_private() {
           } {acc.par_dims = #acc<par_dims[thread_y]>}
           %value = memref.load %local[] : memref<i32>
           acc.reduction_accumulate %value to %local <add>
-              : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_y]>}
+              : i32 -> memref<i32> <{par_dims = #acc<par_dims[thread_y]>}>
           scf.reduce
         } {acc.par_dims = #acc<par_dims[sequential]>}
         scf.reduce

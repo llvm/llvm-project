@@ -363,6 +363,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf128
     libc.src.math.fmaximum
     libc.src.math.fmaximumf
     libc.src.math.fmaximuml
@@ -378,6 +379,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminf128
     libc.src.math.fminimum
     libc.src.math.fminimumf
     libc.src.math.fminimuml
@@ -489,6 +491,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintl
     libc.src.math.roundeven
     libc.src.math.roundevenf
+    libc.src.math.roundevenf128
     libc.src.math.roundevenl
     libc.src.math.round
     libc.src.math.roundf

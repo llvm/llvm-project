@@ -34,9 +34,9 @@ module attributes {gpu.container_module} {
   func.func @test_worker_routine_with_thread_y_reduction(%arg0: memref<16xi32>) {
     %c4 = arith.constant 4 : index
     %c32 = arith.constant 32 : index
-    %bx = acc.par_width %c4 {par_dim = #acc.par_dim<block_x>}
-    %tx = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
-    %ty = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
+    %bx = acc.par_width %c4 par_dim(#acc.par_dim<block_x>)
+    %tx = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
+    %ty = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
     %priv = acc.privatize : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty)
         ins(%arg10 = %priv, %arg11 = %arg0)
@@ -62,7 +62,7 @@ module attributes {gpu.container_module} {
               scf.reduce.return %sum : i32
             }
           } {acc.par_dims = #acc<par_dims[sequential]>}
-          acc.reduction_accumulate %loop_red to %out_priv <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_y]>}
+          acc.reduction_accumulate %loop_red to %out_priv <add> : i32 -> memref<i32> <{par_dims = #acc<par_dims[thread_y]>}>
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         scf.reduce
