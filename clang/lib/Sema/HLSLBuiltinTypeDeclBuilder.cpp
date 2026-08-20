@@ -406,8 +406,8 @@ TemplateParameterListBuilder::constructConceptSpecializationExpr(
 
   // In the concept reference, ATALI is what adds the extra
   // TemplateArgument node underneath CSE
-  ConceptReference *CR =
-      ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD, CD, ATALI);
+  ConceptReference *CR = ConceptReference::Create(Context, NNSLoc, Loc, DNI, CD,
+                                                  TemplateName(CD), ATALI);
 
   ConceptSpecializationExpr *CSE =
       ConceptSpecializationExpr::Create(Context, CR, ImplicitCSEDecl, &CS);

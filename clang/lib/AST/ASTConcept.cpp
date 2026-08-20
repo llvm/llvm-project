@@ -93,7 +93,7 @@ ConceptReference *
 ConceptReference::Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
                          SourceLocation TemplateKWLoc,
                          DeclarationNameInfo ConceptNameInfo,
-                         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
+                         NamedDecl *FoundDecl, TemplateName NamedConcept,
                          const ASTTemplateArgumentListInfo *ArgsAsWritten) {
   return new (C) ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo,
                                   FoundDecl, NamedConcept, ArgsAsWritten);

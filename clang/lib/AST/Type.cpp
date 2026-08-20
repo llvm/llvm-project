@@ -5740,20 +5740,15 @@ DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
 }
 
 AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-                   AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+                   AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
-  assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
-  if (TypeConstraintConcept) {
-    auto Dep = TypeDependence::None;
-    if (const auto *TTP =
-            dyn_cast<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      Dep = TypeDependence::DependentInstantiation |
-            (TTP->isParameterPack() ? TypeDependence::UnexpandedPack
-                                    : TypeDependence::None);
+  assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
+  if (!TypeConstraintConcept.isNull()) {
+    auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
@@ -5770,11 +5765,11 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                        DeducedKind DK, QualType Deduced,
-                       AutoTypeKeyword Keyword, TemplateDecl *CD,
+                       AutoTypeKeyword Keyword, TemplateName CD,
                        ArrayRef<TemplateArgument> Arguments) {
   DeducedType::Profile(ID, DK, Deduced);
   ID.AddInteger(llvm::to_underlying(Keyword));
-  ID.AddPointer(CD);
+  CD.Profile(ID);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }

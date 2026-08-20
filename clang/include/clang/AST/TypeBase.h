@@ -7381,10 +7381,10 @@ public:
 class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
-  TemplateDecl *TypeConstraintConcept;
+  TemplateName TypeConstraintConcept;
 
   AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+           AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7393,13 +7393,11 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  TemplateDecl *getTypeConstraintConcept() const {
+  TemplateName getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
-  bool isConstrained() const {
-    return TypeConstraintConcept != nullptr;
-  }
+  bool isConstrained() const { return !TypeConstraintConcept.isNull(); }
 
   bool isDecltypeAuto() const {
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
@@ -7416,7 +7414,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
-                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
+                      TemplateName CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;

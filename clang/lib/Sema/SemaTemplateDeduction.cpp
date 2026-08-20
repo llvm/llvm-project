@@ -5350,7 +5350,8 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
                                                AutoTypeLoc TypeLoc,
                                                QualType Deduced) {
   ConstraintSatisfaction Satisfaction;
-  ConceptDecl *Concept = cast<ConceptDecl>(Type.getTypeConstraintConcept());
+  ConceptDecl *Concept =
+      cast<ConceptDecl>(Type.getTypeConstraintConcept().getAsTemplateDecl());
   TemplateArgumentListInfo TemplateArgs(TypeLoc.getLAngleLoc(),
                                         TypeLoc.getRAngleLoc());
   TemplateArgs.addArgument(
@@ -5376,9 +5377,11 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
     llvm::raw_string_ostream OS(Buf);
     OS << "'" << Concept->getName();
     if (TypeLoc.hasExplicitTemplateArgs()) {
-      printTemplateArgumentList(
-          OS, Type.getTypeConstraintArguments(), S.getPrintingPolicy(),
-          Type.getTypeConstraintConcept()->getTemplateParameters());
+      printTemplateArgumentList(OS, Type.getTypeConstraintArguments(),
+                                S.getPrintingPolicy(),
+                                Type.getTypeConstraintConcept()
+                                    .getAsTemplateDecl()
+                                    ->getTemplateParameters());
     }
     OS << "'";
     S.Diag(TypeLoc.getConceptNameLoc(),
