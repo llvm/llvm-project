@@ -332,6 +332,15 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
 )
 
+config_setting(
+    name = "is_x86_64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
     "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
     "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
@@ -343,6 +352,10 @@ filegroup(
     name = "blake3_x86_64_asm",
     srcs = select({
         ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        ":is_x86_64_windows_clang_cl": [
             pattern % "windows_gnu"
             for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
         ],
