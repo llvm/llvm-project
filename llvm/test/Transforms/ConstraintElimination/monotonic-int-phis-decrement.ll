@@ -269,8 +269,7 @@ define void @add_rec_decreasing_nsw_signed_monotonic(i8 %start, i8 %b) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[U:%.*]] = icmp ule i8 [[K_0]], [[START]]
 ; CHECK-NEXT:    call void @use(i1 [[U]])
 ; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
@@ -388,8 +387,7 @@ define void @add_rec_decreasing_nsw_from_scev(i8 %b) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], 100
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[K_0]], 0
 ; CHECK-NEXT:    br i1 [[POSITIVE]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
@@ -431,8 +429,7 @@ define void @add_rec_decreasing_nsw_step_minus_2(i8 %start, i8 %b) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -2
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -463,8 +460,7 @@ define void @add_rec_decreasing_nsw_compare_in_header(i8 %start, i8 %b) {
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[K_0:%.*]] = phi i8 [ [[START]], [[ENTRY:%.*]] ], [ [[K_DEC:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -502,8 +498,7 @@ define void @add_rec_decreasing_nsw_second_phi(i8 %start, i8 %start2, i8 %b) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[J_0]], [[START2]]
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    [[J_DEC]] = add nsw i8 [[J_0]], -3
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
@@ -540,8 +535,7 @@ define void @add_rec_decreasing_nsw_slt_exit(i8 %start, i8 %b) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp slt i8 [[K_0]], [[B]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[S:%.*]] = icmp sle i8 [[K_0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[S]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:

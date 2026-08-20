@@ -166,24 +166,17 @@ define void @shl_flags(i32 %n) {
 ; CHECK-LABEL: define void @shl_flags(
 ; CHECK-SAME: i32 [[N:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START:%.*]] = lshr i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[START]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[EXT:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ [[TMP2]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[GUARD:%.*]] = icmp sgt i64 [[EXT]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[GUARD]], label %[[LOOP_LATCH]], label %[[BODY:.*]]
-; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw i64 [[EXT]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[EXT:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[CALL_BB:.*]] ], [ [[TMP2]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = trunc nuw i64 [[EXT]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[IV]], 1
 ; CHECK-NEXT:    [[POS:%.*]] = icmp sgt i32 [[SHL]], 0
-; CHECK-NEXT:    br i1 [[POS]], label %[[CALL_BB:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[POS]], label %[[CALL_BB]], label %[[EXIT:.*]]
 ; CHECK:       [[CALL_BB]]:
 ; CHECK-NEXT:    [[V:%.*]] = tail call i32 @load(i64 [[EXT]])
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[EXT]], 0
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[EXT]], -1
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT]], label %[[LOOP_HEADER]]
