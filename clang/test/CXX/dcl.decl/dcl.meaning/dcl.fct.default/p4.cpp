@@ -110,9 +110,21 @@ void main() {
 namespace GH216211 {
 
 struct S {
-  template <typename... T> S(T..., int); // expected-note{{previous template declaration is here}}
+  template <typename... T> S(T..., int); // expected-note{{previous template declaration is here}} expected-note{{previous declaration is here}}
 };
 template <typename... T>
-S::S(T..., int = 10) {} // expected-error{{default arguments cannot be added to a function template that has already been declared}}
+S::S(T..., int = 10) {} // expected-error{{cannot be added}} expected-error{{makes this constructor a default constructor}}
+
+struct S2 {
+  template <typename... T> S2(T..., int, int); // expected-note 2{{previous template declaration is here}} expected-note{{previous declaration is here}}
+};
+template <typename... T>
+S2::S2(T..., int = 1, int = 2) {} // expected-error 2{{cannot be added}} expected-error{{makes this constructor a default constructor}}
+
+struct S3 {
+  template <typename... T> S3(T..., int, int); // expected-note{{previous template declaration is here}}
+};
+template <typename... T>
+S3::S3(T..., int, int = 2) {} // expected-error{{cannot be added}}
 
 } // namespace GH216211

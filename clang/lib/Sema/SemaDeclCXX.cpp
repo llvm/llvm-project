@@ -624,8 +624,6 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
         Diag(PrevForDefaultArgs->getLocation(),
              diag::note_template_prev_declaration)
             << false;
-        // Recover by discarding the default argument.
-        NewParam->setDefaultArg(nullptr);
       } else if (New->getTemplateSpecializationKind()
                    != TSK_ImplicitInstantiation &&
                  New->getTemplateSpecializationKind() != TSK_Undeclared) {
@@ -665,10 +663,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 
         Diag(NewParam->getLocation(),
              diag::err_param_default_argument_member_template_redecl)
-          << WhichKind
-          << NewParam->getDefaultArgRange();
-        // Recover by discarding the default argument.
-        NewParam->setDefaultArg(nullptr);
+            << WhichKind << NewParam->getDefaultArgRange();
       }
     }
   }
@@ -683,8 +678,11 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
                          OldSM =
                              cast<CXXMethodDecl>(Old)->getSpecialMemberKind();
     if (NewSM != OldSM) {
-      ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
-      assert(NewParam->hasDefaultArg());
+      auto It = llvm::find_if(New->parameters(), [](const ParmVarDecl *P) {
+        return P->hasDefaultArg();
+      });
+      assert(It != New->param_end());
+      ParmVarDecl *NewParam = *It;
       Diag(NewParam->getLocation(), diag::err_default_arg_makes_ctor_special)
           << NewParam->getDefaultArgRange() << NewSM;
       Diag(Old->getLocation(), diag::note_previous_declaration);
