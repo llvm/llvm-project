@@ -25,7 +25,10 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
-#include "llvm/ADT/SmallBitVector.h"
+
+namespace llvm {
+class SmallBitVector;
+} // namespace llvm
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect Helpers
