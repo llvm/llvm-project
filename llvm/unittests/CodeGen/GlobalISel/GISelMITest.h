@@ -125,10 +125,7 @@ protected:
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
     RTLCI.emplace(TM->getTargetTriple());
-    const TargetSubtargetInfo &STI = MF->getSubtarget();
-    LibcallLowering.emplace(*RTLCI, [&STI](LibcallLoweringInfo &Info) {
-      STI.initLibcallLoweringInfo(Info);
-    });
+    LibcallLowering.emplace(*RTLCI, MF->getSubtarget());
   }
 
   LLVMContext Context;

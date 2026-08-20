@@ -146,7 +146,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   const TargetLowering *TLI = STI->getTargetLowering();
   const LibcallLoweringInfo &Libcalls =
-      getLibcallLowering(*LibcallLowering, *STI);
+      LibcallLowering->getLibcallLowering(*STI);
 
   ++NumFunProtected;
   bool Changed = InsertStackProtectors(*TLI, Libcalls, &F, DT ? &DTU : nullptr,

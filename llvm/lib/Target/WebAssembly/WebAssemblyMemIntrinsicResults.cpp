@@ -262,11 +262,11 @@ WebAssemblyMemIntrinsicResultsPass::run(MachineFunction &MF,
            .getResult<TargetLibraryAnalysis>(MF.getFunction());
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
-  const LibcallLoweringInfo &LibCalls = getLibcallLowering(
-      *MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-           .getCachedResult<LibcallLoweringModuleAnalysis>(
-               *MF.getFunction().getParent()),
-      Subtarget);
+  const LibcallLoweringInfo &LibCalls =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<LibcallLoweringModuleAnalysis>(
+              *MF.getFunction().getParent())
+          ->getLibcallLowering(Subtarget);
   WebAssemblyMemIntrinsicResultsImpl Impl(MDT, LIS, LibInfo, LibCalls);
   bool Changed = Impl.runOnMachineFunction(MF);
   if (!Changed)

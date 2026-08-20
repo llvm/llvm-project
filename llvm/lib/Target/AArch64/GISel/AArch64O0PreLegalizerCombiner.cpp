@@ -203,7 +203,7 @@ AArch64O0PreLegalizerCombinerPass::run(MachineFunction &MF,
   if (!LibcallResult)
     reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
-  const LibcallLoweringInfo &Libcalls = getLibcallLowering(*LibcallResult, ST);
+  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
 
   if (!runCombiner(MF, Libcalls, *RuleConfig))
     return PreservedAnalyses::all();

@@ -461,7 +461,7 @@ bool AtomicExpandImpl::run(Function &F,
   if (!Subtarget->enableAtomicExpand())
     return false;
   TLI = Subtarget->getTargetLowering();
-  LibcallLowering = &getLibcallLowering(LibcallResult, *Subtarget);
+  LibcallLowering = &LibcallResult.getLibcallLowering(*Subtarget);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;

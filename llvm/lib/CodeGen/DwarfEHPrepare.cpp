@@ -405,7 +405,7 @@ PreservedAnalyses DwarfEHPreparePass::run(Function &F,
 
   const TargetSubtargetInfo *Subtarget = TM->getSubtargetImpl(F);
   const LibcallLoweringInfo &Libcalls =
-      getLibcallLowering(*LibcallLowering, *Subtarget);
+      LibcallLowering->getLibcallLowering(*Subtarget);
 
   bool Changed =
       prepareDwarfEH(OptLevel, F, Libcalls, DT, TTI, TM->getTargetTriple());

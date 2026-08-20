@@ -980,7 +980,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   }
 
   const LibcallLoweringInfo &Libcalls =
-      getLibcallLowering(*LibcallLowering, *Subtarget);
+      LibcallLowering->getLibcallLowering(*Subtarget);
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 

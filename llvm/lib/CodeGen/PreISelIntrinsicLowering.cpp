@@ -248,7 +248,7 @@ static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
@@ -258,7 +258,7 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
   if (!TM)
     return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      ModuleLowering.getLibcallLowering(*TM->getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
