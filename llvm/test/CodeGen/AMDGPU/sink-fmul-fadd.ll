@@ -819,18 +819,18 @@ define <2 x half> @fma_in_loop_v2f16_denormals(<2 x half> %a, <2 x half> %b, i32
 ; GFX8-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX8-NEXT:    s_mov_b32 s6, 0
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX8-NEXT:  .LBB9_1: ; %loop
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX8-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX8-NEXT:    v_fma_f16 v4, v6, v5, v4
+; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; GFX8-NEXT:    v_fma_f16 v6, v5, v4, v6
 ; GFX8-NEXT:    s_add_i32 s6, s6, 1
-; GFX8-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX8-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; GFX8-NEXT:    v_fma_f16 v3, v0, v1, v3
 ; GFX8-NEXT:    v_cmp_ge_i32_e32 vcc, s6, v2
 ; GFX8-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
-; GFX8-NEXT:    v_or_b32_e32 v3, v3, v4
+; GFX8-NEXT:    v_or_b32_e32 v3, v3, v6
 ; GFX8-NEXT:    s_andn2_b64 exec, exec, s[4:5]
 ; GFX8-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX8-NEXT:  ; %bb.2: ; %exit
