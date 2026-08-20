@@ -1437,6 +1437,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // selectAtomicRMW). No intermediate intrinsic.
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Add);
   }
+  case Builtin::BI__builtin_hlsl_interlocked_min: {
+    llvm::AtomicRMWInst::BinOp Op =
+        E->getArg(0)->getType()->hasSignedIntegerRepresentation()
+            ? llvm::AtomicRMWInst::Min
+            : llvm::AtomicRMWInst::UMin;
+    return handleInterlockedOp(*this, E, Op);
+  }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Or);
   }

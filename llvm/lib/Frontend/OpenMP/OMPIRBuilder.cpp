@@ -8565,8 +8565,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
 
   // Manifest the launch configuration in the metadata matching the kernel
   // environment.
-  if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
-    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
+  if (Attrs.MinTeams.front() > 1 || Attrs.MaxTeams.front() > 0)
+    writeTeamsForKernel(T, *Kernel, Attrs.MinTeams.front(),
+                        Attrs.MaxTeams.front());
 
   // If MaxThreads is not set and needs adjustment, select the maximum between
   // the default workgroup size and the MinThreads value.
@@ -8575,18 +8576,20 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
     if (hasGridValue(T)) {
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
-                   Attrs.MinThreads);
+                   Attrs.MinThreads.front());
     } else {
-      MaxThreadsVal = Attrs.MinThreads;
+      MaxThreadsVal = Attrs.MinThreads.front();
     }
   }
 
   if (MaxThreadsVal > 0)
-    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads, MaxThreadsVal);
+    writeThreadBoundsForKernel(T, *Kernel, Attrs.MinThreads.front(),
+                               MaxThreadsVal);
 
-  Constant *MinThreads = ConstantInt::getSigned(Int32, Attrs.MinThreads);
+  Constant *MinThreads =
+      ConstantInt::getSigned(Int32, Attrs.MinThreads.front());
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
-  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, Attrs.MinTeams.front());
   Constant *MaxTeams = ConstantInt::getSigned(Int32, Attrs.MaxTeams.front());
   Constant *ReductionDataSize =
       ConstantInt::getSigned(Int32, Attrs.ReductionDataSize);
@@ -10142,7 +10145,7 @@ static void emitTargetCall(
     SmallVector<Value *, 3> NumThreadsC;
     Value *MaxThreadsClause =
         RuntimeAttrs.TeamsThreadLimit.size() == 1
-            ? InitMaxThreadsClause(RuntimeAttrs.MaxThreads)
+            ? InitMaxThreadsClause(RuntimeAttrs.MaxThreads.front())
             : nullptr;
 
     for (auto [TeamsVal, TargetVal] : zip_equal(
