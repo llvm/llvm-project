@@ -66,6 +66,10 @@ class LLVM_ABI MCObjectStreamer : public MCStreamer {
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
 
 protected:
+  // Within .bundle_lock/.bundle_unlock. A section cannot be switched while a
+  // group is open, so no per-section state is needed.
+  bool BundleLocked = false;
+
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
@@ -88,6 +92,9 @@ public:
 
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override;
+
+  bool isBundleLocked() const { return BundleLocked; }
+
   /// \name MCStreamer Interface
   /// @{
 

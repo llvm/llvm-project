@@ -48,6 +48,12 @@ extern "C" unsigned long GetCurrentThreadId(void);
 #define AIG_SYM2 "getppid"
 #endif
 
+#ifdef __APPLE__
+#define MANGLING_PREFIX "_"
+#else
+#define MANGLING_PREFIX ""
+#endif // __APPLE__
+
 using namespace llvm;
 using namespace llvm::orc;
 
@@ -108,14 +114,14 @@ TEST_F(COFFAutoImportGeneratorTest, SynthesizesImpSlotAndThunk) {
   JD.addGenerator(std::move(*AIGOrErr));
 
   // The __imp_ slot holds the symbol's real address in the library.
-  auto ImpSym = ES.lookup(&JD, "__imp_" AIG_SYM1);
+  auto ImpSym = ES.lookup(&JD, "__imp_" MANGLING_PREFIX AIG_SYM1);
   ASSERT_THAT_EXPECTED(ImpSym, Succeeded());
   void **Slot = ImpSym->getAddress().toPtr<void **>();
   EXPECT_EQ(*Slot, RealSym1);
 
   // The thunk is a distinct, synthesized definition (so &X yields the thunk,
   // not the implementation in the library) ...
-  auto ThunkSym = ES.lookup(&JD, AIG_SYM1);
+  auto ThunkSym = ES.lookup(&JD, MANGLING_PREFIX AIG_SYM1);
   ASSERT_THAT_EXPECTED(ThunkSym, Succeeded());
   EXPECT_NE(ThunkSym->getAddress(), ImpSym->getAddress());
   EXPECT_NE(ThunkSym->getAddress().toPtr<void *>(), RealSym1);
@@ -155,7 +161,8 @@ TEST_F(COFFAutoImportGeneratorTest, StubsResourceTrackerLifecycle) {
   // No stubs synthesized yet.
   EXPECT_EQ(AIG.getImportStubsResourceTracker(), nullptr);
 
-  ASSERT_THAT_EXPECTED(ES.lookup(&JD, "__imp_" AIG_SYM1), Succeeded());
+  ASSERT_THAT_EXPECTED(ES.lookup(&JD, "__imp_" MANGLING_PREFIX AIG_SYM1),
+                       Succeeded());
   ResourceTrackerSP RT1 = AIG.getImportStubsResourceTracker();
   ASSERT_NE(RT1, nullptr);
   EXPECT_FALSE(RT1->isDefunct());
@@ -166,7 +173,8 @@ TEST_F(COFFAutoImportGeneratorTest, StubsResourceTrackerLifecycle) {
   EXPECT_TRUE(RT1->isDefunct());
 
   // A later import transparently starts a fresh tracker.
-  ASSERT_THAT_EXPECTED(ES.lookup(&JD, "__imp_" AIG_SYM2), Succeeded());
+  ASSERT_THAT_EXPECTED(ES.lookup(&JD, "__imp_" MANGLING_PREFIX AIG_SYM2),
+                       Succeeded());
   ResourceTrackerSP RT2 = AIG.getImportStubsResourceTracker();
   ASSERT_NE(RT2, nullptr);
   EXPECT_NE(RT2, RT1);

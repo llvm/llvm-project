@@ -404,6 +404,10 @@ public:
     return DivergentTermBlocks.contains(&B);
   }
 
+  /// Call before erasing \p V, or a later instruction reusing its address
+  /// may be misclassified as uniform.
+  void forgetValue(ConstValueRefT V) { UniformValues.erase(V); }
+
   void print(raw_ostream &Out) const;
 
   /// Print divergent arguments and return true if any were found.
@@ -727,8 +731,8 @@ public:
         for (auto *BlockCycleExit : BlockCycleExits) {
           if (BranchIsInside)
             visitCycleExitEdge(*BlockCycleExit, *Label);
-          else
-            visitEdge(*BlockCycleExit, *Label);
+          // Propagate the label to the exit block.
+          visitEdge(*BlockCycleExit, *Label);
         }
       } else {
         for (const auto *SuccBlock : successors(Block))
@@ -1315,6 +1319,12 @@ bool GenericUniformityInfo<ContextT>::isDivergentAtUse(const UseT &U) const {
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
   return DA && DA->hasDivergentTerminator(B);
+}
+
+template <typename ContextT>
+void GenericUniformityInfo<ContextT>::forgetValue(ConstValueRefT V) {
+  if (DA)
+    DA->forgetValue(V);
 }
 
 /// \brief T helper function for printing.

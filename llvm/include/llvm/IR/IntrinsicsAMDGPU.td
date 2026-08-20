@@ -556,6 +556,7 @@ def int_amdgcn_fmed3 :
     [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]
 >;
 
+let TargetFeatures = "cube-insts" in {
 def int_amdgcn_cubeid : ClangBuiltin<"__builtin_amdgcn_cubeid">,
   PureIntrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty]
@@ -575,6 +576,7 @@ def int_amdgcn_cubetc : ClangBuiltin<"__builtin_amdgcn_cubetc">,
   PureIntrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty]
 >;
+} // TargetFeatures = "cube-insts"
 
 // v_ffbh_i32, as opposed to v_ffbh_u32. For v_ffbh_u32, llvm.ctlz
 // should be used.
@@ -989,6 +991,10 @@ class AMDGPUDimProps<bits<3> enc, string name, string asmsuffix,
   bit DA = 0; // DA bit in MIMG encoding
   bit MSAA = msaa;
 
+  // The corresponding non-arrayed dim, e.g. 2D_ARRAY -> 2D. Defaults to Dim.
+  // The arrayed dims override it below.
+  AMDGPUDimProps NonArrayDim = Dim;
+
   list<AMDGPUArg> CoordSliceArgs =
     makeArgList<!listconcat(coord_names, slice_names), llvm_anyfloat_ty>.ret;
   list<AMDGPUArg> CoordSliceIntArgs =
@@ -1007,11 +1013,14 @@ def AMDGPUDim2D : AMDGPUDimProps<0x1, "2d", "2D", ["s", "t"], []>;
 def AMDGPUDim3D : AMDGPUDimProps<0x2, "3d", "3D", ["s", "t", "r"], []>;
 let DA = 1 in {
   def AMDGPUDimCube : AMDGPUDimProps<0x3, "cube", "CUBE", ["s", "t"], ["face"]>;
+  let NonArrayDim = AMDGPUDim1D in
   def AMDGPUDim1DArray : AMDGPUDimProps<0x4, "1darray", "1D_ARRAY", ["s"], ["slice"]>;
+  let NonArrayDim = AMDGPUDim2D in
   def AMDGPUDim2DArray : AMDGPUDimProps<0x5, "2darray", "2D_ARRAY", ["s", "t"], ["slice"]>;
 }
 def AMDGPUDim2DMsaa : AMDGPUDimProps<0x6, "2dmsaa", "2D_MSAA", ["s", "t"], ["fragid"], 1>;
 let DA = 1 in {
+  let NonArrayDim = AMDGPUDim2DMsaa in
   def AMDGPUDim2DArrayMsaa : AMDGPUDimProps<0x7, "2darraymsaa", "2D_MSAA_ARRAY", ["s", "t"], ["slice", "fragid"], 1>;
 }
 
@@ -1466,7 +1475,7 @@ def int_amdgcn_make_buffer_rsrc : PureIntrinsic <
   [llvm_anyptr_ty],
   [llvm_anyptr_ty, // base
    llvm_i16_ty,    // stride (and swizzle control)
-   llvm_i64_ty,    // NumRecords / extent
+   llvm_anyint_ty, // NumRecords / extent
    llvm_i32_ty],   // flags
   // Attributes lifted from ptrmask + some extra argument attributes.
   [ReadNone<ArgIndex<0>>]>;
@@ -2071,8 +2080,11 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
                               //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
-def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
+  def int_amdgcn_raw_buffer_load_async_lds : AMDGPURawBufferLoadLDS;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPURawPtrBufferLoadLDS :
   Intrinsic <
@@ -2095,10 +2107,13 @@ class AMDGPURawPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
-      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
-def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
-      ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS,
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">;
+  def int_amdgcn_raw_ptr_buffer_load_async_lds : AMDGPURawPtrBufferLoadLDS,
+        ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_async_lds">;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 
 class AMDGPUStructBufferLoadLDS : Intrinsic <
@@ -2119,8 +2134,11 @@ class AMDGPUStructBufferLoadLDS : Intrinsic <
                               //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
-def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
+  def int_amdgcn_struct_buffer_load_async_lds : AMDGPUStructBufferLoadLDS;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 class AMDGPUStructPtrBufferLoadLDS :
   Intrinsic <
@@ -2144,10 +2162,13 @@ class AMDGPUStructPtrBufferLoadLDS :
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
-  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
-def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
-  ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
+
+let TargetFeatures = "vmem-to-lds-load-insts" in {
+  def int_amdgcn_struct_ptr_buffer_load_lds : AMDGPUStructPtrBufferLoadLDS,
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_lds">;
+  def int_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUStructPtrBufferLoadLDS,
+    ClangBuiltin<"__builtin_amdgcn_struct_ptr_buffer_load_async_lds">;
+} // End TargetFeatures = "vmem-to-lds-load-insts"
 
 def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
   [],
@@ -4194,34 +4215,36 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16_16x16x32_bf16    : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_bf16f32_16x16x32_bf16 : AMDGPUWmmaIntrinsicModsCDiff<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x64_fp8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x64_fp8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x64_fp8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x64_fp8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f16_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsABClamp<llvm_anyint_ty, llvm_anyint_ty>;
-def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
-def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
-def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
-def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
-def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
+let TargetFeatures = "wmma-n16-insts" in {
+  def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_bf16_16x16x32_bf16    : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_bf16f32_16x16x32_bf16 : AMDGPUWmmaIntrinsicModsCDiff<llvm_anyfloat_ty, llvm_anyfloat_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x64_fp8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x64_fp8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x64_fp8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x64_fp8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x64_bf8_fp8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x64_bf8_bf8  : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f16_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x128_fp8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x128_fp8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x128_bf8_fp8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_f32_16x16x128_bf8_bf8 : AMDGPUWmmaIntrinsicModsC<llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_i32_16x16x64_iu8      : AMDGPUWmmaIntrinsicModsABClamp<llvm_anyint_ty, llvm_anyint_ty>;
+  def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
+  def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
+  def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
+  def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
+  def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
+  def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
+} // End TargetFeatures = "wmma-n16-insts"
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :

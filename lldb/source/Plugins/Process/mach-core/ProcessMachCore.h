@@ -62,11 +62,11 @@ public:
   bool WarnBeforeDetach() const override;
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  size_t ReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                    size_t size, lldb_private::Status &error) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   lldb::addr_t GetImageInfoAddress() override;
 

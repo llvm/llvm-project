@@ -36,7 +36,7 @@ public:
   };
 
   static Expected<std::unique_ptr<GDBJITDebugInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES, JITDylib &ProcessJD, const Triple &TT);
+  Create(ExecutionSession &ES, JITDylib &BootstrapJD);
 
   GDBJITDebugInfoRegistrationPlugin(ExecutorAddr RegisterActionAddr)
       : RegisterActionAddr(RegisterActionAddr) {}

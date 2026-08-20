@@ -27,6 +27,7 @@
 #include <flang/Optimizer/Builder/BoxValue.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
+#include <flang/Optimizer/Support/InternalNames.h>
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
@@ -1089,13 +1090,40 @@ static std::string
 getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
                    fir::FirOpBuilder &firOpBuilder,
                    const semantics::DerivedTypeSpec *typeSpec) {
-  if (mlir::isa<mlir::omp::DeclareMapperOp>(
-          firOpBuilder.getRegion().getParentOp()) ||
-      !typeSpec)
+  // Nested derived-type components inside a declare mapper may use their own
+  // default mapper. Only suppress the mapper currently being built.
+  if (!typeSpec)
     return {};
 
   std::string mapperIdName =
       typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (!semantics::IsIsoCType(typeSpec) && !typeSpec->parameters().empty()) {
+    if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
+            converter.genType(*typeSpec))) {
+      mapperIdName =
+          Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+              recordType);
+
+      auto [nameKind, deconstructed] =
+          fir::NameUniquer::deconstruct(recordType.getName());
+      if (nameKind == fir::NameUniquer::NameKind::DERIVED_TYPE) {
+        llvm::SmallVector<llvm::StringRef> modules;
+        llvm::SmallVector<llvm::StringRef> procs;
+        for (const std::string &module : deconstructed.modules)
+          modules.emplace_back(module);
+        for (const std::string &proc : deconstructed.procs)
+          procs.emplace_back(proc);
+        std::string kindlessMapperName = fir::NameUniquer::doGenerated(
+            modules, procs, deconstructed.blockId,
+            deconstructed.name + llvm::omp::OmpDefaultMapperName);
+        if (auto explicitMapper = converter.getModuleOp()
+                                      .lookupSymbol<mlir::omp::DeclareMapperOp>(
+                                          kindlessMapperName);
+            explicitMapper && explicitMapper.getType() == recordType)
+          return kindlessMapperName;
+      }
+    }
+  }
   if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
     mapperIdName =
         converter.mangleName(mapperIdName, sym->GetUltimate().owner());

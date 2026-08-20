@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class ChangePtrTest(TestBase):
+    @skipIfWasm  # the test checks the address of a persistent expression result
     def test(self):
         self.build()
 

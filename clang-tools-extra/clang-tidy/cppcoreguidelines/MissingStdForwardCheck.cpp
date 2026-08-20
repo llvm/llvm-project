@@ -104,7 +104,7 @@ AST_MATCHER_P(ValueDecl, refersToBoundParm, std::string, ParamID) {
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
-  auto CapturedVar = varDecl(refersToBoundParm("param"));
+  const auto CapturedVar = varDecl(refersToBoundParm("param"));
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
@@ -123,9 +123,9 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
                       anyOf(CapturedInCaptureList, CapturedInBody),
                       hasAncestor(functionDecl(equalsBoundNode("func")))))));
 
-  auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
+  const auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
-  auto ForwardCallMatcher =
+  const auto ForwardCallMatcher =
       callExpr(callExpr().bind("call"), argumentCountIs(1),
                hasArgument(0, declRefExpr(to(CapturedVar)).bind("var")),
                forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
