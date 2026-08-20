@@ -657,7 +657,8 @@ DISubrange::BoundType DISubrange::getCount() const {
          "Count must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(CB))
-    return BoundType(cast<ConstantInt>(MD->getValue()));
+    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+      return BoundType(CV);
 
   if (auto *MD = dyn_cast<DIVariable>(CB))
     return BoundType(MD);
@@ -678,7 +679,8 @@ DISubrange::BoundType DISubrange::getLowerBound() const {
          "LowerBound must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(LB))
-    return BoundType(cast<ConstantInt>(MD->getValue()));
+    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+      return BoundType(CV);
 
   if (auto *MD = dyn_cast<DIVariable>(LB))
     return BoundType(MD);
@@ -699,7 +701,8 @@ DISubrange::BoundType DISubrange::getUpperBound() const {
          "UpperBound must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(UB))
-    return BoundType(cast<ConstantInt>(MD->getValue()));
+    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+      return BoundType(CV);
 
   if (auto *MD = dyn_cast<DIVariable>(UB))
     return BoundType(MD);
@@ -720,7 +723,8 @@ DISubrange::BoundType DISubrange::getStride() const {
          "Stride must be signed constant or DIVariable or DIExpression");
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(ST))
-    return BoundType(cast<ConstantInt>(MD->getValue()));
+    if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+      return BoundType(CV);
 
   if (auto *MD = dyn_cast<DIVariable>(ST))
     return BoundType(MD);

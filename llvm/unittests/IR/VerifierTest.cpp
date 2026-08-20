@@ -292,6 +292,48 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
   }
 }
 
+// DISubrange/DISubrangeType bound operands (LowerBound/UpperBound/Stride/
+// Bias/CountNode) accept a signed constant wrapped in ConstantAsMetadata,
+// but ConstantAsMetadata can wrap any Constant, not just a ConstantInt. The
+// textual IR parser only ever produces a ConstantInt for these fields, so
+// this is only reachable via programmatic IR construction.
+TEST(VerifierTest, DISubrangeNonConstantIntBound) {
+  LLVMContext C;
+  Module M("M", C);
+  auto *NonIntBound =
+      ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(C)));
+  auto *N = DISubrange::get(C, nullptr, NonIntBound, nullptr, nullptr);
+  M.getOrInsertNamedMetadata("test")->addOperand(N);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).contains(
+      "LowerBound must be signed constant or DIVariable or DIExpression"))
+      << Error;
+}
+
+TEST(VerifierTest, DISubrangeTypeNonConstantIntBound) {
+  LLVMContext C;
+  Module M("M", C);
+  auto *Base =
+      DIBasicType::get(C, dwarf::DW_TAG_base_type, "int", 32, 0,
+                       dwarf::DW_ATE_signed, DINode::FlagZero);
+  auto *NonIntBound =
+      ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(C)));
+  auto *N = DISubrangeType::get(C, StringRef(), nullptr, 0, nullptr, 32, 0,
+                                DINode::FlagZero, Base, NonIntBound, nullptr,
+                                nullptr, nullptr);
+  M.getOrInsertNamedMetadata("test")->addOperand(N);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).contains(
+      "LowerBound must be signed constant or DIVariable or DIExpression"))
+      << Error;
+}
+
 TEST(VerifierTest, MDNodeWrongContext) {
   LLVMContext C1, C2;
   auto *Node = MDNode::get(C1, {});

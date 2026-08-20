@@ -1986,13 +1986,15 @@ void MDFieldPrinter::printMetadataOrInt(StringRef Name, const Metadata *MD,
     return;
 
   if (auto *CI = dyn_cast<ConstantAsMetadata>(MD)) {
-    auto *CV = cast<ConstantInt>(CI->getValue());
-    if (IsUnsigned)
-      printInt(Name, CV->getZExtValue(), ShouldSkipZero);
-    else
-      printInt(Name, CV->getSExtValue(), ShouldSkipZero);
-  } else
-    printMetadata(Name, MD);
+    if (auto *CV = dyn_cast<ConstantInt>(CI->getValue())) {
+      if (IsUnsigned)
+        printInt(Name, CV->getZExtValue(), ShouldSkipZero);
+      else
+        printInt(Name, CV->getSExtValue(), ShouldSkipZero);
+      return;
+    }
+  }
+  printMetadata(Name, MD);
 }
 
 template <class IntTy>
