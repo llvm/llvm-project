@@ -1815,12 +1815,12 @@ define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x)
 ; IEEE-NEXT:    [[TMP25:%.*]] = select nnan contract i1 [[TMP21]], float 4.096000e+03, float 1.000000e+00
 ; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = fmul nnan contract float [[TMP24]], [[TMP25]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX0]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[TMP26:%.*]] = fcmp nnan ninf contract olt float [[X]], f0x00800000
-; IEEE-NEXT:    [[TMP27:%.*]] = select nnan ninf contract i1 [[TMP26]], float f0x4B800000, float 1.000000e+00
-; IEEE-NEXT:    [[TMP28:%.*]] = fmul nnan ninf contract float [[X]], [[TMP27]]
-; IEEE-NEXT:    [[TMP29:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[TMP28]])
-; IEEE-NEXT:    [[TMP30:%.*]] = select nnan ninf contract i1 [[TMP26]], float 4.096000e+03, float 1.000000e+00
-; IEEE-NEXT:    [[FDIV_OPENCL_NINF_MIX1:%.*]] = fmul nnan ninf contract float [[TMP29]], [[TMP30]]
+; IEEE-NEXT:    [[TMP26:%.*]] = fcmp nnan contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP27:%.*]] = select nnan contract i1 [[TMP26]], float f0x4B800000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP28:%.*]] = fmul nnan contract float [[X]], [[TMP27]]
+; IEEE-NEXT:    [[TMP29:%.*]] = call nnan contract float @llvm.amdgcn.rsq.f32(float [[TMP28]])
+; IEEE-NEXT:    [[TMP30:%.*]] = select nnan contract i1 [[TMP26]], float 4.096000e+03, float 1.000000e+00
+; IEEE-NEXT:    [[FDIV_OPENCL_NINF_MIX1:%.*]] = fmul nnan contract float [[TMP29]], [[TMP30]]
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NINF_MIX1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
@@ -1836,7 +1836,7 @@ define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x)
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NSZ]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = call nnan contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX0]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[FDIV_OPENCL_NINF_MIX1:%.*]] = call nnan ninf contract float @llvm.amdgcn.rsq.f32(float [[X]])
+; DAZ-NEXT:    [[FDIV_OPENCL_NINF_MIX1:%.*]] = call nnan contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NINF_MIX1]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
@@ -1938,17 +1938,17 @@ define float @rsq_f32_missing_contract1(float %x) {
 define float @rsq_f32_flag_merge(float %x) {
 ; IEEE-LABEL: define float @rsq_f32_flag_merge(
 ; IEEE-SAME: float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[TMP1:%.*]] = fcmp nsz contract olt float [[X]], f0x00800000
-; IEEE-NEXT:    [[TMP2:%.*]] = select nsz contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
-; IEEE-NEXT:    [[TMP3:%.*]] = fmul nsz contract float [[X]], [[TMP2]]
-; IEEE-NEXT:    [[TMP4:%.*]] = call nsz contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
-; IEEE-NEXT:    [[TMP5:%.*]] = select nsz contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
-; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fmul nsz contract float [[TMP4]], [[TMP5]]
+; IEEE-NEXT:    [[TMP1:%.*]] = fcmp contract olt float [[X]], f0x00800000
+; IEEE-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float f0x4B800000, float 1.000000e+00
+; IEEE-NEXT:    [[TMP3:%.*]] = fmul contract float [[X]], [[TMP2]]
+; IEEE-NEXT:    [[TMP4:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[TMP3]])
+; IEEE-NEXT:    [[TMP5:%.*]] = select contract i1 [[TMP1]], float 4.096000e+03, float 1.000000e+00
+; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fmul contract float [[TMP4]], [[TMP5]]
 ; IEEE-NEXT:    ret float [[FDIV_OPENCL]]
 ;
 ; DAZ-LABEL: define float @rsq_f32_flag_merge(
 ; DAZ-SAME: float [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call nsz contract float @llvm.amdgcn.rsq.f32(float [[X]])
+; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rsq.f32(float [[X]])
 ; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
 ;
   %sqrt.x.3ulp = call contract ninf float @llvm.sqrt.f32(float %x), !fpmath !2

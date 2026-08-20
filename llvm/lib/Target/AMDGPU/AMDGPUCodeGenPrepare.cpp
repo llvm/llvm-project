@@ -742,12 +742,12 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
 
   // TODO: Handle other numerator values with arcp.
   if (CLHS->isOne() || (IsNegative = CLHS->isMinusOne())) {
-    // Add sqrt flags, but keep ninf/nsz from the div: they don't say
-    // anything about the quotient.
+    // Add sqrt flags, but require both ninf and nsz from the div and the
+    // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     FastMathFlags NewFMF = DivFMF | SqrtFMF;
-    NewFMF.setNoInfs(DivFMF.noInfs());
-    NewFMF.setNoSignedZeros(DivFMF.noSignedZeros());
+    NewFMF.setNoInfs(DivFMF.noInfs() && SqrtFMF.noInfs());
+    NewFMF.setNoSignedZeros(DivFMF.noSignedZeros() && SqrtFMF.noSignedZeros());
     Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
