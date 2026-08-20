@@ -15,6 +15,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"

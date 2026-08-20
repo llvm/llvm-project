@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
