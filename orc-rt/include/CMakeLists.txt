@@ -1,14 +1,15 @@
 set(ORC_RT_HEADERS
+    orc-rt-c/Compiler.h
     orc-rt-c/CoreTyspe.h
     orc-rt-c/Error.h
-    orc-rt-c/Compiler.h
+    orc-rt-c/Logging.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/BootstrapInfo.h
+    orc-rt/CCallback.h
     orc-rt/Compiler.h
-    orc-rt/SimpleSymbolTable.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
     orc-rt/InProcessControllerAccess.h
@@ -21,19 +22,17 @@ set(ORC_RT_HEADERS
     orc-rt/NativeDylibManager.h
     orc-rt/QueueingRunner.h
     orc-rt/RTTI.h
+    orc-rt/SPSAllocAction.h
+    orc-rt/SPSMemoryFlags.h
+    orc-rt/SPSWrapperFunction.h
+    orc-rt/SPSWrapperFunctionBuffer.h
     orc-rt/Service.h
     orc-rt/Session.h
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
-    orc-rt/SPSAllocAction.h
-    orc-rt/sps-ci/AllSPSCI.h
-    orc-rt/sps-ci/CallSPSCI.h
-    orc-rt/sps-ci/MemoryAccessSPSCI.h
-    orc-rt/sps-ci/NativeDylibManagerSPSCI.h
-    orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
-    orc-rt/SPSMemoryFlags.h
-    orc-rt/SPSWrapperFunction.h
-    orc-rt/SPSWrapperFunctionBuffer.h
+    orc-rt/SimpleSymbolTable.h
+    orc-rt/StandaloneMachOUnwindInfoRegistrar.h
+    orc-rt/StringPool.h
     orc-rt/TaskGroup.h
     orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h
@@ -42,6 +41,12 @@ set(ORC_RT_HEADERS
     orc-rt/move_only_function.h
     orc-rt/scope_exit.h
     orc-rt/span.h
+    orc-rt/sps-ci/AllSPSCI.h
+    orc-rt/sps-ci/CallSPSCI.h
+    orc-rt/sps-ci/GDBJITRegistrarSPSCI.h
+    orc-rt/sps-ci/MemoryAccessSPSCI.h
+    orc-rt/sps-ci/NativeDylibManagerSPSCI.h
+    orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
 )
 
 # Add generated config header

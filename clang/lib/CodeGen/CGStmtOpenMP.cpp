@@ -1703,7 +1703,8 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     case OMPD_flush:
     case OMPD_depobj:
     case OMPD_scan:
-    case OMPD_ordered:
+    case OMPD_ordered_standalone:
+    case OMPD_ordered_blockassoc:
     case OMPD_atomic:
     case OMPD_teams:
     case OMPD_target:
@@ -2784,7 +2785,7 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
   }
 }
 
-// Check for the presence of an `OMPOrderedDirective`,
+// Check for the presence of an `OMPOrderedBlockAssocDirective`,
 // i.e., `ordered` in `#pragma omp ordered simd`.
 //
 // Consider the following source code:
@@ -2805,7 +2806,7 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
 //
 // Suppose we are in `CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective
 // &D)`. By examining `D.dump()` we have the following AST containing
-// `OMPOrderedDirective`:
+// `OMPOrderedBlockAssocDirective`:
 //
 // ```
 // OMPSimdDirective 0x1c32950
@@ -2823,24 +2824,24 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
 //   | | |-UnaryOperator 0x1c31348 'int' prefix '++'
 //   | | | `-DeclRefExpr 0x1c31328 'int' lvalue Var 0x1c31208 'k' 'int'
 //   | | `-CompoundStmt 0x1c31e18
-//   | |   `-OMPOrderedDirective 0x1c31dd8
+//   | |   `-OMPOrderedBlockAssocDirective 0x1c31dd8
 //   | |     |-OMPSimdClause 0x1c31380
 //   | |     `-CapturedStmt 0x1c31cd0
 // ```
 //
-// Note the presence of `OMPOrderedDirective` above:
+// Note the presence of `OMPOrderedBlockAssocDirective` above:
 // It's (transitively) nested in a `CapturedStmt` representing the pragma
 // annotated compound statement. Thus, we need to consider this nesting and
 // include checking the `getCapturedStmt` in this case.
-static bool hasOrderedDirective(const Stmt *S) {
-  if (isa<OMPOrderedDirective>(S))
+static bool hasOrderedBlockAssocDirective(const Stmt *S) {
+  if (isa<OMPOrderedBlockAssocDirective>(S))
     return true;
 
   if (const auto *CS = dyn_cast<CapturedStmt>(S))
-    return hasOrderedDirective(CS->getCapturedStmt());
+    return hasOrderedBlockAssocDirective(CS->getCapturedStmt());
 
   for (const Stmt *Child : S->children()) {
-    if (Child && hasOrderedDirective(Child))
+    if (Child && hasOrderedBlockAssocDirective(Child))
       return true;
   }
 
@@ -2849,9 +2850,9 @@ static bool hasOrderedDirective(const Stmt *S) {
 
 static void applyConservativeSimdOrderedDirective(const Stmt &AssociatedStmt,
                                                   LoopInfoStack &LoopStack) {
-  // Check for the presence of an `OMPOrderedDirective`
+  // Check for the presence of an `OMPOrderedBlockAssocDirective`
   // i.e., `ordered` in `#pragma omp ordered simd`
-  bool HasOrderedDirective = hasOrderedDirective(&AssociatedStmt);
+  bool HasOrderedDirective = hasOrderedBlockAssocDirective(&AssociatedStmt);
   // If present then conservatively disable loop vectorization
   // analogously to how `emitSimdlenSafelenClause` does.
   if (HasOrderedDirective)
@@ -3086,9 +3087,9 @@ static bool isSimdSupportedByOpenMPIRBuilder(const OMPLoopDirective &S) {
       return false;
   }
 
-  // Check if we have a statement with the ordered directive.
+  // Check if we have a statement with the ordered-blockassoc directive.
   // Visit the statement hierarchy to find a compound statement
-  // with a ordered directive in it.
+  // with a ordered-blockassoc directive in it.
   if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(S.getRawStmt())) {
     if (const Stmt *SyntacticalLoop = CanonLoop->getLoopStmt()) {
       for (const Stmt *SubStmt : SyntacticalLoop->children()) {
@@ -3098,7 +3099,7 @@ static bool isSimdSupportedByOpenMPIRBuilder(const OMPLoopDirective &S) {
           for (const Stmt *CSSubStmt : CS->children()) {
             if (!CSSubStmt)
               continue;
-            if (isa<OMPOrderedDirective>(CSSubStmt)) {
+            if (isa<OMPOrderedBlockAssocDirective>(CSSubStmt)) {
               return false;
             }
           }
@@ -6002,8 +6003,8 @@ void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
     CGM.getOpenMPRuntime().emitDestroyClause(*this, DOLVal, DC->getBeginLoc());
     return;
   }
-  if (const auto *UC = S.getSingleClause<OMPUpdateClause>()) {
-    CGM.getOpenMPRuntime().emitUpdateClause(
+  if (const auto *UC = S.getSingleClause<OMPUpdateDependObjectsClause>()) {
+    CGM.getOpenMPRuntime().emitUpdateDependObjectsClause(
         *this, DOLVal, UC->getDependencyKind(), UC->getBeginLoc());
     return;
   }
@@ -6502,78 +6503,84 @@ static void emitRestoreIP(CodeGenFunction &CGF, const T *C,
                                      StoreValues, ".cnt.addr", IsDependSource));
 }
 
-void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
+void CodeGenFunction::EmitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective &S) {
+  assert((S.hasClausesOfKind<OMPDependClause>() ||
+          S.hasClausesOfKind<OMPDoacrossClause>()) &&
+         "Standalone ordered directive should have either depend or doacross "
+         "clause");
+  // The ordered-standalone directive.
+  assert(!S.hasAssociatedStmt() && "No associated statement must be in "
+                                   "ordered depend|doacross construct.");
+
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    if (S.hasClausesOfKind<OMPDependClause>() ||
-        S.hasClausesOfKind<OMPDoacrossClause>()) {
-      // The ordered directive with depend clause.
-      assert(!S.hasAssociatedStmt() && "No associated statement must be in "
-                                       "ordered depend|doacross construct.");
-      InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
-                             AllocaInsertPt->getIterator());
-      for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
-        emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
-      for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
-        emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
-    } else {
-      // The ordered directive with threads or simd clause, or without clause.
-      // Without clause, it behaves as if the threads clause is specified.
-      const auto *C = S.getSingleClause<OMPSIMDClause>();
-
-      auto FiniCB = [this](InsertPointTy IP) {
-        OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
-        return llvm::Error::success();
-      };
-
-      auto BodyGenCB = [&S, C,
-                        this](InsertPointTy AllocIP, InsertPointTy CodeGenIP,
-                              ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
-        Builder.restoreIP(CodeGenIP);
-
-        const CapturedStmt *CS = S.getInnermostCapturedStmt();
-        if (C) {
-          llvm::BasicBlock *FiniBB = splitBBWithSuffix(
-              Builder, /*CreateBranch=*/false, ".ordered.after");
-          llvm::SmallVector<llvm::Value *, 16> CapturedVars;
-          GenerateOpenMPCapturedVars(*CS, CapturedVars);
-          llvm::Function *OutlinedFn = emitOutlinedOrderedFunction(CGM, CS, S);
-          assert(S.getBeginLoc().isValid() &&
-                 "Outlined function call location must be valid.");
-          ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
-          OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, *FiniBB,
-                                               OutlinedFn, CapturedVars);
-        } else {
-          OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
-              *this, CS->getCapturedStmt(), AllocIP, CodeGenIP, "ordered");
-        }
-        return llvm::Error::success();
-      };
-
-      OMPLexicalScope Scope(*this, S, OMPD_unknown);
-      llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
-          OMPBuilder.createOrderedThreadsSimd(Builder, BodyGenCB, FiniCB, !C));
-      Builder.restoreIP(AfterIP);
-    }
+    InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
+                           AllocaInsertPt->getIterator());
+    for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
+      emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
+    for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
+      emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
     return;
   }
 
   if (S.hasClausesOfKind<OMPDependClause>()) {
-    assert(!S.hasAssociatedStmt() &&
-           "No associated statement must be in ordered depend construct.");
     for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
       CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
-    return;
-  }
-  if (S.hasClausesOfKind<OMPDoacrossClause>()) {
-    assert(!S.hasAssociatedStmt() &&
-           "No associated statement must be in ordered doacross construct.");
+  } else if (S.hasClausesOfKind<OMPDoacrossClause>()) {
     for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
       CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
+  }
+}
+
+void CodeGenFunction::EmitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective &S) {
+  if (CGM.getLangOpts().OpenMPIRBuilder) {
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    // The ordered directive with threads or simd clause, or without clause.
+    // Without clause, it behaves as if the threads clause is specified.
+    const auto *C = S.getSingleClause<OMPSIMDClause>();
+
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+      return llvm::Error::success();
+    };
+
+    auto BodyGenCB = [&S, C, this](InsertPointTy AllocIP,
+                                   InsertPointTy CodeGenIP,
+                                   ArrayRef<llvm::BasicBlock *> DeallocBlocks) {
+      Builder.restoreIP(CodeGenIP);
+
+      const CapturedStmt *CS = S.getInnermostCapturedStmt();
+      if (C) {
+        llvm::BasicBlock *FiniBB = splitBBWithSuffix(
+            Builder, /*CreateBranch=*/false, ".ordered.after");
+        llvm::SmallVector<llvm::Value *, 16> CapturedVars;
+        GenerateOpenMPCapturedVars(*CS, CapturedVars);
+        llvm::Function *OutlinedFn = emitOutlinedOrderedFunction(CGM, CS, S);
+        assert(S.getBeginLoc().isValid() &&
+               "Outlined function call location must be valid.");
+        ApplyDebugLocation::CreateDefaultArtificial(*this, S.getBeginLoc());
+        OMPBuilderCBHelpers::EmitCaptureStmt(*this, CodeGenIP, *FiniBB,
+                                             OutlinedFn, CapturedVars);
+      } else {
+        OMPBuilderCBHelpers::EmitOMPInlinedRegionBody(
+            *this, CS->getCapturedStmt(), AllocIP, CodeGenIP, "ordered");
+      }
+      return llvm::Error::success();
+    };
+
+    OMPLexicalScope Scope(*this, S, OMPD_unknown);
+    llvm::OpenMPIRBuilder::InsertPointTy AfterIP = cantFail(
+        OMPBuilder.createOrderedThreadsSimd(Builder, BodyGenCB, FiniCB, !C));
+    Builder.restoreIP(AfterIP);
     return;
   }
+
   const auto *C = S.getSingleClause<OMPSIMDClause>();
   auto &&CodeGen = [&S, C, this](CodeGenFunction &CGF,
                                  PrePostActionTy &Action) {
@@ -7366,17 +7373,50 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
 
-  const auto *NT = S.getSingleClause<OMPNumTeamsClause>();
-  const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
-  if (NT || TL) {
-    const Expr *NumTeams = NT ? NT->getNumTeams().front() : nullptr;
-    const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
+  OMPTeamsScope Scope(CGF, S);
+  auto ParallelLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+    const auto *NT = S.getSingleClause<OMPNumTeamsClause>();
+    const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
+    if (NT || TL) {
+      const Expr *NumTeams = NT ? NT->getNumTeams().front() : nullptr;
+      const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
 
-    CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeams, ThreadLimit,
-                                                  S.getBeginLoc());
+      CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, NumTeams, ThreadLimit,
+                                                    S.getBeginLoc());
+    }
+  };
+
+  const Expr *IfCond = nullptr;
+  for (const auto *C : S.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() == OMPD_unknown ||
+        C->getNameModifier() == OMPD_teams) {
+      IfCond = C->getCondition();
+      break;
+    }
+  }
+  if (IfCond && CGF.CGM.getLangOpts().OpenMP >= 52) {
+    auto SerialLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+      // OpenMP 5.2, 10.2, teams Construct
+      // When an if clause is present on a teams construct and the if clause
+      // expression evaluates to false, the number of created teams is one.
+      const llvm::APInt One(32, 1);
+      IntegerLiteral NumTeams(
+          CGF.getContext(), One,
+          CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
+          SourceLocation());
+      // The thread_limit clause is unaffected by the if clause.
+      const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
+      const Expr *ThreadLimit = TL ? TL->getThreadLimit().front() : nullptr;
+      CGF.CGM.getOpenMPRuntime().emitNumTeamsClause(CGF, &NumTeams, ThreadLimit,
+                                                    S.getBeginLoc());
+    };
+    CGF.CGM.getOpenMPRuntime().emitIfClause(CGF, IfCond, ParallelLeague,
+                                            SerialLeague);
+  } else {
+    const RegionCodeGenTy ThenRCG(ParallelLeague);
+    ThenRCG(CGF);
   }
 
-  OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getBeginLoc(), OutlinedFn,

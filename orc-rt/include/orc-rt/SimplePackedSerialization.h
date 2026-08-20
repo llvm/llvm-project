@@ -37,9 +37,11 @@
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/bit.h"
+#include "orc-rt/iterator_range.h"
 #include "orc-rt/span.h"
 
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -388,7 +390,34 @@ public:
   }
 };
 
-/// Trivial serialization / deserialization for span<char>
+/// Serialization (but no deserialization) from iterator range.
+template <typename SPSElementTagT, typename IteratorT>
+class SPSSerializationTraits<SPSSequence<SPSElementTagT>,
+                             iterator_range<IteratorT>> {
+  static uint64_t rangeSize(const iterator_range<IteratorT> &R) {
+    return std::distance(R.begin(), R.end());
+  }
+
+public:
+  static size_t size(const iterator_range<IteratorT> &R) {
+    size_t Size = SPSArgList<uint64_t>::size(rangeSize(R));
+    for (const auto &E : R)
+      Size += SPSArgList<SPSElementTagT>::size(E);
+    return Size;
+  }
+
+  static bool serialize(SPSOutputBuffer &OB,
+                        const iterator_range<IteratorT> &R) {
+    if (!SPSArgList<uint64_t>::serialize(OB, rangeSize(R)))
+      return false;
+    for (const auto &E : R)
+      if (!SPSArgList<SPSElementTagT>::serialize(OB, E))
+        return false;
+    return true;
+  }
+};
+
+/// span<const char> as a byte sequence: transmits the span's contents.
 template <> class SPSSerializationTraits<SPSSequence<char>, span<const char>> {
 public:
   static size_t size(const span<const char> &S) {
@@ -590,6 +619,40 @@ public:
   static bool deserialize(SPSInputBuffer &IB, ExecutorAddrRange &R) {
     return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::deserialize(
         IB, R.Start, R.End);
+  }
+};
+
+/// span<T> as an address range: transmits the span's bounds, not its contents.
+template <typename T>
+class SPSSerializationTraits<SPSExecutorAddrRange, span<T>> {
+public:
+  static size_t size(const span<T> &S) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::size(
+        ExecutorAddr::fromPtr(S.data()),
+        ExecutorAddr::fromPtr(S.data() + S.size()));
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const span<T> &S) {
+    return SPSArgList<SPSExecutorAddr, SPSExecutorAddr>::serialize(
+        OB, ExecutorAddr::fromPtr(S.data()),
+        ExecutorAddr::fromPtr(S.data() + S.size()));
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, span<T> &S) {
+    ExecutorAddrRange R;
+    if (!SPSArgList<SPSExecutorAddrRange>::deserialize(IB, R))
+      return false;
+    // Check for inverted range, out-of-range pointers, and spans that aren't a
+    // multiple of sizeof(T).
+    if (R.End < R.Start)
+      return false;
+    if (R.Start.getValue() >= std::numeric_limits<uintptr_t>::max() ||
+        R.End.getValue() >= std::numeric_limits<uintptr_t>::max())
+      return false;
+    if (R.size() % sizeof(T))
+      return false;
+    S = R.toSpan<T>();
+    return true;
   }
 };
 

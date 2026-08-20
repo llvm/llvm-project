@@ -202,7 +202,7 @@ static llvm::APSInt convertBoolVectorToInt(const Pointer &Val) {
 
 // Strict double -> float conversion used for X86 PD2PS/cvtsd2ss intrinsics.
 // Reject NaN/Inf/Subnormal inputs and any lossy/inexact conversions.
-static bool convertDoubleToFloatStrict(APFloat Src, Floating &Dst,
+static bool convertDoubleToFloatStrict(const APFloat &Src, Floating &Dst,
                                        InterpState &S, const Expr *DiagExpr) {
   if (Src.isInfinity()) {
     if (S.diagnosing())
@@ -1374,15 +1374,16 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     return false;
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  const ASTContext &ASTCtx = S.getASTContext();
   CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer()) {
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = S.getASTContext().getDeclAlign(VD);
-    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
-      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+      BaseAlignment = ASTCtx.getDeclAlign(VD);
+    else if (const auto *E = Ptr.getRootExpr())
+      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
@@ -1392,8 +1393,11 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     }
   }
 
-  APValue AV = Ptr.toAPValue(S.getASTContext());
-  CharUnits AVOffset = AV.getLValueOffset();
+  std::optional<size_t> LayoutOffset = Ptr.computeLayoutOffset(ASTCtx);
+  if (!LayoutOffset)
+    return false;
+
+  CharUnits AVOffset = CharUnits::fromQuantity(*LayoutOffset);
   if (ExtraOffset)
     AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
   if (AVOffset.alignTo(Align) != AVOffset) {
@@ -1608,7 +1612,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Composite arrays
   if (IsArray) {
     const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, ElemType.getTypePtr(), std::nullopt);
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr());
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1621,8 +1625,8 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   QualType AllocType = S.getASTContext().getConstantArrayType(
       ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
 
-  const Descriptor *Desc = S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
-                                                Descriptor::InlineDescMD);
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, AllocType.getTypePtr());
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
@@ -1664,7 +1668,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
       return true;
     }
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     if (!BlockToDelete->isDynamic()) {
@@ -1681,7 +1685,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   std::optional<DynamicAllocator::Form> AllocForm =
       Allocator.getAllocationForm(Source);
 
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+  if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
@@ -1710,6 +1714,9 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
   assert(Call->getType() == ElemType);
   PrimType ElemT = *S.getContext().classify(ElemType);
   unsigned NumElems = Arg.getNumElems();
+
+  if (!isIntegerType(ElemT))
+    return false;
 
   INT_TYPE_SWITCH_NO_BOOL(ElemT, {
     T Result = Arg.elem<T>(0);
@@ -2299,11 +2306,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
 static std::optional<unsigned> computeFullDescSize(const ASTContext &ASTCtx,
                                                    const Descriptor *Desc) {
-  if (Desc->isPrimitive())
+  if (Desc->isPrimitive() || Desc->isArray())
     return ASTCtx.getTypeSizeInChars(Desc->getType()).getQuantity();
-  if (Desc->isArray())
-    return ASTCtx.getTypeSizeInChars(Desc->getElemQualType()).getQuantity() *
-           Desc->getNumElems();
+
   if (Desc->isRecord()) {
     // Can't use Descriptor::getType() as that may return a pointer type. Look
     // at the decl directly.
@@ -2942,6 +2947,45 @@ static bool interp__builtin_ia32_pmul(
 
     INT_TYPE_SWITCH_NO_BOOL(DestElemT,
                             { Dst.elem<T>(DstElem) = static_cast<T>(Result); });
+    ++DstElem;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_ia32_psadbw(InterpState &S, CodePtr OpPC,
+                                        const CallExpr *Call) {
+  assert(Call->getNumArgs() == 2);
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
+  PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
+  unsigned SourceLen = SrcVT->getNumElements();
+  assert((SourceLen % 8) == 0);
+
+  const auto *DestVT = Call->getType()->castAs<VectorType>();
+  PrimType DestElemT = *S.getContext().classify(DestVT->getElementType());
+  bool DestUnsigned =
+      DestVT->getElementType()->isUnsignedIntegerOrEnumerationType();
+
+  unsigned DstElem = 0;
+  for (unsigned Lane = 0; Lane != SourceLen; Lane += 8) {
+    APInt Sum(64, 0);
+    for (unsigned I = 0; I != 8; ++I) {
+      INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+        APSInt L = LHS.elem<T>(Lane + I).toAPSInt();
+        APSInt R = RHS.elem<T>(Lane + I).toAPSInt();
+        Sum += llvm::APIntOps::abdu(L.extOrTrunc(8), R.extOrTrunc(8)).zext(64);
+      });
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(DestElemT, {
+      Dst.elem<T>(DstElem) = static_cast<T>(APSInt(Sum, DestUnsigned));
+    });
     ++DstElem;
   }
 
@@ -4551,10 +4595,163 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// Bit Matrix Multiply and Accumulate (AVX512BMM). Each 256-bit lane holds a
+// 16x16 bit matrix as 16 x i16 elements; element i is row i and bit j of that
+// element is entry [i][j]. The accumulator (third argument, src1 in the AMD
+// ISA) provides the initial value of each result bit, into which the bit-matrix
+// product of the first two arguments (src2 * src3) is reduced with OR (vbmacor)
+// or XOR (vbmacxor):
+//   for i in 0..15, j in 0..15:
+//     bit = C[16*i+j]
+//     for k in 0..15: bit OP= A[16*i+k] & B[16*k+j]
+//     dest[16*i+j] = bit
+static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call, bool IsXor) {
+  assert(Call->getNumArgs() == 3);
+
+  // AST-based type checks before popping the stack.
+  QualType AType = Call->getArg(0)->getType();
+  QualType BType = Call->getArg(1)->getType();
+  QualType CType = Call->getArg(2)->getType();
+  if (!AType->isVectorType() || !BType->isVectorType() ||
+      !CType->isVectorType())
+    return false;
+
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // check if all three primitive arrays are with 16-bit elements.
+  auto isValid16BitArray = [](const Pointer &P) {
+    const Descriptor *D = P.getFieldDesc();
+    if (!D->isPrimitiveArray())
+      return false;
+    PrimType PT = D->getPrimType();
+    return ((PT == PT_Sint16) || (PT == PT_Uint16));
+  };
+
+  if (!isValid16BitArray(A) || !isValid16BitArray(B) || !isValid16BitArray(C))
+    return false;
+
+  PrimType ElemT = A.getFieldDesc()->getPrimType();
+  unsigned NumElems = A.getNumElems();
+  assert(NumElems % 16 == 0 && "BMM operates on 256-bit lanes of 16 x i16");
+  bool DstUnsigned = ElemT == PT_Uint16;
+
+  // Lanes are always 16-bit; gather them so the reduction below is untyped.
+  SmallVector<uint16_t> AVals(NumElems), BVals(NumElems), Acc(NumElems);
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
+      AVals[I] = (uint16_t)A.elem<T>(I).toAPSInt().getZExtValue();
+      BVals[I] = (uint16_t)B.elem<T>(I).toAPSInt().getZExtValue();
+      Acc[I] = (uint16_t)C.elem<T>(I).toAPSInt().getZExtValue();
+    }
+  });
+
+  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
+    for (unsigned I = 0; I != 16; ++I) {
+      uint16_t AVal = AVals[Lane + I], DVal = Acc[Lane + I];
+      for (unsigned J = 0; J != 16; ++J) {
+        // Seed the reduction with the accumulator bit, then fold in each
+        // product term with the same operator (OR for vbmacor, XOR for
+        // vbmacxor).
+        unsigned Bit = (DVal >> J) & 1u;
+        for (unsigned K = 0; K != 16; ++K) {
+          unsigned Product = ((AVal >> K) & 1u) & ((BVals[Lane + K] >> J) & 1u);
+          Bit = IsXor ? (Bit ^ Product) : (Bit | Product);
+        }
+        DVal = (DVal & ~(uint16_t(1) << J)) | (uint16_t(Bit) << J);
+      }
+      Acc[Lane + I] = DVal;
+    }
+  }
+
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I)
+      Dst.elem<T>(I) = static_cast<T>(APSInt(APInt(16, Acc[I]), DstUnsigned));
+  });
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp_builtin_ia32_cvt_scalar_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  const Floating &FloatElem = SrcVecPtr.elem<Floating>(0);
+
+  unsigned BitWidth = S.getASTContext().getIntWidth(E->getType());
+  bool IsUnsigned = E->getType()->isUnsignedIntegerType();
+
+  llvm::APSInt IntResult(BitWidth, IsUnsigned);
+  bool IsExact = false;
+  // We only allow exact conversions so rounding mode does not matter for cvt*
+  // and cvtt* builtins
+  FloatElem.getAPFloat().convertToInteger(
+      IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return false;
+
+  pushInteger(S, IntResult, E->getType());
+  return true;
+}
+
+static bool interp_builtin_ia32_cvt_vector_to_int(InterpState &S, CodePtr OpPC,
+                                                  const CallExpr *E) {
+  Pointer SrcVecPtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumSrcElems = SrcVecPtr.getNumElems();
+  unsigned NumDstElems = Dst.getNumElems();
+
+  if (NumSrcElems > NumDstElems)
+    return false;
+
+  QualType ElemType = Dst.getFieldDesc()->getElemQualType();
+  unsigned BitWidth = S.getASTContext().getIntWidth(ElemType);
+  bool IsUnsigned = ElemType->isUnsignedIntegerType();
+
+  PrimType ElemT = *S.getContext().classify(ElemType);
+  for (unsigned I = 0; I != NumSrcElems; ++I) {
+    const Floating &FloatElem = SrcVecPtr.elem<Floating>(I);
+    llvm::APSInt IntResult(BitWidth, IsUnsigned);
+
+    bool IsExact = false;
+    // We only allow exact conversions so rounding mode does not matter for
+    // cvt* and cvtt* builtins
+    FloatElem.getAPFloat().convertToInteger(
+        IntResult, llvm::APFloat::rmTowardZero, &IsExact);
+    if (!IsExact)
+      return false;
+    INT_TYPE_SWITCH_NO_BOOL(
+        ElemT, { Dst.elem<T>(I) = T::from(IntResult.getZExtValue()); });
+  }
+
+  // Zero out remaining elements if the destination has more elements
+  // (e.g., cvtpd2dq converting 2 doubles(_m128d) to 2 ints stored in _m128i).
+  for (unsigned I = NumSrcElems; I != NumDstElems; ++I)
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(I) = T::from(0); });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
-  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+  const ASTContext &ASTCtx = S.getASTContext();
+
+  // BuiltinID is the raw ID baked into the bytecode. The "is constant
+  // evaluated" gate needs the raw ID so that auxiliary-target IDs resolve into
+  // the correct (aux-target) builtin records.
+  if (!ASTCtx.BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
+
+  // Convert an auxiliary x86 target builtin ID to its canonical X86::BI* value
+  // so the target-specific cases below (and the handlers they call) match. This
+  // is a cheap integer operation (a single comparison for the common,
+  // target-independent case); we deliberately avoid re-deriving the ID from the
+  // call expression, which is comparatively slow.
+  BuiltinID = ConvertBuiltinIDToX86BuiltinID(ASTCtx, BuiltinID);
 
   const InterpFrame *Frame = S.Current;
   switch (BuiltinID) {
@@ -5422,6 +5619,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                  (HiLHS.sext(BitWidth) * HiRHS.sext(BitWidth));
         });
 
+  case clang::X86::BI__builtin_ia32_psadbw128:
+  case clang::X86::BI__builtin_ia32_psadbw256:
+  case clang::X86::BI__builtin_ia32_psadbw512:
+    return interp__builtin_ia32_psadbw(S, OpPC, Call);
+
   case clang::X86::BI__builtin_ia32_dbpsadbw128:
   case clang::X86::BI__builtin_ia32_dbpsadbw256:
   case clang::X86::BI__builtin_ia32_dbpsadbw512:
@@ -5917,6 +6119,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vgf2p8mulb_v32qi:
   case X86::BI__builtin_ia32_vgf2p8mulb_v64qi:
     return interp__builtin_ia32_gfni_mul(S, OpPC, Call);
+
+  case X86::BI__builtin_ia32_bmacor16x16x16_v16hi:
+  case X86::BI__builtin_ia32_bmacor16x16x16_v32hi:
+    return interp__builtin_ia32_bmac(S, OpPC, Call, /*IsXor=*/false);
+  case X86::BI__builtin_ia32_bmacxor16x16x16_v16hi:
+  case X86::BI__builtin_ia32_bmacxor16x16x16_v32hi:
+    return interp__builtin_ia32_bmac(S, OpPC, Call, /*IsXor=*/true);
 
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
@@ -6633,6 +6842,24 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
+  case X86::BI__builtin_ia32_cvtss2si:
+  case X86::BI__builtin_ia32_cvtsd2si:
+  case X86::BI__builtin_ia32_cvttss2si:
+  case X86::BI__builtin_ia32_cvttsd2si:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64:
+    return interp_builtin_ia32_cvt_scalar_to_int(S, OpPC, Call);
+  case X86::BI__builtin_ia32_cvtpd2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq:
+  case X86::BI__builtin_ia32_cvtps2dq:
+  case X86::BI__builtin_ia32_cvtpd2dq256:
+  case X86::BI__builtin_ia32_cvtps2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq:
+  case X86::BI__builtin_ia32_cvttpd2dq256:
+  case X86::BI__builtin_ia32_cvttps2dq256:
+    return interp_builtin_ia32_cvt_vector_to_int(S, OpPC, Call);
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)
@@ -6673,12 +6900,28 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       // When generating bytecode, we put all the index expressions as Sint64 on
       // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
+      if (Index < 0)
+        return Invalid(S, OpPC);
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
-      Result += Index * ElementSize;
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (Index != 0 && ElemSize > (llvm::maxIntN(64) / Index)) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      int64_t Offset = Index * ElemSize;
+      if (Result.getQuantity() > llvm::maxIntN(64) - Offset) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      Result += CharUnits::fromQuantity(Offset);
       ++ArrayIndex;
       break;
     }

@@ -10,7 +10,6 @@ define <2 x bfloat> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1073758080;
 ; CHECK-NEXT:    ret;
@@ -415,7 +414,7 @@ define <2 x bfloat> @test_bitcast_2xi16_to_2xbf16(<2 x i16> %a) #0 {
 }
 
 declare <2 x bfloat> @llvm.sqrt.f16(<2 x bfloat> %a) #0
-declare <2 x bfloat> @llvm.powi.f16(<2 x bfloat> %a, <2 x i32> %b) #0
+declare <2 x bfloat> @llvm.powi.f16(<2 x bfloat> %a, i32 %b) #0
 declare <2 x bfloat> @llvm.sin.f16(<2 x bfloat> %a) #0
 declare <2 x bfloat> @llvm.cos.f16(<2 x bfloat> %a) #0
 declare <2 x bfloat> @llvm.pow.f16(<2 x bfloat> %a, <2 x bfloat> %b) #0

@@ -350,6 +350,7 @@ def ExtraTokens : DiagGroup<"extra-tokens">;
 def CXX98CompatExtraSemi : DiagGroup<"c++98-compat-extra-semi">;
 def CXX11ExtraSemi : DiagGroup<"c++11-extra-semi">;
 def EmptyInitStatement : DiagGroup<"empty-init-stmt">;
+def ExpansionStmtBody : DiagGroup<"expansion-stmt-missing-braces">;
 def ExportUnnamed : DiagGroup<"export-unnamed">;
 def ExtraSemiStmt : DiagGroup<"extra-semi-stmt", [EmptyInitStatement]>;
 def ExtraSemi : DiagGroup<"extra-semi", [CXX98CompatExtraSemi,
@@ -412,6 +413,9 @@ def CXXPre26CompatPedantic :
   DiagGroup<"pre-c++26-compat-pedantic", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat-pedantic", [CXXPre26CompatPedantic]>;
+def CXXPre29Compat : DiagGroup<"pre-c++2d-compat">;
+def CXXPre29CompatPedantic :
+  DiagGroup<"pre-c++2d-compat-pedantic", [CXXPre29Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -604,6 +608,12 @@ Warning to detect dangling field references.
 This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
   }];
 }
+def LifetimeSafetyDanglingFieldLambdaCapture : DiagGroup<"lifetime-safety-dangling-field-lambda-capture"> {
+  code Documentation = [{
+Warning to detect dangling field references.
+This may contain false-positives, e.g. when the field is captured by a lambda that resets the field before function exit.
+  }];
+}
 
 def LifetimeSafetyDanglingGlobal : DiagGroup<"lifetime-safety-dangling-global"> {
   code Documentation = [{
@@ -663,6 +673,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
+                                    LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
                                     LifetimeSafetyInvalidation]>;
 
@@ -1195,7 +1206,6 @@ def Attributes : DiagGroup<"attributes", [UnknownAttributes,
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
 def UnnamedTypeTemplateArgs : DiagGroup<"unnamed-type-template-args",
                                         [CXX98CompatUnnamedTypeTemplateArgs]>;
-def UnsupportedFriend : DiagGroup<"unsupported-friend">;
 def UnusedArgument : DiagGroup<"unused-argument">;
 def UnusedCommandLineArgument : DiagGroup<"unused-command-line-argument">;
 def IgnoredOptimizationArgument : DiagGroup<"ignored-optimization-argument">;
@@ -1366,7 +1376,7 @@ def Conversion
 def Unused : DiagGroup<"unused",
                        [UnusedArgument, UnusedFunction, UnusedLabel,
                         // UnusedParameter, (matches GCC's behavior)
-                        // UnusedTemplate, (clean-up libc++ before enabling)
+                        UnusedTemplate,
                         // UnusedMemberFunction, (clean-up llvm before enabling)
                         UnusedPrivateField, UnusedLambdaCapture,
                         UnusedLocalTypedef, UnusedValue, UnusedVariable,
@@ -1580,6 +1590,10 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 // earlier C++ versions.
 def CXX26 : DiagGroup<"c++26-extensions">;
 
+// A warning group for warnings about using C++29 features as extensions in
+// earlier C++ versions.
+def CXX29 : DiagGroup<"c++2d-extensions">;
+
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;
 def : DiagGroup<"c++1z-extensions", [CXX17]>;
@@ -1673,6 +1687,8 @@ def MicrosoftStringLiteralFromPredefined : DiagGroup<
     "microsoft-string-literal-from-predefined">;
 def MicrosoftInlineOnNonFunction : DiagGroup<
     "microsoft-inline-on-non-function">;
+def MicrosoftRelaxedConstantFold :
+  DiagGroup<"relaxed-constant-fold">;
 
 // Aliases.
 def : DiagGroup<"msvc-include", [MicrosoftInclude]>;
@@ -1758,6 +1774,10 @@ def OpenMP : DiagGroup<"openmp", [
 // OpenACC warnings.
 def SourceUsesOpenACC : DiagGroup<"source-uses-openacc">;
 def OpenACC : DiagGroup<"openacc", [SourceUsesOpenACC]>;
+
+// ClangIR (CIR) warnings emitted by MLIR-side passes routed through clang.
+def ClangIR : DiagGroup<"clangir">;
+def RemarkClangIR : DiagGroup<"remark-clangir">;
 
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
@@ -1967,7 +1987,8 @@ def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
 def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
 def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
+def UnsafeBufferUsageInStringView : DiagGroup<"unsafe-buffer-usage-in-string-view">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall, UnsafeBufferUsageInStringView]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1999,3 +2020,7 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 
 // Warnings about unguarded usages of AMDGPU target specific constructs
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
+
+def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
+
+def DynamicDebugging : DiagGroup<"dynamic-debugging">;

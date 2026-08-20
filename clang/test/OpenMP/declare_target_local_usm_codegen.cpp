@@ -8,9 +8,9 @@
 // absence of ref ptr and offload entry for local variable and, by contrast,
 // presence of ref ptr and offload entry for enter variable.
 
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ -triple amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fvisibility=protected -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s --check-prefix=DEVICE
 
 // expected-no-diagnostics
 

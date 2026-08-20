@@ -1486,9 +1486,19 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
     // Add the step value register, if it needs one.
     // TODO: The non-affine case isn't precisely modeled here.
-    if (!AR->isAffine() || !isa<SCEVConstant>(AR->getOperand(1))) {
-      if (!Regs.count(AR->getOperand(1))) {
-        RateRegister(F, AR->getOperand(1), Regs, LU, HardwareLoopProfitable);
+    const SCEV *StepReg = AR->getOperand(1);
+    if (!AR->isAffine() || !isa<SCEVConstant>(StepReg)) {
+      // If the step amount is a constant multiplied by vscale then it can form
+      // the immediate value of an add and doesn't use a register, so long as
+      // the immediate value is legal.
+      auto IsVScaleStep = [](const SCEV *Reg, const TargetTransformInfo *TTI) {
+        const APInt *X;
+        if (!match(Reg, m_scev_Mul(m_scev_APInt(X), m_SCEVVScale())))
+          return false;
+        return TTI->isLegalAddScalableImmediate(X->getLimitedValue());
+      };
+      if (!Regs.count(StepReg) && !IsVScaleStep(StepReg, TTI)) {
+        RateRegister(F, StepReg, Regs, LU, HardwareLoopProfitable);
         if (isLoser())
           return;
       }
@@ -5833,10 +5843,6 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
-  // For ICmpZero with pointer-typed operands, keep the comparison in the
-  // integer domain to avoid generating inttoptr casts.
-  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
-    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -5847,6 +5853,14 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     Ty = OpTy;
   // This is the type to do integer arithmetic in.
   Type *IntTy = SE.getEffectiveSCEVType(Ty);
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts. Use IntTy (the
+  // formula's arithmetic width) so that both icmp operands match even when
+  // the IV is wider than the pointer.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy()) {
+    OpTy = IntTy;
+    Ty = IntTy;
+  }
 
   // Build up a list of operands to add together to form the full base.
   SmallVector<SCEVUse, 8> Ops;
@@ -6627,8 +6641,7 @@ struct SCEVDbgValueBuilder {
     } else if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(S)) {
       // Assert if a new and unknown SCEVCastEXpr type is encountered.
       assert((isa<SCEVZeroExtendExpr>(Cast) || isa<SCEVTruncateExpr>(Cast) ||
-              isa<SCEVPtrToIntExpr>(Cast) || isa<SCEVPtrToAddrExpr>(Cast) ||
-              isa<SCEVSignExtendExpr>(Cast)) &&
+              isa<SCEVPtrToAddrExpr>(Cast) || isa<SCEVSignExtendExpr>(Cast)) &&
              "Unexpected cast type in SCEV.");
       Success &= pushCast(Cast, (isa<SCEVSignExtendExpr>(Cast)));
 
@@ -6785,7 +6798,8 @@ struct SCEVDbgValueBuilder {
     }
 
     for (const auto &Op : expr_ops()) {
-      if (Op.getOp() != dwarf::DW_OP_LLVM_arg) {
+      auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
+      if (!Arg) {
         Op.appendToVector(DestExpr);
         continue;
       }
@@ -6793,7 +6807,7 @@ struct SCEVDbgValueBuilder {
       DestExpr.push_back(dwarf::DW_OP_LLVM_arg);
       // `DW_OP_LLVM_arg n` represents the nth LocationOp in this SCEV,
       // DestIndexMap[n] contains its new index in DestLocations.
-      uint64_t NewIndex = DestIndexMap[Op.getArg(0)];
+      uint64_t NewIndex = DestIndexMap[Arg.getIndex()];
       DestExpr.push_back(NewIndex);
     }
   }
@@ -6843,7 +6857,6 @@ static void updateDVIWithLocation(T &DbgVal, Value *Location,
   assert(numLLVMArgOps(Ops) == 0 && "Expected expression that does not "
                                     "contain any DW_OP_llvm_arg operands.");
   DbgVal.setRawLocation(ValueAsMetadata::get(Location));
-  DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
   DbgVal.setExpression(DIExpression::get(DbgVal.getContext(), Ops));
 }
 
@@ -7016,12 +7029,13 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
   }
   for (const auto &Op : DVIRec.Expr->expr_ops()) {
     // Most Ops needn't be updated.
-    if (Op.getOp() != dwarf::DW_OP_LLVM_arg) {
+    auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
+    if (!Arg) {
       Op.appendToVector(NewExpr);
       continue;
     }
 
-    uint64_t LocationArgIndex = Op.getArg(0);
+    uint64_t LocationArgIndex = Arg.getIndex();
     SCEVDbgValueBuilder *DbgBuilder =
         DVIRec.RecoveryExprs[LocationArgIndex].get();
     // The location doesn't have s SCEVDbgValueBuilder, so LSR did not
@@ -7029,9 +7043,9 @@ static bool SalvageDVI(llvm::Loop *L, ScalarEvolution &SE,
     // location index.
     if (!DbgBuilder) {
       NewExpr.push_back(dwarf::DW_OP_LLVM_arg);
-      assert(LocationOpIndexMap[Op.getArg(0)] != -1 &&
+      assert(LocationOpIndexMap[LocationArgIndex] != -1 &&
              "Expected a positive index for the location-op position.");
-      NewExpr.push_back(LocationOpIndexMap[Op.getArg(0)]);
+      NewExpr.push_back(LocationOpIndexMap[LocationArgIndex]);
       continue;
     }
     // The location has a recovery expression.

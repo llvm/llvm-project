@@ -22,13 +22,24 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 namespace {
+AST_MATCHER(Expr, isStringLiteralOrTernary) {
+  const auto Matches = [](const auto &Self, const Expr &Expression) -> bool {
+    const Expr *Unwrapped = Expression.IgnoreParenImpCasts();
+    if (const auto *Ternary = dyn_cast<ConditionalOperator>(Unwrapped))
+      return Self(Self, *Ternary->getTrueExpr()) &&
+             Self(Self, *Ternary->getFalseExpr());
+    return isa<StringLiteral>(Unwrapped);
+  };
+  return Matches(Matches, Node);
+}
+
 AST_MATCHER(FunctionDecl, isOverloaded) {
   const DeclarationName Name = Node.getDeclName();
   // Sanity check
   if (Name.isEmpty())
     return false;
   const DeclContext *DC = Node.getDeclContext();
-  auto LookupResult = DC->lookup(Name);
+  const auto LookupResult = DC->lookup(Name);
   size_t UniqueSignatures = 0;
   llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
   for (NamedDecl *ND : LookupResult) {
@@ -65,7 +76,7 @@ static auto getStringTypeMatcher(StringRef CharType) {
 
 static void fixReturns(const FunctionDecl *FuncDecl,
                        const DiagnosticBuilder &Diag, ASTContext &Context) {
-  auto Matches = match(
+  const auto Matches = match(
       findAll(returnStmt(hasReturnValue(ignoringParenImpCasts(
           cxxTemporaryObjectExpr(argumentCountIs(0)).bind("temp_obj_expr"))))),
       *FuncDecl->getBody(), Context);
@@ -106,9 +117,6 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsStdStringView = getStringTypeMatcher("::std::basic_string_view");
   const auto IgnoredFunctionsMatcher =
       matchers::matchesAnyListedRegexName(IgnoredFunctions);
-  const auto TernaryOperator = conditionalOperator(
-      hasTrueExpression(ignoringParenImpCasts(stringLiteral())),
-      hasFalseExpression(ignoringParenImpCasts(stringLiteral())));
   const auto VirtualOrOperator =
       cxxMethodDecl(anyOf(cxxConversionDecl(), isVirtual()));
   const auto CheckOverloaded =
@@ -121,7 +129,8 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(
-              anyOf(stringLiteral(), hasType(IsStdStringView), TernaryOperator,
+              anyOf(stringLiteral(), hasType(IsStdStringView),
+                    isStringLiteralOrTernary(),
                     cxxConstructExpr(anyOf(
                         allOf(hasType(IsStdString), argumentCountIs(0)),
                         allOf(isListInitialization(),
@@ -142,7 +151,7 @@ void UseStringViewCheck::check(const MatchFinder::MatchResult &Result) {
           .getAsString();
   const StringRef DestReturnTypeStr = toStringViewTypeStr(DesugaredTypeStr);
 
-  auto Diag =
+  const auto Diag =
       diag(MatchedDecl->getTypeSpecStartLoc(),
            "consider using '%0' to avoid unnecessary copying and allocations")
       << DestReturnTypeStr;
@@ -179,7 +188,7 @@ void UseStringViewCheck::parseReplacementStringViewClass(StringRef Options) {
       {U32StringViewClassKey, &U32StringViewClass}};
   for (const auto &Option : utils::options::parseStringList(Options)) {
     const auto Split = Option.split('=');
-    if (auto It = StringClassesMap.find(Split.first);
+    if (const auto It = StringClassesMap.find(Split.first);
         It != StringClassesMap.end())
       *It->second = Split.second;
   }

@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC);
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -190,11 +192,6 @@ UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     return NoLambdaIsCaptureCapable;
 
   const unsigned IndexOfCaptureReadyLambda = *OptionalStackIndex;
-  assert(((IndexOfCaptureReadyLambda != (FunctionScopes.size() - 1)) ||
-          S.getCurGenericLambda()) &&
-         "The capture ready lambda for a potential capture can only be the "
-         "current lambda if it is a generic lambda");
-
   const sema::LambdaScopeInfo *const CaptureReadyLambdaLSI =
       cast<sema::LambdaScopeInfo>(FunctionScopes[IndexOfCaptureReadyLambda]);
 
@@ -248,7 +245,7 @@ CXXRecordDecl *
 Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
                               unsigned LambdaDependencyKind,
                               LambdaCaptureDefault CaptureDefault) {
-  DeclContext *DC = CurContext;
+  DeclContext *DC = CurContext->getEnclosingNonExpansionStatementContext();
 
   bool IsGenericLambda =
       Info && getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -327,7 +324,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
-    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+    } else if (isa<ImplicitConceptSpecializationDecl, ConceptDecl>(
+                   ManglingContextDecl)) {
       return Concept;
     }
 
@@ -518,10 +516,6 @@ void Sema::handleLambdaNumbering(
   // numbering state before final numbering is assigned below.
   if (ContextDecl)
     Class->setLambdaContextDecl(ContextDecl);
-  if (NumberingOverride) {
-    Class->setLambdaNumbering(*NumberingOverride);
-    return;
-  }
 
   CXXRecordDecl::LambdaNumbering Numbering;
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
@@ -537,15 +531,41 @@ void Sema::handleLambdaNumbering(
     assert(MCtx && "Retrieving mangle numbering context failed!");
     Numbering.HasKnownInternalLinkage = true;
   }
-  if (MCtx) {
+
+  if (!MCtx) {
+    // This lambda doesn't need a mangle numbering.
+    return;
+  }
+
+  if (NumberingOverride) {
+    Numbering = *NumberingOverride;
+  } else {
     Numbering.IndexInContext = MCtx->getNextLambdaIndex();
     Numbering.ManglingNumber = MCtx->getManglingNumber(Method);
     Numbering.DeviceManglingNumber = MCtx->getDeviceManglingNumber(Method);
-    Class->setLambdaNumbering(Numbering);
+  }
 
-    if (auto *Source =
-            dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
-      Source->AssignedLambdaNumbering(Class);
+  Class->setLambdaNumbering(Numbering);
+
+  // If there is no context declaration (e.g. this lambda is defined at the
+  // top-level in the global namespace), there is no need to register it for
+  // merging.
+  if (!ContextDecl) {
+    return;
+  }
+
+  // This lambda might redeclare a previous lambda if this is not the first
+  // definition of the context declaration. We might have a definition from
+  // another translation unit.
+  auto *&Slot = Context.getLambdaDeclarationSlotForMerging(
+      ContextDecl, Numbering.IndexInContext);
+  if (auto *Previous = Slot) {
+    Class->setPreviousDecl(Previous);
+    makeMergedDefinitionVisible(Previous);
+  } else {
+    // Keep track of this lambda so it can be merged with another lambda that is
+    // parsed or loaded later.
+    Slot = Class;
   }
 }
 
@@ -1403,7 +1423,9 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
   if (Intro.Default != LCD_None &&
-      !LSI->Lambda->getParent()->isFunctionOrMethod() &&
+      !LSI->Lambda->getParent()
+           ->getEnclosingNonExpansionStatementContext()
+           ->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
        CheckCXXThisCapture(SourceLocation(), /*Explicit=*/true,
                            /*BuildAndDiagnose=*/false)))
@@ -1444,6 +1466,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   LambdaScopeInfo *LSI = getCurrentLambdaScopeUnsafe(*this);
   LSI->CallOperator->setConstexprKind(DS.getConstexprSpecifier());
+  LSI->BeforeCompoundStatement = false;
 
   SmallVector<ParmVarDecl *, 8> Params;
   bool ExplicitResultType;
@@ -1490,10 +1513,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
-
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))
@@ -1501,6 +1520,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // This represents the function body for the lambda function, check if we
+  // have to apply optnone due to a pragma.
+  AddRangeBasedOptnone(Method);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);
@@ -2551,9 +2574,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

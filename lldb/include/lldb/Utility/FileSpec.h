@@ -13,8 +13,7 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Utility/ConstString.h"
-
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -231,7 +230,7 @@ public:
   ///
   /// \return
   ///     A const reference to the directory string object.
-  const ConstString &GetDirectory() const { return m_directory; }
+  llvm::StringRef GetDirectory() const { return m_directory; }
 
   /// Directory string set accessor.
   ///
@@ -246,7 +245,7 @@ public:
   ///
   /// \return
   ///     A const reference to the filename string object.
-  const ConstString &GetFilename() const { return m_filename; }
+  llvm::StringRef GetFilename() const { return m_filename; }
 
   /// Filename string set accessor.
   ///
@@ -406,6 +405,9 @@ public:
   std::vector<llvm::StringRef> GetComponents() const;
 
 protected:
+  static constexpr size_t directory_size = 256;
+  static constexpr size_t filename_size = 32;
+
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
@@ -416,10 +418,10 @@ protected:
   enum class Absolute : uint8_t { Calculate, Yes, No };
 
   /// The unique'd directory path.
-  ConstString m_directory;
+  llvm::SmallString<directory_size> m_directory;
 
   /// The unique'd filename path.
-  ConstString m_filename;
+  llvm::SmallString<filename_size> m_filename;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;
@@ -462,10 +464,8 @@ template <> struct format_provider<lldb_private::FileSpec> {
 template <> struct DenseMapInfo<lldb_private::FileSpec> {
   static unsigned getHashValue(lldb_private::FileSpec file_spec) {
     return llvm::hash_combine(
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetDirectory()),
-        DenseMapInfo<lldb_private::ConstString>::getHashValue(
-            file_spec.GetFilename()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetDirectory()),
+        DenseMapInfo<llvm::StringRef>::getHashValue(file_spec.GetFilename()),
         DenseMapInfo<llvm::sys::path::Style>::getHashValue(
             file_spec.GetPathStyle()));
   }

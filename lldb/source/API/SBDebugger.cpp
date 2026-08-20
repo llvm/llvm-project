@@ -531,9 +531,12 @@ void SBDebugger::HandleCommand(const char *command) {
   if (m_opaque_sp) {
     TargetSP target_sp(
         m_opaque_sp->GetCommandInterpreter().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
 
     SBCommandInterpreter sb_interpreter(GetCommandInterpreter());
     SBCommandReturnObject result;
@@ -606,7 +609,8 @@ void SBDebugger::HandleProcessEvent(const SBProcess &process,
   char stdio_buffer[1024];
   size_t len;
 
-  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+  std::lock_guard<TargetAPIMutex> guard(api_lock);
 
   if (event_type &
       (Process::eBroadcastBitSTDOUT | Process::eBroadcastBitStateChanged)) {
@@ -1642,11 +1646,12 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
   if (m_opaque_sp) {
     uint32_t log_options =
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    return m_opaque_sp->EnableLog(channel, GetCategoryArray(categories), "",
-                                  log_options, /*buffer_size=*/0,
-                                  eLogHandlerStream, error_stream);
+    llvm::Error err = m_opaque_sp->EnableLog(
+        channel, GetCategoryArray(categories), "", log_options,
+        /*buffer_size=*/0, eLogHandlerStream);
+    bool succeeded = !bool(err);
+    llvm::consumeError(std::move(err));
+    return succeeded;
   } else
     return false;
 }

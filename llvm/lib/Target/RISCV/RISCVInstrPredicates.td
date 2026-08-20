@@ -33,7 +33,6 @@ def isSEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDIW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 0>
                    ]>>>;
 
@@ -43,7 +42,6 @@ def isZEXT_W
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADD_UW]>,
                      CheckIsRegOperand<1>,
-                     CheckIsRegOperand<2>,
                      CheckRegOperand<2, X0>
                    ]>>>;
 
@@ -53,7 +51,6 @@ def isZEXT_B
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ANDI]>,
                      CheckIsRegOperand<1>,
-                     CheckIsImmOperand<2>,
                      CheckImmOperand<2, 255>
                    ]>>>;
 
@@ -184,7 +181,6 @@ def isLoadImmediate
     : TIIPredicate<"isLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>
                    ]>>>;
@@ -193,7 +189,6 @@ def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[ADDI]>,
-                     CheckIsRegOperand<1>,
                      CheckRegOperand<1, X0>,
                      CheckIsImmOperand<2>,
                      CheckNot<CheckImmOperand<2, 0>>
@@ -203,7 +198,6 @@ def isLPAD
     : TIIPredicate<"isLPAD",
                    MCReturnStatement<CheckAll<[
                      CheckOpcode<[AUIPC]>,
-                     CheckIsRegOperand<0>,
                      CheckRegOperand<0, X0>,
                    ]>>>;
 
@@ -241,4 +235,26 @@ def isBaseStore
                        SW,
                        SH,
                        SB,
+                     ]>>>;
+
+// Xqcilo 26-bit offset Loads (qc.e.lb, qc.e.lbu, qc.e.lh, qc.e.lhu, qc.e.lw)
+def isBaseQCLoad
+    : TIIPredicate<"isBaseQCLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_LB,
+                       QC_E_LBU,
+                       QC_E_LH,
+                       QC_E_LHU,
+                       QC_E_LW
+                     ]>>>;
+
+// Xqcilo 26-bit offset Stores (qc.e.sb, qc.e.sh, qc.e.sw)
+def isBaseQCStore
+    : TIIPredicate<"isBaseQCStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       QC_E_SB,
+                       QC_E_SH,
+                       QC_E_SW
                      ]>>>;

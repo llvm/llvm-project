@@ -17,15 +17,13 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
   auto std_replace    = [](auto first, auto last, auto old, auto new_) { return std::replace(first, last, old, new_); };
   auto std_replace_if = [](auto first, auto last, auto old, auto new_) {
-    auto pred = [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == old;
-    };
+    auto pred = [&](auto element) { return element == old; };
     return std::replace_if(first, last, pred, new_);
   };
 
@@ -38,7 +36,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto replace) {
       benchmark::RegisterBenchmark(
           name,
-          [replace](auto& st) {
+          [replace](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;
@@ -78,7 +76,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto replace) {
       benchmark::RegisterBenchmark(
           name,
-          [replace](auto& st) {
+          [replace](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c;

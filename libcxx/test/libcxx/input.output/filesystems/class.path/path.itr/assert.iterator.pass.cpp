@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
+// REQUIRES: can-test-hardening-assertions-debug
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: !libcpp-hardening-mode=debug
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 // <filesystem>
 

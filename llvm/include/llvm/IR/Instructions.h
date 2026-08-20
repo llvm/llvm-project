@@ -176,15 +176,25 @@ private:
 //                                LoadInst Class
 //===----------------------------------------------------------------------===//
 
+/// A structure representing the properties of a load or store instruction.
+struct LoadStoreInstProperties {
+  bool IsVolatile;
+  Align Alignment;
+  AtomicOrdering Ordering;
+  SyncScope::ID SSID;
+  bool IsElementwise = false;
+};
+
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
 class LoadInst : public UnaryInstruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AlignmentField, OrderingField>(),
-      "Bitfields must be contiguous");
+  using ElementWiseField = BoolBitfieldElementT<OrderingField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AlignmentField,
+                                        OrderingField, ElementWiseField>(),
+                "Bitfields must be contiguous");
 
   void AssertOK();
 
@@ -205,12 +215,21 @@ public:
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
                     InsertPosition InsertBefore = nullptr);
+  LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
+                    const LoadStoreInstProperties &Props,
+                    InsertPosition InsertBefore = nullptr);
 
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
 
   /// Specify whether this is a volatile load or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this is an elementwise atomic load.
+  bool isElementwise() const { return getSubclassData<ElementWiseField>(); }
+
+  /// Specify whether this is an elementwise atomic load or not.
+  void setElementwise(bool V) { setSubclassData<ElementWiseField>(V); }
 
   /// Return the alignment of the access that is being performed.
   Align getAlign() const {
@@ -247,6 +266,21 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this load instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID(),
+            isElementwise()};
+  }
+
+  /// Sets the properties of this load instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
+    setElementwise(Props.IsElementwise);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -298,9 +332,10 @@ class StoreInst : public Instruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
-  static_assert(
-      Bitfield::areContiguous<VolatileField, AlignmentField, OrderingField>(),
-      "Bitfields must be contiguous");
+  using ElementWiseField = BoolBitfieldElementT<OrderingField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AlignmentField,
+                                        OrderingField, ElementWiseField>(),
+                "Bitfields must be contiguous");
 
   void AssertOK();
 
@@ -322,6 +357,9 @@ public:
                      AtomicOrdering Order,
                      SyncScope::ID SSID = SyncScope::System,
                      InsertPosition InsertBefore = nullptr);
+  LLVM_ABI StoreInst(Value *Val, Value *Ptr,
+                     const LoadStoreInstProperties &Props,
+                     InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
@@ -332,6 +370,12 @@ public:
 
   /// Specify whether this is a volatile store or not.
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this is an elementwise atomic store.
+  bool isElementwise() const { return getSubclassData<ElementWiseField>(); }
+
+  /// Specify whether this is an elementwise atomic store or not.
+  void setElementwise(bool V) { setSubclassData<ElementWiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -371,6 +415,21 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the properties of this store instruction.
+  LoadStoreInstProperties getProperties() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID(),
+            isElementwise()};
+  }
+
+  /// Sets the properties of this store instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
+    setElementwise(Props.IsElementwise);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -3076,76 +3135,13 @@ struct OperandTraits<ReturnInst> : public VariadicOperandTraits<ReturnInst> {};
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ReturnInst, Value)
 
 //===----------------------------------------------------------------------===//
-//                               BranchInst Class
-//===----------------------------------------------------------------------===//
-
-//===---------------------------------------------------------------------------
-/// Conditional or Unconditional Branch instruction.
-///
-class LLVM_DEPRECATED("Use UncondBrInst/CondBrInst/Instruction instead", "")
-    BranchInst : public Instruction {
-protected:
-  BranchInst(Type *Ty, unsigned Opcode, AllocInfo AllocInfo,
-             InsertPosition InsertBefore = nullptr)
-      : Instruction(Ty, Opcode, AllocInfo, InsertBefore) {}
-
-public:
-  LLVM_DEPRECATED("Use UncondBrInst::Create instead", "UncondBrInst::Create")
-  static BranchInst *Create(BasicBlock *IfTrue,
-                            InsertPosition InsertBefore = nullptr);
-
-  LLVM_DEPRECATED("Use CondBrInst::Create instead", "CondBrInst::Create")
-  static BranchInst *Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                            Value *Cond, InsertPosition InsertBefore = nullptr);
-
-  /// Transparently provide more efficient getOperand methods.
-  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
-
-  // Defined out-of-line below to access CondBrInst.
-  LLVM_DEPRECATED("Use isa<UncondBrInst> instead", "isa<UncondBrInst>")
-  bool isUnconditional() const;
-  LLVM_DEPRECATED("Use isa<CondBrInst> instead", "isa<CondBrInst>")
-  bool isConditional() const;
-
-  LLVM_DEPRECATED("Cast to CondBrInst", "")
-  Value *getCondition() const;
-  LLVM_DEPRECATED("Cast to CondBrInst", "")
-  void setCondition(Value *V);
-
-  /// Swap the successors of this branch instruction.
-  ///
-  /// Swaps the successors of the branch instruction. This also swaps any
-  /// branch weight metadata associated with the instruction so that it
-  /// continues to map correctly to each operand.
-  LLVM_DEPRECATED("Cast to CondBrInst", "")
-  void swapSuccessors();
-
-  // Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const Instruction *I) {
-    return (I->getOpcode() == Instruction::UncondBr ||
-            I->getOpcode() == Instruction::CondBr);
-  }
-  static bool classof(const Value *V) {
-    return isa<Instruction>(V) && classof(cast<Instruction>(V));
-  }
-};
-
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-
-template <>
-struct OperandTraits<BranchInst> : public VariadicOperandTraits<BranchInst> {};
-
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BranchInst, Value)
-
-//===----------------------------------------------------------------------===//
 //                               UncondBrInst Class
 //===----------------------------------------------------------------------===//
 
 //===---------------------------------------------------------------------------
 /// Unconditional Branch instruction.
 ///
-class UncondBrInst : public BranchInst {
+class UncondBrInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
 
   UncondBrInst(const UncondBrInst &BI);
@@ -3167,15 +3163,6 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-private:
-  // Hide methods.
-  using BranchInst::getCondition;
-  using BranchInst::isConditional;
-  using BranchInst::isUnconditional;
-  using BranchInst::setCondition;
-  using BranchInst::swapSuccessors;
-
-public:
   unsigned getNumSuccessors() const { return 1; }
 
   BasicBlock *getSuccessor(unsigned i = 0) const {
@@ -3220,7 +3207,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UncondBrInst, Value)
 //===---------------------------------------------------------------------------
 /// Conditional Branch instruction.
 ///
-class CondBrInst : public BranchInst {
+class CondBrInst : public Instruction {
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
   CondBrInst(const CondBrInst &BI);
@@ -3234,11 +3221,6 @@ protected:
   friend class Instruction;
 
   LLVM_ABI CondBrInst *cloneImpl() const;
-
-private:
-  // Hide methods.
-  using BranchInst::isConditional;
-  using BranchInst::isUnconditional;
 
 public:
   static CondBrInst *Create(Value *Cond, BasicBlock *IfTrue,
@@ -3296,40 +3278,6 @@ struct OperandTraits<CondBrInst> : public FixedNumOperandTraits<CondBrInst, 3> {
 };
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CondBrInst, Value)
-
-//===----------------------------------------------------------------------===//
-//                     BranchInst Out-Of-Line Functions
-//===----------------------------------------------------------------------===//
-
-inline BranchInst *BranchInst::Create(BasicBlock *IfTrue,
-                                      InsertPosition InsertBefore) {
-  return UncondBrInst::Create(IfTrue, InsertBefore);
-}
-
-inline BranchInst *BranchInst::Create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                                      Value *Cond,
-                                      InsertPosition InsertBefore) {
-  return CondBrInst::Create(Cond, IfTrue, IfFalse, InsertBefore);
-}
-
-inline bool BranchInst::isConditional() const { return isa<CondBrInst>(this); }
-inline bool BranchInst::isUnconditional() const {
-  return isa<UncondBrInst>(this);
-}
-
-inline Value *BranchInst::getCondition() const {
-  return cast<CondBrInst>(this)->getCondition();
-}
-inline void BranchInst::setCondition(Value *V) {
-  cast<CondBrInst>(this)->setCondition(V);
-}
-
-inline void BranchInst::swapSuccessors() {
-  cast<CondBrInst>(this)->swapSuccessors();
-}
-
-// Suppress deprecation warnings from BranchInst.
-LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                               SwitchInst Class

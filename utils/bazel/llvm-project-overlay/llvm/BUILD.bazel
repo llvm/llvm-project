@@ -51,7 +51,9 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
-    "utils/lit/lit.py",
+    # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
+    "include/llvm/TargetParser/TripleName.def",
+    "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
@@ -454,6 +456,7 @@ cc_library(
             "-pthread",
             "-ldl",
         ],
+        "@platforms//os:emscripten": [],
         "//conditions:default": [
             "-pthread",
             "-ldl",
@@ -655,16 +658,20 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TransformUtils",
     ],
 )
 
@@ -848,22 +855,19 @@ cc_binary(
 
 cc_binary(
     name = "llvm-min-tblgen",
-    srcs = [
+    srcs = glob(["utils/TableGen/Basic/*.h"]) + [
+        "utils/TableGen/Basic/AMDGPUTargetDefEmitter.cpp",
         "utils/TableGen/Basic/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
-        "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
+        "utils/TableGen/Basic/PredicateExpanderDag.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
         "utils/TableGen/Basic/RuntimeLibcalls.cpp",
-        "utils/TableGen/Basic/RuntimeLibcalls.h",
         "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
-        "utils/TableGen/Basic/SDNodeProperties.h",
-        "utils/TableGen/Basic/SequenceToOffsetTable.h",
         "utils/TableGen/Basic/TableGen.cpp",
-        "utils/TableGen/Basic/TableGen.h",
         "utils/TableGen/Basic/VTEmitter.cpp",
         "utils/TableGen/llvm-min-tblgen.cpp",
     ],
@@ -1436,7 +1440,10 @@ cc_library(
             "include/llvm/Analysis/Utils/*.h",
         ],
     ) + ["include/llvm-c/Analysis.h"],
-    copts = llvm_copts + ["-ftrapping-math"],
+    copts = llvm_copts + select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": ["-ftrapping-math"],
+    }),
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
@@ -1614,6 +1621,28 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AMDGPUTargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/AMDGPUTargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPU.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "R600TargetParserDefGen",
+    tbl_outs = {"include/llvm/TargetParser/R600TargetParserDef.inc": ["-gen-amdgpu-target-def"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AMDGPU/R600.td",
+    deps = [
+        ":AMDGPUTargetTdFiles",
+        ":CommonTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "PPCGenTargetFeaturesGen",
     tbl_outs = {"include/llvm/TargetParser/PPCGenTargetFeatures.inc": ["-gen-target-features"]},
     tblgen = ":llvm-tblgen",
@@ -1657,8 +1686,10 @@ cc_library(
         "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64FeatPriorities.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/AMDGPUTargetParserDef.inc",
         "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
+        "include/llvm/TargetParser/R600TargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
     ]),
@@ -2337,6 +2368,7 @@ cc_library(
         ":TransformUtils",
         ":asm_printer_defs",
         ":config",
+        ":runtime_libcalls_gen",
         ":vt_gen",
     ],
 )
@@ -3702,18 +3734,24 @@ gentbl_cc_library(
     name = "amdgpu_isel_target_gen",
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = {
-        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPreLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPUPostLegalizerCombiner",
+            "-gisel-extended-llt",
         ],
         "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=AMDGPURegBankCombiner",
+            "-gisel-extended-llt",
         ],
     },
     tblgen = ":llvm-tblgen",
@@ -4311,6 +4349,16 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "orc_headers",
+    hdrs = glob([
+        "include/llvm/ExecutionEngine/Orc/**/*.h",
+        "include/llvm/ExecutionEngine/JITLink/**/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+)
+
+cc_library(
     name = "JITLink",
     srcs = glob([
         "lib/ExecutionEngine/JITLink/*.cpp",
@@ -4318,7 +4366,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/JITLink/*.h",
-        "include/llvm/ExecutionEngine/Orc/*.h",
     ]),
     copts = llvm_copts,
     deps = [
@@ -4336,6 +4383,7 @@ cc_library(
         ":TargetParser",
         ":TransformUtils",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4400,6 +4448,7 @@ cc_library(
         ":TransformUtils",
         ":WindowsDriver",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4409,10 +4458,10 @@ cc_library(
         "lib/ExecutionEngine/Orc/Shared/*.cpp",
     ]),
     hdrs = glob([
-        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-    ] + [
+        "include/llvm/ExecutionEngine/Orc/Shared/**/*.h",
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4426,6 +4475,7 @@ cc_library(
         ":Support",
         ":Target",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4485,6 +4535,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":config",
+        ":orc_headers",
     ],
 )
 
@@ -4811,7 +4862,15 @@ cc_library(
     hdrs = glob(["include/llvm/HTTP/*.h"]),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lcrypt32",
+            "-lwinhttp",
+        ],
+        ":is_windows_clang_cl": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        ":is_windows_msvc": [
             "crypt32.lib",
             "winhttp.lib",
         ],
@@ -4918,6 +4977,7 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -5493,6 +5553,7 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -6586,11 +6647,13 @@ cc_library(
     ],
 )
 
-py_binary(
+# Compatibility alias: the lit sources have moved to //llvm/utils/lit:lit
+# (a py_library, matching where the upstream tool actually lives). Kept
+# here so downstream callers of `//llvm:lit` don't break.
+alias(
     name = "lit",
     testonly = True,
-    srcs = ["utils/lit/lit.py"] + glob(["utils/lit/lit/**/*.py"]),
-    imports = ["utils/lit"],
+    actual = "//llvm/utils/lit:lit_bin",
 )
 
 py_binary(
@@ -6927,23 +6990,6 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
-        ":config",
-    ],
-)
-
-cc_binary(
-    name = "llvm-sim",
-    testonly = True,
-    srcs = glob([
-        "tools/llvm-sim/*.cpp",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":IRReader",
-        ":Support",
         ":config",
     ],
 )

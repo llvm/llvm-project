@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -249,6 +250,31 @@ static void printProcessorValue(AsmPrinter &printer,
                                 const GPUParallelDimAttr &attr) {
   gpu::Processor processor = indexToGpuProcessor(attr.getValue().getInt());
   printer << gpu::stringifyProcessor(processor);
+}
+
+static FailureOr<SmallVector<GPUParallelDimAttr>>
+parseGPUParallelDimList(AsmParser &parser) {
+  SmallVector<GPUParallelDimAttr> parDims;
+  auto parseParDim = [&]() -> ParseResult {
+    GPUParallelDimAttr dim;
+    if (parseProcessorValue(parser, dim))
+      return failure();
+    parDims.push_back(dim);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, parseParDim,
+                                     "list of OpenACC GPU parallel dimensions"))
+    return failure();
+  return parDims;
+}
+
+static void printGPUParallelDimList(AsmPrinter &printer,
+                                    ArrayRef<GPUParallelDimAttr> dims) {
+  printer << "[";
+  llvm::interleaveComma(dims, printer, [&printer](const GPUParallelDimAttr &p) {
+    printProcessorValue(printer, p);
+  });
+  printer << "]";
 }
 
 } // namespace
@@ -809,6 +835,14 @@ LogicalResult GPUSharedMemoryOp::verify() {
         "dynamic_shared_memory_scaling_bytes and "
         "dynamic_shared_memory_fixed_bytes must both be present or both be "
         "absent");
+  if (auto scalingAttr = getDynamicSharedMemoryScalingBytesAttr())
+    if (scalingAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_scaling_bytes must be "
+                         "non-negative");
+  if (auto fixedAttr = getDynamicSharedMemoryFixedBytesAttr())
+    if (fixedAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_fixed_bytes must be "
+                         "non-negative");
 
   auto resultTy = cast<MemRefType>(getResult().getType());
   auto addrSpace =
@@ -1015,26 +1049,29 @@ bool GPUParallelDimsAttr::hasOnlyThreadXLevel() const {
 }
 
 Attribute GPUParallelDimsAttr::parse(AsmParser &parser, Type type) {
-  auto delimiter = AsmParser::Delimiter::Square;
-  SmallVector<GPUParallelDimAttr> parDims;
-  auto parseParDim = [&]() -> ParseResult {
-    GPUParallelDimAttr dim;
-    if (parseProcessorValue(parser, dim))
-      return failure();
-    parDims.push_back(dim);
-    return success();
-  };
-  if (parser.parseCommaSeparatedList(delimiter, parseParDim,
-                                     "list of OpenACC GPU parallel dimensions"))
+  FailureOr<SmallVector<GPUParallelDimAttr>> parDims =
+      parseGPUParallelDimList(parser);
+  if (failed(parDims))
     return {};
-  return GPUParallelDimsAttr::get(parser.getContext(), parDims);
+  return GPUParallelDimsAttr::get(parser.getContext(), *parDims);
 }
 
 void GPUParallelDimsAttr::print(AsmPrinter &printer) const {
-  printer << "[";
-  llvm::interleaveComma(getArray(), printer,
-                        [&printer](const GPUParallelDimAttr &p) {
-                          printProcessorValue(printer, p);
-                        });
-  printer << "]";
+  printGPUParallelDimList(printer, getArray());
+}
+
+//===----------------------------------------------------------------------===//
+// ActiveParDimsAttr
+//===----------------------------------------------------------------------===//
+
+Attribute ActiveParDimsAttr::parse(AsmParser &parser, Type type) {
+  FailureOr<SmallVector<GPUParallelDimAttr>> parDims =
+      parseGPUParallelDimList(parser);
+  if (failed(parDims))
+    return {};
+  return ActiveParDimsAttr::get(parser.getContext(), *parDims);
+}
+
+void ActiveParDimsAttr::print(AsmPrinter &printer) const {
+  printGPUParallelDimList(printer, getArray());
 }

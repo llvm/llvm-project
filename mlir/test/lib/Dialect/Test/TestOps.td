@@ -3313,6 +3313,8 @@ def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
 //===----------------------------------------------------------------------===//
 
 def TestResource : Resource<"TestResource">;
+def ParameterizedTestResource : Resource<"TestResource",
+    [{::mlir::StringAttr::get(getContext(), "test parameter")}]>;
 
 def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
   let arguments = (ins
@@ -3327,6 +3329,11 @@ def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
 
 def TestEffectsOpB : TEST_Op<"op_with_effects_b",
     [MemoryEffects<[MemWrite<TestResource, 0>]>]>;
+
+def TestParameterizedEffectsOp : TEST_Op<"op_with_parameterized_effects"> {
+  let arguments =
+      (ins Arg<AnyMemRef, "", [MemRead<ParameterizedTestResource>]>:$input);
+}
 
 def TestEffectsRead : TEST_Op<"op_with_memread",
     [MemoryEffects<[MemRead]>]> {
@@ -3686,6 +3693,22 @@ def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
   }];
 }
 
+// Same as `TestOpWithVariadicSegmentProperties`, but the assembly format uses
+// the bulk `type(operands)` / `type(results)` directives instead of spelling
+// out the type of each individual variadic group. This prevents the printer
+// from eliding `operandSegmentSizes` / `resultSegmentSizes` from the
+// `<{...}>` properties dictionary (since there is no other way to recover the
+// segment sizes on re-parse), so this op exercises the parser's ability to
+// read those trait-injected properties back out of `prop-dict`.
+def TestOpWithBulkTypesAndSegmentProperties : TEST_Op<"variadic_segment_prop_bulk_type",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results) prop-dict attr-dict
+  }];
+}
+
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
   let arguments = (ins IntProp<"int64_t">:$first, IntProp<"int64_t">:$second);
@@ -3977,6 +4000,27 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
     "attr-dict `:` functional-type(operands, results)";
 }
 
+// A call-like operation whose first result is produced by the operation itself
+// and is *not* forwarded from the callee. Only the trailing results are
+// forwarded.
+def TestCallAndProduceOp : TEST_Op<"call_and_produce",
+    [DeclareOpInterfaceMethods<CallOpInterface, ["getForwardedResults"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Variadic<AnyType>:$forwarded_operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+  let results = (outs
+    I1:$produced_status,
+    Variadic<AnyType>:$forwarded
+  );
+  let assemblyFormat =
+    "$callee `(` $forwarded_operands `)` attr-dict "
+    "`:` functional-type(operands, results)";
+}
+
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
@@ -4239,7 +4283,7 @@ def TestTensorWithFutureLayoutOp
   }];
 
   let arguments = (ins TestMemRefLayoutAttr:$layout);
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
         ::mlir::OpOperand&,
@@ -4285,10 +4329,10 @@ def TestForceNewLayoutOp
   }];
 
   let arguments = (ins
-    AnyRankedTensor:$input,
+    Bufferization_TensorLikeTypeInterface:$input,
     TestMemRefLayoutAttr:$layout
   );
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -4320,6 +4364,16 @@ def TestForceNewLayoutOp
                /*isDefinite=*/true}};
     }
   }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

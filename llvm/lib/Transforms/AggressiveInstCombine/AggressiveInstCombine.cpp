@@ -954,31 +954,14 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // All these can be lowered to @llvm.cttz.i32/64 intrinsics.
-static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
-  LoadInst *LI = dyn_cast<LoadInst>(&I);
-  if (!LI)
-    return false;
-
-  Type *AccessType = LI->getType();
-  if (!AccessType->isIntegerTy())
-    return false;
-
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
-    return false;
-
-  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
-    return false;
-
-  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  APInt ModOffset(BW, 0);
-  SmallMapVector<Value *, APInt, 4> VarOffsets;
-  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
-      VarOffsets.size() != 1 || ModOffset != 0)
-    return false;
-  auto [GepIdx, GEPScale] = VarOffsets.front();
-
+//
+// This shares its initial match (load from a GEP into a constant table with
+// a single variable index) with tryToRecognizeTableBasedLog2() below; see
+// tryToRecognizeTableBasedCttzOrLog2().
+static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
+                                         GlobalVariable *GVTable, Value *GepIdx,
+                                         const APInt &GEPScale,
+                                         const DataLayout &DL) {
   Value *X1;
   const APInt *MulConst, *ShiftConst, *AndCst = nullptr;
   // Check that the gep variable index is ((x & -x) * MulConst) >> ShiftConst.
@@ -1004,25 +987,26 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
   Type *XType = X1->getType();
   auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
-  Value *ZExtOrTrunc = nullptr;
+  Value *Res = B.CreateZExtOrTrunc(Cttz, AccessType);
 
-  if (DefinedForZero) {
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
-  } else {
+  if (!DefinedForZero) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
-    // produce the value from the table.
+    // produce the value from the table. Emit the select in AccessType with elem
+    // 0 unchanged, as the table's element type may be wider than the input
+    // type (and directly truncating ZeroTableElem into the input type could
+    // incorrectly drop bits).
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+    Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
     if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      if (Instruction *SelectI = dyn_cast<Instruction>(Res))
         SelectI->setMetadata(
             LLVMContext::MD_prof,
             MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
@@ -1030,11 +1014,9 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
-
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
 
-  LI->replaceAllUsesWith(ZExtOrTrunc);
+  LI->replaceAllUsesWith(Res);
 
   return true;
 }
@@ -1121,9 +1103,148 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
 // %0 = load i8, ptr %arrayidx, align 1
 //
+// CASE 3:
+// A variant where the most-significant set bit of the OR-cascade result is
+// isolated via subtraction before the multiply, i.e.
+// table[((v - (v >> 1)) * MulConst) >> ShiftConst], analogous to how the
+// cttz pattern isolates the least-significant set bit via `x & -x`:
+//
+// %shr = lshr i64 %v, 1
+// %or = or i64 %shr, %v
+// ... (rest of the OR-cascade, as above) ...
+// %shr11 = lshr i64 %or10, 1
+// %sub = sub i64 %or10, %shr11
+// %mul = mul i64 %sub, 571347909858961602
+// %shr12 = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr12
+// %0 = load i8, ptr %arrayidx, align 1
+//
 // All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
-static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
+//
+// This shares its initial match (load from a GEP into a constant table with
+// a single variable index) with tryToRecognizeTableBasedCttz() above; see
+// tryToRecognizeTableBasedCttzOrLog2().
+static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
+                                         GlobalVariable *GVTable, Value *GepIdx,
+                                         const APInt &GEPScale,
+                                         const DataLayout &DL,
                                          TargetTransformInfo &TTI) {
+  Value *X;
+  const APInt *MulConst, *ShiftConst;
+  // Check that the gep variable index is (x * MulConst) >> ShiftConst.
+  auto MatchInner =
+      m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
+  if (!match(GepIdx, m_CastOrSelf(MatchInner)))
+    return false;
+
+  // The multiplied value may instead be the OR-cascade result with its
+  // most-significant set bit isolated first via `v - (v >> 1)`: since every
+  // bit below the MSB of an OR-cascade result is 1, this subtraction leaves
+  // just the MSB, mirroring how tryToRecognizeTableBasedCttz() isolates the
+  // least-significant set bit via `x & -x`.
+  bool IsolatedMSB = false;
+  Value *V;
+  if (match(X, m_Sub(m_Value(V), m_LShr(m_Deferred(V), m_SpecificInt(1))))) {
+    IsolatedMSB = true;
+    X = V;
+  }
+
+  unsigned InputBits = X->getType()->getScalarSizeInBits();
+  if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
+    return false;
+
+  // Verify shift amount.
+  // TODO: Allow other shift amounts when we have proper test coverage.
+  if (*ShiftConst != InputBits - Log2_32(InputBits))
+    return false;
+
+  // Match the sequence of OR operations with right shifts by powers of 2.
+  for (unsigned ShiftAmt = InputBits / 2; ShiftAmt != 0; ShiftAmt /= 2) {
+    Value *Y;
+    if (!match(X, m_c_Or(m_LShr(m_Value(Y), m_SpecificInt(ShiftAmt)),
+                         m_Deferred(Y))))
+      return false;
+    X = Y;
+  }
+
+  if (!GEPScale.isIntN(InputBits))
+    return false;
+
+  if (IsolatedMSB) {
+    // With the MSB isolated, the multiplicand for an input whose MSB is at bit
+    // Idx is a single set bit rather than a run of low bits, which is exactly
+    // what isCTTZTable() checks for (there is no additional masking here, so
+    // pass an all-ones mask).
+    if (!isCTTZTable(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     APInt::getAllOnes(InputBits), AccessType, InputBits,
+                     GEPScale.zextOrTrunc(InputBits), DL))
+      return false;
+  } else {
+    if (!isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     AccessType, InputBits, GEPScale.zextOrTrunc(InputBits),
+                     DL))
+      return false;
+  }
+
+  ConstantInt *ZeroTableElem = cast<ConstantInt>(
+      ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
+
+  // Use InputBits - 1 - ctlz(X) to compute log2(X).
+  IRBuilder<> B(LI);
+  ConstantInt *BoolConst = B.getTrue();
+  Type *XType = X->getType();
+
+  // Check the the backend has an efficient ctlz instruction.
+  // FIXME: Teach the backend to emit the original code when ctlz isn't
+  // supported like we do for cttz.
+  IntrinsicCostAttributes Attrs(
+      Intrinsic::ctlz, XType,
+      {PoisonValue::get(XType), /*is_zero_poison=*/BoolConst});
+  InstructionCost Cost =
+      TTI.getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
+  if (Cost > TargetTransformInfo::TCC_Basic)
+    return false;
+
+  Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
+
+  Value *Result;
+  if (ZeroTableElem->getZExtValue() == InputBits - 1) {
+    Value *Ctlz =
+        B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, B.getFalse()});
+    Result = B.CreateAnd(B.CreateNot(Ctlz), InputBitsM1);
+  } else {
+    Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+    Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
+
+    // The table won't produce a sensible result for 0.
+    Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+    Value *Select =
+        B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+    // The true branch of select handles the log2(0) case, which is rare.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+        SelectI->setMetadata(
+            LLVMContext::MD_prof,
+            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+    }
+
+    Result = Select;
+  }
+
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Result, AccessType);
+
+  LI->replaceAllUsesWith(ZExtOrTrunc);
+
+  return true;
+}
+
+// Match a table-based cttz or log2 implementation. These patterns share a
+// load from a global table pattern that we match first. Then we try the
+// specific matches for the cttz and log2 patterns.
+static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
+                                               const DataLayout &DL,
+                                               TargetTransformInfo &TTI) {
   LoadInst *LI = dyn_cast<LoadInst>(&I);
   if (!LI)
     return false;
@@ -1148,78 +1269,12 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
     return false;
   auto [GepIdx, GEPScale] = VarOffsets.front();
 
-  Value *X;
-  const APInt *MulConst, *ShiftConst;
-  // Check that the gep variable index is (x * MulConst) >> ShiftConst.
-  auto MatchInner =
-      m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
-  if (!match(GepIdx, m_CastOrSelf(MatchInner)))
-    return false;
+  if (tryToRecognizeTableBasedCttz(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                   DL))
+    return true;
 
-  unsigned InputBits = X->getType()->getScalarSizeInBits();
-  if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
-    return false;
-
-  // Verify shift amount.
-  // TODO: Allow other shift amounts when we have proper test coverage.
-  if (*ShiftConst != InputBits - Log2_32(InputBits))
-    return false;
-
-  // Match the sequence of OR operations with right shifts by powers of 2.
-  for (unsigned ShiftAmt = InputBits / 2; ShiftAmt != 0; ShiftAmt /= 2) {
-    Value *Y;
-    if (!match(X, m_c_Or(m_LShr(m_Value(Y), m_SpecificInt(ShiftAmt)),
-                         m_Deferred(Y))))
-      return false;
-    X = Y;
-  }
-
-  if (!GEPScale.isIntN(InputBits) ||
-      !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
-                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
-    return false;
-
-  ConstantInt *ZeroTableElem = cast<ConstantInt>(
-      ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-
-  // Use InputBits - 1 - ctlz(X) to compute log2(X).
-  IRBuilder<> B(LI);
-  ConstantInt *BoolConst = B.getTrue();
-  Type *XType = X->getType();
-
-  // Check the the backend has an efficient ctlz instruction.
-  // FIXME: Teach the backend to emit the original code when ctlz isn't
-  // supported like we do for cttz.
-  IntrinsicCostAttributes Attrs(
-      Intrinsic::ctlz, XType,
-      {PoisonValue::get(XType), /*is_zero_poison=*/BoolConst});
-  InstructionCost Cost =
-      TTI.getIntrinsicInstrCost(Attrs, TargetTransformInfo::TCK_SizeAndLatency);
-  if (Cost > TargetTransformInfo::TCC_Basic)
-    return false;
-
-  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
-
-  Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
-  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
-
-  // The table won't produce a sensible result for 0.
-  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
-  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
-
-  // The true branch of select handles the log2(0) case, which is rare.
-  if (!ProfcheckDisableMetadataFixes) {
-    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-      SelectI->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-  }
-
-  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
-
-  LI->replaceAllUsesWith(ZExtOrTrunc);
-
-  return true;
+  return tryToRecognizeTableBasedLog2(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                      DL, TTI);
 }
 
 /// This is used by foldLoadsRecursive() to capture a Root Load node which is
@@ -1365,6 +1420,12 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
+  // Reject if the combined size of the loads exceeds the target type size.
+  // This avoids attempting to emit an invalid ZExt (from wider to narrower
+  // type) when out-of-bounds shifts lead to matching too many loads.
+  if (LoadSize1 + LoadSize2 > X->getType()->getScalarSizeInBits())
+    return false;
+
   // Update LOps
   AAMDNodes AATags1 = LOps.AATags;
   AAMDNodes AATags2 = LI2->getAAMetadata();
@@ -1432,9 +1493,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
-  if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+  // Zero extend if needed.
+  NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
@@ -1455,7 +1515,11 @@ struct PartStore {
   StoreInst *Store;
 
   bool isCompatibleWith(const PartStore &Other) const {
-    return PtrBase == Other.PtrBase && Val == Other.Val;
+    // Offset stripping looks through addrspacecasts, so an equal PtrBase does
+    // not imply an equal address space, and thus not an equal PtrOffset width.
+    return PtrBase == Other.PtrBase && Val == Other.Val &&
+           Store->getPointerAddressSpace() ==
+               Other.Store->getPointerAddressSpace();
   }
 
   bool operator<(const PartStore &Other) const {
@@ -2046,9 +2110,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   if (!CalledFunc)
     return false;
 
-  LibFunc LF;
-  if (!TLI.getLibFunc(*CalledFunc, LF) ||
-      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+  LibFunc LF = TLI.getLibFunc(*CalledFunc);
+  if (!isLibFuncEmittable(CI->getModule(), &TLI, LF))
     return false;
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -2427,8 +2490,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
-      MadeChange |= tryToRecognizeTableBasedLog2(I, DL, TTI);
+      MadeChange |= tryToRecognizeTableBasedCttzOrLog2(I, DL, TTI);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);

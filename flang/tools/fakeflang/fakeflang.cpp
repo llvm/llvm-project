@@ -25,6 +25,11 @@
 ///
 /// The most relevant preprocessor definition is __flang__ which leads to
 /// CMAKE_Fortran_COMPILER_ID="LLVMFlang".
+///
+/// Whether a particular invocation is CMake's compiler detection is detected
+/// via the filename or when the FLANG_BOOTSTRAP_PROBE environment variable is
+/// set. Any other invocation is forwarded, unmodified, to the real flang
+/// driver that must live right next to this program.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,13 +39,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
 #include <cstdint>
 #include <string>
-
-#define STRINGIFY(X) #X
-#define STRINGIFY_EXPANDED(X) STRINGIFY(X)
 
 static std::string getExecutablePath(const char *argv0) {
   void *anchor = (void *)(intptr_t)getExecutablePath;
@@ -52,30 +55,64 @@ static std::string getExecutablePath(const char *argv0) {
   exit(EXIT_FAILURE);
 }
 
-int main(int argc, const char **argv) {
-  llvm::InitLLVM X(argc, argv);
-  std::string SelfExe = getExecutablePath(argv[0]);
+/// A CMake compiler detection probe is assumed if
+///
+/// 1. FLANG_BOOTSTRAP_PROBE=1 has been set during runtimes-configure
+///    (requires CMake 4.2+), or
+///
+/// 2. the file being compiled is CMakeFortranCompilerId.F; all supported
+///    CMake versions below 4.2 use this filename.
+static bool isCompilerIdProbe(llvm::ArrayRef<const char *> OrigArgs) {
+  if (llvm::sys::Process::GetEnv("FLANG_BOOTSTRAP_PROBE"))
+    return true;
 
-  if (llvm::sys::path::stem(SelfExe) == "flang") {
-    llvm::WithColor::remark(llvm::errs())
-        << "This is a mock flang compiler; Use '" STRINGIFY_EXPANDED(
-               CMAKE_MAKE_PROGRAM) " flang' to replace it with the real "
-                                   "compiler\n";
-  }
+  return llvm::any_of(OrigArgs, [](const char *Arg) {
+    llvm::StringRef fname = llvm::sys::path::filename(Arg);
+    return fname == "CMakeFortranCompilerId.F" || fname == "CMakeTestGNU.c";
+  });
+}
+
+/// Forward the invocation directly to Flang. Only reached for invocations
+/// that are not CMake's compiler-id probe, i.e. after the caller's build has
+/// already established (through a real dependency, not this mock) that
+/// flang is up to date.
+static int main_flang(
+    llvm::StringRef SelfExe, llvm::ArrayRef<const char *> OrigArgs) {
+  llvm::SmallString<256> FlangExe{llvm::sys::path::parent_path(SelfExe)};
+  llvm::sys::path::append(FlangExe, "flang");
+
+  llvm::SmallVector<llvm::StringRef> Args;
+  Args.push_back(FlangExe);
+  llvm::append_range(Args, OrigArgs);
+
+  std::string ErrMsg;
+  int RC = llvm::sys::ExecuteAndWait(FlangExe, Args, /*Env=*/std::nullopt,
+      /*Redirects=*/{}, /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
+  if (RC < 0)
+    fail(ErrMsg);
+  return RC;
+}
+
+/// Use Clang to emulate Flang's preprocessor, answering CMake's
+/// compiler-id probe without needing the real flang to be ready yet.
+static int main_probe(
+    llvm::StringRef SelfExe, llvm::ArrayRef<const char *> OrigArgs) {
+  llvm::WithColor::warning(llvm::errs(), "fakeflang")
+      << "Emulating flang for compiler probing\nFor anything other than "
+         "bootstrapping the Flang toolchain, just use 'flang' instead\n";
 
   llvm::SmallString<256> ClangExe{llvm::sys::path::parent_path(SelfExe)};
   llvm::sys::path::append(ClangExe, "clang");
 
-  llvm::ArrayRef<const char *> AllArgs(argv, static_cast<size_t>(argc));
-  bool hasDashO = AllArgs.size() > 1 &&
-      llvm::any_of(AllArgs.drop_front(), [](const char *Arg) {
-        return llvm::StringRef(Arg).starts_with("-o");
-      });
+  bool hasDashO = llvm::any_of(OrigArgs,
+      [](const char *Arg) { return llvm::StringRef(Arg).starts_with("-o"); });
 
   // Assemble invocation of the preprocessor
   // `-E`: Invoke the preprocessor
   // `-P`: No #line directives
   // `-D..`: Preprocessor definitions that CMake probes
+  // `-D__fakeflang_probe__=1`: To identify fakeflang probe mode
+  //                            (for regression tests)
   // `-fgnuc-version=0`: Prevent clang from implicitly defining __GNUC__;
   //                     CMake's CMakeFortranCompilerId.F.in checks
   //                     __GNUC__before __flang__, so without this flag the
@@ -89,10 +126,8 @@ int main(int argc, const char **argv) {
       "-D__flang_major__=" FLANG_VERSION_MAJOR_STRING,
       "-D__flang_minor__=" FLANG_VERSION_MINOR_STRING,
       "-D__flang_patchlevel__=" FLANG_VERSION_PATCHLEVEL_STRING,
-      "-fgnuc-version=0", "-x", "c"});
-  for (int I = 1; I < argc; ++I) {
-    llvm::StringRef arg = argv[I];
-
+      "-D__fakeflang_probe__=1", "-fgnuc-version=0", "-x", "c"});
+  for (llvm::StringRef arg : OrigArgs) {
     // Sometime CMake tries to invoke the preprocessor
     if (arg == "-cpp" || arg == "-E")
       continue;
@@ -108,4 +143,16 @@ int main(int argc, const char **argv) {
   if (RC < 0)
     fail(ErrMsg);
   return RC;
+}
+
+int main(int argc, const char **argv) {
+  llvm::InitLLVM X(argc, argv);
+  std::string SelfExe = getExecutablePath(argv[0]);
+  llvm::ArrayRef<const char *> OrigArgs(argv, static_cast<size_t>(argc));
+  OrigArgs = OrigArgs.drop_front();
+
+  if (isCompilerIdProbe(OrigArgs))
+    return main_probe(SelfExe, OrigArgs);
+
+  return main_flang(SelfExe, OrigArgs);
 }

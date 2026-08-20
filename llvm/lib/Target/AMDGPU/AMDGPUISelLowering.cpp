@@ -30,6 +30,7 @@
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "AMDGPUGenCallingConv.inc"
 
 static cl::opt<bool> AMDGPUBypassSlowDiv(
@@ -645,14 +646,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(64);
   setMaxDivRemBitWidthSupported(64);
   setMaxLargeFPConvertBitWidthSupported(64);
-}
-
-bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  const auto Flags = Op.getNode()->getFlags();
-  if (Flags.hasNoSignedZeros())
-    return true;
-
-  return false;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1546,16 +1539,20 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   const GlobalValue *GV = G->getGlobal();
 
   if (!MFI->isModuleEntryFunction()) {
-    auto IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
-    if (std::optional<uint32_t> Address =
-            AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV)) {
+    bool IsNamedBarrier = AMDGPU::isNamedBarrier(*cast<GlobalVariable>(GV));
+    std::optional<uint32_t> Address =
+        AMDGPUMachineFunctionInfo::getLDSAbsoluteAddress(*GV);
+    if (!Address && IsNamedBarrier)
+      llvm_unreachable("named barrier should have an assigned address");
+    if (Address) {
       if (IsNamedBarrier) {
         unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
-      return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
-    } else if (IsNamedBarrier) {
-      llvm_unreachable("named barrier should have an assigned address");
+      // A constant byte offset (e.g. from a GEP into an array of named
+      // barriers) folds directly into the fixed LDS address.
+      return DAG.getConstant(*Address + G->getOffset(), SDLoc(Op),
+                             Op.getValueType());
     }
   }
 
@@ -1582,15 +1579,14 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
       return DAG.getPOISON(Op.getValueType());
     }
 
-    // XXX: What does the value of G->getOffset() mean?
-    assert(G->getOffset() == 0 &&
-         "Do not know what to do with an non-zero offset");
-
     // TODO: We could emit code to handle the initialization somewhere.
     // We ignore the initializer for now and legalize it to allow selection.
     // The initializer will anyway get errored out during assembly emission.
     unsigned Offset = MFI->allocateLDSGlobal(DL, *cast<GlobalVariable>(GV));
-    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
+    // A constant byte offset (e.g. from a GEP into an array of named barriers)
+    // folds directly into the allocated LDS address.
+    return DAG.getConstant(Offset + G->getOffset(), SDLoc(Op),
+                           Op.getValueType());
   }
   return SDValue();
 }
@@ -2011,13 +2007,12 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 }
 
 // This is a shortcut for integer division because we have fast i32<->f32
-// conversions, and fast f32 reciprocal instructions. The fractional part of a
-// float is enough to accurately represent up to a 24-bit integer.
-SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
-                                            bool Sign) const {
+// conversions, and fast f32 reciprocal instructions.
+SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
+                                                 bool Sign) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  assert(VT == MVT::i32 && "LowerDIVREM24 expects an i32");
+  assert(VT == MVT::i32 && "LowerDIVREMToFloat expects an i32");
 
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
@@ -2034,10 +2029,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   } else {
     KnownBits LHSKnown = DAG.computeKnownBits(LHS);
     KnownBits RHSKnown = DAG.computeKnownBits(RHS);
-    APInt U24Max = APInt::getLowBitsSet(32, 24);
-    if (LHSKnown.getMaxValue().ugt(U24Max) ||
-        RHSKnown.getMaxValue().ugt(U24Max))
-      return SDValue();
+
     LHSSignBits = LHSKnown.countMinLeadingZeros();
     RHSSignBits = RHSKnown.countMinLeadingZeros();
   }
@@ -2048,22 +2040,16 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   if (Sign)
     ++DivBits;
 
+  // In order to avoid problems due to 1 ulp accuracy issues with v_rcp_f32,
+  // limit LowerDIVREMToFloat to:
+  //   [-0x400000,0x3FFFFF] for Sign
+  //   [ 0x000000,0x3FFFFF] for !Sign
+  // This matches what is done in expandDivRemToFloatImpl.
+  if (DivBits > (Sign ? 23 : 22))
+    return SDValue();
+
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   ISD::NodeType ToInt = Sign ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-
-  SDValue jq = DAG.getConstant(1, DL, IntVT);
-
-  if (Sign) {
-    // char|short jq = ia ^ ib;
-    jq = DAG.getNode(ISD::XOR, DL, VT, LHS, RHS);
-
-    // jq = jq >> (bitsize - 2)
-    jq = DAG.getNode(ISD::SRA, DL, VT, jq,
-                     DAG.getConstant(BitSize - 2, DL, VT));
-
-    // jq = jq | 0x1
-    jq = DAG.getNode(ISD::OR, DL, VT, jq, DAG.getConstant(1, DL, VT));
-  }
 
   // int ia = (int)LHS;
   SDValue ia = LHS;
@@ -2071,8 +2057,22 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   // int ib, (int)RHS;
   SDValue ib = RHS;
 
-  // float fa = (float)ia;
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This is
+  // dealt with by incrementing fa by 1ulp:
+  //   fq = (fa+1ulp)*recip(fb)
+  // This will increase fa's magnitude by at most 0.5
+  // (i.e. when fabs(fa)==0x400000 the LSB of the mantissa represents 0.5).
+  // Thus, this method is safe since fa must be incremented by at least 1.0
+  // for the quotient to increase by one.
   SDValue fa = DAG.getNode(ToFp, DL, FltVT, ia);
+  SDValue faAsInt = DAG.getNode(ISD::BITCAST, DL, MVT::i32, fa);
+  SDValue faIncremented = DAG.getNode(ISD::ADD, DL, MVT::i32, faAsInt,
+                                      DAG.getConstant(1, DL, MVT::i32));
+  fa = DAG.getNode(ISD::BITCAST, DL, FltVT, faIncremented);
 
   // float fb = (float)ib;
   SDValue fb = DAG.getNode(ToFp, DL, FltVT, ib);
@@ -2083,59 +2083,12 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   // fq = trunc(fq);
   fq = DAG.getNode(ISD::FTRUNC, DL, FltVT, fq);
 
-  // float fqneg = -fq;
-  SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
-
-  MachineFunction &MF = DAG.getMachineFunction();
-
-  bool UseFmadFtz = false;
-  if (Subtarget->isGCN()) {
-    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    UseFmadFtz =
-        MFI->getMode().FP32Denormals != DenormalMode::getPreserveSign();
-  }
-
-  // float fr = mad(fqneg, fb, fa);
-  unsigned OpCode = !Subtarget->hasMadMacF32Insts() ? (unsigned)ISD::FMA
-                    : UseFmadFtz ? (unsigned)AMDGPUISD::FMAD_FTZ
-                                 : (unsigned)ISD::FMAD;
-  SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
-
   // int iq = (int)fq;
-  SDValue iq = DAG.getNode(ToInt, DL, IntVT, fq);
-
-  // fr = fabs(fr);
-  fr = DAG.getNode(ISD::FABS, DL, FltVT, fr);
-
-  // fb = fabs(fb);
-  fb = DAG.getNode(ISD::FABS, DL, FltVT, fb);
-
-  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-
-  // int cv = fr >= fb;
-  SDValue cv = DAG.getSetCC(DL, SetCCVT, fr, fb, ISD::SETOGE);
-
-  // jq = (cv ? jq : 0);
-  jq = DAG.getNode(ISD::SELECT, DL, VT, cv, jq, DAG.getConstant(0, DL, VT));
-
-  // dst = iq + jq;
-  SDValue Div = DAG.getNode(ISD::ADD, DL, VT, iq, jq);
+  SDValue Div = DAG.getNode(ToInt, DL, IntVT, fq);
 
   // Rem needs compensation, it's easier to recompute it
   SDValue Rem = DAG.getNode(ISD::MUL, DL, VT, Div, RHS);
   Rem = DAG.getNode(ISD::SUB, DL, VT, LHS, Rem);
-
-  // Truncate to number of bits this divide really is.
-  if (Sign) {
-    SDValue InRegSize
-      = DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), DivBits));
-    Div = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Div, InRegSize);
-    Rem = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Rem, InRegSize);
-  } else {
-    SDValue TruncMask = DAG.getConstant((UINT64_C(1) << DivBits) - 1, DL, VT);
-    Div = DAG.getNode(ISD::AND, DL, VT, Div, TruncMask);
-    Rem = DAG.getNode(ISD::AND, DL, VT, Rem, TruncMask);
-  }
 
   return DAG.getMergeValues({ Div, Rem }, DL);
 }
@@ -2366,7 +2319,7 @@ SDValue AMDGPUTargetLowering::LowerUDIVREM(SDValue Op,
   }
 
   if (VT == MVT::i32) {
-    if (SDValue Res = LowerDIVREM24(Op, DAG, false))
+    if (SDValue Res = LowerDIVREMToFloat(Op, DAG, false))
       return Res;
   }
 
@@ -2421,7 +2374,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
 
   if (VT == MVT::i32) {
-    if (SDValue Res = LowerDIVREM24(Op, DAG, true))
+    if (SDValue Res = LowerDIVREMToFloat(Op, DAG, true))
       return Res;
   }
 
@@ -5269,7 +5222,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5317,7 +5270,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
+    if (!N0->getFlags().hasNoSignedZeros() && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -5379,6 +5332,12 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     return Res;
   }
   case AMDGPUISD::FMED3: {
+    // med3 sorts a NaN input as smaller than everything regardless of its sign,
+    // so negating all operands does not sign-flip the median when an input may
+    // be NaN.
+    if (!N0->getFlags().hasNoNaNs())
+      return SDValue();
+
     SDValue Ops[3];
     for (unsigned I = 0; I < 3; ++I)
       Ops[I] = DAG.getNode(ISD::FNEG, SL, VT, N0->getOperand(I), N0->getFlags());
@@ -5539,6 +5498,16 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
                                   DAG.getConstant(0x7fff, SL, SrcVT));
     return DAG.getNode(ISD::FP16_TO_FP, SL, N->getValueType(0), IntFAbs);
   }
+  case ISD::FP_ROUND: {
+    SDLoc SL(N);
+    SDValue CvtSrc = N0.getOperand(0);
+
+    // fabs (fp_round x) -> fp_round (fabs x)
+    SDValue Abs = DAG.getNode(ISD::FABS, SL, CvtSrc.getValueType(), CvtSrc,
+                              N->getFlags());
+    return DAG.getNode(ISD::FP_ROUND, SL, N->getValueType(0), Abs,
+                       N0.getOperand(1), N0->getFlags());
+  }
   default:
     return SDValue();
   }
@@ -5550,10 +5519,11 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   if (!CFP)
     return SDValue();
 
-  // XXX - Should this flush denormals?
-  const APFloat &Val = CFP->getValueAPF();
-  APFloat One(Val.getSemantics(), "1.0");
-  return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
+  std::optional<APFloat> Result = AMDGPU::evaluateRcp(CFP->getValueAPF());
+  if (!Result)
+    return SDValue();
+
+  return DCI.DAG.getConstantFP(*Result, SDLoc(N), N->getValueType(0));
 }
 
 bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
@@ -5719,14 +5689,11 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (OffsetVal == 0) {
       // This is already sign / zero extended, so try to fold away extra BFEs.
-      unsigned SignBits =  Signed ? (32 - WidthVal + 1) : (32 - WidthVal);
-
-      unsigned OpSignBits = DAG.ComputeNumSignBits(BitsFrom);
-      if (OpSignBits >= SignBits)
-        return BitsFrom;
-
       EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), WidthVal);
       if (Signed) {
+        if (DAG.ComputeNumSignBits(BitsFrom) >= 32 - WidthVal + 1)
+          return BitsFrom;
+
         // This is a sign_extend_inreg. Replace it to take advantage of existing
         // DAG Combines. If not eliminated, we will match back to BFE during
         // selection.
@@ -5736,6 +5703,10 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
         return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i32, BitsFrom,
                            DAG.getValueType(SmallVT));
       }
+
+      if (DAG.MaskedValueIsZero(BitsFrom,
+                                APInt::getHighBitsSet(32, 32 - WidthVal)))
+        return BitsFrom;
 
       return DAG.getZeroExtendInReg(BitsFrom, DL, SmallVT);
     }
@@ -5835,11 +5806,26 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
     switch (Op.getConstantOperandVal(0)) {
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
-    case Intrinsic::amdgcn_set_inactive:
     case Intrinsic::amdgcn_wwm: {
       if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
                                OriginalDemandedElts, Known, TLO, Depth + 1))
         return true;
+      break;
+    }
+    case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_set_inactive_chain_arg: {
+      // The result is operand 1 in active lanes and operand 2 in inactive
+      // lanes, so the known bits are the intersection of both operands.
+      KnownBits KnownValue, KnownInactive;
+      if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                               OriginalDemandedElts, KnownValue, TLO,
+                               Depth + 1))
+        return true;
+      if (SimplifyDemandedBits(Op.getOperand(2), OriginalDemandedBits,
+                               OriginalDemandedElts, KnownInactive, TLO,
+                               Depth + 1))
+        return true;
+      Known = KnownValue.intersectWith(KnownInactive);
       break;
     }
     default:
@@ -6291,14 +6277,9 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY: {
-    if (SNaN)
-      return true;
-
-    // TODO: Can check no nans on one of the operands for each one, but which
-    // one?
-    return false;
-  }
+  case AMDGPUISD::FMAX_LEGACY:
+    return DAG.isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
+           DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
   case AMDGPUISD::FMUL_LEGACY:
   case AMDGPUISD::CVT_PKRTZ_F16_F32: {
     if (SNaN)

@@ -6,9 +6,6 @@
 HowToUseInstrMappings
 ```
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -277,16 +274,21 @@ templates which should take care of the work for you.
 
 All targets should declare a global `Target` object which is used to
 represent the target during registration.  Then, in the target's `TargetInfo`
-library, the target should define that object and use the `RegisterTarget`
-template to register the target.  For example, the Sparc registration code
-looks like this:
+library (under `lib/Target/XXX/TargetInfo/`), the target should define that
+object and use the `RegisterTarget` template to register the target.  A target
+may register multiple variants in the same `LLVMInitializeXXXTargetInfo`
+function.  For example, the Sparc registration code (in
+`SparcTargetInfo.cpp`) looks like this:
 
 ```c++
-Target llvm::getTheSparcTarget();
+Target &llvm::getTheSparcTarget() {
+  static Target TheSparcTarget;
+  return TheSparcTarget;
+}
 
 extern "C" void LLVMInitializeSparcTargetInfo() {
-  RegisterTarget<Triple::sparc, /*HasJIT=*/false>
-    X(getTheSparcTarget(), "sparc", "Sparc");
+  RegisterTarget<Triple::sparc, /*HasJIT=*/false> X(getTheSparcTarget(),
+                                                    "sparc", "Sparc", "Sparc");
 }
 ```
 
@@ -303,7 +305,7 @@ extern "C" void LLVMInitializeSparcAsmPrinter() {
 }
 ```
 
-For more information, see "[`llvm/Target/TargetRegistry.h`][TargetRegistry]".
+For more information, see "[`llvm/MC/TargetRegistry.h`][TargetRegistry]".
 
 [TargetRegistry]: doxygen:TargetRegistry_8h-source.html
 
@@ -630,14 +632,21 @@ for the SPARC implementation in `SparcRegisterInfo.cpp`:
 * `getReservedRegs` --- Returns a bitset indexed by physical register
   numbers, indicating if a particular register is unavailable.
 
-* `hasFP` --- Return a Boolean indicating if a function should have a
+* `eliminateFrameIndex` --- Eliminate abstract frame indices from
+  instructions that may use them.
+
+### Implement a subclass of `TargetFrameLowering`
+
+Stack frame layout and prologue/epilogue code generation are handled
+separately in `XXXFrameLowering`, which implements the interface described
+in `TargetFrameLowering.h`.  Here is a list of functions that are overridden
+for the SPARC implementation in `SparcFrameLowering.cpp`:
+
+* `hasFPImpl` --- Returns a Boolean indicating if a function should have a
   dedicated frame pointer register.
 
 * `eliminateCallFramePseudoInstr` --- If call frame setup or destroy pseudo
   instructions are used, this can be called to eliminate them.
-
-* `eliminateFrameIndex` --- Eliminate abstract frame indices from
-  instructions that may use them.
 
 * `emitPrologue` --- Insert prologue code into the function.
 
