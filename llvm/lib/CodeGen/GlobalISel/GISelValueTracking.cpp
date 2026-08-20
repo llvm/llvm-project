@@ -2669,6 +2669,20 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_SUBVECTOR: {
+    // Offset the demanded elts by the subvector index.
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    APInt DemandedSrcElts;
+    if (SrcTy.isScalableVector()) {
+      DemandedSrcElts = APInt(1, 1);
+    } else {
+      uint64_t Idx = MI.getOperand(2).getImm();
+      unsigned NumSrcElts = SrcTy.getNumElements();
+      DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    }
+    return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1);
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector
     // element referenced by the shuffle.

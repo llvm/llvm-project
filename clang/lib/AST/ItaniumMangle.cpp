@@ -4695,7 +4695,7 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Counter";
   if (Attrs.IsArray)
     Str += "_Array";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     Str += "_MS";
   if (T->hasContainedType())
     Str += "_CT";
@@ -5314,6 +5314,15 @@ recurse:
     mangleUnresolvedName(ULE->getQualifier(), ULE->getName(),
                          ULE->getTemplateArgs(), ULE->getNumTemplateArgs(),
                          Arity);
+    break;
+  }
+
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
     break;
   }
 

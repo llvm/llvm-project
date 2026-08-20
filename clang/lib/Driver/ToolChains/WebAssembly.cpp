@@ -120,6 +120,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
 
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
+
   // On `wasip2` the default linker is `wasm-component-ld` which wraps the
   // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
   // to find it to avoid it needing to hunt and rediscover or search `PATH` for

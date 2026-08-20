@@ -1129,7 +1129,7 @@ bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr);
 // Can a scalar real or complex RHS expression in an assignment be rewritten
 // as a split sum expression tree?
 bool CanBuildSplitSumExpressionTree(
-    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
+    FoldingContext &, const Expr<SomeType> &lhs, const Expr<SomeType> &rhs);
 
 // Try to rewrite a scalar real or complex sum as a split sum expression tree.
 std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(

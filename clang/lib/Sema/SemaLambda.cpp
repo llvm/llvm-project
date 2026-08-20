@@ -1513,10 +1513,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
-
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))
@@ -1524,6 +1520,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // This represents the function body for the lambda function, check if we
+  // have to apply optnone due to a pragma.
+  AddRangeBasedOptnone(Method);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);

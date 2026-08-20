@@ -2150,10 +2150,10 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
   if (DAG.MFI.isDynamicVGPREnabled()) {
     unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(),
-        PressureBefore.getVGPRNum(false));
+        ST, PressureBefore.getVGPRNum(false),
+        DAG.MFI.getDynamicVGPRBlockSize());
     unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
-        ST, DAG.MFI.getDynamicVGPRBlockSize(), PressureAfter.getVGPRNum(false));
+        ST, PressureAfter.getVGPRNum(false), DAG.MFI.getDynamicVGPRBlockSize());
     if (BlocksAfter > BlocksBefore)
       return true;
   }
@@ -2310,8 +2310,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
     RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
     if (DAG.ShouldTrackLaneMasks) {
       // Adjust liveness and add missing dead+read-undef flags.
-      SlotIndex SlotIdx = DAG.LIS->getInstructionIndex(*MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, SlotIdx, MI);
+      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, *MI);
     } else {
       // Adjust for missing dead-def flags.
       RegOpers.detectDeadDefs(*MI, *DAG.LIS);
