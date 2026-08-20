@@ -1,4 +1,5 @@
 import errno
+import functools
 import itertools
 import math
 import numbers
@@ -465,7 +466,7 @@ def memoize(f):
     return memoized
 
 
-@memoize
+@functools.lru_cache(maxsize=None)
 def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
     """
     Run a command with subprocess.run, with a cache global to this llvm-lit invocation
