@@ -974,10 +974,10 @@ static void dumpConstraint(ArrayRef<Entry> C,
 #endif
 
 /// Splits the induction phi \p PN into the start value, coming from the loop
-/// predecessor \p LoopPred, and the step value, coming from inside the loop.
-/// Returns {nullptr, nullptr} if \p PN has other incoming values.
-static std::pair<Value *, Value *> getStartAndStep(const PHINode &PN,
-                                                   const BasicBlock *LoopPred) {
+/// predecessor \p LoopPred, and the backedge value, coming from inside the
+/// loop. Returns {nullptr, nullptr} if \p PN has other incoming values.
+static std::pair<Value *, Value *>
+getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   assert(PN.getBasicBlockIndex(LoopPred) >= 0 &&
          "LoopPred must be a predecessor of the phi's block");
   if (PN.getNumIncomingValues() != 2)
@@ -1032,7 +1032,7 @@ void State::addLowerBoundsForHeaderInductions(BasicBlock &BB) {
     if (!PN.getType()->isIntegerTy() && !PN.getType()->isPointerTy())
       continue;
 
-    auto [Start, Step] = getStartAndStep(PN, LoopPred);
+    auto [Start, Step] = getStartAndBackedgeValue(PN, LoopPred);
     if (!Start)
       continue;
 
@@ -1101,7 +1101,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (!LoopPred || !L->isLoopInvariant(B))
     return;
 
-  auto [StartValue, Backedge] = getStartAndStep(*PN, LoopPred);
+  auto [StartValue, Backedge] = getStartAndBackedgeValue(*PN, LoopPred);
   const APInt *StepOffset = nullptr;
   const SCEV *StartSCEV = nullptr;
   if (match(Backedge, m_c_Add(m_Specific(PN), m_APInt(StepOffset)))) {
