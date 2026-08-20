@@ -458,6 +458,14 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   void *TgtPteeBase =
       calculateTargetPointeeBase(HstPteeBase, HstPteeBegin, TgtPteeBegin);
 
+  // Record the pointer against its pointee, so that it can be told later
+  // whether the pointee's entry may take a device allocation. Recorded even
+  // when the shadow pointer below turns out to be a duplicate. Only settling
+  // consults this, so there is nothing to record when no mapping can share
+  // storage with the original.
+  if (mayShareStorageWithOriginal(PM->getRequirements()))
+    Device.getMappingInfo().recordAttachedPointer(HstPteeBegin, HstPtrAddr);
+
   // Add shadow pointer tracking
   if (!PtrTPR.getEntry()->addShadowPointer(
           ShadowPtrInfoTy{HstPtrAddr, TgtPtrAddr, TgtPteeBase, HstPtrSize})) {
@@ -520,6 +528,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     StateInfoTy *StateInfo, bool FromMapper) {
   assert(StateInfo && "StateInfo must be available for targetDataBegin for "
                       "handling ATTACH and TO/TOFROM map-types.");
+
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -815,6 +824,407 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// For this purpose, we insert a data_fence before the first
 /// pointer-attachment, (3), to ensure that all pending transfers finish first.
+/// Settle which side of each pending attachment holds device storage, before
+/// any attachment is performed.
+///
+/// Attachment assigns the corresponding pointer. If the storage holding the
+/// pointer is shared with the original then that assignment writes a device
+/// address into the original pointer, which the program is still using: the
+/// host cannot dereference it while the attachment lasts, and another task
+/// reading it concurrently sees a device address. Restoring it at the end of
+/// the region does not make that window correct.
+///
+/// One of the two sides has to change its storage so that this does not happen,
+/// and only a mapping created by this construct can, since the device address
+/// of a mapping that was already present may have been obtained by the program,
+/// through omp_get_mapped_ptr, use_device_ptr, or having been passed to an
+/// earlier kernel.
+///
+/// Both changes are available:
+///
+///  - releasing the pointee's allocation, so that the address to be attached is
+///    the original one and the assignment is a no-op;
+///  - giving the pointer a device allocation, so that the assignment does not
+///    reach the original pointer.
+///
+/// Releasing is preferred, because it settles that attachment outright, whereas
+/// giving a pointer device storage moves that pointer's own address and so
+/// propagates to everything attached to it. But an attachment whose pointee is
+/// device-bound from an enclosing construct has no choice: the pointee cannot
+/// be released, so the pointer must be upgraded. Those obligations therefore
+/// have to be known before anything is released, or a release can turn out to
+/// have been pointless -- and worse, releasing something that was obliged to
+/// stay device-bound reintroduces a conflict that then has no resolution.
+///
+/// Hence three phases, none of which mutates before the obligations are known:
+///
+///     attach entries
+///           |
+///           v
+///   +-------------------+   an attachment only happens if a side was newly
+///   | 0. eligible?      |   mapped here, or it is unconditional; settling one
+///   +-------------------+   that will be skipped would report a false conflict
+///           |
+///           v
+///   +-------------------+   seed: pointees that are device-bound and NOT
+///   | 1. forced set     |   allocated here, so immovable
+///   |    (no mutation)  |   propagate: anything attached inside a forced entry
+///   +-------------------+   is forced too, transitively
+///           |
+///           v
+///   +-------------------+   upgrade those pointers, cascading backwards over
+///   | 2. forced         |   the recorded attachments and the pending ones
+///   |    upgrades       |   reaching a pre-existing host-bound entry => error
+///   +-------------------+
+///           |
+///           v
+///   +-------------------+   everything still unsettled has a pointee this
+///   | 3. releases,      |   construct allocated, so release it; skip the
+///   |    to a fixpoint  |   forced set. Repeat: a release can leave another
+///   +-------------------+   attachment unsettled, since the storage just
+///           |               released may itself hold a pointer whose own
+///           v               pointee is device-bound
+///     all settled
+///
+/// Each phase moves in one direction only, and phase 3 never touches what phase
+/// 2 forced, so no decision is ever reversed. Phase 2 terminates because an
+/// upgrade makes an entry device-bound and only host-bound entries are visited;
+/// phase 3 terminates because each release frees an allocation made by this
+/// construct and none are created here.
+///
+/// The mapping table is held for all three phases, because the decisions are
+/// taken against entry pointers and the table has to stay stable across them.
+/// That serialises concurrent constructs on the same device for the duration,
+/// including across the allocations, transfers and the wait before a release
+/// frees storage. Worth revisiting if that contention is ever measured to
+/// matter, but not separable from the decisions themselves.
+///
+/// Attachments for PTR_AND_OBJ map entries are not covered: those are performed
+/// as the mapping is processed, before this runs, so such a pointer can still
+/// be assigned a device address in its original storage. That encoding is on
+/// its way out, as attachment becomes the way every pointer mapping is
+/// expressed, and the remaining users are shrinking: declare-mapper members no
+/// longer lower to it after a recent change to mapper code generation, which
+/// leaves C++ by-reference captures. Deferring these the same way is what fixes
+/// it, once they are no longer emitted at all.
+static int settleAttachStorage(DeviceTy &Device, StateInfoTy &StateInfo,
+                               AsyncInfoTy &AsyncInfo) {
+  // When no mapping can share storage with the original, attachment cannot
+  // assign a device address to an original pointer and there is nothing to
+  // settle. Leave before taking the mapping table, which the phases below would
+  // otherwise hold for their duration.
+  if (!mayShareStorageWithOriginal(PM->getRequirements()))
+    return OFFLOAD_SUCCESS;
+
+  MappingInfoTy &MappingInfo = Device.getMappingInfo();
+  MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+      MappingInfo.HostDataToTargetMap.getExclusiveAccessor();
+
+  auto FindEntry = [&](void *HstPtrBegin,
+                       int64_t Size) -> HostDataToTargetTy * {
+    LookupResult LR = MappingInfo.lookupMapping(HDTTMap, HstPtrBegin, Size);
+    HostDataToTargetTy *Entry =
+        LR.Flags.IsContained ? LR.TPR.getEntry() : nullptr;
+    // The result holds a lock on the entry until it is destroyed, and the
+    // callers below need to look the same entry up again.
+    LR.TPR.setEntry(nullptr);
+    return Entry;
+  };
+
+  // Names are only available when the program was compiled with -g; they make
+  // the diagnostics below usable, and cost nothing when absent.
+  auto NameOf = [](map_var_info_t Name) -> std::string {
+    return Name ? getNameFromMapping(Name) : "unknown";
+  };
+  auto NameOfEntry = [&](HostDataToTargetTy *Entry) -> std::string {
+    return Entry ? NameOf(Entry->HstPtrName) : "unknown";
+  };
+
+  const bool TreatAttachAutoAsAlways =
+      MappingConfig::get().TreatAttachAutoAsAlways;
+
+  // Attachment is only performed when one of the two sides was newly mapped by
+  // this construct, or when it is unconditional. processAttachEntries applies
+  // the same test; settling an entry it will skip would report a conflict for
+  // an assignment that never happens.
+  auto WillAttach = [&](const AttachMapInfo &AttachEntry) {
+    if ((AttachEntry.MapType & OMP_TGT_MAPTYPE_ALWAYS) ||
+        TreatAttachAutoAsAlways)
+      return true;
+    return StateInfo.wasNewlyMapped(AttachEntry.PointeeBegin).has_value() ||
+           StateInfo.wasNewlyMapped(AttachEntry.PointerBase).has_value();
+  };
+
+  // An attachment only needs settling if the pointer is shared with the
+  // original, and the pointee has device storage for its address to differ.
+  auto NeedsSettling = [&](void *HstPtr, int64_t PtrSize,
+                           void *HstPteeBegin) -> bool {
+    HostDataToTargetTy *PtrEntry = FindEntry(HstPtr, PtrSize);
+    if (!PtrEntry || !PtrEntry->isHostBound())
+      return false;
+    HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+    return PteeEntry && !PteeEntry->isHostBound();
+  };
+
+  // An attachment whose pointee cannot give its allocation up -- it was made by
+  // an enclosing construct, so its device address may already have been
+  // obtained by the program -- can only be settled by giving the pointer device
+  // storage. That obligation propagates: the pointer's storage then holds a
+  // device address, so anything attached to it must hold one too. Work the
+  // whole set out before touching anything, because a pointee reached this way
+  // must not be released even though this construct allocated it.
+  llvm::DenseSet<HostDataToTargetTy *> ForcedDevice;
+  {
+    SmallVector<HostDataToTargetTy *> Worklist;
+    auto Force = [&](HostDataToTargetTy *Entry) {
+      if (Entry && ForcedDevice.insert(Entry).second)
+        Worklist.push_back(Entry);
+    };
+
+    for (const auto &AttachEntry : StateInfo.AttachEntries) {
+      if (!WillAttach(AttachEntry) ||
+          StateInfo.wasNewlyAllocated(AttachEntry.PointeeBegin).has_value())
+        continue;
+      HostDataToTargetTy *PteeEntry =
+          FindEntry(AttachEntry.PointeeBegin, /*Size=*/0);
+      if (PteeEntry && !PteeEntry->isHostBound())
+        Force(PteeEntry);
+    }
+
+    while (!Worklist.empty()) {
+      HostDataToTargetTy *Entry = Worklist.pop_back_val();
+      for (const auto &AttachEntry : StateInfo.AttachEntries) {
+        if (!WillAttach(AttachEntry))
+          continue;
+        uintptr_t Ptee = reinterpret_cast<uintptr_t>(AttachEntry.PointeeBegin);
+        if (Ptee < Entry->HstPtrBegin || Ptee >= Entry->HstPtrEnd)
+          continue;
+        Force(FindEntry(AttachEntry.PointerBase, AttachEntry.PointerSize));
+      }
+    }
+  }
+
+  // Settle those attachments first, so that the releases below see the storage
+  // this obligation implies instead of undoing their own work.
+  for (const auto &AttachEntry : StateInfo.AttachEntries) {
+    void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
+    if (!WillAttach(AttachEntry) ||
+        !NeedsSettling(HstPtr, AttachEntry.PointerSize,
+                       AttachEntry.PointeeBegin))
+      continue;
+
+    if (!ForcedDevice.contains(FindEntry(AttachEntry.PointeeBegin, /*Size=*/0)))
+      continue;
+
+    // Give the pointer, and whatever points at it, device storage. A pointer
+    // attached to storage within an entry designates that entry's current
+    // address, so an entry cannot take a device allocation while such a pointer
+    // is itself unable to hold a device address.
+    // Each item carries the pointer that made it need device storage, so a
+    // failure can name the chain that led there rather than just its end.
+    struct UpgradeItem {
+      void **HstPtr;
+      int64_t PtrSize;
+      void **ReachedFrom;
+    };
+    SmallVector<UpgradeItem> ToUpgrade;
+    ToUpgrade.push_back({HstPtr, AttachEntry.PointerSize, nullptr});
+
+    while (!ToUpgrade.empty()) {
+      auto [UpHstPtr, UpPtrSize, ReachedFrom] = ToUpgrade.pop_back_val();
+
+      HostDataToTargetTy *UpEntry = FindEntry(UpHstPtr, UpPtrSize);
+      if (!UpEntry || !UpEntry->isHostBound())
+        continue;
+
+      if (!StateInfo.wasNewlyMapped(UpHstPtr).has_value()) {
+        std::string PtrName = NameOf(AttachEntry.Pointername);
+        std::string BlockerName = NameOfEntry(UpEntry);
+
+        // Say which mapping cannot hold a device address, and why. When the
+        // upgrade cascaded, that is not the pointer of this attach entry but
+        // something that points into its storage.
+        if (ReachedFrom)
+          MESSAGE("could not do pointer attachment for %s (" DPxMOD
+                  "): the pointee is device-bound, so %s (" DPxMOD
+                  ") would have to be device-bound as well, but it has an "
+                  "existing host-bound mapping that cannot be changed\n",
+                  PtrName.c_str(), DPxPTR(HstPtr), BlockerName.c_str(),
+                  DPxPTR(UpHstPtr));
+        else
+          MESSAGE("could not do pointer attachment for %s (" DPxMOD
+                  "): the pointer has an existing host-bound mapping and the "
+                  "pointee is device-bound, so neither can be changed\n",
+                  PtrName.c_str(), DPxPTR(HstPtr));
+        return OFFLOAD_FAIL;
+      }
+
+      if (MappingInfo.giveEntryDeviceStorage(HDTTMap, UpEntry, AsyncInfo,
+                                             StateInfo.HostPathToRanges) !=
+          OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
+
+      // Anything attached to storage within the entry just moved, so it has to
+      // be able to hold a device address too. That covers both the attachments
+      // already in place from earlier constructs and the ones this construct is
+      // about to perform, which are not recorded yet.
+      auto IsInsideUpEntry = [&](void *HstPteeBegin) {
+        return reinterpret_cast<uintptr_t>(HstPteeBegin) >=
+                   UpEntry->HstPtrBegin &&
+               reinterpret_cast<uintptr_t>(HstPteeBegin) < UpEntry->HstPtrEnd;
+      };
+
+      for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
+        if (!IsInsideUpEntry(AttachedPtee))
+          continue;
+        for (void **AttachedPtr : AttachedPtrs)
+          ToUpgrade.push_back({AttachedPtr, sizeof(void *), UpHstPtr});
+      }
+
+      for (const auto &Pending : StateInfo.AttachEntries) {
+        if (!IsInsideUpEntry(Pending.PointeeBegin))
+          continue;
+        ToUpgrade.push_back({reinterpret_cast<void **>(Pending.PointerBase),
+                             Pending.PointerSize, UpHstPtr});
+      }
+    }
+  }
+
+  // Whatever is still unsettled has a pointee this construct allocated, so it
+  // can be released. That is preferred over giving the pointer device storage:
+  // it settles the attachment outright, whereas an upgrade propagates to
+  // everything that points at the pointer.
+  //
+  // Releasing one pointee can leave another attachment unsettled, because the
+  // storage just released may itself hold a pointer whose own pointee is
+  // device-bound. So keep going until a pass releases nothing. Each release
+  // frees an allocation made by this construct, and none are created here, so
+  // this terminates.
+  for (bool Released = true; Released;) {
+    Released = false;
+    for (const auto &AttachEntry : StateInfo.AttachEntries) {
+      void **HstPtr = reinterpret_cast<void **>(AttachEntry.PointerBase);
+      void *HstPteeBegin = AttachEntry.PointeeBegin;
+      if (!WillAttach(AttachEntry) ||
+          !NeedsSettling(HstPtr, AttachEntry.PointerSize, HstPteeBegin))
+        continue;
+
+      // Only a pointee allocated for this construct may give its allocation up,
+      // and not one whose storage is required to hold device addresses.
+      if (!StateInfo.wasNewlyAllocated(HstPteeBegin).has_value())
+        continue;
+
+      HostDataToTargetTy *PteeEntry = FindEntry(HstPteeBegin, /*Size=*/0);
+      if (ForcedDevice.contains(PteeEntry))
+        continue;
+#ifndef NDEBUG
+      // Giving the allocation up moves the pointee's device address, which
+      // would strand any pointer already attached to it. That cannot happen
+      // here: the allocation was made by this construct, so no earlier
+      // construct could have attached to it, and this pre-pass runs before any
+      // attachment is performed for this one.
+      for (auto &[AttachedPtee, AttachedPtrs] : MappingInfo.AttachedPointers) {
+        (void)AttachedPtrs;
+        assert((reinterpret_cast<uintptr_t>(AttachedPtee) <
+                    PteeEntry->HstPtrBegin ||
+                reinterpret_cast<uintptr_t>(AttachedPtee) >=
+                    PteeEntry->HstPtrEnd) &&
+               "Releasing an allocation that a pointer is already attached to");
+      }
+#endif
+      if (MappingInfo.shareEntryStorageWithOriginal(
+              HDTTMap, PteeEntry, AsyncInfo) != OFFLOAD_SUCCESS)
+        return OFFLOAD_FAIL;
+      Released = true;
+    }
+  }
+
+  return OFFLOAD_SUCCESS;
+}
+
+/// Issue the transfers that were held back until the storage was settled.
+///
+/// An entry that ended up sharing storage with the original needs none: the
+/// device reads the original storage, which already holds the data. Anything
+/// else has a device allocation that is now known to be staying.
+static int flushDeferredSubmits(DeviceTy &Device, StateInfoTy &StateInfo,
+                                AsyncInfoTy &AsyncInfo) {
+  if (StateInfo.DeferredSubmits.empty())
+    return OFFLOAD_SUCCESS;
+
+  MappingInfoTy &MappingInfo = Device.getMappingInfo();
+
+  // Hold the mapping table across the whole flush. The entry has to be found
+  // again rather than remembered, because another thread deleting the mapping
+  // can erase it in between, and the checks below and the transfer itself all
+  // have to see the same entry: releasing the table between looking it up and
+  // copying into it would let it be erased in that window instead.
+  MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+      MappingInfo.HostDataToTargetMap.getExclusiveAccessor();
+
+  for (const auto &[HstPtrBegin, Size] : StateInfo.DeferredSubmits) {
+    LookupResult LR = MappingInfo.lookupMapping(HDTTMap, HstPtrBegin, Size);
+    HostDataToTargetTy *Entry =
+        LR.Flags.IsContained ? LR.TPR.getEntry() : nullptr;
+
+    if (!Entry) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): the mapping is gone";
+      LR.TPR.setEntry(nullptr);
+      continue;
+    }
+
+    if (Entry->isHostBound()) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): its storage is shared with the original";
+      LR.TPR.setEntry(nullptr);
+      continue;
+    }
+
+    // The clobber check that guards this copy ran when the transfer was
+    // recorded, so it did not see a pointer attached to this storage later in
+    // the mapping. Repeat it: such a pointer holds a device address, and
+    // copying the original storage over it would put the host address back. A
+    // shadow pointer counts as overlapping if any of it lies in the copied
+    // range, not only if it starts there.
+    auto FailOnPtrFound = [HstPtrBegin = HstPtrBegin,
+                           Size = Size](ShadowPtrInfoTy &SP) {
+      uintptr_t SPBegin = reinterpret_cast<uintptr_t>(SP.HstPtrAddr);
+      uintptr_t SPEnd = SPBegin + SP.PtrSize;
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(HstPtrBegin);
+      if (SPBegin < Begin + Size && Begin < SPEnd)
+        return OFFLOAD_FAIL;
+      return OFFLOAD_SUCCESS;
+    };
+    if (Entry->foreachShadowPointerInfo(FailOnPtrFound) == OFFLOAD_FAIL) {
+      ODBG(ODT_Mapping) << "Dropping the deferred transfer of " << Size
+                        << " bytes (hst:" << HstPtrBegin
+                        << "): a pointer is attached within it";
+      LR.TPR.setEntry(nullptr);
+      continue;
+    }
+
+    void *TgtPtrBegin = reinterpret_cast<void *>(
+        Entry->TgtPtrBegin +
+        (reinterpret_cast<uintptr_t>(HstPtrBegin) - Entry->HstPtrBegin));
+    ODBG(ODT_Mapping) << "Moving " << Size
+                      << " deferred bytes (hst:" << HstPtrBegin
+                      << ") -> (tgt:" << TgtPtrBegin << ")";
+    int Ret =
+        Device.submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo, Entry);
+    LR.TPR.setEntry(nullptr);
+    if (Ret != OFFLOAD_SUCCESS) {
+      REPORT() << "Copying data to device failed.";
+      return OFFLOAD_FAIL;
+    }
+  }
+
+  StateInfo.DeferredSubmits.clear();
+  return OFFLOAD_SUCCESS;
+}
+
 int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -830,10 +1240,18 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
   }
 
   if (StateInfo.AttachEntries.empty())
-    return OFFLOAD_SUCCESS;
+    return flushDeferredSubmits(Device, StateInfo, AsyncInfo);
 
   ODBG(ODT_Mapping) << "Processing " << StateInfo.AttachEntries.size()
                     << " deferred ATTACH map entries";
+
+  // Decide which side of each attachment holds device storage before performing
+  // any of them, so that a release cannot strand an earlier attachment.
+  if (settleAttachStorage(Device, StateInfo, AsyncInfo) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
+
+  if (flushDeferredSubmits(Device, StateInfo, AsyncInfo) != OFFLOAD_SUCCESS)
+    return OFFLOAD_FAIL;
 
   bool TreatAttachAutoAsAlways = MappingConfig::get().TreatAttachAutoAsAlways;
   if (TreatAttachAutoAsAlways)
@@ -865,7 +1283,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
-      bool WasNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr).has_value();
+      bool WasNewlyAllocated = StateInfo.wasNewlyMapped(Ptr).has_value();
       ODBG(ODT_Mapping) << "Attach " << PtrName << " " << Ptr
                         << " was newly allocated: "
                         << (WasNewlyAllocated ? "yes" : "no");
@@ -883,9 +1301,15 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     }
 
     // Lambda to perform target pointer lookup and validation
+    // \p AllowHostPointer permits the lookup to succeed for storage shared with
+    // the host. That is correct for the pointer being attached: the device
+    // dereferences the same storage, so attaching writes the device pointee
+    // address into it and the original value is restored at the end of the
+    // region through the shadow-pointer mechanism. It is not correct for the
+    // pointee, where a host address would mean there is nothing to attach to.
     auto LookupTargetPointer =
-        [&](void *Ptr, int64_t Size,
-            const char *PtrType) -> std::optional<TargetPointerResultTy> {
+        [&](void *Ptr, int64_t Size, const char *PtrType,
+            bool AllowHostPointer) -> std::optional<TargetPointerResultTy> {
       // ATTACH map-type does not change ref-count, or do any allocation
       // We just need to do a lookup for the pointer/pointee.
       TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
@@ -901,7 +1325,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                           << PtrType << " not present on device";
         return std::nullopt;
       }
-      if (TPR.Flags.IsHostPointer) {
+      if (TPR.Flags.IsHostPointer && !AllowHostPointer) {
         ODBG(ODT_Mapping) << "Skipping ATTACH entry " << EntryIdx
                           << ": device version of the " << PtrType
                           << " is a host pointer.";
@@ -914,7 +1338,8 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     // Get device version of the pointee (e.g., &p[10]) first, as we can
     // release its TPR after extracting the pointer value.
     void *TgtPteeBegin = [&]() -> void * {
-      if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee"))
+      if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee",
+                                                /*AllowHostPointer=*/false))
         return PteeTPROpt->TargetPointer;
       return nullptr;
     }();
@@ -924,9 +1349,24 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Get device version of the pointer (e.g., &p) next. We need to keep its
     // TPR for use in shadow-pointer handling during pointer-attachment.
-    auto PtrTPROpt = LookupTargetPointer(HstPtr, PtrSize, "pointer");
+    auto PtrTPROpt = LookupTargetPointer(HstPtr, PtrSize, "pointer",
+                                         /*AllowHostPointer=*/true);
     if (!PtrTPROpt)
       continue;
+
+    // The storage on both sides was settled by settleAttachStorage, so an
+    // attachment that would write a device address into an original pointer is
+    // one that could not be settled at all.
+    if (PtrTPROpt->getEntry() && PtrTPROpt->getEntry()->isHostBound() &&
+        TgtPteeBegin != HstPteeBegin) {
+      MESSAGE("pointer " DPxMOD " cannot be attached to " DPxMOD
+              ": its corresponding pointer is the original pointer, so the "
+              "attachment would assign a device address to the original "
+              "pointer\n",
+              DPxPTR(HstPtr), DPxPTR(HstPteeBegin));
+      return OFFLOAD_FAIL;
+    }
+
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
     void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
 
@@ -993,7 +1433,15 @@ postProcessingTargetDataEnd(DeviceTy *Device,
   int Ret = OFFLOAD_SUCCESS;
 
   for (auto &[HstPtrBegin, DataSize, ArgType, TPR] : EntriesInfo) {
-    bool DelEntry = !TPR.isHostPointer();
+    // The reuse entry recorded on the unified-shared-memory host path has no
+    // device allocation, but it does occupy a slot in the mapping table and has
+    // to be reclaimed with the region that created it. Otherwise it lingers
+    // with a zero reference count and a later map(close, ...) of the same
+    // storage finds it and concludes the data is already on the device.
+    const bool IsHostBackedEntry =
+        TPR.getEntry() != nullptr &&
+        TPR.getEntry()->TgtAllocBegin == TPR.getEntry()->HstPtrBegin;
+    bool DelEntry = !TPR.isHostPointer() || IsHostBackedEntry;
 
     // If the last element from the mapper (for end transfer args comes in
     // reverse order), do not remove the partial entry, the parent struct still
@@ -2077,8 +2525,10 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
     return OFFLOAD_FAIL;
   }
 
-  // Process collected ATTACH entries
-  if (!StateInfo.AttachEntries.empty()) {
+  // Process collected ATTACH entries. Also entered with none, because transfers
+  // held back for storage that attachment might have released still have to be
+  // issued.
+  if (!StateInfo.AttachEntries.empty() || !StateInfo.DeferredSubmits.empty()) {
     Ret = processAttachEntries(*DeviceOrErr, StateInfo, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Failed to process ATTACH entries.";

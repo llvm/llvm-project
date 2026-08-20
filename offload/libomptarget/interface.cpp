@@ -182,8 +182,11 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                           StateInfo.get(), /*FromMapper=*/false);
 
   if (Rc == OFFLOAD_SUCCESS) {
-    // Process deferred ATTACH entries BEFORE synchronization
-    if (StateInfo && !StateInfo->AttachEntries.empty())
+    // Process deferred ATTACH entries BEFORE synchronization. Also entered with
+    // no such entries, because transfers held back for storage that attachment
+    // might have released still have to be issued.
+    if (StateInfo && (!StateInfo->AttachEntries.empty() ||
+                      !StateInfo->DeferredSubmits.empty()))
       Rc = processAttachEntries(*DeviceOrErr, *StateInfo, AsyncInfo);
 
     if (Rc == OFFLOAD_SUCCESS)
