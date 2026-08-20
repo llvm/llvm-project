@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=none -o /dev/null %s
+
+# ds_load_tr6_b96 and global_load_tr6_b96 declare VGPROp_96_Align1, which is the
+# unaligned VReg_96 class. They accept unaligned tuples, so these
+# functions should pass verification.
+# See also verify-align1-operands.mir for ds_read_b96_tr_b6 on gfx950.
+
+---
+name: ds_load_tr6_b96_unaligned
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_vgpr2_vgpr3 = DS_LOAD_TR6_B96 $vgpr0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: global_load_tr6_b96_unaligned
+body:             |
+  bb.0:
+    $vgpr4_vgpr5 = IMPLICIT_DEF
+    $vgpr1_vgpr2_vgpr3 = GLOBAL_LOAD_TR6_B96 $vgpr4_vgpr5, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Aligned tuples remain valid.
+---
+name: ds_load_tr6_b96_aligned
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr2_vgpr3_vgpr4 = DS_LOAD_TR6_B96 $vgpr0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...

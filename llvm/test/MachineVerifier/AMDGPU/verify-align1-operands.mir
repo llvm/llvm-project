@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=amdgpu9.50 -run-pass=none -o /dev/null %s
+
+# Instructions which declare an _Align1 operand register class can accept
+# unaligned tuples. ds_read_b96_tr_b6 declares AVLdSt_96_Align1, which resolves
+# to an unaligned register class in every HwMode, so these functions should pass
+# verification. The other two _Align1 instructions are covered by
+# verify-align1-operands-gfx1250.mir.
+
+---
+name: ds_read_b96_tr_b6_unaligned_vgpr
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1_vgpr2_vgpr3 = DS_READ_B96_TR_B6 $vgpr0, 32, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: ds_read_b96_tr_b6_unaligned_agpr
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $agpr1_agpr2_agpr3 = DS_READ_B96_TR_B6 $vgpr0, 32, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: ds_read_b96_tr_b6_unaligned_vreg
+body:             |
+  bb.0:
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_96 = DS_READ_B96_TR_B6 %0, 32, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Aligned tuples remain valid.
+---
+name: ds_read_b96_tr_b6_aligned
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr2_vgpr3_vgpr4 = DS_READ_B96_TR_B6 $vgpr0, 32, 0, implicit $exec
+    S_ENDPGM 0
+...

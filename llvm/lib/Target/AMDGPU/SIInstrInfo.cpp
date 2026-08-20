@@ -5392,29 +5392,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (!Reg)
       continue;
 
-    // FIXME: Ideally we would have separate instruction definitions with the
-    // aligned register constraint.
-    // FIXME: We do not verify inline asm operands, but custom inline asm
-    // verification is broken anyway
-    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
-        Opcode != AMDGPU::V_MOV_B64_PSEUDO && !isSpill(MI)) {
-      const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
-      if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
-        if (const TargetRegisterClass *SubRC =
-                RI.getSubRegisterClass(RC, MO.getSubReg())) {
-          RC = RI.getCompatibleSubRegClass(RC, SubRC, MO.getSubReg());
-          if (RC)
-            RC = SubRC;
-        }
-      }
-
-      // Check that this is the aligned version of the class.
-      if (!RC || !RI.isProperlyAlignedRC(*RC)) {
-        ErrInfo = "Subtarget requires even aligned vector registers";
-        return false;
-      }
-    }
-
     if (RegClass != -1) {
       if (Reg.isVirtual())
         continue;
