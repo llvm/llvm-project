@@ -78,11 +78,8 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<MipsTargetObjectFile>();
 }
 
-static Reloc::Model getEffectiveRelocModel(bool JIT,
-                                           std::optional<Reloc::Model> RM) {
-  if (!RM || JIT)
-    return Reloc::Static;
-  return *RM;
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  return RM.value_or(Reloc::Static);
 }
 
 // On function prologue, the stack is created by decrementing
@@ -95,11 +92,11 @@ MipsTargetMachine::MipsTargetMachine(const Target &T, const Triple &TT,
                                      const TargetOptions &Options,
                                      std::optional<Reloc::Model> RM,
                                      std::optional<CodeModel::Model> CM,
-                                     CodeGenOptLevel OL, bool JIT,
+                                     CodeGenOptLevel OL, bool /*JIT*/,
                                      bool isLittle)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
-          Options, getEffectiveRelocModel(JIT, RM),
+          Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
       isLittle(isLittle), TLOF(createTLOF(getTargetTriple())),
       ABI(MipsABIInfo::computeTargetABI(TT, Options.MCOptions.getABIName())),

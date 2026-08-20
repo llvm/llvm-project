@@ -52,10 +52,10 @@ MachOLinkGraphBuilder::MachOLinkGraphBuilder(
     std::shared_ptr<orc::SymbolStringPool> SSP, Triple TT,
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
-    : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
-          std::move(Features), std::move(GetEdgeKindName))) {
+    : Obj(Obj), G(std::make_unique<LinkGraph>(
+                    std::string(Obj.getFileName()), std::move(SSP),
+                    std::move(TT), std::move(Features),
+                    std::move(GetEdgeKindName), Obj.getBytesInAddress())) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
