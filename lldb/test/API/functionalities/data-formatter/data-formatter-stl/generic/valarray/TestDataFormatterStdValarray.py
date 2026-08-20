@@ -201,9 +201,7 @@ class StdValarrayDataFormatterTestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
 
-        zero_children = [
-            ValueCheck(name=f"[{index}]", value="0") for index in range(4)
-        ]
+        zero_children = [ValueCheck(name=f"[{index}]", value="0") for index in range(4)]
         self.expect_var_path("va_int", summary="size=4", children=zero_children)
         self.expect_var_path("va_empty", summary="size=0", children=[])
         self.expect_var_path("va_ref", summary="size=4", children=zero_children)
