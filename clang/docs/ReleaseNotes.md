@@ -497,12 +497,6 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
-- Fixed a number issues arising from the fact that Clang considered the body of
-  an expansion statement to not be inside a function in some contexts. Several
-  constructs that were previously incorrectly rejected inside expansion statements
-  (e.g. `thread_local` variables, `va_start`, and `co_await`/`co_yield`/`co_return`)
-  are now accepted, and vice versa.
-
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

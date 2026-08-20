@@ -1106,7 +1106,7 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
   if (isa<FieldDecl>(this))
     return true;
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
-    if (!getDeclContext()->isInsideFunctionOrMethod() &&
+    if (!getDeclContext()->isFunctionOrMethod() &&
         !getDeclContext()->isRecord())
       return false;
     const VarDecl *VD = IFD->getVarDecl();
@@ -1121,7 +1121,7 @@ bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
     return VD->getStorageDuration() == StorageDuration::SD_Automatic;
   }
   if (const auto *BD = dyn_cast<BindingDecl>(this);
-      BD && getDeclContext()->isInsideFunctionOrMethod()) {
+      BD && getDeclContext()->isFunctionOrMethod()) {
     const VarDecl *VD = BD->getHoldingVar();
     return !VD || VD->getStorageDuration() == StorageDuration::SD_Automatic;
   }
@@ -1566,9 +1566,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
   //   one such matching entity, the program is ill-formed. Otherwise,
   //   if no matching entity is found, the block scope entity receives
   //   external linkage.
-  if (D->getDeclContext()
-          ->getEnclosingNonExpansionStatementContext()
-          ->isFunctionOrMethod())
+  if (D->getDeclContext()->isFunctionOrMethod())
     return getLVForLocalDecl(D, computation);
 
   // C++ [basic.link]p6:

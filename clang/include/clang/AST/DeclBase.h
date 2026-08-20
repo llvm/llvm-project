@@ -2175,23 +2175,21 @@ public:
     }
   }
 
+  /// Returns true if this DeclContext is a function, Objective-C method,
+  /// or block, or a DeclContext that can only occur in or is conceptually
+  /// treated like a function.
   bool isFunctionOrMethod() const {
     switch (getDeclKind()) {
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
     case Decl::TopLevelStmt:
+    case Decl::CXXExpansionStmt:
       return true;
     default:
       return getDeclKind() >= Decl::firstFunction &&
              getDeclKind() <= Decl::lastFunction;
     }
-  }
-
-  /// Test whether we're directly inside a function or method, but ignoring
-  /// any intervening expansion statements.
-  bool isInsideFunctionOrMethod() const {
-    return getEnclosingNonExpansionStatementContext()->isFunctionOrMethod();
   }
 
   /// Cast this to a FunctionDecl if it is one, ignoring any intervening
