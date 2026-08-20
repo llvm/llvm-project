@@ -493,7 +493,8 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
     if (!BF)
       continue;
 
-    BC.addRelocation(EntryAddress, BF->getSymbol(), Relocation::getPC32(), 0,
+    BC.addRelocation(EntryAddress, BF->getSymbol(),
+                     BC.getRelocationHandler().getPC32(), 0,
                      *Offset);
   }
 }
@@ -832,7 +833,8 @@ Error LinuxKernelRewriter::rewriteORCTables() {
 
     if (Label)
       ORCUnwindIPSection->addRelocation(UnwindIPWriter.getOffset(), Label,
-                                        Relocation::getPC32(), /*Addend*/ 0);
+                                        BC.getRelocationHandler().getPC32(),
+                                        /*Addend*/ 0);
 
     const int32_t IPValue =
         IP - ORCUnwindIPSection->getAddress() - UnwindIPWriter.getOffset();

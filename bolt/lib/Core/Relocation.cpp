@@ -28,7 +28,7 @@ enum {
 };
 } // namespace ELFReserved
 
-Triple::ArchType Relocation::Arch;
+static bool isPCRelativeX86(uint32_t Type);
 
 static bool isSupportedX86(uint32_t Type) {
   switch (Type) {
@@ -353,8 +353,8 @@ static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
 static uint64_t extractValueX86(uint32_t Type, uint64_t Contents, uint64_t PC) {
   if (Type == ELF::R_X86_64_32S)
     return SignExtend64<32>(Contents);
-  if (Relocation::isPCRelative(Type))
-    return SignExtend64(Contents, 8 * Relocation::getSizeForType(Type));
+  if (isPCRelativeX86(Type))
+    return SignExtend64(Contents, 8 * getSizeForTypeX86(Type));
   return Contents;
 }
 
@@ -736,213 +736,187 @@ static bool isPCRelativeRISCV(uint32_t Type) {
   }
 }
 
-bool Relocation::isSupported(uint32_t Type) {
-  switch (Arch) {
-  default:
-    return false;
-  case Triple::aarch64:
-    return isSupportedAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return isSupportedRISCV(Type);
-  case Triple::x86_64:
+namespace {
+
+class X86RelocationHandler final : public RelocationHandler {
+public:
+  bool isSupported(uint32_t Type) const override {
     return isSupportedX86(Type);
   }
-}
-
-size_t Relocation::getSizeForType(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return getSizeForTypeAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return getSizeForTypeRISCV(Type);
-  case Triple::x86_64:
+  size_t getSizeForType(uint32_t Type) const override {
     return getSizeForTypeX86(Type);
   }
-}
-
-bool Relocation::skipRelocationType(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return skipRelocationTypeAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return skipRelocationTypeRISCV(Type);
-  case Triple::x86_64:
+  bool skipRelocationType(uint32_t Type) const override {
     return skipRelocationTypeX86(Type);
   }
-}
-
-uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return encodeValueAArch64(Type, Value, PC);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return encodeValueRISCV(Type, Value, PC);
-  case Triple::x86_64:
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override {
     return encodeValueX86(Type, Value, PC);
   }
-}
-
-bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return canEncodeValueAArch64(Type, Value, PC);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return canEncodeValueRISCV(Type, Value, PC);
-  case Triple::x86_64:
+  bool canEncodeValue(uint32_t, uint64_t, uint64_t) const override {
     return true;
   }
-}
-
-uint64_t Relocation::extractValue(uint32_t Type, uint64_t Contents,
-                                  uint64_t PC) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return extractValueAArch64(Type, Contents, PC);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return extractValueRISCV(Type, Contents, PC);
-  case Triple::x86_64:
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override {
     return extractValueX86(Type, Contents, PC);
   }
-}
-
-bool Relocation::isGOT(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return isGOTAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return isGOTRISCV(Type);
-  case Triple::x86_64:
-    return isGOTX86(Type);
+  bool isGOT(uint32_t Type) const override { return isGOTX86(Type); }
+  bool isX86GOTPCRELX(uint32_t Type) const override {
+    return Type == ELF::R_X86_64_GOTPCRELX ||
+           Type == ELF::R_X86_64_REX_GOTPCRELX;
   }
-}
-
-bool Relocation::isX86GOTPCRELX(uint32_t Type) {
-  if (Arch != Triple::x86_64)
-    return false;
-  return Type == ELF::R_X86_64_GOTPCRELX || Type == ELF::R_X86_64_REX_GOTPCRELX;
-}
-
-bool Relocation::isX86GOTPC64(uint32_t Type) {
-  if (Arch != Triple::x86_64)
-    return false;
-  return Type == ELF::R_X86_64_GOTPC64;
-}
-
-bool Relocation::isNone(uint32_t Type) { return Type == getNone(); }
-
-bool Relocation::isRelative(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return Type == ELF::R_AARCH64_RELATIVE;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return Type == ELF::R_RISCV_RELATIVE;
-  case Triple::x86_64:
+  bool isX86GOTPC64(uint32_t Type) const override {
+    return Type == ELF::R_X86_64_GOTPC64;
+  }
+  bool isRelative(uint32_t Type) const override {
     return Type == ELF::R_X86_64_RELATIVE;
   }
-}
-
-bool Relocation::isIRelative(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return Type == ELF::R_AARCH64_IRELATIVE;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    llvm_unreachable("not implemented");
-  case Triple::x86_64:
+  bool isIRelative(uint32_t Type) const override {
     return Type == ELF::R_X86_64_IRELATIVE;
   }
-}
-
-bool Relocation::isTLS(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return isTLSAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return isTLSRISCV(Type);
-  case Triple::x86_64:
-    return isTLSX86(Type);
+  bool isTLS(uint32_t Type) const override { return isTLSX86(Type); }
+  uint32_t getNone() const override { return ELF::R_X86_64_NONE; }
+  uint32_t getPC32() const override { return ELF::R_X86_64_PC32; }
+  uint32_t getPC64() const override { return ELF::R_X86_64_PC64; }
+  bool isPCRelative(uint32_t Type) const override {
+    return isPCRelativeX86(Type);
   }
-}
-
-bool Relocation::isInstructionReference(uint32_t Type) {
-  if (Arch != Triple::riscv64)
-    return false;
-
-  switch (Type) {
-  default:
-    return false;
-  case ELF::R_RISCV_PCREL_LO12_I:
-  case ELF::R_RISCV_PCREL_LO12_S:
-    return true;
+  uint32_t getAbs64() const override { return ELF::R_X86_64_64; }
+  uint32_t getRelative() const override { return ELF::R_X86_64_RELATIVE; }
+  void printType(raw_ostream &OS, uint32_t Type) const override {
+    OS << object::getELFRelocationTypeName(ELF::EM_X86_64, Type);
   }
-}
+};
 
-uint32_t Relocation::getNone() {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return ELF::R_AARCH64_NONE;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return ELF::R_RISCV_NONE;
-  case Triple::x86_64:
-    return ELF::R_X86_64_NONE;
+class AArch64RelocationHandler final : public RelocationHandler {
+public:
+  bool isSupported(uint32_t Type) const override {
+    return isSupportedAArch64(Type);
   }
-}
 
-uint32_t Relocation::getPC32() {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return ELF::R_AARCH64_PREL32;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return ELF::R_RISCV_32_PCREL;
-  case Triple::x86_64:
-    return ELF::R_X86_64_PC32;
+size_t getSizeForType(uint32_t Type) const override {
+    return getSizeForTypeAArch64(Type);
   }
-}
+  bool skipRelocationType(uint32_t Type) const override {
+    return skipRelocationTypeAArch64(Type);
+  }
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override {
+    return encodeValueAArch64(Type, Value, PC);
+  }
+  bool canEncodeValue(uint32_t Type, uint64_t Value,
+                      uint64_t PC) const override {
+    return canEncodeValueAArch64(Type, Value, PC);
+  }
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override {
+    return extractValueAArch64(Type, Contents, PC);
+  }
+  bool isGOT(uint32_t Type) const override { return isGOTAArch64(Type); }
+  bool isRelative(uint32_t Type) const override {
+    return Type == ELF::R_AARCH64_RELATIVE;
+  }
+  bool isIRelative(uint32_t Type) const override {
+    return Type == ELF::R_AARCH64_IRELATIVE;
+  }
+  bool isTLS(uint32_t Type) const override { return isTLSAArch64(Type); }
+  uint32_t getNone() const override { return ELF::R_AARCH64_NONE; }
+  uint32_t getPC32() const override { return ELF::R_AARCH64_PREL32; }
+  uint32_t getPC64() const override { return ELF::R_AARCH64_PREL64; }
+  bool isPCRelative(uint32_t Type) const override {
+    return isPCRelativeAArch64(Type);
+  }
+  uint32_t getAbs64() const override { return ELF::R_AARCH64_ABS64; }
+  uint32_t getRelative() const override { return ELF::R_AARCH64_RELATIVE; }
+  void printType(raw_ostream &OS, uint32_t Type) const override {
+    OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
+  }
+};
 
-uint32_t Relocation::getPC64() {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return ELF::R_AARCH64_PREL64;
-  case Triple::riscv64:
-  case Triple::riscv32:
+class RISCVRelocationHandler final : public RelocationHandler {
+  bool Is64Bit;
+
+public:
+  explicit RISCVRelocationHandler(bool Is64Bit) : Is64Bit(Is64Bit) {}
+
+  bool isSupported(uint32_t Type) const override {
+    return isSupportedRISCV(Type);
+  }
+  size_t getSizeForType(uint32_t Type) const override {
+    return getSizeForTypeRISCV(Type);
+  }
+  bool skipRelocationType(uint32_t Type) const override {
+    return skipRelocationTypeRISCV(Type);
+  }
+  uint64_t encodeValue(uint32_t Type, uint64_t Value,
+                       uint64_t PC) const override {
+    return encodeValueRISCV(Type, Value, PC);
+  }
+  bool canEncodeValue(uint32_t Type, uint64_t Value,
+                      uint64_t PC) const override {
+    return canEncodeValueRISCV(Type, Value, PC);
+  }
+  uint64_t extractValue(uint32_t Type, uint64_t Contents,
+                        uint64_t PC) const override {
+    return extractValueRISCV(Type, Contents, PC);
+  }
+  bool isGOT(uint32_t Type) const override { return isGOTRISCV(Type); }
+  bool isRelative(uint32_t Type) const override {
+    return Type == ELF::R_RISCV_RELATIVE;
+  }
+  bool isIRelative(uint32_t) const override {
     llvm_unreachable("not implemented");
+  }
+  bool isTLS(uint32_t Type) const override { return isTLSRISCV(Type); }
+  bool isInstructionReference(uint32_t Type) const override {
+    if (!Is64Bit)
+      return false;
+    return Type == ELF::R_RISCV_PCREL_LO12_I ||
+           Type == ELF::R_RISCV_PCREL_LO12_S;
+  }
+  uint32_t getNone() const override { return ELF::R_RISCV_NONE; }
+  uint32_t getPC32() const override { return ELF::R_RISCV_32_PCREL; }
+  uint32_t getPC64() const override { llvm_unreachable("not implemented"); }
+  bool isPCRelative(uint32_t Type) const override {
+    return isPCRelativeRISCV(Type);
+  }
+  uint32_t getAbs64() const override { return ELF::R_RISCV_64; }
+  uint32_t getRelative() const override { llvm_unreachable("not implemented"); }
+  MCBinaryExpr::Opcode getComposeOpcodeFor(uint32_t Type) const override {
+    switch (Type) {
+    default:
+      llvm_unreachable("not implemented");
+    case ELF::R_RISCV_ADD32:
+      return MCBinaryExpr::Add;
+    case ELF::R_RISCV_SUB32:
+      return MCBinaryExpr::Sub;
+    }
+  }
+  void printType(raw_ostream &OS, uint32_t Type) const override {
+    OS << object::getELFRelocationTypeName(ELF::EM_RISCV, Type);
+  }
+};
+
+} // namespace
+
+MCBinaryExpr::Opcode
+RelocationHandler::getComposeOpcodeFor(uint32_t Type) const {
+  llvm_unreachable("composed relocations are unsupported for this target");
+}
+
+std::unique_ptr<RelocationHandler>
+llvm::bolt::createRelocationHandler(Triple::ArchType Arch) {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return std::make_unique<AArch64RelocationHandler>();
+  case Triple::riscv32:
+    return std::make_unique<RISCVRelocationHandler>(false);
+  case Triple::riscv64:
+    return std::make_unique<RISCVRelocationHandler>(true);
   case Triple::x86_64:
-    return ELF::R_X86_64_PC64;
+    return std::make_unique<X86RelocationHandler>();
   }
 }
 
@@ -952,56 +926,16 @@ uint32_t Relocation::getType(const object::RelocationRef &Rel) {
   return static_cast<uint32_t>(RelType);
 }
 
-bool Relocation::isPCRelative(uint32_t Type) {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return isPCRelativeAArch64(Type);
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return isPCRelativeRISCV(Type);
-  case Triple::x86_64:
-    return isPCRelativeX86(Type);
-  }
-}
-
-uint32_t Relocation::getAbs64() {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return ELF::R_AARCH64_ABS64;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    return ELF::R_RISCV_64;
-  case Triple::x86_64:
-    return ELF::R_X86_64_64;
-  }
-}
-
-uint32_t Relocation::getRelative() {
-  switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported architecture");
-  case Triple::aarch64:
-    return ELF::R_AARCH64_RELATIVE;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    llvm_unreachable("not implemented");
-  case Triple::x86_64:
-    return ELF::R_X86_64_RELATIVE;
-  }
-}
-
-size_t Relocation::emit(MCStreamer *Streamer) const {
-  const size_t Size = getSizeForType(Type);
-  const auto *Value = createExpr(Streamer);
+size_t Relocation::emit(MCStreamer *Streamer,
+                        const RelocationHandler &RH) const {
+  const size_t Size = RH.getSizeForType(Type);
+  const auto *Value = createExpr(Streamer, RH);
   Streamer->emitValue(Value, Size);
   return Size;
 }
 
-const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
+const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
+                                     const RelocationHandler &RH) const {
   MCContext &Ctx = Streamer->getContext();
   const MCExpr *Value = nullptr;
 
@@ -1014,7 +948,7 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
     Value = MCConstantExpr::create(Addend, Ctx);
   }
 
-  if (isPCRelative(Type)) {
+  if (RH.isPCRelative(Type)) {
     MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
     Streamer->emitLabel(TempLabel);
     Value = MCBinaryExpr::createSub(
@@ -1025,47 +959,20 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
 }
 
 const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
-                                     const MCExpr *RetainedValue) const {
-  const auto *Value = createExpr(Streamer);
+                                     const MCExpr *RetainedValue,
+                                     const RelocationHandler &RH) const {
+  const auto *Value = createExpr(Streamer, RH);
 
   if (RetainedValue) {
-    Value = MCBinaryExpr::create(getComposeOpcodeFor(Type), RetainedValue,
+    Value = MCBinaryExpr::create(RH.getComposeOpcodeFor(Type), RetainedValue,
                                  Value, Streamer->getContext());
   }
 
   return Value;
 }
 
-MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint32_t Type) {
-  assert((Arch == Triple::riscv32 || Arch == Triple::riscv64) &&
-         "only implemented for RISC-V");
-
-  switch (Type) {
-  default:
-    llvm_unreachable("not implemented");
-  case ELF::R_RISCV_ADD32:
-    return MCBinaryExpr::Add;
-  case ELF::R_RISCV_SUB32:
-    return MCBinaryExpr::Sub;
-  }
-}
-
-void Relocation::print(raw_ostream &OS) const {
-  switch (Arch) {
-  default:
-    OS << "RType:" << Twine::utohexstr(Type);
-    break;
-  case Triple::aarch64:
-    OS << object::getELFRelocationTypeName(ELF::EM_AARCH64, Type);
-    break;
-  case Triple::riscv64:
-  case Triple::riscv32:
-    OS << object::getELFRelocationTypeName(ELF::EM_RISCV, Type);
-    break;
-  case Triple::x86_64:
-    OS << object::getELFRelocationTypeName(ELF::EM_X86_64, Type);
-    break;
-  }
+void Relocation::print(raw_ostream &OS, const RelocationHandler &RH) const {
+  RH.printType(OS, Type);
   OS << ", 0x" << Twine::utohexstr(Offset);
   if (Symbol) {
     OS << ", " << Symbol->getName();

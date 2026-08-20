@@ -722,6 +722,10 @@ public:
 
   std::unique_ptr<Triple> TheTriple;
 
+private:
+  std::unique_ptr<RelocationHandler> RelocHandler;
+
+public:
   std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
@@ -974,6 +978,10 @@ public:
   bool isELF() const { return TheTriple->isOSBinFormatELF(); }
 
   bool isMachO() const { return TheTriple->isOSBinFormatMachO(); }
+
+  const RelocationHandler &getRelocationHandler() const {
+    return *RelocHandler;
+  }
 
   bool isAArch64() const {
     return TheTriple->getArch() == llvm::Triple::aarch64;

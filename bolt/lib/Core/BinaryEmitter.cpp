@@ -597,9 +597,10 @@ void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
             dbgs() << "BOLT-DEBUG: emitting constant island relocation"
                    << " for " << BF << " at offset 0x"
                    << Twine::utohexstr(Relocation.Offset) << " with size "
-                   << Relocation::getSizeForType(Relocation.Type) << '\n');
+                   << BC.getRelocationHandler().getSizeForType(Relocation.Type)
+                   << '\n');
 
-        FunctionOffset += Relocation.emit(&Streamer);
+        FunctionOffset += Relocation.emit(&Streamer, BC.getRelocationHandler());
       }
 
       assert(FunctionOffset <= EndOffset && "overflow error");

@@ -51,7 +51,6 @@ protected:
   }
 
   void initializeBOLT() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
         ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
@@ -63,6 +62,20 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 };
+
+TEST(RelocationHandlerTest, ArchitectureStateIsIndependent) {
+  std::unique_ptr<RelocationHandler> X86Handler =
+      createRelocationHandler(Triple::x86_64);
+  std::unique_ptr<RelocationHandler> AArch64Handler =
+      createRelocationHandler(Triple::aarch64);
+
+  EXPECT_EQ(X86Handler->getPC32(), ELF::R_X86_64_PC32);
+  EXPECT_EQ(AArch64Handler->getPC32(), ELF::R_AARCH64_PREL32);
+  EXPECT_TRUE(X86Handler->isSupported(ELF::R_X86_64_PC32));
+  EXPECT_FALSE(X86Handler->isSupported(ELF::R_AARCH64_CALL26));
+  EXPECT_TRUE(AArch64Handler->isSupported(ELF::R_AARCH64_CALL26));
+  EXPECT_FALSE(AArch64Handler->isSupported(ELF::R_X86_64_PC32));
+}
 } // namespace
 
 #ifdef X86_AVAILABLE

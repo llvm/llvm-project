@@ -97,7 +97,8 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   const uint64_t InstOffset = InstAddress - Function.getAddress();
   const Relocation *Relocation =
       Function.getRelocationInRange(InstOffset, InstOffset + InstSize);
-  if (Relocation && Relocation::isX86GOTPCRELX(Relocation->Type)) {
+  if (Relocation &&
+      BC.getRelocationHandler().isX86GOTPCRELX(Relocation->Type)) {
     // If the operand is PC-relative, convert it without using the relocation
     // information. For GOTPCRELX, it is safe to use the absolute address
     // instead of extracting the addend from the relocation, as non-standard
@@ -133,7 +134,7 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   // GOTPC64 is special because the X86 Assembler doesn't know how to emit
   // a PC-relative 8-byte fixup, which is what we need to cover this. The
   // only way to do this is to use the symbol name _GLOBAL_OFFSET_TABLE_.
-  if (Relocation::isX86GOTPC64(Relocation->Type)) {
+  if (BC.getRelocationHandler().isX86GOTPC64(Relocation->Type)) {
     auto PairOrErr = handleGOTPC64(*Relocation, InstAddress);
     if (auto E = PairOrErr.takeError()) {
       Function.setSimple(false);
@@ -146,17 +147,19 @@ bool X86MCSymbolizer::tryAddingSymbolicOperand(
   }
 
   uint64_t SymbolValue = Relocation->Value - Relocation->Addend;
-  if (Relocation->isPCRelative())
+  if (BC.getRelocationHandler().isPCRelative(Relocation->Type))
     SymbolValue += InstAddress + ImmOffset;
 
   // Process reference to the symbol.
   if (CreateNewSymbols)
-    BC.handleAddressRef(SymbolValue, Function, Relocation->isPCRelative());
+    BC.handleAddressRef(
+        SymbolValue, Function,
+        BC.getRelocationHandler().isPCRelative(Relocation->Type));
 
   uint64_t Addend = Relocation->Addend;
   // Real addend for pc-relative targets is adjusted with a delta from
   // the relocation placement to the next instruction.
-  if (Relocation->isPCRelative())
+  if (BC.getRelocationHandler().isPCRelative(Relocation->Type))
     Addend += InstOffset + InstSize - Relocation->Offset;
 
   addOperand(Relocation->Symbol, Addend);
