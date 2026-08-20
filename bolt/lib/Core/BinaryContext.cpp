@@ -17,6 +17,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -573,12 +574,13 @@ MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
           << Twine::utohexstr(Address) << "; ignoring both functions\n";
       IsValid = false;
     }
-    if (Target.isInConstantIsland(Address)) {
-      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
-                   << Twine::utohexstr(Address)
-                   << " in constant island of function " << Target << '\n';
-      IsValid = false;
-    }
+  }
+
+  if (Target.isInConstantIsland(Address)) {
+    this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                 << Twine::utohexstr(Address)
+                 << " in constant island of function " << Target << '\n';
+    IsValid = false;
   }
 
   if (!IsValid) {
@@ -629,12 +631,11 @@ MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
   return MemoryContentsType::UNKNOWN;
 }
 
-bool BinaryContext::analyzeJumpTable(const uint64_t Address,
-                                     const JumpTable::JumpTableType Type,
-                                     const BinaryFunction &BF,
-                                     const uint64_t NextJTAddress,
-                                     JumpTable::AddressesType *EntriesAsAddress,
-                                     bool *HasEntryInFragment) const {
+bool BinaryContext::analyzeJumpTable(
+    const uint64_t Address, const JumpTable::JumpTableType Type,
+    const BinaryFunction &BF, const uint64_t NextJTAddress,
+    JumpTable::AddressesType *EntriesAsAddress, bool *HasEntryInFragment,
+    uint64_t EntrySize, bool EntriesAreSigned) const {
   // Target address of __builtin_unreachable.
   const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
 
@@ -695,20 +696,27 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                       Address, BF.getPrintName(),
                       Type == JTT::JTT_PIC ? "PIC" : "Normal");
   });
-  const uint64_t EntrySize = getJumpTableEntrySize(Type);
+  if (!EntrySize)
+    EntrySize = getJumpTableEntrySize(Type);
+  EntriesAreSigned |= Type == JumpTable::JTT_PIC;
+  if (UpperBound < Address || UpperBound - Address < EntrySize)
+    return false;
   for (uint64_t EntryAddress = Address; EntryAddress <= UpperBound - EntrySize;
        EntryAddress += EntrySize) {
     LLVM_DEBUG(dbgs() << "  * Checking 0x" << Twine::utohexstr(EntryAddress)
                       << " -> ");
     // Check if there's a proper relocation against the jump table entry.
     if (HasRelocations) {
+      const Relocation *Rel = getRelocationAt(EntryAddress);
+      const bool HasRISCVLabelDifference =
+          isRISCV() && Rel && Rel->Type == ELF::R_RISCV_ADD32;
       if (Type == JumpTable::JTT_PIC &&
-          !DataPCRelocations.count(EntryAddress)) {
+          !DataPCRelocations.count(EntryAddress) && !HasRISCVLabelDifference) {
         LLVM_DEBUG(
             dbgs() << "FAIL: JTT_PIC table, no relocation for this address\n");
         break;
       }
-      if (Type == JumpTable::JTT_NORMAL && !getRelocationAt(EntryAddress)) {
+      if (Type == JumpTable::JTT_NORMAL && !Rel) {
         LLVM_DEBUG(
             dbgs()
             << "FAIL: JTT_NORMAL table, no relocation for this address\n");
@@ -716,10 +724,22 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       }
     }
 
-    const uint64_t Value =
-        (Type == JumpTable::JTT_PIC)
-            ? Address + *getSignedValueAtAddress(EntryAddress, EntrySize)
-            : *getPointerAtAddress(EntryAddress);
+    uint64_t Value;
+    if (EntriesAreSigned) {
+      ErrorOr<int64_t> SignedValue =
+          getSignedValueAtAddress(EntryAddress, EntrySize);
+      if (!SignedValue)
+        break;
+      Value = static_cast<uint64_t>(*SignedValue);
+      if (Type == JumpTable::JTT_PIC)
+        Value += Address;
+    } else {
+      ErrorOr<uint64_t> UnsignedValue =
+          getUnsignedValueAtAddress(EntryAddress, EntrySize);
+      if (!UnsignedValue)
+        break;
+      Value = *UnsignedValue;
+    }
 
     // __builtin_unreachable() case.
     if (Value == UnreachableAddress) {
@@ -791,7 +811,8 @@ void BinaryContext::populateJumpTables() {
 
     const bool Success =
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
-                         NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
+                         NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit,
+                         JT->EntrySize, JT->EntriesAreSigned);
     if (!Success) {
       // Re-analysis here is stricter than during disassembly (the referenced
       // function is now disassembled), so it may fail on a table we accepted
@@ -835,7 +856,7 @@ void BinaryContext::populateJumpTables() {
       for (uint64_t Address = JT->getAddress();
            Address < JT->getAddress() + JT->getSize();
            Address += JT->EntrySize) {
-        DataPCRelocations.erase(DataPCRelocations.find(Address));
+        DataPCRelocations.erase(Address);
       }
     }
 
@@ -925,11 +946,18 @@ BinaryFunction *BinaryContext::createBinaryFunction(
 
 const MCSymbol *
 BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
-                                    JumpTable::JumpTableType Type) {
+                                    JumpTable::JumpTableType Type,
+                                    uint64_t EntrySize, bool EntriesAreSigned) {
+  EntriesAreSigned |= Type == JumpTable::JTT_PIC;
+
   // Two fragments of same function access same jump table
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
     assert(JT->Type == Type && "jump table types have to match");
     assert(Address == JT->getAddress() && "unexpected non-empty jump table");
+    assert((!EntrySize || JT->EntrySize == EntrySize) &&
+           "jump table entry sizes have to match");
+    assert((!EntrySize || JT->EntriesAreSigned == EntriesAreSigned) &&
+           "jump table entry signedness has to match");
 
     if (llvm::is_contained(JT->Parents, &Function))
       return JT->getFirstLabel();
@@ -961,7 +989,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
       JTLabel = Object->getSymbol();
   }
 
-  const uint64_t EntrySize = getJumpTableEntrySize(Type);
+  if (!EntrySize)
+    EntrySize = getJumpTableEntrySize(Type);
   if (!JTLabel) {
     const std::string JumpTableName = generateJumpTableName(Function, Address);
     JTLabel = registerNameAtAddress(JumpTableName, Address, 0, EntrySize);
@@ -970,8 +999,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: creating jump table " << JTLabel->getName()
                     << " in function " << Function << '\n');
 
-  JumpTable *JT = new JumpTable(*JTLabel, Address, EntrySize, Type,
-                                JumpTable::LabelMapType{{0, JTLabel}},
+  JumpTable *JT = new JumpTable(*JTLabel, Address, EntrySize, EntriesAreSigned,
+                                Type, JumpTable::LabelMapType{{0, JTLabel}},
                                 *getSectionForAddress(Address));
   JT->Parents.push_back(&Function);
   if (opts::Verbosity > 2)
@@ -999,10 +1028,10 @@ BinaryContext::duplicateJumpTable(BinaryFunction &Function, JumpTable *JT,
   assert(Found && "Label not found");
   (void)Found;
   MCSymbol *NewLabel = Ctx->createNamedTempSymbol("duplicatedJT");
-  JumpTable *NewJT =
-      new JumpTable(*NewLabel, JT->getAddress(), JT->EntrySize, JT->Type,
-                    JumpTable::LabelMapType{{Offset, NewLabel}},
-                    *getSectionForAddress(JT->getAddress()));
+  JumpTable *NewJT = new JumpTable(*NewLabel, JT->getAddress(), JT->EntrySize,
+                                   JT->EntriesAreSigned, JT->Type,
+                                   JumpTable::LabelMapType{{Offset, NewLabel}},
+                                   *getSectionForAddress(JT->getAddress()));
   NewJT->Parents = JT->Parents;
   NewJT->Entries = JT->Entries;
   NewJT->Counts = JT->Counts;

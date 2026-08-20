@@ -191,18 +191,31 @@ void BinarySection::flushPendingRelocations(raw_fd_ostream &OS,
       ++SkippedPendingRelocations;
       continue;
     }
+
+    const size_t RelocSize = Relocation::getSizeForType(Reloc.Type);
+    uint64_t OldValue = 0;
+    if (Reloc.Offset + RelocSize <= getContents().size()) {
+      ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(
+                                  getContents().data() + Reloc.Offset),
+                              RelocSize);
+      if (BC.AsmInfo->isLittleEndian()) {
+        for (unsigned I = 0; I < Bytes.size(); ++I)
+          OldValue |= uint64_t(Bytes[I]) << (I * 8);
+      } else {
+        for (uint8_t Byte : Bytes)
+          OldValue = (OldValue << 8) | Byte;
+      }
+    }
     Value = Relocation::encodeValue(Reloc.Type, Value,
-                                    SectionAddress + Reloc.Offset);
+                                    SectionAddress + Reloc.Offset, OldValue);
 
     safePWrite(OS, reinterpret_cast<const char *>(&Value),
-               Relocation::getSizeForType(Reloc.Type),
-               SectionFileOffset + Reloc.Offset);
+               RelocSize, SectionFileOffset + Reloc.Offset);
 
     LLVM_DEBUG(
         dbgs() << "BOLT-DEBUG: writing value 0x" << Twine::utohexstr(Value)
-               << " of size " << Relocation::getSizeForType(Reloc.Type)
-               << " at section offset 0x" << Twine::utohexstr(Reloc.Offset)
-               << " address 0x"
+               << " of size " << RelocSize << " at section offset 0x"
+               << Twine::utohexstr(Reloc.Offset) << " address 0x"
                << Twine::utohexstr(SectionAddress + Reloc.Offset)
                << " file offset 0x"
                << Twine::utohexstr(SectionFileOffset + Reloc.Offset) << '\n';);

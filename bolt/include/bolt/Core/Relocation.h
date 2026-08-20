@@ -94,8 +94,10 @@ public:
   /// Skip relocations that we don't want to handle in BOLT
   static bool skipRelocationType(uint32_t Type);
 
-  /// Adjust value depending on relocation type (make it PC relative or not).
-  static uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC);
+  /// Encode \p Value according to the relocation type. \p OldValue is used only
+  /// by RISC-V instruction relocations that preserve non-immediate bits.
+  static uint64_t encodeValue(uint32_t Type, uint64_t Value, uint64_t PC,
+                              uint64_t OldValue = 0);
 
   /// Return true if there are enough bits to encode the relocation value.
   static bool canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC);
@@ -147,6 +149,9 @@ public:
 
   /// Return code for a PC-relative 8-byte relocation
   static uint32_t getPC64();
+
+  /// Return code for an ABS 4-byte relocation
+  static uint32_t getAbs32();
 
   /// Return code for a ABS 8-byte relocation
   static uint32_t getAbs64();

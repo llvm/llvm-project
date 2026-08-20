@@ -10,9 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCVMCSymbolizer.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -28,7 +33,22 @@ using namespace bolt;
 namespace {
 
 class RISCVMCPlusBuilder : public MCPlusBuilder {
+  using LocalUDChain = DenseMap<const MCInst *, SmallVector<MCInst *, 4>>;
+
+  struct JumpTableLoad {
+    const MCInst *Inst{nullptr};
+    uint64_t EntrySize{0};
+    bool EntrySigned{false};
+    int64_t Offset{0};
+  };
+
+  struct ScaledAddress {
+    const MCInst *BaseDef{nullptr};
+    MCPhysReg IndexReg{MCRegister::NoRegister};
+  };
+
   bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
+  bool isRVE() const { return STI->hasFeature(RISCV::FeatureStdExtE); }
   unsigned regSize() const { return isRV64() ? 8 : 4; }
   unsigned loadOpc() const { return isRV64() ? RISCV::LD : RISCV::LW; }
   unsigned storeOpc() const { return isRV64() ? RISCV::SD : RISCV::SW; }
@@ -36,8 +56,271 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
     return isRV64() ? RISCV::AMOADD_D : RISCV::AMOADD_W;
   }
 
+  LocalUDChain computeLocalUDChain(const MCInst *CurInstr,
+                                   InstructionIterator Begin,
+                                   InstructionIterator End) const {
+    DenseMap<int, MCInst *> RegAliasTable;
+    LocalUDChain Uses;
+
+    auto addInstrOperands = [&](const MCInst &Instr) {
+      for (const MCOperand &Operand : MCPlus::primeOperands(Instr)) {
+        if (!Operand.isReg())
+          continue;
+        Uses[&Instr].push_back(RegAliasTable[Operand.getReg()]);
+      }
+    };
+
+    bool TerminatorSeen = false;
+    for (auto II = Begin; II != End; ++II) {
+      MCInst &Instr = *II;
+      if (isPseudo(Instr) || isNoop(Instr))
+        continue;
+      if (TerminatorSeen) {
+        RegAliasTable.clear();
+        Uses.clear();
+      }
+
+      addInstrOperands(Instr);
+
+      BitVector Regs(RegInfo->getNumRegs(), false);
+      getWrittenRegs(Instr, Regs);
+      for (int Idx : Regs.set_bits())
+        RegAliasTable[Idx] = &Instr;
+
+      TerminatorSeen = isTerminator(Instr);
+    }
+
+    if (CurInstr)
+      addInstrOperands(*CurInstr);
+
+    return Uses;
+  }
+
+  const MCInst *getOperandDef(const MCInst &Inst, unsigned OperandIndex,
+                              const LocalUDChain &UDChain) const {
+    if (OperandIndex >= MCPlus::getNumPrimeOperands(Inst) ||
+        !Inst.getOperand(OperandIndex).isReg())
+      return nullptr;
+
+    const auto UsesIt = UDChain.find(&Inst);
+    if (UsesIt == UDChain.end())
+      return nullptr;
+
+    unsigned RegOperandIndex = 0;
+    for (unsigned Index = 0; Index < OperandIndex; ++Index)
+      RegOperandIndex += Inst.getOperand(Index).isReg();
+
+    if (RegOperandIndex >= UsesIt->second.size())
+      return nullptr;
+    return UsesIt->second[RegOperandIndex];
+  }
+
+  const MCInst *followCopies(const MCInst *Def,
+                             const LocalUDChain &UDChain) const {
+    SmallPtrSet<const MCInst *, 4> Visited;
+    while (Def && Visited.insert(Def).second) {
+      unsigned SourceOperand = 0;
+      switch (Def->getOpcode()) {
+      default:
+        return Def;
+      case RISCV::ADDI:
+      case RISCV::ORI:
+        if (!Def->getOperand(2).isImm() || Def->getOperand(2).getImm() != 0)
+          return Def;
+        SourceOperand = 1;
+        break;
+      case RISCV::ADD:
+      case RISCV::OR:
+        if (Def->getOperand(1).getReg() == RISCV::X0)
+          SourceOperand = 2;
+        else if (Def->getOperand(2).getReg() == RISCV::X0)
+          SourceOperand = 1;
+        else
+          return Def;
+        break;
+      case RISCV::C_MV:
+        SourceOperand = 1;
+        break;
+      }
+      Def = getOperandDef(*Def, SourceOperand, UDChain);
+    }
+    return Def;
+  }
+
+  static const MCExpr *stripSpecifier(const MCExpr *Expr) {
+    while (const auto *Specifier = dyn_cast_or_null<MCSpecifierExpr>(Expr))
+      Expr = Specifier->getSubExpr();
+    return Expr;
+  }
+
+  const MCExpr *matchJumpTableBase(const MCInst *Def,
+                                   const LocalUDChain &UDChain) const {
+    Def = followCopies(Def, UDChain);
+    if (!Def)
+      return nullptr;
+
+    if (Def->getOpcode() == RISCV::ADDI || Def->getOpcode() == RISCV::C_ADDI) {
+      Def = followCopies(getOperandDef(*Def, 1, UDChain), UDChain);
+      if (!Def)
+        return nullptr;
+    }
+
+    switch (Def->getOpcode()) {
+    default:
+      return nullptr;
+    case RISCV::LUI:
+    case RISCV::AUIPC:
+    case RISCV::C_LUI:
+      break;
+    }
+
+    if (!Def->getOperand(1).isExpr())
+      return nullptr;
+    const MCExpr *Expr = stripSpecifier(Def->getOperand(1).getExpr());
+    return getTargetSymbolInfo(Expr).first ? Expr : nullptr;
+  }
+
+  bool matchJumpTableLoad(const MCInst *Def, const LocalUDChain &UDChain,
+                          JumpTableLoad &Load) const {
+    Def = followCopies(Def, UDChain);
+    if (!Def)
+      return false;
+
+    switch (Def->getOpcode()) {
+    default:
+      return false;
+    case RISCV::LW:
+    case RISCV::C_LW:
+      Load.EntrySize = 4;
+      Load.EntrySigned = isRV64();
+      break;
+    case RISCV::LWU:
+      Load.EntrySize = 4;
+      Load.EntrySigned = false;
+      break;
+    case RISCV::LD:
+    case RISCV::C_LD:
+      // GCC uses full-width label-address arrays as a family of sub-tables
+      // relative to one shared anchor. BOLT cannot move those safely until it
+      // can retarget every LUI/AUIPC + ADDI reference to an interior label.
+      return false;
+    }
+
+    if (!Def->getOperand(2).isImm())
+      return false;
+    Load.Inst = Def;
+    Load.Offset = Def->getOperand(2).getImm();
+    // A non-zero displacement can select an embedded table relative to a
+    // larger anchor object. Moving that table requires retargeting the whole
+    // LUI/AUIPC + ADDI pair to a new interior label, which is not represented
+    // by MemLocInstr today. Reject it instead of moving the wrong sub-table.
+    return Load.Offset == 0;
+  }
+
+  static unsigned getSHXADDScale(unsigned Opcode) {
+    switch (Opcode) {
+    default:
+      return 0;
+    case RISCV::SH1ADD:
+    case RISCV::SH1ADD_UW:
+      return 2;
+    case RISCV::SH2ADD:
+    case RISCV::SH2ADD_UW:
+      return 4;
+    case RISCV::SH3ADD:
+    case RISCV::SH3ADD_UW:
+      return 8;
+    }
+  }
+
+  bool matchScaledAddress(const MCInst *Def, uint64_t EntrySize,
+                          const LocalUDChain &UDChain,
+                          ScaledAddress &Address) const {
+    Def = followCopies(Def, UDChain);
+    if (!Def)
+      return false;
+
+    if (getSHXADDScale(Def->getOpcode()) == EntrySize) {
+      Address.IndexReg = Def->getOperand(1).getReg();
+      Address.BaseDef = followCopies(getOperandDef(*Def, 2, UDChain), UDChain);
+      return Address.BaseDef != nullptr;
+    }
+
+    if (Def->getOpcode() != RISCV::ADD && Def->getOpcode() != RISCV::C_ADD)
+      return false;
+
+    for (unsigned ShiftOperand : {1U, 2U}) {
+      const unsigned BaseOperand = ShiftOperand == 1 ? 2 : 1;
+      const MCInst *Shift =
+          followCopies(getOperandDef(*Def, ShiftOperand, UDChain), UDChain);
+      if (!Shift)
+        continue;
+      if (Shift->getOpcode() != RISCV::SLLI &&
+          Shift->getOpcode() != RISCV::SLLI_UW &&
+          Shift->getOpcode() != RISCV::C_SLLI)
+        continue;
+      if (!Shift->getOperand(2).isImm() ||
+          (1ULL << Shift->getOperand(2).getImm()) != EntrySize)
+        continue;
+
+      Address.IndexReg = Shift->getOperand(1).getReg();
+      Address.BaseDef =
+          followCopies(getOperandDef(*Def, BaseOperand, UDChain), UDChain);
+      if (Address.BaseDef)
+        return true;
+    }
+    return false;
+  }
+
+  bool areSameJumpTable(const MCExpr *LHS, const MCExpr *RHS) const {
+    return getTargetSymbolInfo(LHS) == getTargetSymbolInfo(RHS);
+  }
+
+  bool replaceJumpTableSymbol(MCInst &Inst, const MCSymbol *OldTarget,
+                              const MCSymbol *NewTarget,
+                              MCContext *Ctx) const {
+    for (unsigned OpIndex = 0;
+         OpIndex < MCPlus::getNumPrimeOperands(Inst); ++OpIndex) {
+      MCOperand &Operand = Inst.getOperand(OpIndex);
+      if (!Operand.isExpr())
+        continue;
+
+      const MCExpr *Expr = Operand.getExpr();
+      const auto *Specifier = dyn_cast<MCSpecifierExpr>(Expr);
+      const MCExpr *SubExpr = Specifier ? Specifier->getSubExpr() : Expr;
+      const auto [Symbol, Addend] = getTargetSymbolInfo(SubExpr);
+      if (Symbol != OldTarget)
+        continue;
+
+      const MCExpr *NewExpr = MCSymbolRefExpr::create(NewTarget, *Ctx);
+      if (Addend)
+        NewExpr = MCBinaryExpr::createAdd(
+            NewExpr, MCConstantExpr::create(Addend, *Ctx), *Ctx);
+      if (Specifier)
+        NewExpr =
+            MCSpecifierExpr::create(NewExpr, Specifier->getSpecifier(), *Ctx);
+      Operand = MCOperand::createExpr(NewExpr);
+      return true;
+    }
+    return false;
+  }
+
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs(RegInfo->getNumRegs(), false);
+    const MCPhysReg LastArgReg = isRVE() ? RISCV::X15 : RISCV::X17;
+    for (MCPhysReg Reg = RISCV::X10; Reg <= LastArgReg; ++Reg)
+      Regs |= getAliases(Reg);
+    return Regs;
+  }
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<RISCVMCSymbolizer>(Function, CreateNewSymbols);
+  }
 
   bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
@@ -54,6 +337,8 @@ public:
     Regs |= getAliases(RISCV::X2);
     Regs |= getAliases(RISCV::X8);
     Regs |= getAliases(RISCV::X9);
+    if (isRVE())
+      return;
     Regs |= getAliases(RISCV::X18);
     Regs |= getAliases(RISCV::X19);
     Regs |= getAliases(RISCV::X20);
@@ -64,6 +349,32 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    Regs |= getAliases(RISCV::X10);
+    Regs |= getAliases(RISCV::X11);
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    const MCPhysReg LastGPR = isRVE() ? RISCV::X15 : RISCV::X31;
+    for (MCPhysReg Reg = RISCV::X1; Reg <= LastGPR; ++Reg) {
+      if (IncludeAlias)
+        Regs |= getAliases(Reg);
+      else
+        Regs.set(Reg);
+    }
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask(RegInfo->getNumRegs(), false);
+    ExclusionMask |= getAliases(RISCV::X1); // return address
+    ExclusionMask |= getAliases(RISCV::X2); // stack pointer
+    ExclusionMask |= getAliases(RISCV::X3); // global pointer
+    ExclusionMask |= getAliases(RISCV::X4); // thread pointer
+    ExclusionMask |= getAliases(RISCV::X8); // frame pointer
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {
@@ -171,6 +482,29 @@ public:
     return {Inst};
   }
 
+  int getPCRelEncodingSize(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      llvm_unreachable("Failed to get RISC-V PC-relative encoding size");
+    case RISCV::C_BEQZ:
+    case RISCV::C_BNEZ:
+      return 9;
+    case RISCV::C_J:
+      return 12;
+    case RISCV::BEQ:
+    case RISCV::BNE:
+    case RISCV::BLT:
+    case RISCV::BGE:
+    case RISCV::BLTU:
+    case RISCV::BGEU:
+      return 13;
+    case RISCV::JAL:
+      return 21;
+    }
+  }
+
+  int getUncondBranchEncodingSize() const override { return 21; }
+
   void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
@@ -189,26 +523,129 @@ public:
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
+      uint64_t &EntrySize, bool &EntrySigned, MCInst *&PCRelBaseOut,
+      MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
     BaseRegNum = 0;
     IndexRegNum = 0;
     DispValue = 0;
     DispExpr = nullptr;
+    EntrySize = 0;
+    EntrySigned = false;
     PCRelBaseOut = nullptr;
     FixedEntryLoadInst = nullptr;
 
-    // Check for the following long tail call sequence:
-    // 1: auipc xi, %pcrel_hi(sym)
-    // jalr zero, %pcrel_lo(1b)(xi)
-    if (Instruction.getOpcode() == RISCV::JALR && Begin != End) {
-      MCInst &PrevInst = *std::prev(End);
-      if (isRISCVCall(PrevInst, Instruction) &&
-          Instruction.getOperand(0).getReg() == RISCV::X0)
-        return IndirectBranchType::POSSIBLE_TAIL_CALL;
+    (void)PtrSize;
+
+    unsigned TargetOperand;
+    switch (Instruction.getOpcode()) {
+    default:
+      return IndirectBranchType::UNKNOWN;
+    case RISCV::JALR:
+      if (Instruction.getOperand(0).getReg() != RISCV::X0)
+        return IndirectBranchType::UNKNOWN;
+      TargetOperand = 1;
+      break;
+    case RISCV::C_JR:
+      TargetOperand = 0;
+      break;
     }
 
-    return IndirectBranchType::UNKNOWN;
+    LocalUDChain UDChain = computeLocalUDChain(&Instruction, Begin, End);
+    const MCInst *TargetDef =
+        getOperandDef(Instruction, TargetOperand, UDChain);
+
+    // Check for a long tail call. The local use-def chain makes this robust
+    // against unrelated instructions between AUIPC and JALR.
+    if (Instruction.getOpcode() == RISCV::JALR && TargetDef &&
+        isRISCVCall(*TargetDef, Instruction))
+      return IndirectBranchType::POSSIBLE_TAIL_CALL;
+
+    // Jump-table dispatches use an unmodified register as the JALR target.
+    if (Instruction.getOpcode() == RISCV::JALR &&
+        (!Instruction.getOperand(2).isImm() ||
+         Instruction.getOperand(2).getImm() != 0))
+      return IndirectBranchType::UNKNOWN;
+
+    const MCInst *Root = followCopies(TargetDef, UDChain);
+    if (!Root)
+      return IndirectBranchType::UNKNOWN;
+
+    // PIC tables contain signed 32-bit offsets. Match
+    //   add target, loaded-offset, table-base
+    // before the absolute-address form, which branches directly to the load.
+    if (Root->getOpcode() == RISCV::ADD || Root->getOpcode() == RISCV::C_ADD) {
+      for (unsigned LoadOperand : {1U, 2U}) {
+        const unsigned BaseOperand = LoadOperand == 1 ? 2 : 1;
+        JumpTableLoad Load;
+        if (!matchJumpTableLoad(getOperandDef(*Root, LoadOperand, UDChain),
+                                UDChain, Load) ||
+            Load.EntrySize != 4)
+          continue;
+
+        const MCExpr *TargetBase = matchJumpTableBase(
+            getOperandDef(*Root, BaseOperand, UDChain), UDChain);
+        if (!TargetBase)
+          continue;
+
+        ScaledAddress Address;
+        if (!matchScaledAddress(getOperandDef(*Load.Inst, 1, UDChain),
+                                Load.EntrySize, UDChain, Address))
+          continue;
+        const MCExpr *LoadBase = matchJumpTableBase(Address.BaseDef, UDChain);
+        if (!LoadBase || !areSameJumpTable(TargetBase, LoadBase))
+          continue;
+
+        IndexRegNum = Address.IndexReg;
+        DispValue = Load.Offset;
+        DispExpr = LoadBase;
+        EntrySize = Load.EntrySize;
+        EntrySigned = true;
+        return IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE;
+      }
+    }
+
+    // Absolute-address tables branch directly to a loaded 32/64-bit entry:
+    //   load target, (table-base + index * entry-size)
+    //   jr   target
+    JumpTableLoad Load;
+    if (!matchJumpTableLoad(Root, UDChain, Load))
+      return IndirectBranchType::UNKNOWN;
+
+    ScaledAddress Address;
+    if (!matchScaledAddress(getOperandDef(*Load.Inst, 1, UDChain),
+                            Load.EntrySize, UDChain, Address))
+      return IndirectBranchType::UNKNOWN;
+
+    const MCExpr *LoadBase = matchJumpTableBase(Address.BaseDef, UDChain);
+    if (!LoadBase)
+      return IndirectBranchType::UNKNOWN;
+
+    BaseRegNum = getNoRegister();
+    IndexRegNum = Address.IndexReg;
+    DispValue = Load.Offset;
+    DispExpr = LoadBase;
+    EntrySize = Load.EntrySize;
+    EntrySigned = Load.EntrySigned;
+    return IndirectBranchType::POSSIBLE_JUMP_TABLE;
+  }
+
+  bool replaceJumpTableReference(
+      MutableArrayRef<MCInst> InstrWindow, const MCSymbol *OldTarget,
+      const MCSymbol *NewTarget, MCContext *Ctx) const override {
+    for (MCInst &Inst : llvm::reverse(InstrWindow)) {
+      switch (Inst.getOpcode()) {
+      default:
+        continue;
+      case RISCV::AUIPC:
+      case RISCV::LUI:
+      case RISCV::C_LUI:
+        break;
+      }
+      if (replaceJumpTableSymbol(Inst, OldTarget, NewTarget, Ctx))
+        return true;
+    }
+    return false;
   }
 
   bool convertJmpToTailCall(MCInst &Inst) override {
@@ -273,12 +710,66 @@ public:
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
                           MCContext *Ctx) override {
-    createShortJmp(Seq, Target, Ctx, /*IsTailCall*/ true);
+    Seq.emplace_back();
+    createTailCall(Seq.back(), Target, Ctx);
   }
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+  }
+
+  InstructionListType createIndirectPLTCall(MCInst &&DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    const bool IsTailCall = isTailCall(DirectCall);
+    assert(((DirectCall.getOpcode() == RISCV::PseudoCALL && !IsTailCall) ||
+            (DirectCall.getOpcode() == RISCV::PseudoTAIL && IsTailCall)) &&
+           "RISC-V direct (tail) call instruction expected");
+
+    // Load the resolved function address directly from its GOT slot:
+    //
+    //   auipc t3, %pcrel_hi(TargetLocation)
+    //   l[dw] t3, %pcrel_lo(.Lpcrel_hi)(t3)
+    //   jalr  ra, t3, 0
+    //
+    // A tail call uses zero instead of ra as the JALR destination.
+    InstructionListType Code;
+    // Use t3 (x28), the scratch register used by linker-generated RISC-V
+    // PLT/IPLT entries. It is caller-saved, is not an argument register, and
+    // the original call through the PLT already clobbers it.
+    const MCPhysReg PLTScratchReg = RISCV::X28;
+    MCSymbol *AUIPCLabel = Ctx->createNamedTempSymbol("pcrel_hi");
+
+    MCInst InstAUIPC =
+        MCInstBuilder(RISCV::AUIPC).addReg(PLTScratchReg).addImm(0);
+    // TargetLocation is already registered at the existing GOT slot, so use a
+    // direct PC-relative relocation to that slot instead of R_RISCV_GOT_HI20,
+    // which is used when starting from the referenced function symbol.
+    setOperandToSymbolRef(InstAUIPC, /*OpNum=*/1, TargetLocation,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(InstAUIPC, AUIPCLabel);
+    Code.emplace_back(std::move(InstAUIPC));
+
+    MCInst InstLoad = MCInstBuilder(loadOpc())
+                          .addReg(PLTScratchReg)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    // Pair the I-type LD/LW immediate with the label on AUIPC. RISC-V
+    // R_RISCV_PCREL_LO12_I relocations name the corresponding HI20 location,
+    // not the final GOT-slot symbol.
+    setOperandToSymbolRef(InstLoad, /*OpNum=*/2, AUIPCLabel,
+                          /*Addend=*/0, Ctx, ELF::R_RISCV_PCREL_LO12_I);
+    Code.emplace_back(std::move(InstLoad));
+
+    MCInst InstCall = MCInstBuilder(RISCV::JALR)
+                          .addReg(IsTailCall ? RISCV::X0 : RISCV::X1)
+                          .addReg(PLTScratchReg)
+                          .addImm(0);
+    moveAnnotations(std::move(DirectCall), InstCall);
+    Code.emplace_back(std::move(InstCall));
+
+    return Code;
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -298,6 +789,11 @@ public:
       if (!isTerminator(*I) || isTailCall(*I) || !isBranch(*I))
         break;
 
+      // An indirect jump has no symbolic TBB operand. It may be a recognized
+      // jump-table dispatch and must not enter the direct unconditional path.
+      if (isIndirectBranch(*I))
+        return false;
+
       // Handle unconditional branches.
       if (isUnconditionalBranch(*I)) {
         // If any code was seen after this unconditional branch, we've seen
@@ -310,10 +806,6 @@ public:
         TBB = Sym;
         continue;
       }
-
-      // Handle conditional branches and ignore indirect branches
-      if (isIndirectBranch(*I))
-        return false;
 
       if (CondBranch == nullptr) {
         const MCSymbol *TargetBB = getTargetSymbol(*I);
@@ -567,6 +1059,7 @@ public:
 
   void atomicAdd(MCInst &Inst, MCPhysReg RegAtomic, MCPhysReg RegTo,
                  MCPhysReg RegCnt) const {
+    // AMO operands are ordered as rd, rs2 (value), rs1 (address).
     Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
                .addReg(RegCnt)
@@ -613,6 +1106,29 @@ public:
     Seq.swap(Insts);
   }
 
+  void createLongJmp(InstructionListType &Seq, const MCSymbol *Target,
+                     MCContext *Ctx, bool IsTailCall,
+                     MCPhysReg ScratchReg) override {
+    assert(ScratchReg && "RISC-V long jump requires a scratch register");
+    MCSymbol *AuipcLabel = Ctx->createNamedTempSymbol("long_jmp");
+
+    MCInst Inst = MCInstBuilder(RISCV::AUIPC).addReg(ScratchReg).addImm(0);
+    setOperandToSymbolRef(Inst, /*OpNum=*/1, Target, /*Addend=*/0, Ctx,
+                          ELF::R_RISCV_PCREL_HI20);
+    setInstLabel(Inst, AuipcLabel);
+    Seq.emplace_back(std::move(Inst));
+
+    Inst = MCInstBuilder(RISCV::JALR)
+               .addReg(RISCV::X0)
+               .addReg(ScratchReg)
+               .addImm(0);
+    setOperandToSymbolRef(Inst, /*OpNum=*/2, AuipcLabel, /*Addend=*/0, Ctx,
+                          ELF::R_RISCV_PCREL_LO12_I);
+    if (IsTailCall)
+      setTailCall(Inst);
+    Seq.emplace_back(std::move(Inst));
+  }
+
   InstructionListType createGetter(MCContext *Ctx, const char *name) const {
     InstructionListType Insts(4);
     MCSymbol *Locs = Ctx->getOrCreateSymbol(name);
@@ -650,6 +1166,74 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, AuipcLabel, Addend, Ctx,
                           ELF::R_RISCV_PCREL_LO12_I);
     return Insts;
+  }
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override {
+    (void)MAB;
+    const uint64_t RelOffset = Fixup.getOffset();
+
+    uint32_t RelType;
+    if (mc::isRelocation(Fixup.getKind())) {
+      RelType = Fixup.getKind();
+    } else if (Fixup.isPCRel()) {
+      switch (Fixup.getKind()) {
+      default:
+        return std::nullopt;
+      case FK_Data_4:
+        RelType = ELF::R_RISCV_32_PCREL;
+        break;
+      case RISCV::fixup_riscv_pcrel_hi20:
+        RelType = ELF::R_RISCV_PCREL_HI20;
+        break;
+      case RISCV::fixup_riscv_pcrel_lo12_i:
+        RelType = ELF::R_RISCV_PCREL_LO12_I;
+        break;
+      case RISCV::fixup_riscv_pcrel_lo12_s:
+        RelType = ELF::R_RISCV_PCREL_LO12_S;
+        break;
+      case RISCV::fixup_riscv_jal:
+        RelType = ELF::R_RISCV_JAL;
+        break;
+      case RISCV::fixup_riscv_branch:
+        RelType = ELF::R_RISCV_BRANCH;
+        break;
+      case RISCV::fixup_riscv_rvc_jump:
+        RelType = ELF::R_RISCV_RVC_JUMP;
+        break;
+      case RISCV::fixup_riscv_rvc_branch:
+        RelType = ELF::R_RISCV_RVC_BRANCH;
+        break;
+      case RISCV::fixup_riscv_call:
+      case RISCV::fixup_riscv_call_plt:
+        RelType = ELF::R_RISCV_CALL_PLT;
+        break;
+      }
+    } else {
+      switch (Fixup.getKind()) {
+      default:
+        return std::nullopt;
+      case FK_Data_4:
+        RelType = ELF::R_RISCV_32;
+        break;
+      case FK_Data_8:
+        RelType = ELF::R_RISCV_64;
+        break;
+      case RISCV::fixup_riscv_hi20:
+        RelType = ELF::R_RISCV_HI20;
+        break;
+      case RISCV::fixup_riscv_lo12_i:
+        RelType = ELF::R_RISCV_LO12_I;
+        break;
+      case RISCV::fixup_riscv_lo12_s:
+        RelType = ELF::R_RISCV_LO12_S;
+        break;
+      }
+    }
+
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
+    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
 
   InstructionListType createInstrIncMemory(const MCSymbol *Target,

@@ -33,6 +33,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -824,6 +825,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   unsigned BaseRegNum, IndexRegNum;
   int64_t DispValue;
   const MCExpr *DispExpr;
+  uint64_t EntrySize;
+  bool EntrySigned;
 
   // In AArch, identify the instruction adding the PC-relative offset to
   // jump table entries to correctly decode it.
@@ -847,12 +850,13 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   IndirectBranchType BranchType = BC.MIB->analyzeIndirectBranch(
       Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
-      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
+      IndexRegNum, DispValue, DispExpr, EntrySize, EntrySigned, PCRelBaseInstr,
+      FixedEntryLoadInstr);
 
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
 
-  if (MemLocInstr != &Instruction)
+  if (MemLocInstr && MemLocInstr != &Instruction)
     IndexRegNum = BC.MIB->getNoRegister();
 
   if (BC.isAArch64()) {
@@ -910,7 +914,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     ArrayStart = static_cast<uint64_t>(DispValue);
   }
 
-  if (BaseRegNum == BC.MRI->getProgramCounter())
+  if (BaseRegNum != BC.MIB->getNoRegister() &&
+      BaseRegNum == BC.MRI->getProgramCounter())
     ArrayStart += getAddress() + Offset + Size;
 
   if (FixedEntryLoadInstr) {
@@ -991,6 +996,16 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // Check if there's already a jump table registered at this address.
   MemoryContentsType MemType;
   if (JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart)) {
+    if (BC.isRISCV()) {
+      const bool IsRelated = llvm::all_of(JT->Parents, [&](BinaryFunction *BF) {
+        return BC.areRelatedFragments(this, BF);
+      });
+      if (!IsRelated)
+        return IndirectBranchType::UNKNOWN;
+    }
+
+    EntrySize = JT->EntrySize;
+    EntrySigned = JT->EntriesAreSigned;
     switch (JT->Type) {
     case JumpTable::JTT_NORMAL:
       MemType = MemoryContentsType::POSSIBLE_JUMP_TABLE;
@@ -999,6 +1014,18 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
       MemType = MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE;
       break;
     }
+  } else if (EntrySize) {
+    const JumpTable::JumpTableType ExpectedType =
+        BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE
+            ? JumpTable::JTT_PIC
+            : JumpTable::JTT_NORMAL;
+    const bool IsJumpTable =
+        BC.analyzeJumpTable(ArrayStart, ExpectedType, *this, 0, nullptr,
+                            nullptr, EntrySize, EntrySigned);
+    MemType = IsJumpTable ? ExpectedType == JumpTable::JTT_PIC
+                                ? MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE
+                                : MemoryContentsType::POSSIBLE_JUMP_TABLE
+                          : MemoryContentsType::UNKNOWN;
   } else {
     MemType = BC.analyzeMemoryAt(ArrayStart, *this);
   }
@@ -1021,8 +1048,10 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   }
 
   // Convert the instruction into jump table branch.
-  const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType);
-  BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
+  const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType,
+                                                    EntrySize, EntrySigned);
+  if (MemLocInstr)
+    BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
   BC.MIB->setJumpTable(Instruction, ArrayStart, IndexRegNum);
 
   JTSites.emplace_back(Offset, ArrayStart);
@@ -1330,13 +1359,6 @@ Error BinaryFunction::disassemble() {
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
-  // Map offsets in the function to a label that should always point to the
-  // corresponding instruction. This is used for labels that shouldn't point to
-  // the start of a basic block but always to a specific instruction. This is
-  // used, for example, on RISC-V where %pcrel_lo relocations point to the
-  // corresponding %pcrel_hi.
-  LabelsMapType InstructionLabels;
-
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
@@ -1501,42 +1523,6 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isRISCV()) {
-      // Check if there's a relocation associated with this instruction.
-      for (auto Itr = Relocations.lower_bound(Offset),
-                ItrE = Relocations.lower_bound(Offset + Size);
-           Itr != ItrE; ++Itr) {
-        const Relocation &Relocation = Itr->second;
-        MCSymbol *Symbol = Relocation.Symbol;
-
-        if (Relocation::isInstructionReference(Relocation.Type)) {
-          uint64_t RefOffset = Relocation.Value - getAddress();
-          LabelsMapType::iterator LI = InstructionLabels.find(RefOffset);
-
-          if (LI == InstructionLabels.end()) {
-            Symbol = BC.Ctx->createNamedTempSymbol();
-            InstructionLabels.emplace(RefOffset, Symbol);
-          } else {
-            Symbol = LI->second;
-          }
-        }
-
-        uint64_t Addend = Relocation.Addend;
-
-        // For GOT relocations, create a reference against GOT entry ignoring
-        // the relocation symbol.
-        if (Relocation::isGOT(Relocation.Type)) {
-          assert(Relocation::isPCRelative(Relocation.Type) &&
-                 "GOT relocation must be PC-relative on RISC-V");
-          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-          Addend = Relocation.Value + Relocation.Offset + getAddress();
-        }
-        int64_t Value = Relocation.Value;
-        const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
-        (void)Result;
-        assert(Result && "cannot replace immediate with relocation");
-      }
     }
 
 add_instruction:
@@ -1577,13 +1563,6 @@ add_instruction:
 
   // Scope-boundary markers are only consulted while assigning offsets above.
   DebugScopeBoundaryOffsets.clear();
-
-  for (auto [Offset, Label] : InstructionLabels) {
-    InstrMapType::iterator II = Instructions.find(Offset);
-    assert(II != Instructions.end() && "reference to non-existing instruction");
-
-    BC.MIB->setInstLabel(II->second, Label);
-  }
 
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);
@@ -1882,6 +1861,22 @@ bool BinaryFunction::scanExternalRefs() {
         // create an external reference relocation.
         Success = false;
         continue;
+      }
+
+      if (BC.isRISCV()) {
+        switch (Rel->Type) {
+        default:
+          break;
+        case ELF::R_RISCV_BRANCH:
+        case ELF::R_RISCV_JAL:
+        case ELF::R_RISCV_RVC_BRANCH:
+        case ELF::R_RISCV_RVC_JUMP:
+          if (BinaryFunction *TargetBF = BC.getFunctionForSymbol(Rel->Symbol)) {
+            TargetBF->setNeedsPatch(true);
+            continue;
+          }
+          break;
+        }
       }
 
       if (BC.isAArch64()) {
@@ -2198,12 +2193,14 @@ bool BinaryFunction::postProcessIndirectBranches(
         unsigned BaseRegNum, IndexRegNum;
         int64_t DispValue;
         const MCExpr *DispExpr;
+        uint64_t EntrySize;
+        bool EntrySigned;
         MCInst *PCRelBaseInstr;
         MCInst *FixedEntryLoadInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
             Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
-            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr,
-            FixedEntryLoadInstr);
+            IndexRegNum, DispValue, DispExpr, EntrySize, EntrySigned,
+            PCRelBaseInstr, FixedEntryLoadInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 
@@ -4218,6 +4215,38 @@ void BinaryFunction::disambiguateJumpTables(
         continue;
       if (JumpTables.insert(JT).second)
         continue;
+
+      if (BC.isRISCV()) {
+        const uint64_t JTAddress = BC.MIB->getJumpTable(Inst);
+        const uint64_t JTOffset = JTAddress - JT->getAddress();
+        const auto LabelIt = JT->Labels.find(JTOffset);
+        if (LabelIt == JT->Labels.end()) {
+          BC.errs() << "BOLT-ERROR: failed to find RISC-V jump table label at "
+                    << "offset 0x" << Twine::utohexstr(JTOffset)
+                    << " in function " << *this << '\n';
+          exit(1);
+        }
+
+        const MCSymbol *OldJTLabel = LabelIt->second;
+        uint64_t NewJumpTableID = 0;
+        const MCSymbol *NewJTLabel;
+        std::tie(NewJumpTableID, NewJTLabel) =
+            BC.duplicateJumpTable(*this, JT, OldJTLabel);
+
+        MutableArrayRef<MCInst> InstrWindow(&*BB->begin(), &Inst + 1);
+        if (!BC.MIB->replaceJumpTableReference(
+                InstrWindow, OldJTLabel, NewJTLabel, BC.Ctx.get())) {
+          BC.errs() << "BOLT-ERROR: failed to retarget duplicated RISC-V jump "
+                       "table in function "
+                    << *this << '\n';
+          exit(1);
+        }
+
+        const uint16_t IndexReg = BC.MIB->getJumpTableIndexReg(Inst);
+        BC.MIB->setJumpTable(Inst, NewJumpTableID, IndexReg, AllocId);
+        continue;
+      }
+
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT
