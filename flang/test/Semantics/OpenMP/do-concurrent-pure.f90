@@ -78,6 +78,33 @@ contains
     end do
   end subroutine
 
+  ! An APPLY clause's directive-variant must be pure too, independently of
+  ! its host directive (TILE, which is itself pure).
+  subroutine do_concurrent_apply(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n, n)
+    integer :: i, j
+    do concurrent (i = 1:n)
+      !$omp tile sizes(2) apply(grid: nothing)
+      do j = 1, n
+        a(i, j) = a(i, j) + 1
+      end do
+    end do
+  end subroutine
+
+  subroutine do_concurrent_apply_bad(a, n)
+    integer, intent(in) :: n
+    integer, intent(inout) :: a(n, n)
+    integer :: i, j
+    do concurrent (i = 1:n)
+      !ERROR: The OpenMP directive 'BARRIER' is not allowed in a DO CONCURRENT construct
+      !$omp tile sizes(2) apply(grid: barrier)
+      do j = 1, n
+        a(i, j) = a(i, j) + 1
+      end do
+    end do
+  end subroutine
+
   subroutine do_concurrent_bad(a, n)
     integer, intent(in) :: n
     integer, intent(inout) :: a(n)
