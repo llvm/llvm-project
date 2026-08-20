@@ -3376,11 +3376,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // The carry-out lane of Add is unused, so it is safe to write with
       // S_MOV_B32 even into a VGPR.
       auto MaterializeCarryOutOffset = [&](MachineInstrBuilder &Add) {
-        Register ConstOffsetReg;
-        if (!isWave32)
-          ConstOffsetReg = getSubReg(Add.getReg(1), AMDGPU::sub0);
-        else
-          ConstOffsetReg = Add.getReg(1);
+        Register ConstOffsetReg =
+            isWave32 ? Add.getReg(1) : getSubReg(Add.getReg(1), AMDGPU::sub0);
         BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32), ConstOffsetReg)
             .addImm(Offset);
         return ConstOffsetReg;
