@@ -334,6 +334,11 @@ public:
   }
 
   bool isElementTypeLegalForCompressStore(Type *Ty) const {
+    if ((ST->hasSVE2p2() || ST->hasSME2p2()) &&
+        ((Ty->isIntegerTy(8) || Ty->isIntegerTy(16)) ||
+         ((Ty->isHalfTy() || Ty->isBFloatTy()) &&
+          Ty->getScalarSizeInBits() == 16)))
+      return true;
     return Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isIntegerTy(32) ||
            Ty->isIntegerTy(64);
   }

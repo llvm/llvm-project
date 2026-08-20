@@ -2283,6 +2283,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // lowering for non-compressing masked stores.
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
+    if (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) {
+      // With +sve2p2/+sme2p2 the full range of vector types are supported.
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv8f16, MVT::nxv8bf16})
+        setOperationAction(ISD::MSTORE, VT, Custom);
+    }
 
     // Histcnt is SVE2 only
     if (Subtarget->hasSVE2()) {
@@ -33927,7 +33932,6 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
       ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
       Store->getMask(), Store->getMask());
-
   SDValue CompressedValue =
       DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
                   Store->getMask(), DAG.getPOISON(VT));
