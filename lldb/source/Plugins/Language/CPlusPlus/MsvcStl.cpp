@@ -309,8 +309,7 @@ bool lldb_private::formatters::MsvcStlStrongOrderingSummaryProvider(
 
 bool lldb_private::formatters::IsMsvcStlSourceLocation(ValueObject &valobj) {
   if (auto valobj_sp = valobj.GetNonSyntheticValue())
-    return valobj_sp->GetChildMemberWithName("_File") != nullptr &&
-           valobj_sp->GetChildMemberWithName("_Line") != nullptr;
+    return valobj_sp->GetChildMemberWithName("_File") != nullptr;
   return false;
 }
 
