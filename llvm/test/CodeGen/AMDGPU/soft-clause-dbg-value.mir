@@ -28,7 +28,6 @@ body:             |
     ; CHECK-NEXT: DBG_VALUE [[S_LOAD_DWORD_IMM2]], 0, 0
     ; CHECK-NEXT: DBG_VALUE [[S_LOAD_DWORD_IMM3]], 0, 0
     ; CHECK-NEXT: [[S_LOAD_DWORD_IMM4:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 64, 0 :: (load (s32), addrspace 4)
-    ; CHECK-NEXT: KILL [[COPY]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_LOAD_DWORD_IMM]], implicit [[S_LOAD_DWORD_IMM1]], implicit [[S_LOAD_DWORD_IMM2]], implicit [[S_LOAD_DWORD_IMM3]], implicit [[S_LOAD_DWORD_IMM4]]
     %0:sreg_64 = COPY $sgpr4_sgpr5
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (load (s32), align 4, addrspace 4)

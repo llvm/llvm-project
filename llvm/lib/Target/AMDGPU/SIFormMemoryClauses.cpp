@@ -275,7 +275,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
-    GCNDownwardRPTracker RPT(*LIS);
+    GCNDownwardRPTracker RPT(*LIS, *MRI);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
@@ -290,16 +290,17 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         continue;
 
       if (!RPT.getNext().isValid())
-        RPT.reset(MI, MBB.end());
+        RPT.reset(MI, MBB.end(), /*VirtLiveRegs=*/nullptr, &MBB);
       else { // Advance the state to the current MI.
         RPT.advance(MachineBasicBlock::const_iterator(MI));
         RPT.advanceBeforeNext();
       }
 
       const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getVirtLiveRegs());
+      const BitVector PhysRegsCopy(RPT.getPhysLiveRegUnits());
       RegUse Defs, Uses;
       if (!processRegUses(MI, Defs, Uses, RPT)) {
-        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
+        RPT.reset(MI, LiveRegsCopy, PhysRegsCopy);
         continue;
       }
 
@@ -323,7 +324,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         ++Length;
       }
       if (Length < 2) {
-        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
+        RPT.reset(MI, LiveRegsCopy, PhysRegsCopy);
         continue;
       }
 
@@ -391,7 +392,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       }
 
       // Restore the state after processing the end of the bundle.
-      RPT.reset(MI, MBB.end(), &LiveRegsCopy);
+      RPT.reset(MI, LiveRegsCopy, PhysRegsCopy);
 
       if (!Kill)
         continue;

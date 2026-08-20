@@ -12,10 +12,10 @@ define <32 x float> @bitcast_v32i32_to_v32f32(<32 x i32> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32i32_to_v32f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -62,10 +62,10 @@ define <32 x float> @bitcast_v32i32_to_v32f32(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v32f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -112,10 +112,10 @@ define <32 x float> @bitcast_v32i32_to_v32f32(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v32f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -636,10 +636,10 @@ define <32 x i32> @bitcast_v32f32_to_v32i32(<32 x float> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32f32_to_v32i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -686,10 +686,10 @@ define <32 x i32> @bitcast_v32f32_to_v32i32(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v32i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -736,10 +736,10 @@ define <32 x i32> @bitcast_v32f32_to_v32i32(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -1468,10 +1468,10 @@ define <16 x i64> @bitcast_v32i32_to_v16i64(<32 x i32> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32i32_to_v16i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -1518,10 +1518,10 @@ define <16 x i64> @bitcast_v32i32_to_v16i64(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v16i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -1568,10 +1568,10 @@ define <16 x i64> @bitcast_v32i32_to_v16i64(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v16i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2092,10 +2092,10 @@ define <32 x i32> @bitcast_v16i64_to_v32i32(<16 x i64> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16i64_to_v32i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2142,10 +2142,10 @@ define <32 x i32> @bitcast_v16i64_to_v32i32(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v32i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2192,10 +2192,10 @@ define <32 x i32> @bitcast_v16i64_to_v32i32(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2724,10 +2724,10 @@ define <16 x double> @bitcast_v32i32_to_v16f64(<32 x i32> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32i32_to_v16f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2774,10 +2774,10 @@ define <16 x double> @bitcast_v32i32_to_v16f64(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v16f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -2824,10 +2824,10 @@ define <16 x double> @bitcast_v32i32_to_v16f64(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v16f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -3348,16 +3348,15 @@ define <32 x i32> @bitcast_v16f64_to_v32i32(<16 x double> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16f64_to_v32i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB10_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.true
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; SI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; SI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -3376,22 +3375,20 @@ define <32 x i32> @bitcast_v16f64_to_v32i32(<16 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; SI-NEXT:  .LBB10_2: ; %end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: bitcast_v16f64_to_v32i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; VI-NEXT:    s_cbranch_execz .LBB10_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.true
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -3410,22 +3407,20 @@ define <32 x i32> @bitcast_v16f64_to_v32i32(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; VI-NEXT:  .LBB10_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -3444,7 +3439,6 @@ define <32 x i32> @bitcast_v16f64_to_v32i32(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GFX9-NEXT:  .LBB10_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v32i32:
@@ -22330,10 +22324,10 @@ define <64 x bfloat> @bitcast_v32i32_to_v64bf16(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v64bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -22380,10 +22374,10 @@ define <64 x bfloat> @bitcast_v32i32_to_v64bf16(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -30332,10 +30326,10 @@ define <64 x half> @bitcast_v32i32_to_v64f16(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -30382,10 +30376,10 @@ define <64 x half> @bitcast_v32i32_to_v64f16(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v64f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -31988,10 +31982,10 @@ define <32 x i32> @bitcast_v64f16_to_v32i32(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -33548,10 +33542,10 @@ define <64 x i16> @bitcast_v32i32_to_v64i16(<32 x i32> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32i32_to_v64i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -33598,10 +33592,10 @@ define <64 x i16> @bitcast_v32i32_to_v64i16(<32 x i32> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32i32_to_v64i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -35035,10 +35029,10 @@ define <32 x i32> @bitcast_v64i16_to_v32i32(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v32i32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -36157,10 +36151,10 @@ define <16 x i64> @bitcast_v32f32_to_v16i64(<32 x float> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32f32_to_v16i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -36207,10 +36201,10 @@ define <16 x i64> @bitcast_v32f32_to_v16i64(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v16i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -36257,10 +36251,10 @@ define <16 x i64> @bitcast_v32f32_to_v16i64(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v16i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -36989,10 +36983,10 @@ define <32 x float> @bitcast_v16i64_to_v32f32(<16 x i64> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16i64_to_v32f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -37039,10 +37033,10 @@ define <32 x float> @bitcast_v16i64_to_v32f32(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v32f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -37089,10 +37083,10 @@ define <32 x float> @bitcast_v16i64_to_v32f32(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v32f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -37621,10 +37615,10 @@ define <16 x double> @bitcast_v32f32_to_v16f64(<32 x float> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v32f32_to_v16f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -37671,10 +37665,10 @@ define <16 x double> @bitcast_v32f32_to_v16f64(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v16f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -37721,10 +37715,10 @@ define <16 x double> @bitcast_v32f32_to_v16f64(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v16f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -38453,16 +38447,15 @@ define <32 x float> @bitcast_v16f64_to_v32f32(<16 x double> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16f64_to_v32f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; SI-NEXT:    s_cbranch_execz .LBB34_2
 ; SI-NEXT:  ; %bb.1: ; %cmp.true
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; SI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; SI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -38481,22 +38474,20 @@ define <32 x float> @bitcast_v16f64_to_v32f32(<16 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; SI-NEXT:  .LBB34_2: ; %end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: bitcast_v16f64_to_v32f32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; VI-NEXT:    s_cbranch_execz .LBB34_2
 ; VI-NEXT:  ; %bb.1: ; %cmp.true
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -38515,22 +38506,20 @@ define <32 x float> @bitcast_v16f64_to_v32f32(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; VI-NEXT:  .LBB34_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v32f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX9-NEXT:    s_cbranch_execz .LBB34_2
 ; GFX9-NEXT:  ; %bb.1: ; %cmp.true
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -38549,7 +38538,6 @@ define <32 x float> @bitcast_v16f64_to_v32f32(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
 ; GFX9-NEXT:  .LBB34_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v32f32:
@@ -58340,10 +58328,10 @@ define <64 x bfloat> @bitcast_v32f32_to_v64bf16(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v64bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -58390,10 +58378,10 @@ define <64 x bfloat> @bitcast_v32f32_to_v64bf16(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -66540,10 +66528,10 @@ define <64 x half> @bitcast_v32f32_to_v64f16(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -66590,10 +66578,10 @@ define <64 x half> @bitcast_v32f32_to_v64f16(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v64f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -68343,10 +68331,10 @@ define <32 x float> @bitcast_v64f16_to_v32f32(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v32f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -69903,10 +69891,10 @@ define <64 x i16> @bitcast_v32f32_to_v64i16(<32 x float> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v32f32_to_v64i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -69953,10 +69941,10 @@ define <64 x i16> @bitcast_v32f32_to_v64i16(<32 x float> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v32f32_to_v64i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -71537,10 +71525,10 @@ define <32 x float> @bitcast_v64i16_to_v32f32(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v32f32:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -72659,10 +72647,10 @@ define <16 x double> @bitcast_v16i64_to_v16f64(<16 x i64> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16i64_to_v16f64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -72709,10 +72697,10 @@ define <16 x double> @bitcast_v16i64_to_v16f64(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v16f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -72759,10 +72747,10 @@ define <16 x double> @bitcast_v16i64_to_v16f64(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v16f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -73290,10 +73278,10 @@ define <16 x i64> @bitcast_v16f64_to_v16i64(<16 x double> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v16f64_to_v16i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -73314,20 +73302,18 @@ define <16 x i64> @bitcast_v16f64_to_v16i64(<16 x double> %a, i32 %b) #0 {
 ; SI-NEXT:    v_add_f64 v[24:25], v[24:25], 1.0
 ; SI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
 ; SI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; SI-NEXT:  .LBB54_2: ; %end
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: bitcast_v16f64_to_v16i64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -73348,20 +73334,18 @@ define <16 x i64> @bitcast_v16f64_to_v16i64(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[24:25], v[24:25], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:  .LBB54_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v16i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -73382,11 +73366,9 @@ define <16 x i64> @bitcast_v16f64_to_v16i64(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[24:25], v[24:25], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:  .LBB54_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v16i64:
@@ -92355,10 +92337,10 @@ define <64 x bfloat> @bitcast_v16i64_to_v64bf16(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v64bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -92405,10 +92387,10 @@ define <64 x bfloat> @bitcast_v16i64_to_v64bf16(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -100338,10 +100320,10 @@ define <64 x half> @bitcast_v16i64_to_v64f16(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -100388,10 +100370,10 @@ define <64 x half> @bitcast_v16i64_to_v64f16(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v64f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -102002,10 +101984,10 @@ define <16 x i64> @bitcast_v64f16_to_v16i64(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v16i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -103562,10 +103544,10 @@ define <64 x i16> @bitcast_v16i64_to_v64i16(<16 x i64> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16i64_to_v64i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -103612,10 +103594,10 @@ define <64 x i16> @bitcast_v16i64_to_v64i16(<16 x i64> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v16i64_to_v64i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -105057,10 +105039,10 @@ define <16 x i64> @bitcast_v64i16_to_v16i64(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v16i64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -125347,10 +125329,10 @@ define <64 x bfloat> @bitcast_v16f64_to_v64bf16(<16 x double> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16f64_to_v64bf16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -125364,7 +125346,6 @@ define <64 x bfloat> @bitcast_v16f64_to_v64bf16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -125375,16 +125356,15 @@ define <64 x bfloat> @bitcast_v16f64_to_v64bf16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; VI-NEXT:  .LBB76_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -125398,7 +125378,6 @@ define <64 x bfloat> @bitcast_v16f64_to_v64bf16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; GFX9-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -125409,7 +125388,6 @@ define <64 x bfloat> @bitcast_v16f64_to_v64bf16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; GFX9-NEXT:  .LBB76_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v64bf16:
@@ -133435,10 +133413,10 @@ define <64 x half> @bitcast_v16f64_to_v64f16(<16 x double> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16f64_to_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -133452,7 +133430,6 @@ define <64 x half> @bitcast_v16f64_to_v64f16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -133463,16 +133440,15 @@ define <64 x half> @bitcast_v16f64_to_v64f16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; VI-NEXT:  .LBB80_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v64f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -133486,7 +133462,6 @@ define <64 x half> @bitcast_v16f64_to_v64f16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; GFX9-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -133497,7 +133472,6 @@ define <64 x half> @bitcast_v16f64_to_v64f16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; GFX9-NEXT:  .LBB80_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v64f16:
@@ -135143,10 +135117,10 @@ define <16 x double> @bitcast_v64f16_to_v16f64(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v16f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -136688,10 +136662,10 @@ define <64 x i16> @bitcast_v16f64_to_v64i16(<16 x double> %a, i32 %b) #0 {
 ; VI-LABEL: bitcast_v16f64_to_v64i16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; VI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -136705,7 +136679,6 @@ define <64 x i16> @bitcast_v16f64_to_v64i16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; VI-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; VI-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; VI-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; VI-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -136716,16 +136689,15 @@ define <64 x i16> @bitcast_v16f64_to_v64i16(<16 x double> %a, i32 %b) #0 {
 ; VI-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; VI-NEXT:  .LBB84_2: ; %end
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: bitcast_v16f64_to_v64i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -136739,7 +136711,6 @@ define <64 x i16> @bitcast_v16f64_to_v64i16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[4:5], v[4:5], 1.0
 ; GFX9-NEXT:    v_add_f64 v[2:3], v[2:3], 1.0
 ; GFX9-NEXT:    v_add_f64 v[0:1], v[0:1], 1.0
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f64 v[30:31], v[30:31], 1.0
 ; GFX9-NEXT:    v_add_f64 v[28:29], v[28:29], 1.0
 ; GFX9-NEXT:    v_add_f64 v[26:27], v[26:27], 1.0
@@ -136750,7 +136721,6 @@ define <64 x i16> @bitcast_v16f64_to_v64i16(<16 x double> %a, i32 %b) #0 {
 ; GFX9-NEXT:    v_add_f64 v[16:17], v[16:17], 1.0
 ; GFX9-NEXT:  .LBB84_2: ; %end
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: bitcast_v16f64_to_v64i16:
@@ -138227,10 +138197,10 @@ define <16 x double> @bitcast_v64i16_to_v16f64(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v16f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -216217,10 +216187,10 @@ define <64 x bfloat> @bitcast_v64f16_to_v64bf16(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -225990,10 +225960,10 @@ define <64 x bfloat> @bitcast_v64i16_to_v64bf16(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v64bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -227982,10 +227952,10 @@ define <64 x i16> @bitcast_v64f16_to_v64i16(<64 x half> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64f16_to_v64i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -230347,10 +230317,10 @@ define <64 x half> @bitcast_v64i16_to_v64f16(<64 x i16> %a, i32 %b) #0 {
 ; GFX9-LABEL: bitcast_v64i16_to_v64f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v31
+; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v32
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]

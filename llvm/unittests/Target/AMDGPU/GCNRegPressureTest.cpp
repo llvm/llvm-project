@@ -61,7 +61,8 @@ body:             |
 
   // Track pressure across MBB1.
   {
-    GCNDownwardRPTracker RPTracker(LIS), RPTrackerNoLiveIns(LIS);
+    GCNDownwardRPTracker RPTracker(LIS, MF.getRegInfo()),
+        RPTrackerNoLiveIns(LIS, MF.getRegInfo());
 
     // There is a non-debug instruction in bb.1 (%2's def), so advance should
     // return true.
@@ -77,7 +78,8 @@ body:             |
   // Track pressure just across the first debug value of bb.1.
   {
     MachineBasicBlock::iterator Dbg1 = std::next(MBB1.begin());
-    GCNDownwardRPTracker RPTracker(LIS), RPTrackerNoLiveIns(LIS);
+    GCNDownwardRPTracker RPTracker(LIS, MF.getRegInfo()),
+        RPTrackerNoLiveIns(LIS, MF.getRegInfo());
 
     // The following unpacks a call to
     // advance(*MBB1.begin(), Dbg1, [MBB1LiveIns|nullptr])
@@ -128,7 +130,8 @@ body:             |
                       LIS, MF.getRegInfo());
 
   MachineBasicBlock &MBB1 = *MF.getBlockNumbered(1);
-  GCNDownwardRPTracker RPTracker(LIS), RPTrackerNoLiveIns(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MF.getRegInfo()),
+      RPTrackerNoLiveIns(LIS, MF.getRegInfo());
 
   // The following unpacks a call to
   // advance(MBB1.begin(), MBB1.end(), [MBB1LiveIns|nullptr])
@@ -182,7 +185,7 @@ body:             |
   MachineInstr *U1 = Instrs[2];
   MachineInstr *U2 = Instrs[3];
 
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MRI);
   GCNRPTracker::LiveRegSet Empty;
   RPTracker.reset(MRI, Empty);
 
@@ -233,7 +236,7 @@ body:             |
   MachineInstr *DefS0 = Instrs[0];
   MachineInstr *UseRedef = Instrs[1];
 
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MRI);
   GCNRPTracker::LiveRegSet Empty;
   RPTracker.reset(MRI, Empty);
 

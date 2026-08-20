@@ -1,17 +1,33 @@
-; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0  < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1  < %s | FileCheck --check-prefix=GCN-GCNTRACKERS %s
-
+; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN %s
+; RUN: FileCheck --check-prefix=SCHED %s < %t
+; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa -amdgpu-s-branch-bits=5 -amdgpu-long-branch-factor=0 -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN-GCNTRACKERS %s
+; RUN: FileCheck --check-prefix=SCHED-GCNTRACKERS %s < %t
+; REQUIRES: asserts
 ; CHECK-LABEL: {{^}}spill:
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
 ; GCN:    NumVgprs: 1
-; GCN-GCNTRACKERS:    NumVgprs: 2
+; GCN-GCNTRACKERS:    NumVgprs: 1
 ; GCN:    ScratchSize: 0
 ; GCN-GCNTRACKERS:    ScratchSize: 0
 ; GCN:    Occupancy: 4
 ; GCN-GCNTRACKERS:    Occupancy: 4
-
-; FIXME: GCN Trackers do not track pressure from PhysRegs, so scheduling is actually worse
+;
+; Check scheduling pressure values:
+; SCHED-LABEL: spill:%bb.0 entry
+; SCHED: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 193
+; SCHED: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 98
+;
+; SCHED-GCNTRACKERS-LABEL: spill:%bb.0 entry
+; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 193
+; SCHED-GCNTRACKERS: Pressure after scheduling: VGPRs: 0 AGPRs: 0, SGPRs: 98
+;
+; NOTE: Physical register pressure tracking is now decoupled from the GCN
+; trackers, so both the generic and GCN-tracker scheduling paths account for
+; physical registers. As a result SCHED and SCHED-GCNTRACKERS now report the
+; same pressure. When a live range is not found for a physical regunit, we
+; conservatively assume the unit is live, so Region SGPR pressure is higher
+; (193) than the virtual-only count (98).
 
 define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 entry:
@@ -247,9 +263,15 @@ bb3:
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
 ; GCN:    NumVgprs: 2
-; GCN-GCNTRACKERS:    NumVgprs: 3
+; GCN-GCNTRACKERS:    NumVgprs: 2
 ; GCN:    ScratchSize: 8
-; GCN-GCNTRACKERS:    ScratchSize: 12
+; GCN-GCNTRACKERS:    ScratchSize: 8
+;
+; SCHED-LABEL: spill_func:%bb.0 entry
+; SCHED: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 192
+;
+; SCHED-GCNTRACKERS-LABEL: spill_func:%bb.0 entry
+; SCHED-GCNTRACKERS: Region register pressure: VGPRs: 0 AGPRs: 0, SGPRs: 192
 
 define void @spill_func(ptr addrspace(1) %arg) #0 {
 entry:

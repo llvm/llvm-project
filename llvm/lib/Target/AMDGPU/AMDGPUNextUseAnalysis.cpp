@@ -2431,7 +2431,7 @@ void printNextUseDistancesAsJson(json::OStream &J, const MachineFunction &MF,
   // We don't actually care about register pressure here - just using
   // GCNDownwardRPTracker as a convenient way of getting the set of live
   // registers at a given instruction.
-  GCNDownwardRPTracker RPTracker(LIS);
+  GCNDownwardRPTracker RPTracker(LIS, MRI);
   ModuleSlotTracker MST(M);
   MST.incorporateFunction(F);
 

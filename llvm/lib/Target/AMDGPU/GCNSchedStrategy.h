@@ -293,6 +293,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> VirtLiveIns;
 
+  // Per-region physical register live-in cache (register unit BitVectors).
+  SmallVector<BitVector, 32> PhysLiveIns;
+
+  // Per-region physical register live-out cache (register unit BitVectors).
+  SmallVector<BitVector, 32> PhysLiveOuts;
+
   // Region pressure cache.
   SmallVector<GCNRegPressure, 32> Pressure;
 
