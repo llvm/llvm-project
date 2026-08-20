@@ -229,7 +229,6 @@ public:
   void __parse_basic() {
     __parse_basic_expr();
     __machine_.__push_end_state();
-    __machine_.__optimize();
   }
 
   void __parse_grep() {

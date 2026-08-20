@@ -294,7 +294,6 @@ public:
     if (__first_ != __last_)
       std::__throw_regex_error<regex_constants::__re_err_parse>();
     __machine_.__push_end_state();
-    __machine_.__optimize();
   }
 
   __interpreter<_CharT, _Traits> __extract_interpreter() { return std::move(__machine_); }

@@ -13,6 +13,7 @@
 #include <__algorithm/equal.h>
 #include <__algorithm/min.h>
 #include <__algorithm/reverse.h>
+#include <__algorithm/reverse_copy.h>
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
@@ -372,42 +373,43 @@ struct __local_execution_state {
     return {__found, false, __current_pos};
   }
 
-  /*
-pair<bool, size_t> __exec_lookahead(
-    const _CharT* const __first,
-    const _CharT* const __last,
-    const __global_state& __gstate,
-    const __interpreter_info<_CharT>* const __code,
-    size_t __current_pos,
-    bool __is_positive) {
-  auto __jump_offset    = __read_uleb(__code, __current_pos);
-  auto __submatch_count = __read_uleb(__code, __current_pos);
-  auto __submatch_base  = __read_uleb(__code, __current_pos);
-  auto __loop_count     = __read_uleb(__code, __current_pos);
+  pair<bool, size_t> __exec_lookahead(
+      const _CharT* const __first,
+      const _CharT* const __last,
+      const _CharT* __current,
+      const __global_state& __gstate,
+      const __interpreter_info<_CharT>* const __code,
+      size_t __current_pos,
+      bool __is_positive) {
+    auto __jump_offset    = __read_uleb(__code, __current_pos);
+    auto __submatch_count = __read_uleb(__code, __current_pos);
+    auto __submatch_base  = __read_uleb(__code, __current_pos);
+    auto __loop_count     = __read_uleb(__code, __current_pos);
 
-  auto __initial_loop_values = std::make_unique_for_overwrite<__loop_value<_CharT>[]>(__loop_count);
+    vector<__loop_value<_CharT>> __initial_loop_values;
 
-  for (size_t __i = 0; __i != __loop_count; ++__i)
-    __initial_loop_values[__i] = __read_uleb(__code, __current_pos);
+    for (size_t __i = 0; __i != __loop_count; ++__i)
+      __initial_loop_values.push_back(__read_uleb(__code, __current_pos));
 
-  __global_state __gexec_state{{}, __gstate.__machine_, __submatch_count, __gstate.__flags_};
-  __gexec_state.__flags_ &= ~regex_constants::__full_match;
-  auto& __s = __gexec_state.__states_.emplace_back();
-  if (__loop_count > 0)
-    __s.__sub_matches_ = std::make_unique<pair<const _CharT*, const _CharT*>[]>(__submatch_count);
-  __s.__current_     = __current_;
-  __s.__loop_values_ = std::move(__initial_loop_values);
-  __s.__current_pos_ = __current_pos;
-  if (__gexec_state.__execute(__first, __last) != __is_positive)
-    return {false, __current_pos};
-  if (__is_positive) {
-    auto& __matched_state = __gexec_state.__states_.back();
-    std::copy_n(__matched_state.__sub_matches_.get(), __submatch_count, __get_submatch(__submatch_base));
+    __global_state __gexec_state{
+        {__loop_count, __gstate.__states_.__get_submatch_count()},
+        __gstate.__machine_,
+        __submatch_count,
+        __gstate.__flags_};
+    __gexec_state.__flags_ &= ~regex_constants::__full_match;
+    vector<sub_match<const _CharT*>> __sub_matches;
+    if (__gexec_state.__execute(__first, __current, __last, __sub_matches, __current_pos, __initial_loop_values)
+            .first != __is_positive)
+      return {false, __current_pos};
+    if (__is_positive) {
+      size_t __index = 0;
+      for (auto __iter = __sub_matches.begin(); __iter != __sub_matches.end(); ++__iter) {
+        __get_submatch(__submatch_base + __index++) = *__iter;
+      }
+    }
+    __current_pos += __jump_offset;
+    return {true, __current_pos};
   }
-  __current_pos += __jump_offset;
-  return {true, __current_pos};
-}
-  */
 
   size_t __exec_branch_n_to_m_matcher(
       __global_state& __gstate,
@@ -616,13 +618,13 @@ pair<bool, size_t> __exec_lookahead(
 
       case __negative_lookahead:
       case __positive_lookahead: {
-        // if (auto __result =
-        //         __exec_lookahead(__first, __last, __gstate, __code, __current_pos, (__st == __positive_lookahead));
-        //     __result.first)
-        //   __current_pos = __result.second;
-        // else
-        //   return {false, __counter};
-      } // break;
+        if (auto __result = __exec_lookahead(
+                __first, __last, __current, __gstate, __code, __current_pos, (__st == __positive_lookahead));
+            __result.first)
+          __current_pos = __result.second;
+        else
+          return {false, __counter};
+      } break;
 
       default:
         std::__libcpp_unreachable();
@@ -634,8 +636,8 @@ pair<bool, size_t> __exec_lookahead(
 template <class _CharT, class _Traits>
 class __local_execution_state_stack {
   char* __data_begin_ = nullptr;
-  size_t __base_offset_;
-  size_t __object_size_;
+  const size_t __base_offset_;
+  const size_t __object_size_;
   size_t __size_     = 0;
   size_t __capacity_ = 0;
 
@@ -651,6 +653,8 @@ public:
   __local_execution_state_stack(const __local_execution_state_stack&)            = delete;
   __local_execution_state_stack& operator=(const __local_execution_state_stack&) = delete;
   ~__local_execution_state_stack() { __builtin_free(__data_begin_); }
+
+  size_t __get_submatch_count() const { return __base_offset_ / sizeof(pair<const _CharT*, const _CharT*>); }
 
   bool empty() const { return __size_ == 0; }
 
@@ -734,6 +738,96 @@ struct __global_execution_state {
         }
       }
       return false;
+    }
+  }
+
+  pair<bool, const _CharT*>
+  __execute(const _CharT* __first,
+            const _CharT* __current,
+            const _CharT* __last,
+            vector<sub_match<const _CharT*>>& __sub_matches,
+            size_t __exec_pos,
+            const vector<__loop_value<_CharT>>& __initial_loop_values) {
+    using __local_state = __local_execution_state<_CharT, _Traits>;
+
+    auto __copy_to_submatches =
+        [&](pair<const _CharT*, const _CharT*>* __from, size_t __count, vector<sub_match<const _CharT*>>& __to) {
+          __to.clear();
+          std::transform(
+              std::make_reverse_iterator(__from + __count),
+              std::make_reverse_iterator(__from),
+              std::back_inserter(__to),
+              [&](pair<const _CharT*, const _CharT*> __v) {
+                sub_match<const _CharT*> __ret;
+                __ret.first   = __v.first ? __v.first : __last;
+                __ret.second  = __v.first ? __v.second : __last;
+                __ret.matched = __v.first;
+                return __ret;
+              });
+        };
+
+    const auto __sizeof_submatches  = sizeof(pair<const _CharT*, const _CharT*>) * __submatch_count_;
+    const auto __sizeof_loop_values = sizeof(__loop_value<_CharT>) * __initial_loop_values.size();
+    const auto __state_size         = __sizeof_submatches + sizeof(__local_state) + __sizeof_loop_values;
+
+    auto* __base_state_start      = static_cast<char*>(__builtin_alloca(2 * __state_size));
+    auto* __base_state_submatches = reinterpret_cast<pair<const _CharT*, const _CharT*>*>(__base_state_start);
+    auto* __base_state            = reinterpret_cast<__local_state*>(__base_state_start + __sizeof_submatches);
+    auto* __tmp_state_start       = __base_state_start + __state_size;
+    auto* __tmp_state             = reinterpret_cast<__local_state*>(__tmp_state_start + __sizeof_submatches);
+
+    std::uninitialized_fill_n(
+        __base_state_submatches, __submatch_count_, pair<const _CharT*, const _CharT*>{nullptr, nullptr});
+    std::__construct_at(__base_state, __current, __exec_pos);
+    std::uninitialized_copy(
+        __initial_loop_values.begin(),
+        __initial_loop_values.end(),
+        reinterpret_cast<__loop_value<_CharT>*>(__base_state_start + __sizeof_submatches + sizeof(__local_state)));
+
+    auto [__base_state_matched, __gcounter] = __base_state->__execute(__first, __last, *this);
+
+    size_t __length = __last - __first + 1;
+    if (__machine_.__find_longest_) {
+      if (!__base_state_matched)
+        __base_state->__current_ = __current;
+      bool __found_match = __base_state_matched;
+      while (!__states_.empty()) {
+        if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
+          std::__throw_regex_error<regex_constants::error_complexity>();
+        __states_.pop(__tmp_state);
+        auto [__success, __counter] = __tmp_state->__execute(__first, __last, *this);
+        __gcounter += __counter;
+        if (__success) {
+          if (!__found_match || __base_state->__current_ < __tmp_state->__current_)
+            __builtin_memcpy(__base_state_start, __tmp_state_start, __state_size);
+          if (__base_state->__current_ == __last) {
+            __copy_to_submatches(__base_state_submatches, __submatch_count_, __sub_matches);
+            return {true, __base_state->__current_};
+          }
+          __found_match = true;
+        }
+      }
+      if (!__found_match)
+        return {false, {}};
+      __copy_to_submatches(__base_state_submatches, __submatch_count_, __sub_matches);
+      return {true, __base_state->__current_};
+    } else {
+      if (__base_state_matched) {
+        __copy_to_submatches(__base_state_submatches, __submatch_count_, __sub_matches);
+        return {true, __base_state->__current_};
+      }
+      while (!__states_.empty()) {
+        if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
+          std::__throw_regex_error<regex_constants::error_complexity>();
+        __states_.pop(__base_state);
+        if (auto [__success, __counter] = __base_state->__execute(__first, __last, *this); __success) {
+          __copy_to_submatches(__base_state_submatches, __submatch_count_, __sub_matches);
+          return {true, __base_state->__current_};
+        } else {
+          __gcounter += __counter;
+        }
+      }
+      return {false, {}};
     }
   }
 };
@@ -1056,87 +1150,7 @@ public:
             const _CharT* __first,
             const _CharT* __last,
             vector<sub_match<const _CharT*>>& __sub_matches) const {
-    using __local_state = __local_execution_state<_CharT, _Traits>;
-
-    auto __copy_to_submatches =
-        [&](pair<const _CharT*, const _CharT*>* __from, size_t __count, vector<sub_match<const _CharT*>>& __to) {
-          __to.clear();
-          std::transform(
-              std::make_reverse_iterator(__from + __count),
-              std::make_reverse_iterator(__from),
-              std::back_inserter(__to),
-              [&](pair<const _CharT*, const _CharT*> __v) {
-                sub_match<const _CharT*> __ret;
-                __ret.first   = __v.first ? __v.first : __last;
-                __ret.second  = __v.first ? __v.second : __last;
-                __ret.matched = __v.first;
-                return __ret;
-              });
-        };
-
-    const auto __sizeof_submatches  = sizeof(pair<const _CharT*, const _CharT*>) * __gexec_state.__submatch_count_;
-    const auto __sizeof_loop_values = sizeof(__loop_value<_CharT>) * __initial_loop_values_.size();
-    const auto __state_size         = __sizeof_submatches + sizeof(__local_state) + __sizeof_loop_values;
-
-    auto* __base_state_start      = static_cast<char*>(__builtin_alloca(2 * __state_size));
-    auto* __base_state_submatches = reinterpret_cast<pair<const _CharT*, const _CharT*>*>(__base_state_start);
-    auto* __base_state            = reinterpret_cast<__local_state*>(__base_state_start + __sizeof_submatches);
-    auto* __tmp_state_start       = __base_state_start + __state_size;
-    auto* __tmp_state             = reinterpret_cast<__local_state*>(__tmp_state_start + __sizeof_submatches);
-
-    std::uninitialized_fill_n(
-        __base_state_submatches, __gexec_state.__submatch_count_, pair<const _CharT*, const _CharT*>{nullptr, nullptr});
-    std::__construct_at(__base_state, __first, 0);
-    std::uninitialized_copy(
-        __initial_loop_values_.begin(),
-        __initial_loop_values_.end(),
-        reinterpret_cast<__loop_value<_CharT>*>(__base_state_start + __sizeof_submatches + sizeof(__local_state)));
-
-    auto [__base_state_matched, __gcounter] = __base_state->__execute(__first, __last, __gexec_state);
-
-    size_t __length = __last - __first + 1;
-    if (__gexec_state.__machine_.__find_longest_) {
-      if (!__base_state_matched)
-        __base_state->__current_ = __first;
-      bool __found_match = __base_state_matched;
-      while (!__gexec_state.__states_.empty()) {
-        if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
-          std::__throw_regex_error<regex_constants::error_complexity>();
-        __gexec_state.__states_.pop(__tmp_state);
-        auto [__success, __counter] = __tmp_state->__execute(__first, __last, __gexec_state);
-        __gcounter += __counter;
-        if (__success) {
-          if (!__found_match || __base_state->__current_ < __tmp_state->__current_)
-            __builtin_memcpy(__base_state_start, __tmp_state_start, __state_size);
-          if (__base_state->__current_ == __last) {
-            __copy_to_submatches(__base_state_submatches, __gexec_state.__submatch_count_, __sub_matches);
-            return {true, __base_state->__current_};
-          }
-          __found_match = true;
-        }
-      }
-      if (!__found_match)
-        return {false, {}};
-      __copy_to_submatches(__base_state_submatches, __gexec_state.__submatch_count_, __sub_matches);
-      return {true, __base_state->__current_};
-    } else {
-      if (__base_state_matched) {
-        __copy_to_submatches(__base_state_submatches, __gexec_state.__submatch_count_, __sub_matches);
-        return {true, __base_state->__current_};
-      }
-      while (!__gexec_state.__states_.empty()) {
-        if (__gcounter / _LIBCPP_REGEX_COMPLEXITY_FACTOR >= __length)
-          std::__throw_regex_error<regex_constants::error_complexity>();
-        __gexec_state.__states_.pop(__base_state);
-        if (auto [__success, __counter] = __base_state->__execute(__first, __last, __gexec_state); __success) {
-          __copy_to_submatches(__base_state_submatches, __gexec_state.__submatch_count_, __sub_matches);
-          return {true, __base_state->__current_};
-        } else {
-          __gcounter += __counter;
-        }
-      }
-      return {false, {}};
-    }
+    return __gexec_state.__execute(__first, __first, __last, __sub_matches, 0, __initial_loop_values_);
   }
 
   pair<bool, const _CharT*> __execute_match(

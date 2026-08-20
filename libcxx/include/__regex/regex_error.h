@@ -155,6 +155,7 @@ enum error_type {
 
 } // namespace regex_constants
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 class _LIBCPP_EXPORTED_FROM_ABI regex_error : public runtime_error {
   regex_constants::error_type __code_;
 
@@ -164,6 +165,7 @@ public:
   ~regex_error() _NOEXCEPT override;
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI regex_constants::error_type code() const { return __code_; }
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <regex_constants::error_type _Ev>
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_regex_error() {
