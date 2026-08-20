@@ -746,8 +746,9 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
     // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     FastMathFlags NewFMF = DivFMF | SqrtFMF;
-    NewFMF.setNoInfs(DivFMF.noInfs() && SqrtFMF.noInfs());
-    NewFMF.setNoSignedZeros(DivFMF.noSignedZeros() && SqrtFMF.noSignedZeros());
+    FastMathFlags ValueFMF = FastMathFlags::intersectValue(DivFMF, SqrtFMF);
+    NewFMF.setNoInfs(ValueFMF.noInfs());
+    NewFMF.setNoSignedZeros(ValueFMF.noSignedZeros());
     Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
