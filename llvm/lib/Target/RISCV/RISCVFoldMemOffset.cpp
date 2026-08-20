@@ -15,7 +15,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RISCVFoldMemOffset.h"
+#include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -84,7 +84,7 @@ char RISCVFoldMemOffsetLegacy::ID = 0;
 INITIALIZE_PASS(RISCVFoldMemOffsetLegacy, DEBUG_TYPE,
                 RISCV_FOLD_MEM_OFFSET_NAME, false, false)
 
-FunctionPass *llvm::createRISCVFoldMemOffsetPass() {
+FunctionPass *llvm::createRISCVFoldMemOffsetLegacyPass() {
   return new RISCVFoldMemOffsetLegacy();
 }
 

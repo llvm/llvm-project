@@ -625,7 +625,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   }
 
   addPass(createRISCVVectorPeepholeLegacyPass());
-  addPass(createRISCVFoldMemOffsetPass());
+  addPass(createRISCVFoldMemOffsetLegacyPass());
 
   TargetPassConfig::addMachineSSAOptimization();
 
