@@ -30,10 +30,10 @@
 #include "llvm/MC/MCDwarf.h"
 using namespace llvm;
 
-static cl::opt<bool>
-    VerifyCFI("verify-cfiinstrs",
-              cl::desc("Verify Call Frame Information instructions"),
-              cl::init(false), cl::Hidden);
+static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
+    cl::desc("Verify Call Frame Information instructions"),
+    cl::init(false),
+    cl::Hidden);
 
 namespace {
 class CFIInstrInserterImpl {
