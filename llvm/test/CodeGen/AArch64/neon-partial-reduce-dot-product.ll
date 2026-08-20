@@ -857,9 +857,7 @@ define <4 x i32> @sdot_no_bin_op(<4 x i32> %acc, <16 x i8> %a){
 define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-LABEL: udot_no_bin_op_narrow:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
-; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    uaddlp v1.4h, v1.8b
 ; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
@@ -882,9 +880,7 @@ define <2 x i32> @udot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 define <2 x i32> @sdot_no_bin_op_narrow(<2 x i32> %acc, <8 x i8> %a){
 ; CHECK-NODOT-LABEL: sdot_no_bin_op_narrow:
 ; CHECK-NODOT:       // %bb.0:
-; CHECK-NODOT-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
-; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    saddlp v1.4h, v1.8b
 ; CHECK-NODOT-NEXT:    sadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
@@ -1385,11 +1381,14 @@ define <4 x i32> @partial_reduce_shl_zext_non_const_rhs(<16 x i8> %l, <4 x i32> 
 define <2 x i32> @udot_v16i8tov2i32(<2 x i32> %acc, <16 x i8> %input) {
 ; CHECK-NODOT-LABEL: udot_v16i8tov2i32:
 ; CHECK-NODOT:       // %bb.0: // %entry
-; CHECK-NODOT-NEXT:    fmov d0, d0
-; CHECK-NODOT-NEXT:    uaddlp v1.8h, v1.16b
-; CHECK-NODOT-NEXT:    uadalp v0.4s, v1.8h
-; CHECK-NODOT-NEXT:    addp v0.4s, v0.4s, v0.4s
-; CHECK-NODOT-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NODOT-NEXT:    ushll v2.8h, v1.8b, #0
+; CHECK-NODOT-NEXT:    ushll2 v1.8h, v1.16b, #0
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v2.4h
+; CHECK-NODOT-NEXT:    mov d2, v2.d[1]
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v2.4h
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
+; CHECK-NODOT-NEXT:    mov d1, v1.d[1]
+; CHECK-NODOT-NEXT:    uadalp v0.2s, v1.4h
 ; CHECK-NODOT-NEXT:    ret
 ;
 ; CHECK-DOT-LABEL: udot_v16i8tov2i32:
