@@ -143,7 +143,7 @@ static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
 }
 
 /// Populate the scalar math library mappings on \p TLII according to the
-/// -fsclrlib= selection.
+/// -ffastlib= selection.
 static void addScalarMathLibrary(TargetLibraryInfoImpl &TLII,
                                  const CodeGenOptions &CodeGenOpts) {
   switch (CodeGenOpts.getScalarLib()) {

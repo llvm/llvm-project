@@ -1,9 +1,9 @@
 ; Exercises the scalar->AOCL fast-call name mapping under fast-math at -O3 with
-; -scalar-library=AMDLIBM on X86: float variants, *_finite aliases and
+; -fast-library=AMDLIBM on X86: float variants, *_finite aliases and
 ; inverse-trig functions are rewritten, while math calls with no AOCL mapping
 ; (e.g. cbrt) are left untouched.
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -scalar-library=AMDLIBM < %s \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -fast-library=AMDLIBM < %s \
 ; RUN:   | FileCheck %s --check-prefix=AMD
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 < %s \
 ; RUN:   | FileCheck %s --check-prefix=STD

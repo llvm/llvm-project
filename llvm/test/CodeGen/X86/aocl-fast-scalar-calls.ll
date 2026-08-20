@@ -1,8 +1,8 @@
-; Verify that, under fast-math at -O3 with -scalar-library=AMDLIBM, scalar math
+; Verify that, under fast-math at -O3 with -fast-library=AMDLIBM, scalar math
 ; library calls are rewritten to their AMD AOCL fast-call equivalents on X86,
 ; and that they are left untouched without the option.
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -scalar-library=AMDLIBM < %s \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -fast-library=AMDLIBM < %s \
 ; RUN:   | FileCheck %s --check-prefix=AMD
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 < %s \
 ; RUN:   | FileCheck %s --check-prefix=STD

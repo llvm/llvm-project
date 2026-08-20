@@ -1,6 +1,6 @@
 ; The AOCL fast-call lowering applies to 32-bit X86 (i686) as well as x86_64.
 
-; RUN: llc -mtriple=i686-unknown-linux-gnu -O3 -scalar-library=AMDLIBM < %s \
+; RUN: llc -mtriple=i686-unknown-linux-gnu -O3 -fast-library=AMDLIBM < %s \
 ; RUN:   | FileCheck %s --check-prefix=AMD
 ; RUN: llc -mtriple=i686-unknown-linux-gnu -O3 < %s \
 ; RUN:   | FileCheck %s --check-prefix=STD

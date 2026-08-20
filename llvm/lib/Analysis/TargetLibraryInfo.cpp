@@ -23,7 +23,7 @@
 using namespace llvm;
 
 static cl::opt<TargetLibraryInfoImpl::ScalarLibrary> ClScalarLibrary(
-    "scalar-library", cl::Hidden, cl::desc("Scalar functions library"),
+    "fast-library", cl::Hidden, cl::desc("fast functions library"),
     cl::init(TargetLibraryInfoImpl::Default_Scalar_Library),
     cl::values(clEnumValN(TargetLibraryInfoImpl::Default_Scalar_Library, "none",
                           "Use default library"),
