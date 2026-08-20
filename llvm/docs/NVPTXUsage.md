@@ -3304,7 +3304,7 @@ instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a
 single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of
 the whole matrix and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
+When `.sp` is specified, the dimension of A matrix is `M x (K/2)` and requires
 specifying an additional `%spmetadata` argument
 
 `.ashift` shifts the rows of the A matrix down by one row, except for the last
@@ -3482,8 +3482,8 @@ instruction. So, a single thread issuing the
 `nvvm.tcgen05.mma.disable_output_lane` will result in the initiation of the
 whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires
-specifiying an additional `%spmetadata` argument.
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires
+specifying an additional `%spmetadata` argument.
 
 > `.ashift` shifts the rows of the A matrix down by one row, except for the last
 > row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
@@ -3555,8 +3555,8 @@ instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a
 single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of
 the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires
-specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires
+specifying an additional `%spmetadata` argument
 
 The operand `%zero_col_mask` is a 64-bit register which specifies the
 [Zero-Column Mask Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor).
