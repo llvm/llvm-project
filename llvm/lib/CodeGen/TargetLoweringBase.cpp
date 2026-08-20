@@ -722,7 +722,9 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
-      Libcalls(RuntimeLibcallInfo, STI) {
+      Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
+        STI.initLibcallLoweringInfo(Info);
+      }) {
   initActions();
 
   // Perform these initializations only once.
@@ -1236,10 +1238,8 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   return LegalizeKind(TypeSplitVector, NVT);
 }
 
-static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
-                                          unsigned &NumIntermediates,
-                                          MVT &RegisterVT,
-                                          TargetLoweringBase *TLI) {
+unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
+    MVT VT, MVT &IntermediateVT, unsigned &NumIntermediates, MVT &RegisterVT) {
   // Figure out the right, legal destination reg to copy into.
   ElementCount EC = VT.getVectorElementCount();
   MVT EltTy = VT.getVectorElementType();
@@ -1264,7 +1264,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // always end up with an EC that represent a scalar or a scalable
   // scalar.
   while (EC.getKnownMinValue() > 1 &&
-         !TLI->isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
+         !isTypeLegal(MVT::getVectorVT(EltTy, EC))) {
     EC = EC.divideCoefficientBy(2);
     NumVectorRegs <<= 1;
   }
@@ -1272,7 +1272,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   NumIntermediates = NumVectorRegs;
 
   MVT NewVT = MVT::getVectorVT(EltTy, EC);
-  if (!TLI->isTypeLegal(NewVT))
+  if (!isTypeLegal(NewVT))
     NewVT = EltTy;
   IntermediateVT = NewVT;
 
@@ -1281,7 +1281,7 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
   // Convert sizes such as i33 to i64.
   LaneSizeInBits = llvm::bit_ceil(LaneSizeInBits);
 
-  MVT DestVT = TLI->getRegisterType(NewVT);
+  MVT DestVT = getCachedRegisterType(NewVT);
   RegisterVT = DestVT;
   if (EVT(DestVT).bitsLT(NewVT))    // Value is expanded, e.g. i64 -> i16.
     return NumVectorRegs * (LaneSizeInBits / DestVT.getScalarSizeInBits());
@@ -1621,8 +1621,8 @@ void TargetLoweringBase::computeRegisterProperties(
       MVT IntermediateVT;
       MVT RegisterVT;
       unsigned NumIntermediates;
-      unsigned NumRegisters = getVectorTypeBreakdownMVT(VT, IntermediateVT,
-          NumIntermediates, RegisterVT, this);
+      unsigned NumRegisters = getVectorTypeBreakdownMVT(
+          VT, IntermediateVT, NumIntermediates, RegisterVT);
       NumRegistersForVT[i] = NumRegisters;
       assert(NumRegistersForVT[i] == NumRegisters &&
              "NumRegistersForVT size cannot represent NumRegisters!");
@@ -1688,10 +1688,9 @@ EVT TargetLoweringBase::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 /// This method returns the number of registers needed, and the VT for each
 /// register.  It also returns the VT and quantity of the intermediate values
 /// before they are promoted/expanded.
-unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
-                                                    EVT VT, EVT &IntermediateVT,
-                                                    unsigned &NumIntermediates,
-                                                    MVT &RegisterVT) const {
+unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
+    LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT, bool ForCallingConv) const {
   ElementCount EltCnt = VT.getVectorElementCount();
 
   // If there is a wider vector type with the same element type as this one,
@@ -1716,9 +1715,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
 
   unsigned NumVectorRegs = 1;
 
-  // Scalable vectors cannot be scalarized, so handle the legalisation of the
-  // types like done elsewhere in SelectionDAG.
-  if (EltCnt.isScalable()) {
+  auto GetLegalVectorBreakdown = [&]() -> std::optional<unsigned> {
     LegalizeKind LK;
     EVT PartVT = VT;
     do {
@@ -1727,23 +1724,39 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
       PartVT = LK.second;
     } while (LK.first != TypeLegal);
 
-    if (!PartVT.isVector()) {
-      report_fatal_error(
-          "Don't know how to legalize this scalable vector type");
-    }
+    if (!PartVT.isVector())
+      return std::nullopt;
 
+    assert(PartVT.isScalableVector() == VT.isScalableVector() &&
+           "Vector legalization changed scalability");
     NumIntermediates =
         divideCeil(VT.getVectorElementCount().getKnownMinValue(),
                    PartVT.getVectorElementCount().getKnownMinValue());
     IntermediateVT = PartVT;
     RegisterVT = getRegisterType(Context, IntermediateVT);
     return NumIntermediates;
+  };
+
+  // Scalable vectors cannot be scalarized, so handle the legalisation of the
+  // types like done elsewhere in SelectionDAG.
+  if (EltCnt.isScalable()) {
+    if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+      return *NumRegs;
+    report_fatal_error("Don't know how to legalize this scalable vector type");
   }
 
-  // FIXME: We don't support non-power-of-2-sized vectors for now.  Ideally
-  // we could break down into LHS/RHS like LegalizeDAG does.
+  // FIXME: We don't generically support non-power-of-2-sized vectors for now.
+  // Ideally we could break down into LHS/RHS like LegalizeDAG does.
   if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
-    NumVectorRegs = EltCnt.getKnownMinValue();
+    assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
+    unsigned NumElts = EltCnt.getKnownMinValue();
+
+    if (!ForCallingConv && preferVectorizedNonPowerOfTwoTypeBreakdown())
+      if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+        return *NumRegs;
+
+    // Fall back to scalars if there is no legal vector decomposition.
+    NumVectorRegs = NumElts;
     EltCnt = ElementCount::getFixed(1);
   }
 
