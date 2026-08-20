@@ -21,13 +21,13 @@
 #include <__functional/hash.h>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
-#include <wchar.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__utility/is_pointer_in_range.h>
 #include <cstdint>
 #include <cstdio>
 #include <iosfwd>
+#include <wchar.h>
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar> // for wmemcpy
