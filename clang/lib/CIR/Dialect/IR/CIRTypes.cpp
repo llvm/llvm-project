@@ -172,7 +172,8 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
 
 /// The keywords that spell a member kind.  A union's tail-padding slot probes
 /// for one of these to reject it, since that slot is not a member.
-static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty"};
+static const llvm::StringRef memberKindMarks[] = {"data", "pad", "empty",
+                                                  "bitfield"};
 
 static std::optional<RecordMemberKind>
 parseMemberKind(mlir::AsmParser &parser) {
@@ -685,9 +686,7 @@ bool RecordType::isEmptyForABI() const {
   // holding no data.
   if (isIncomplete())
     return false;
-  return llvm::none_of(getMemberKinds(), [](RecordMemberKind kind) {
-    return kind == RecordMemberKind::Data;
-  });
+  return llvm::none_of(getMemberKinds(), holdsDataForABI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -868,9 +867,9 @@ unsigned
 StructType::computeStructDataSize(const mlir::DataLayout &dataLayout) const {
   assert(isComplete() && "Cannot get layout of incomplete records");
 
-  // Tail padding is the trailing run of pad members.  An empty member stays
-  // inside the data size: it is storage the source declared, which a derived
-  // class may not reuse.
+  // Tail padding is the trailing run of pad members.  A member of any other
+  // kind stays inside the data size, only pad being reusable by a derived
+  // class.
   llvm::ArrayRef<mlir::Type> members = getMembers();
   llvm::ArrayRef<RecordMemberKind> kinds = getMemberKinds();
   assert(kinds.size() == members.size() &&

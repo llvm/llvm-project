@@ -556,6 +556,7 @@ def int_amdgcn_fmed3 :
     [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]
 >;
 
+let TargetFeatures = "cube-insts" in {
 def int_amdgcn_cubeid : ClangBuiltin<"__builtin_amdgcn_cubeid">,
   PureIntrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty]
@@ -575,6 +576,7 @@ def int_amdgcn_cubetc : ClangBuiltin<"__builtin_amdgcn_cubetc">,
   PureIntrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty]
 >;
+} // TargetFeatures = "cube-insts"
 
 // v_ffbh_i32, as opposed to v_ffbh_u32. For v_ffbh_u32, llvm.ctlz
 // should be used.

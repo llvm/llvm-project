@@ -200,11 +200,11 @@ WebAssemblyPeepholePass::run(MachineFunction &MF,
           .getResult<TargetLibraryAnalysis>(MF.getFunction());
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
-  const LibcallLoweringInfo &LibcallLowering =
-      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-          .getCachedResult<LibcallLoweringModuleAnalysis>(
-              *MF.getFunction().getParent())
-          ->getLibcallLowering(Subtarget);
+  const LibcallLoweringInfo &LibcallLowering = getLibcallLowering(
+      *MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+           .getCachedResult<LibcallLoweringModuleAnalysis>(
+               *MF.getFunction().getParent()),
+      Subtarget);
   return peephole(MF, LibInfo, LibcallLowering)
              ? getMachineFunctionPassPreservedAnalyses()
                    .preserveSet<CFGAnalyses>()

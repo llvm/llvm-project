@@ -3681,6 +3681,22 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
       return this->emitConstBool(E->getBoolValue(), E);
     return this->emitConst(E->getBoolValue(), E);
   }
+  if (E->isStoredAsComparisonResult()) {
+    const ComparisonCategoryInfo &CmpInfo =
+        Ctx.getASTContext().CompCategories.getInfoForType(E->getType());
+    const auto Result =
+        ComparisonCategoryResult(E->getAPValue().getInt().getZExtValue());
+    const Record *R = getRecord(E->getType());
+    if (!R || R->getNumFields() == 0)
+      return false;
+    const Record::Field *Field = R->getField(0U);
+    PrimType FieldT = classifyPrim(Field->Decl->getType());
+    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), FieldT,
+                         E))
+      return false;
+    return this->emitInitField(FieldT, Field->Offset, E);
+  }
+
   PrimType T = classifyPrim(E->getType());
   return this->visitAPValue(E->getAPValue(), T, E);
 }
