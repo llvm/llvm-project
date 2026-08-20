@@ -170,7 +170,7 @@ public:
   }
 
   bool addIRTranslator() override {
-    addPass(new IRTranslator(getOptLevel()));
+    addPass(new IRTranslatorLegacy(getOptLevel()));
     return false;
   }
 
@@ -180,7 +180,7 @@ public:
   }
 
   bool addLegalizeMachineIR() override {
-    addPass(new Legalizer());
+    addPass(new LegalizerLegacy());
     return false;
   }
 

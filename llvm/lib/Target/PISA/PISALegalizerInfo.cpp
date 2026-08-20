@@ -2939,7 +2939,9 @@ static bool legalizeGAtomicrmw(MachineInstr &MI, MachineIRBuilder &B) {
 
   MachineMemOperand *NewMemOp = B.getMF().getMachineMemOperand(
       MemOp->getPointerInfo(), MemOp->getFlags(), MemOp->getSize(),
-      MemOp->getAlign(), MemOp->getAAInfo(), MemOp->getRanges(),
+      MemOp->getAlign(),
+      MMOMetadata(MemOp->getAAInfo(), MemOp->getRanges(),
+                  MemOp->getMemCacheHint()),
       MemOp->getSyncScopeID(), AO, AOF);
 
   if (MI.getOpcode() == TargetOpcode::G_ATOMIC_CMPXCHG)
