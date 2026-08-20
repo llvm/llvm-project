@@ -65,7 +65,7 @@ define void @incrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    [[ADDR_POSTLOOP:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX_POSTLOOP]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_POSTLOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_POSTLOOP:%.*]] = icmp slt i32 [[IDX_NEXT_POSTLOOP]], [[SMIN]]
-; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP1:![0-9]+]], !loop_constrainer.loop.clone !6
+; CHECK-NEXT:    br i1 [[NEXT_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP1:![0-9]+]], !loop_constrainer.loop.clone [[META6:![0-9]+]]
 ;
 entry:
   %len = load i32, ptr %len_ptr, !range !0
@@ -126,7 +126,7 @@ define void @decrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY:%.*]], [[MAINLOOP:%.*]] ], [ [[IDX_DEC:%.*]], [[IN_BOUNDS:%.*]] ]
 ; CHECK-NEXT:    [[IDX_DEC]] = sub nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp slt i32 [[IDX]], [[LEN]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label %[[OUT_OF_BOUNDS_LOOPEXIT:[^, ]+]]
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT2:%.*]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -134,7 +134,7 @@ define void @decrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       [[OUT_OF_BOUNDS_LOOPEXIT]]:
+; CHECK:       out.of.bounds.loopexit2:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void
@@ -154,7 +154,7 @@ define void @decrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR_PRELOOP]], align 4
 ; CHECK-NEXT:    [[NEXT_PRELOOP:%.*]] = icmp sgt i32 [[IDX_DEC_PRELOOP]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[IDX_DEC_PRELOOP]], [[EXIT_PRELOOP_AT]]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone !6
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_PRELOOP]], label [[PRELOOP_EXIT_SELECTOR:%.*]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone [[META6]]
 ; CHECK:       preloop.exit.selector:
 ; CHECK-NEXT:    [[IDX_DEC_PRELOOP_LCSSA:%.*]] = phi i32 [ [[IDX_DEC_PRELOOP]], [[IN_BOUNDS_PRELOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[IDX_DEC_PRELOOP_LCSSA]], -1

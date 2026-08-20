@@ -476,7 +476,7 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %inv_ptr = getelementptr inbounds nuw i8, ptr %p, i64 24
 ; CHECK-NEXT:    IR   %inv_ptr2 = getelementptr inbounds nuw i8, ptr %p, i64 40
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + (zext i32 (1431655767 + (1431655765 * %b)) to i64))<nuw><nsw>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + (zext i32 (1431655767 + (1431655765 * %b)) to i64))<nuw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:

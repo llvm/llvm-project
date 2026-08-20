@@ -22,7 +22,7 @@
 define void @large_size_fixed(ptr %A) {
 ; CHECK-LABEL: 'large_size_fixed'
 ; CHECK-NEXT:  Inst: store i8 0, ptr %gep, align 1
-; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,256}<%for.i.header>,+,1}<nsw><%for.j>
+; CHECK-NEXT:  AccessFunction: {{\{\{}}0,+,256}<%for.i.header>,+,1}<nuw><nsw><%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][256] with elements of 1 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j>]

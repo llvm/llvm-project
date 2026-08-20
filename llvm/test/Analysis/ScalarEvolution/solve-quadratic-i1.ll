@@ -46,29 +46,34 @@ define void @f1() #0 {
 ; CHECK-LABEL: 'f1'
 ; CHECK-NEXT:  Classifying expressions for: @f1
 ; CHECK-NEXT:    %v0 = phi i16 [ 0, %b0 ], [ %v3, %b1 ]
-; CHECK-NEXT:    --> {0,+,3,+,1}<%b1> U: full-set S: full-set Exits: 7 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {0,+,3,+,1}<%b1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v1 = phi i32 [ 3, %b0 ], [ %v6, %b1 ]
-; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,6) S: [3,6) Exits: 5 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,-2147483648) S: [3,-2147483648) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v2 = trunc i32 %v1 to i16
-; CHECK-NEXT:    --> {3,+,1}<%b1> U: [3,6) S: [3,6) Exits: 5 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {3,+,1}<%b1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v3 = add i16 %v0, %v2
-; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set Exits: 12 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v4 = and i16 %v3, 1
-; CHECK-NEXT:    --> (zext i1 {true,+,false,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> (zext i1 {true,+,false,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v6 = add nuw nsw i32 %v1, 1
-; CHECK-NEXT:    --> {4,+,1}<nuw><nsw><%b1> U: [4,7) S: [4,7) Exits: 6 LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> {4,+,1}<nuw><%b1> U: [4,0) S: [4,0) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %v7 = phi i32 [ %v1, %b1 ]
-; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,6) S: [3,6) --> 5 U: [5,6) S: [5,6)
+; CHECK-NEXT:    --> {3,+,1}<nuw><nsw><%b1> U: [3,-2147483648) S: [3,-2147483648)
 ; CHECK-NEXT:    %v8 = phi i16 [ %v3, %b1 ]
-; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set --> 12 U: [12,13) S: [12,13)
+; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
 ; CHECK-NEXT:  Loop %b3: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %b1: backedge-taken count is i6 2
-; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is i6 2
-; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is i6 2
-; CHECK-NEXT:  Loop %b1: Trip multiple is 3
+; CHECK-NEXT:  Loop %b1: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %b1: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %b1: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is i6 2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %b1: Predicated constant max backedge-taken count is i6 2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %b1: Predicated symbolic max backedge-taken count is i6 2
+; CHECK-NEXT:   Predicates:
 ;
 b0:
   store i16 0, ptr @g0, align 2

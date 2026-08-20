@@ -5,7 +5,7 @@ define void @vscale_gep(ptr %p) {
 ; CHECK-LABEL: 'vscale_gep'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_gep
 ; CHECK-NEXT:    %1 = getelementptr <vscale x 4 x i32>, ptr null, i32 3
-; CHECK-NEXT:    --> ((48 * vscale) + null) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> ((48 * vscale) + null)<nuw><nsw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %2 = getelementptr <vscale x 1 x i64>, ptr %p, i32 1
 ; CHECK-NEXT:    --> ((8 * vscale) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_gep
@@ -19,7 +19,7 @@ define void @vscale_gep_range(ptr %p) vscale_range(2, 16) {
 ; CHECK-LABEL: 'vscale_gep_range'
 ; CHECK-NEXT:  Classifying expressions for: @vscale_gep_range
 ; CHECK-NEXT:    %1 = getelementptr <vscale x 4 x i32>, ptr null, i32 3
-; CHECK-NEXT:    --> ((48 * vscale)<nuw><nsw> + null) U: [96,769) S: [96,769)
+; CHECK-NEXT:    --> ((48 * vscale)<nuw><nsw> + null)<nuw><nsw> U: [96,769) S: [96,769)
 ; CHECK-NEXT:    %2 = getelementptr <vscale x 1 x i64>, ptr %p, i32 1
 ; CHECK-NEXT:    --> ((8 * vscale)<nuw><nsw> + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_gep_range

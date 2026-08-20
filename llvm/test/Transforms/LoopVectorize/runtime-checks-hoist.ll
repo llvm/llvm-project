@@ -1123,14 +1123,14 @@ define void @decreasing_outer_iv(ptr nocapture noundef %dst, ptr nocapture nound
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[WIDE_TRIP_COUNT]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i64 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw i64 [[TMP2]], -4
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 2
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[TMP7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP12]], [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nsw i64 [[TMP3]], -4
 ; CHECK-NEXT:    br label %[[OUTER_LOOP:.*]]

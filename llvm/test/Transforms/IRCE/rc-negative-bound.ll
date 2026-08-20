@@ -118,7 +118,7 @@ define void @test_03(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[BOUND]], i32 0)
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[SMAX1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[SMIN2:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN2]], i32 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
@@ -205,7 +205,7 @@ define void @test_04(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[BOUND]], [[SMIN]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[N]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER1:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
@@ -398,7 +398,7 @@ define void @test_07(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[BOUND]], i32 0)
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[SMAX1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[SMIN2:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN2]], i32 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 0, [[EXIT_MAINLOOP_AT]]
@@ -487,7 +487,7 @@ define void @test_08(ptr %arr, i32 %n, i32 %bound) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[BOUND]], [[SMIN]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umin.i32(i32 [[N]], i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_PREHEADER1:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]

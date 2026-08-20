@@ -66,8 +66,8 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   MOV64mr %stack.5, 1, $noreg, 0, $noreg, [[COPY1]] :: (store (s64) into %stack.5)
   ; CHECK-NEXT:   MOV64mr %stack.6, 1, $noreg, 0, $noreg, [[MOVSX64rr32_4]] :: (store (s64) into %stack.6)
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64_nosp = COPY [[MOVSX64rr32_4]]
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64_nosp = IMUL64rr [[COPY6]], [[MOVSX64rr32_2]], implicit-def dead $eflags
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64_nosp = ADD64rr [[COPY6]], [[MOVSX64rm32_]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64_nosp = nsw IMUL64rr [[COPY6]], [[MOVSX64rr32_2]], implicit-def dead $eflags
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64_nosp = nsw ADD64rr [[COPY6]], [[MOVSX64rm32_]], implicit-def dead $eflags
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r [[COPY]], 4, [[COPY6]], 0, $noreg
   ; CHECK-NEXT:   MOV64mr %stack.9, 1, $noreg, 0, $noreg, [[LEA64r]] :: (store (s64) into %stack.9)
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64_with_sub_8bit = lr-split COPY [[MOV32rm2]]

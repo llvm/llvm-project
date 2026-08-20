@@ -446,7 +446,7 @@ define i32 @foo6(ptr %input, i32 %length, ptr %in) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ADD_PTR1]], align 4
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[LENGTH]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[OR]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw i64 [[TMP10]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP10]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[PTR_OR:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[VAL_OR:%.*]] = load i32, ptr [[PTR_OR]], align 4
 ; CHECK-NEXT:    [[TMP12]] = add i32 [[TMP7]], [[VAL_OR]]

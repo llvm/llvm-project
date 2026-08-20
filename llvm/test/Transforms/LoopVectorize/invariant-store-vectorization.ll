@@ -378,7 +378,7 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP5]], [[J_022]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP12]], 2
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP9]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add nuw nsw i64 [[TMP9]], [[TMP13]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[VAR1]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP]]

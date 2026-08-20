@@ -489,7 +489,7 @@ define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, 
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[N]], 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[MUL]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[ADD]]) ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N]], [[IV_START]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[N]], [[IV_START]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

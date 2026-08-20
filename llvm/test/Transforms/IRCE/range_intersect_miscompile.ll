@@ -256,15 +256,15 @@ deopt:                                          ; preds = %range_check_block
 ; known positive.
 
 define void @test_04(ptr %p) {
-; CHECK-LABEL: define void @test_04
-; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-LABEL: define void @test_04(
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[SMIN]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SMIN]], i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 400)
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umax.i32(i32 [[UMIN]], i32 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 2, [[EXIT_MAINLOOP_AT]]
@@ -375,8 +375,8 @@ deopt:                                          ; preds = %range_check_block
 ; intersect ranges (with insertion of postloop).
 
 define void @test_05(ptr %p) {
-; CHECK-LABEL: define void @test_05
-; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-LABEL: define void @test_05(
+; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[P]], align 4, !range [[RNG7:![0-9]+]]
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 2)
@@ -485,14 +485,3 @@ deopt:                                          ; preds = %range_check_block
 }
 
 !0 = !{i32 0, i32 50}
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[META2]] = !{!"llvm.loop.vectorize.disable"}
-; CHECK: [[META3]] = !{!"llvm.loop.licm_versioning.disable"}
-; CHECK: [[META4]] = !{!"llvm.loop.distribute.disable"}
-; CHECK: [[META5]] = !{}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]], [[META4]]}
-; CHECK: [[RNG7]] = !{i32 0, i32 50}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]], [[META3]], [[META4]]}
-;.

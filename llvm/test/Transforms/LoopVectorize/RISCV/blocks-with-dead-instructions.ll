@@ -455,7 +455,7 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i8 [[N]] to i64
 ; CHECK-NEXT:    [[UMIN7:%.*]] = call i64 @llvm.umin.i64(i64 [[N_EXT]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N_EXT]], [[UMIN7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[N_EXT]], [[UMIN7]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[UMIN7]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
@@ -464,7 +464,7 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N_EXT]], i64 1)
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[N_EXT]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[UMIN]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[UMIN]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 12
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]

@@ -85,7 +85,7 @@ exit:
 }
 
 define ptr @cancel_out_of_range(ptr %p) {
-; CHECK-LABEL: define noalias noundef ptr @cancel_out_of_range(
+; CHECK-LABEL: define noalias ptr @cancel_out_of_range(
 ; CHECK-SAME: ptr [[P:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store ptr [[P]], ptr [[P]], align 8
@@ -94,7 +94,7 @@ define ptr @cancel_out_of_range(ptr %p) {
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[P2:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    [[SPEC_SELECT_IDX:%.*]] = select i1 [[IS_ZERO]], i64 0, i64 [[P2]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = getelementptr i8, ptr null, i64 [[SPEC_SELECT_IDX]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = getelementptr nuw i8, ptr null, i64 [[SPEC_SELECT_IDX]]
 ; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
 ;
 entry:
@@ -330,7 +330,7 @@ define i1 @lambda(ptr %lam, ptr %cmp) {
 
 define ptr @gep_base_cancel(ptr %p, ptr %end, ptr noalias %a) {
 ; CHECK-LABEL: define noundef ptr @gep_base_cancel(
-; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[END:%.*]], ptr noalias nofree captures(address, ret: address, provenance) [[A:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]], ptr nofree readnone captures(address) [[END:%.*]], ptr noalias nofree captures(address, ret: address, provenance) [[A:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[IN_BOUNDS6:%.*]] = icmp ult ptr [[P]], [[END]]
 ; CHECK-NEXT:    br i1 [[IN_BOUNDS6]], label %[[BODY_PREHEADER:.*]], label %[[COMMON_RET:.*]]

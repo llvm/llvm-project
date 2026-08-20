@@ -23,7 +23,7 @@ define void @test-add-nsw(ptr %input, i32 %offset, i32 %numIterations) {
 ; CHECK-NEXT:    %index32 = add nsw i32 %i, %offset
 ; CHECK-NEXT:    --> {%offset,+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + %offset + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {(sext i32 %offset to i64),+,1}<nsw><%loop> U: [-2147483648,6442450943) S: [-2147483648,6442450943) Exits: ((zext i32 (-1 + %numIterations) to i64) + (sext i32 %offset to i64)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(sext i32 %offset to i64),+,1}<nsw><%loop> U: [-2147483648,6442450943) S: [-2147483648,6442450943) Exits: ((zext i32 (-1 + %numIterations) to i64) + (sext i32 %offset to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
 ; CHECK-NEXT:    --> {((4 * (sext i32 %offset to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (4 * (sext i32 %offset to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
@@ -1118,7 +1118,7 @@ define void @test-mul-nsw(ptr %input, i32 %stride, i32 %numIterations) {
 ; CHECK-NEXT:    %index32 = mul nsw i32 %i, %stride
 ; CHECK-NEXT:    --> {0,+,%stride}<nsw><%loop> U: full-set S: full-set Exits: ((-1 + %numIterations) * %stride) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {0,+,(sext i32 %stride to i64)}<nsw><%loop> U: [-9223372034707292160,9223372030412324866) S: [-9223372034707292160,9223372030412324866) Exits: ((zext i32 (-1 + %numIterations) to i64) * (sext i32 %stride to i64)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,(sext i32 %stride to i64)}<nsw><%loop> U: [-9223372034707292160,9223372030412324866) S: [-9223372034707292160,9223372030412324866) Exits: ((zext i32 (-1 + %numIterations) to i64) * (sext i32 %stride to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
 ; CHECK-NEXT:    --> {%input,+,(4 * (sext i32 %stride to i64))<nsw>}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + %numIterations) to i64) * (sext i32 %stride to i64)) + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1
@@ -1498,7 +1498,7 @@ define void @test-sub-nsw-lhs-non-negative(ptr %input, i32 %sub, i32 %numIterati
 ; CHECK-NEXT:    %index32 = sub nsw i32 %i, %sub
 ; CHECK-NEXT:    --> {(-1 * %sub),+,1}<nsw><%loop> U: full-set S: full-set Exits: (-1 + (-1 * %sub) + %numIterations) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %index64 = sext i32 %index32 to i64
-; CHECK-NEXT:    --> {(-1 * (sext i32 %sub to i64))<nsw>,+,1}<nsw><%loop> U: [-2147483647,6442450944) S: [-2147483647,6442450944) Exits: ((zext i32 (-1 + %numIterations) to i64) + (-1 * (sext i32 %sub to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-1 * (sext i32 %sub to i64))<nsw>,+,1}<nsw><%loop> U: [-2147483647,6442450944) S: [-2147483647,6442450944) Exits: ((zext i32 (-1 + %numIterations) to i64) + (-1 * (sext i32 %sub to i64))<nsw>)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr = getelementptr inbounds float, ptr %input, i64 %index64
 ; CHECK-NEXT:    --> {((-4 * (sext i32 %sub to i64))<nsw> + %input),+,4}<nw><%loop> U: full-set S: full-set Exits: ((4 * (zext i32 (-1 + %numIterations) to i64))<nuw><nsw> + (-4 * (sext i32 %sub to i64))<nsw> + %input) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %nexti = add nsw i32 %i, 1

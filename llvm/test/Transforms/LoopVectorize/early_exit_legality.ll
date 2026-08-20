@@ -8,10 +8,6 @@ declare void @init_mem(ptr, i64) nofree
 
 ; The form of the induction variables requires SCEV predicates.
 define i32 @diff_exit_block_needs_scev_check(i32 %end) {
-; CHECK-LABEL: LV: Checking a loop in 'diff_exit_block_needs_scev_check'
-; CHECK:       Found an early exit loop with symbolic max backedge taken count: (-1 + (1 umax (zext i10 (trunc i32 %end to i10) to i32)))<nsw>
-; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NOT:   LV: Not vectorizing:
 entry:
   %p1 = alloca [1024 x i32]
   %p2 = alloca [1024 x i32]
@@ -46,10 +42,6 @@ exit:
 
 
 define i64 @same_exit_block_pre_inc_use1() {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1'
-; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NOT:   LV: Not vectorizing
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -78,9 +70,6 @@ loop.end:
 
 
 define i64 @loop_contains_safe_call() {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_safe_call'
-; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-NEXT:  LV: We can vectorize this loop!
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -108,9 +97,6 @@ loop.end:
 
 
 define i64 @loop_contains_safe_div() {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_safe_div'
-; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-NEXT:  LV: We can vectorize this loop!
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -138,10 +124,6 @@ loop.end:
 
 
 define i64 @loop_contains_load_after_early_exit(ptr dereferenceable(1024) align(8) %p2) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_load_after_early_exit'
-; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 63
-; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NOT:   LV: Not vectorizing
 entry:
   %p1 = alloca [1024 x i8]
   call void @init_mem(ptr %p1, i64 1024)
@@ -168,10 +150,6 @@ loop.end:
 
 
 define i64 @one_uncountable_two_countable_same_exit_phi_of_consts() {
-; CHECK-LABEL: LV: Checking a loop in 'one_uncountable_two_countable_same_exit_phi_of_consts'
-; CHECK:       LV: Found an early exit loop with symbolic max backedge taken count: 61
-; CHECK-NEXT:  LV: We can vectorize this loop!
-; CHECK-NEXT:  LV: Not vectorizing: Auto-vectorization of early exit loops requiring a scalar epilogue is unsupported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -207,8 +185,6 @@ loop.end:
 
 
 define i64 @same_exit_block_pre_inc_use1_too_small_allocas() {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_too_small_allocas'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
 entry:
   %p1 = alloca [42 x i8]
   %p2 = alloca [42 x i8]
@@ -237,8 +213,6 @@ loop.end:
 
 
 define i64 @same_exit_block_pre_inc_use1_too_small_deref_ptrs(ptr dereferenceable(42) %p1, ptr dereferenceable(42) %p2) {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_too_small_deref_ptrs'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
 entry:
   br label %loop
 
@@ -263,8 +237,6 @@ loop.end:
 
 
 define i64 @same_exit_block_pre_inc_use1_unknown_ptrs(ptr %p1, ptr %p2) {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_unknown_ptrs'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
 entry:
   br label %loop
 
@@ -288,8 +260,6 @@ loop.end:
 }
 
 define ptr @same_exit_block_strided_unknown_ptr(ptr %first, ptr %last, i32 %value) {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_strided_unknown_ptr'
-; CHECK:       LV: Not vectorizing: Loop contains potentially faulting strided load.
 entry:
   %cond = icmp eq ptr %first, %last
   br i1 %cond, label %return, label %for.body
@@ -317,8 +287,6 @@ return:
 ; The early exit (i.e. unknown exit-not-taken count) is the latch - we don't
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -348,8 +316,6 @@ loop.end:
 
 ; Multiple uncountable early exits are now supported.
 define i64 @multiple_uncountable_exits() {
-; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
-; CHECK:       LV: We can vectorize this loop!
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -382,8 +348,6 @@ loop.end:
 
 
 define i64 @uncountable_exit_infinite_loop() {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_infinite_loop'
-; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -412,8 +376,6 @@ loop.end:
 
 
 define i64 @loop_contains_unsafe_call() {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_unsafe_call'
-; CHECK:       LV: Not vectorizing: Early exit loop contains operations that cannot be speculatively executed.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -441,8 +403,6 @@ loop.end:
 
 
 define i64 @loop_contains_unsafe_div() {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_unsafe_div'
-; CHECK:       LV: Not vectorizing: Early exit loop contains operations that cannot be speculatively executed.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -469,8 +429,6 @@ loop.end:
 }
 
 define void @exit_conditions_combined_in_single_branch(ptr noalias dereferenceable(40) %array, ptr readonly align 2 dereferenceable(40) %pred) {
-; CHECK-LABEL: LV: Checking a loop in 'exit_conditions_combined_in_single_branch'
-; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
   br label %for.body
 
@@ -493,8 +451,6 @@ exit:
 }
 
 define i64 @same_exit_block_pre_inc_use1_with_reduction() {
-; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'
-; CHECK:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -527,8 +483,6 @@ loop.end:
 
 
 define i64 @uncountable_exit_has_multiple_outside_successors() {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_has_multiple_outside_successors'
-; CHECK:       LV: Not vectorizing: Loop contains an unsupported switch
 entry:
   %p1 = alloca [1024 x i8]
   call void @init_mem(ptr %p1, i64 1024)
@@ -560,8 +514,6 @@ loop.end:
 ; Two early exits on parallel branches (neither dominates the other).
 ; This is now supported with predicated early exits.
 define i64 @uncountable_exits_on_parallel_branches() {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_on_parallel_branches'
-; CHECK:       LV: We can vectorize this loop!
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -601,8 +553,6 @@ loop.end:
 ; Note: This loop cannot be vectorized because the latch has no determinate
 ; exit count (loop is infinite without early exits).
 define void @uncountable_exits_invariant_conditions(ptr %p, i1 %cond1, i1 %cond2, i1 %cond3) {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_invariant_conditions'
-; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   br label %loop.header
 
@@ -634,3 +584,5 @@ declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
 attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

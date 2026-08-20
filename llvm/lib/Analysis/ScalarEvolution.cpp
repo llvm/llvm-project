@@ -2476,12 +2476,10 @@ static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
                                                SCEVTypes Type,
                                                ArrayRef<SCEVUse> Ops,
                                                SCEV::NoWrapFlags Flags) {
-  using namespace std::placeholders;
-
   using OBO = OverflowingBinaryOperator;
 
-  bool CanAnalyze =
-      Type == scAddExpr || Type == scAddRecExpr || Type == scMulExpr;
+  bool CanAnalyze = Ops.size() >= 2 &&
+      is_contained({scAddExpr, scAddRecExpr, scMulExpr}, Type);
   (void)CanAnalyze;
   assert(CanAnalyze && "don't call from other places!");
 
@@ -2495,13 +2493,15 @@ static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
   };
 
   if (SignOrUnsignWrap == SCEV::FlagNSW && all_of(Ops, IsKnownNonNegative))
-    Flags = ScalarEvolution::setFlags(Flags, SignOrUnsignMask);
+    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
 
   SignOrUnsignWrap = ScalarEvolution::maskFlags(Flags, SignOrUnsignMask);
 
+  // To avoid degenerate compile-time blowup, restrict the LHS to
+  // non-SCEVUnknowns, to forbid spinning on pointers.
   if (SignOrUnsignWrap != SignOrUnsignMask &&
       (Type == scAddExpr || Type == scMulExpr) && Ops.size() == 2 &&
-      isa<SCEVConstant>(Ops[0])) {
+      !isa<SCEVUnknown>(Ops[0])) {
 
     auto Opcode = [&] {
       switch (Type) {
@@ -2514,20 +2514,18 @@ static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
       }
     }();
 
-    const APInt &C = cast<SCEVConstant>(Ops[0])->getAPInt();
-
-    // (A <opcode> C) --> (A <opcode> C)<nsw> if the op doesn't sign overflow.
-    if (!(SignOrUnsignWrap & SCEV::FlagNSW)) {
+    // (L <opcode> R) --> (L <opcode> R)<nsw> if the op doesn't sign overflow.
+    if (!ScalarEvolution::hasFlags(Flags, SCEV::FlagNSW)) {
       auto NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-          Opcode, C, OBO::NoSignedWrap);
+          Opcode, SE->getSignedRange(Ops[0]), OBO::NoSignedWrap);
       if (NSWRegion.contains(SE->getSignedRange(Ops[1])))
         Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     }
 
-    // (A <opcode> C) --> (A <opcode> C)<nuw> if the op doesn't unsign overflow.
-    if (!(SignOrUnsignWrap & SCEV::FlagNUW)) {
+    // (L <opcode> R) --> (L <opcode> R)<nuw> if the op doesn't unsign overflow.
+    if (!ScalarEvolution::hasFlags(Flags, SCEV::FlagNUW)) {
       auto NUWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
-          Opcode, C, OBO::NoUnsignedWrap);
+          Opcode, SE->getUnsignedRange(Ops[0]), OBO::NoUnsignedWrap);
       if (NUWRegion.contains(SE->getUnsignedRange(Ops[1])))
         Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
     }

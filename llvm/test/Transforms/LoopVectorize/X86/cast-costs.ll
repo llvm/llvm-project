@@ -112,11 +112,11 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw nsw i64 [[TMP13]], 12
-; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP14]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i64 [[TMP13]], 12
+; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i64 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP16]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP13]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[TMP6]], 8
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP8]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP7]]

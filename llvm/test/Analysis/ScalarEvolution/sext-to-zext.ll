@@ -9,15 +9,15 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:    %step = select i1 %c, i32 -1, i32 1
 ; CHECK-NEXT:    --> %step U: [1,0) S: [-2,2)
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.dec, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((99 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((99 * %step)<nsw> + %start)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.tc = phi i32 [ 0, %entry ], [ %iv.tc.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.tc.inc = add i32 %iv.tc, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.dec = add nsw i32 %iv, %step
-; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-200,201) S: [-200,201) Exits: ((100 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-200,201) S: [-200,201) Exits: ((100 * %step)<nsw> + %start)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64
-; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((zext i32 %start to i64) + (99 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((zext i32 %start to i64) + (99 * (sext i32 %step to i64))<nsw>)<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 99
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 99

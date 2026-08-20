@@ -123,7 +123,7 @@ define void @pr49900(i32 %x, ptr %ptr) {
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP13]], i32 1)
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = udiv i32 [[TMP14]], 13
-; CHECK-NEXT:    [[TMP16:%.*]] = add i32 [[UMIN]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i32 [[UMIN]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 13
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i32 [[IV_1]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP30]], 26

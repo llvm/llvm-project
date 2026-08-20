@@ -157,7 +157,7 @@ define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #
 ; COMMON:       // %bb.0: // %entry
 ; COMMON-NEXT:    rdvl x8, #4
 ; COMMON-NEXT:    ptrue p0.b
-; COMMON-NEXT:    orr x8, x8, #0x20
+; COMMON-NEXT:    add x8, x8, #32
 ; COMMON-NEXT:  .LBB3_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    ldr z0, [x0]
@@ -205,7 +205,7 @@ define void @mixed_offsets_fixed_then_scalable(ptr %src, ptr %dst, i64 %count) #
 ; COMMON-NEXT:    rdvl x8, #4
 ; COMMON-NEXT:    mov x9, #8 // =0x8
 ; COMMON-NEXT:    ptrue p1.b
-; COMMON-NEXT:    orr x8, x8, #0x20
+; COMMON-NEXT:    add x8, x8, #32
 ; COMMON-NEXT:  .LBB4_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    ldr z0, [x0]

@@ -18,7 +18,7 @@ define i8 @testnullptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR64-NEXT:    [[GUARD:%.*]] = icmp ult ptr null, [[END]]
 ; PTR64-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR64:       preheader:
-; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i64 [[END1]]
+; PTR64-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr null, i64 [[END1]]
 ; PTR64-NEXT:    br label [[LOOP:%.*]]
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi ptr [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
@@ -40,7 +40,7 @@ define i8 @testnullptrptr(ptr %buf, ptr %end) nounwind {
 ; PTR32-NEXT:    [[GUARD:%.*]] = icmp ult ptr null, [[END]]
 ; PTR32-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR32:       preheader:
-; PTR32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr null, i32 [[END1]]
+; PTR32-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr null, i32 [[END1]]
 ; PTR32-NEXT:    br label [[LOOP:%.*]]
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi ptr [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]

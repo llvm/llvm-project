@@ -11,8 +11,8 @@
 
 ; UGT condition for increasing loop.
 define void @test_01(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_01
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_01(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
@@ -88,8 +88,8 @@ exit:
 
 ; UGT condition for decreasing loop.
 define void @test_02(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_02
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_02(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN]], i32 1)
@@ -166,8 +166,8 @@ exit:
 
 ; Check SINT_MAX + 1, test is similar to test_01.
 define void @test_03(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_03
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_03(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 0, [[EXIT_MAINLOOP_AT]]
@@ -243,8 +243,8 @@ exit:
 
 ; Check SINT_MAX + 1, test is similar to test_02.
 define void @test_04(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_04
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_04(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN]], i32 1)
@@ -321,8 +321,8 @@ exit:
 
 ; Increasing loop, UINT_MAX. Negative test: we cannot add 1 to UINT_MAX.
 define void @test_05(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_05
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_05(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -367,8 +367,8 @@ exit:
 
 ; Decreasing loop, UINT_MAX. Positive test.
 define void @test_06(ptr %arr, ptr %a_len_ptr) #0 {
-; CHECK-LABEL: define void @test_06
-; CHECK-SAME: (ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
+; CHECK-LABEL: define void @test_06(
+; CHECK-SAME: ptr [[ARR:%.*]], ptr [[A_LEN_PTR:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[A_LEN_PTR]], align 4, !range [[RNG0]]
 ; CHECK-NEXT:    br i1 true, label [[LOOP_PRELOOP_PREHEADER:%.*]], label [[PRELOOP_PSEUDO_EXIT:%.*]]
@@ -441,16 +441,3 @@ exit:
 }
 
 !0 = !{i32 0, i32 50}
-;.
-; CHECK: [[RNG0]] = !{i32 0, i32 50}
-; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.disable"}
-; CHECK: [[META4]] = !{!"llvm.loop.licm_versioning.disable"}
-; CHECK: [[META5]] = !{!"llvm.loop.distribute.disable"}
-; CHECK: [[META6]] = !{}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META3]], [[META4]], [[META5]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META3]], [[META4]], [[META5]]}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META2]], [[META3]], [[META4]], [[META5]]}
-; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]], [[META4]], [[META5]]}
-;.

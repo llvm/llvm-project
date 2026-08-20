@@ -157,7 +157,7 @@ define void @test7(i32 %A) {
 ; CHECK-NEXT:    %C = zext i32 %A to i64
 ; CHECK-NEXT:    --> (zext i32 %A to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %D = sub i64 %B, %C
-; CHECK-NEXT:    --> ((sext i32 %A to i64) + (-1 * (zext i32 %A to i64))<nsw>) U: [-6442450943,2147483648) S: [-6442450943,2147483648)
+; CHECK-NEXT:    --> ((sext i32 %A to i64) + (-1 * (zext i32 %A to i64))<nsw>)<nsw> U: [-6442450943,2147483648) S: [-6442450943,2147483648)
 ; CHECK-NEXT:    %E = trunc i64 %D to i16
 ; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @test7

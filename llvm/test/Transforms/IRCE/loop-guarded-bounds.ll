@@ -24,7 +24,7 @@ define i32 @main(i32 %limit, i32 %start, i32 %length) {
 ; CHECK-NEXT:    [[SMAX3:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[LENGTH]], [[SMAX3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[SMAX]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[SMIN4:%.*]] = call i32 @llvm.smin.i32(i32 [[LIMIT]], i32 [[TMP4]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i32 @llvm.smax.i32(i32 [[INDVAR_START]], i32 [[SMIN4]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[INDVAR_START]], [[EXIT_PRELOOP_AT]]

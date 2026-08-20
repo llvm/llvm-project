@@ -12,7 +12,7 @@
 define void @a_i_j_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_j_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
@@ -20,7 +20,7 @@ define void @a_i_j_k(ptr %a) {
 ;
 ; OFF-LABEL: 'a_i_j_k'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -66,7 +66,7 @@ exit:
 define void @a_i_nj_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_nj_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}896,+,1024}<nuw><nsw><%for.i.header>,+,-128}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}896,+,1024}<nuw><nsw><%for.i.header>,+,-128}<nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{7,+,-1}<nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
@@ -74,7 +74,7 @@ define void @a_i_nj_k(ptr %a) {
 ;
 ; OFF-LABEL: 'a_i_nj_k'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}896,+,1024}<nuw><nsw><%for.i.header>,+,-128}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}896,+,1024}<nuw><nsw><%for.i.header>,+,-128}<nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -127,14 +127,14 @@ exit:
 define void @a_ijk_b_i2jk(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'a_ijk_b_i2jk'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %a.idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
 ; CHECK-NEXT:  Delinearization validation: Succeeded
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store i32 1, ptr %b.idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %b
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,1}<nuw><nsw><%for.k>]
@@ -142,11 +142,11 @@ define void @a_ijk_b_i2jk(ptr %a, ptr %b) {
 ;
 ; OFF-LABEL: 'a_ijk_b_i2jk'
 ; OFF-NEXT:  Inst: store i32 1, ptr %a.idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ; OFF-EMPTY:
 ; OFF-NEXT:  Inst: store i32 1, ptr %b.idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -200,7 +200,7 @@ exit:
 define void @a_i_2j1_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_2j1_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}128,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}128,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][4][64] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<%for.j.header>][{32,+,1}<%for.k>]
@@ -208,7 +208,7 @@ define void @a_i_2j1_k(ptr %a) {
 ;
 ; OFF-LABEL: 'a_i_2j1_k'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}128,+,1024}<nuw><nsw><%for.i.header>,+,256}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}128,+,1024}<nuw><nsw><%for.i.header>,+,256}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -259,12 +259,12 @@ exit:
 define void @a_i_3j_k(ptr %a) {
 ; CHECK-LABEL: 'a_i_3j_k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;
 ; OFF-LABEL: 'a_i_3j_k'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nw><%for.j.header>,+,4}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nuw><nsw><%for.j.header>,+,4}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -315,7 +315,7 @@ exit:
 define void @a_i_j_3k(ptr %a) {
 ; CHECK-LABEL: 'a_i_j_3k'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,12}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,12}<nw><%for.k>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,3}<nuw><nsw><%for.k>]
@@ -323,7 +323,7 @@ define void @a_i_j_3k(ptr %a) {
 ;
 ; OFF-LABEL: 'a_i_j_3k'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,12}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,12}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -484,7 +484,7 @@ exit:
 define void @a_i_jk_l(ptr %a) {
 ; CHECK-LABEL: 'a_i_jk_l'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,128}<nw><%for.k.header>,+,4}<nw><%for.l>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,128}<nuw><nsw><%for.k.header>,+,4}<nw><%for.l>
 ; CHECK-NEXT:  Base offset: %a
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{{\{\{}}0,+,1}<nuw><nsw><%for.j.header>,+,1}<nuw><nsw><%for.k.header>][{0,+,1}<nuw><nsw><%for.l>]
@@ -492,7 +492,7 @@ define void @a_i_jk_l(ptr %a) {
 ;
 ; OFF-LABEL: 'a_i_jk_l'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,128}<nw><%for.k.header>,+,4}<nw><%for.l>
+; OFF-NEXT:  AccessFunction: {{\{\{\{\{}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nuw><nsw><%for.j.header>,+,128}<nuw><nsw><%for.k.header>,+,4}<nw><%for.l>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:
@@ -550,12 +550,12 @@ exit:
 define void @non_divisible_by_element_size(ptr %a) {
 ; CHECK-LABEL: 'non_divisible_by_element_size'
 ; CHECK-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nw><%for.j.header>,+,1}<nw><%for.k>
+; CHECK-NEXT:  AccessFunction: {{\{\{\{}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nuw><nsw><%for.j.header>,+,1}<nw><%for.k>
 ; CHECK-NEXT:  failed to delinearize
 ;
 ; OFF-LABEL: 'non_divisible_by_element_size'
 ; OFF-NEXT:  Inst: store i32 1, ptr %idx, align 4
-; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nw><%for.j.header>,+,1}<nw><%for.k>
+; OFF-NEXT:  AccessFunction: {{\{\{\{}}0,+,256}<nuw><nsw><%for.i.header>,+,32}<nuw><nsw><%for.j.header>,+,1}<nw><%for.k>
 ; OFF-NEXT:  failed to delinearize
 ;
 entry:

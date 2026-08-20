@@ -298,13 +298,13 @@ define i64 @add_umax_zext_fold_outer_add(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %umax = call i32 @llvm.umax.i32(i32 %zx, i32 3)
 ; CHECK-NEXT:    --> (3 umax (zext i8 %x to i32)) U: [3,256) S: [3,256)
 ; CHECK-NEXT:    %t = add nsw i32 %umax, %zy
-; CHECK-NEXT:    --> ((zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) U: [3,511) S: [3,511)
+; CHECK-NEXT:    --> ((zext i8 %y to i32) + (3 umax (zext i8 %x to i32)))<nuw><nsw> U: [3,511) S: [3,511)
 ; CHECK-NEXT:    %add = add nsw i32 -3, %t
 ; CHECK-NEXT:    --> (-3 + (zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) U: [0,508) S: [0,508)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
 ; CHECK-NEXT:    --> (zext i32 (-3 + (zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) to i64) U: [0,508) S: [0,508)
 ; CHECK-NEXT:    %res = add i64 3, %ext
-; CHECK-NEXT:    --> (zext i32 ((zext i8 %y to i32) + (3 umax (zext i8 %x to i32))) to i64) U: [3,511) S: [3,511)
+; CHECK-NEXT:    --> ((zext i8 %y to i64) + (3 umax (zext i8 %x to i64)))<nuw><nsw> U: [3,511) S: [3,511)
 ; CHECK-NEXT:  Determining loop execution counts for: @add_umax_zext_fold_outer_add
 ;
   %zx = zext i8 %x to i32

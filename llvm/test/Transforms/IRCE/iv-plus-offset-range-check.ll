@@ -97,7 +97,7 @@ define i8 @test1(i8 %limit, i8 %n) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]], !loop_constrainer.loop.clone [[META5:![0-9]+]]
 ;
 entry:
   %precheck = icmp sgt i8 %limit, 0
@@ -137,7 +137,7 @@ define i8 @test1a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[N]], -1
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP0]], i8 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[SMIN]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i8 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[SMIN2:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP2]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN2]], i8 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
@@ -191,7 +191,7 @@ define i8 @test1a(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !0
@@ -445,7 +445,7 @@ define i8 @test3a(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !0
@@ -549,7 +549,7 @@ define i8 @test4(i8 %limit, i8 %n) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %precheck = icmp sgt i8 %limit, 0
@@ -594,7 +594,7 @@ define i8 @test4a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP3]], i8 0)
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i8 [[SMAX2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i8 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[SMIN3:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN3]], i8 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
@@ -648,7 +648,7 @@ define i8 @test4a(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP10:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !0
@@ -799,7 +799,7 @@ define i8 @test6(i8 %limit, i8 %n) {
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[N]], i8 0)
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i8 [[SMAX2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i8 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[SMIN3:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP3]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN3]], i8 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
@@ -853,7 +853,7 @@ define i8 @test6(i8 %limit, i8 %n) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP11:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %precheck = icmp sgt i8 %limit, 0
@@ -944,7 +944,7 @@ define i8 @test6a(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP12:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !0
@@ -1038,7 +1038,7 @@ define i8 @test_overflow_check_compile_time(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP14:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !1
@@ -1147,7 +1147,7 @@ define i8 @test_overflow_check_runtime(i8 %limit, ptr %p) {
 ; CHECK:       inbounds.postloop:
 ; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
 ; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
-; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone !5
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP15:![0-9]+]], !loop_constrainer.loop.clone [[META5]]
 ;
 entry:
   %n = load i8, ptr %p, !range !1

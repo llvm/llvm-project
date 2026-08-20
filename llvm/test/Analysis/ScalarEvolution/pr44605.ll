@@ -16,10 +16,10 @@ define i32 @test() {
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[LOCAL_7_3:%.*]] = phi i32 [ 2, [[OUTER]] ], [ [[TMP3:%.*]], [[INNER]] ]
 ; CHECK-NEXT:    [[LOCAL_4_5_PN:%.*]] = phi i32 [ [[LOCAL_4_5]], [[OUTER]] ], [ [[TMP2:%.*]], [[INNER]] ]
-; CHECK-NEXT:    [[LOCAL_3_31:%.*]] = mul i32 [[LOCAL_4_5_PN]], [[DOTUDIV]]
+; CHECK-NEXT:    [[LOCAL_3_31:%.*]] = mul nuw i32 [[LOCAL_4_5_PN]], [[DOTUDIV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i32 [[LOCAL_7_3]], [[DOTUDIV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LOCAL_3_4]]
-; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[LOCAL_3_31]]
+; CHECK-NEXT:    [[TMP2]] = add nuw nsw i32 [[TMP1]], [[LOCAL_3_31]]
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i32 [[LOCAL_7_3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp samesign ugt i32 [[LOCAL_7_3]], 4
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LATCH]], label [[INNER]]

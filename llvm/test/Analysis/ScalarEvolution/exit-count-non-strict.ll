@@ -120,12 +120,12 @@ exit:
 define void @ule_from_unknown(i32 %M, i32 %N, i32 %S) {
 ; CHECK-LABEL: 'ule_from_unknown'
 ; CHECK-NEXT:  Determining loop execution counts for: @ule_from_unknown
-; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
 ; CHECK-NEXT:    exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
 ; CHECK-NEXT:    symbolic max exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -345,12 +345,12 @@ exit:
 define void @sle_from_unknown(i32 %M, i32 %N, i32 %S) {
 ; CHECK-LABEL: 'sle_from_unknown'
 ; CHECK-NEXT:  Determining loop execution counts for: @sle_from_unknown
-; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    exit count for loop: ((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    exit count for loop: ((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))<nsw>
 ; CHECK-NEXT:    exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (sext i32 %S to i64))<nsw> + ((sext i32 %S to i64) smax (1 + (sext i32 %M to i64))<nsw>))<nsw>
 ; CHECK-NEXT:    symbolic max exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -374,12 +374,12 @@ exit:
 define void @le_from_unknown(i32 %M, i32 %N, i32 %S) {
 ; CHECK-LABEL: 'le_from_unknown'
 ; CHECK-NEXT:  Determining loop execution counts for: @le_from_unknown
-; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: <multiple exits> backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
 ; CHECK-NEXT:    exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4294967295
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>)) umin_seq (zext i32 ((-1 * %S) + %N) to i64))
-; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw> umin_seq (zext i32 ((-1 * %S) + %N) to i64))
+; CHECK-NEXT:    symbolic max exit count for loop: ((-1 * (zext i32 %S to i64))<nsw> + ((zext i32 %S to i64) umax (1 + (zext i32 %M to i64))<nuw><nsw>))<nsw>
 ; CHECK-NEXT:    symbolic max exit count for latch: ((-1 * %S) + %N)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;

@@ -11,7 +11,7 @@ define i32 @widget() {
 ; CHECK-NEXT:    %udiv = udiv i32 10, %phi2
 ; CHECK-NEXT:    --> (10 /u {1,+,1}<nuw><nsw><%b1>) U: [10,11) S: [10,11) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %urem = urem i32 %udiv, 10
-; CHECK-NEXT:    --> ((-10 * ((10 /u {1,+,1}<nuw><nsw><%b1>) /u 10))<nuw><nsw> + (10 /u {1,+,1}<nuw><nsw><%b1>)) U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
+; CHECK-NEXT:    --> ((-10 * ((10 /u {1,+,1}<nuw><nsw><%b1>) /u 10))<nuw><nsw> + (10 /u {1,+,1}<nuw><nsw><%b1>))<nsw> U: [0,1) S: [0,1) Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %udiv6 = udiv i32 %phi2, 0
 ; CHECK-NEXT:    --> ({1,+,1}<nuw><nsw><%b1> /u 0) U: empty-set S: empty-set Exits: <<Unknown>> LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:    %add = add i32 %phi2, 1

@@ -343,7 +343,7 @@ define void @test3_pr58811(ptr %dst) {
 ; VF2:       [[LOOP_3_PREHEADER]]:
 ; VF2-NEXT:    [[ADD101_LCSSA:%.*]] = phi i32 [ [[ADD101]], %[[LOOP_2]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[P_1]]
-; VF2-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[P_1]], [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[P_1]], [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; VF2-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[P_2]]
 ; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
@@ -404,7 +404,7 @@ define void @test3_pr58811(ptr %dst) {
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    [[ADD101_LCSSA:%.*]] = phi i32 [ [[ADD101]], %[[LOOP_2]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[P_1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[P_1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[P_1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[P_2]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]

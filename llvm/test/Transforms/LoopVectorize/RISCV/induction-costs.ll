@@ -13,7 +13,7 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[X_I64:%.*]] = sext i16 [[X]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -8
 ; CHECK-NEXT:    [[SMAX20:%.*]] = call i64 @llvm.smax.i64(i64 [[X_I64]], i64 99)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[SMAX20]], [[X_I64]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nsw i64 [[SMAX20]], [[X_I64]]
 ; CHECK-NEXT:    [[UMIN21:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[SMAX20]], [[UMIN21]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[X_I64]]
@@ -22,17 +22,17 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = shl nsw i64 [[X_I64]], 1
-; CHECK-NEXT:    [[SCEVGEP9:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP31]]
+; CHECK-NEXT:    [[TMP47:%.*]] = shl nsw i64 [[X_I64]], 1
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP47]]
 ; CHECK-NEXT:    [[SMAX10:%.*]] = call i64 @llvm.smax.i64(i64 [[X_I64]], i64 99)
 ; CHECK-NEXT:    [[TMP32:%.*]] = sub i64 [[SMAX10]], [[X_I64]]
 ; CHECK-NEXT:    [[UMIN11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP32]], i64 1)
 ; CHECK-NEXT:    [[TMP33:%.*]] = sub i64 [[SMAX10]], [[UMIN11]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = sub i64 [[TMP33]], [[X_I64]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = udiv i64 [[TMP34]], 3
-; CHECK-NEXT:    [[TMP36:%.*]] = add i64 [[UMIN11]], [[TMP35]]
+; CHECK-NEXT:    [[TMP36:%.*]] = add nuw nsw i64 [[UMIN11]], [[TMP35]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = mul i64 [[TMP36]], 6
-; CHECK-NEXT:    [[TMP38:%.*]] = add i64 [[TMP37]], [[TMP31]]
+; CHECK-NEXT:    [[TMP38:%.*]] = add i64 [[TMP37]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = add i64 [[TMP38]], 2
 ; CHECK-NEXT:    [[SCEVGEP12:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP39]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = shl nsw i64 [[X_I64]], 3
@@ -44,10 +44,10 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[TMP44:%.*]] = add nsw i64 [[TMP40]], -8
 ; CHECK-NEXT:    [[SCEVGEP15:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP44]]
 ; CHECK-NEXT:    [[SCEVGEP16:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP42]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP9]], [[SCEVGEP14]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP6]], [[SCEVGEP14]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP13]], [[SCEVGEP12]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr [[SCEVGEP9]], [[SCEVGEP16]]
+; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr [[SCEVGEP6]], [[SCEVGEP16]]
 ; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[SCEVGEP15]], [[SCEVGEP12]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT19:%.*]] = and i1 [[BOUND017]], [[BOUND118]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT19]]
