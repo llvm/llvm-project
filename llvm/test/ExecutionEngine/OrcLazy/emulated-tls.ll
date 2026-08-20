@@ -2,7 +2,9 @@
 ; UNSUPPORTED: target=loongarch{{.*}}
 
 ; RUN: not lli -no-process-syms -lljit-platform=Inactive -emulated-tls \
-; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s
+; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s --check-prefix=EMULATED
+; RUN: not lli -no-process-syms -lljit-platform=Inactive -emulated-tls=false \
+; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s --check-prefix=NATIVE
 ;
 ; Test that emulated-tls does not generate any unexpected errors.
 ;
@@ -15,7 +17,9 @@
 ; tls lowering was applied, and (2) that thread locals defined in the JIT'd code
 ; were otherwise handled correctly.
 
-; CHECK: JIT session error: Symbols not found: [ {{[^,]*}}__emutls_get_address ]
+; EMULATED: JIT session error: Symbols not found: [ {{[^,]*}}__emutls_get_address ]
+; NATIVE-NOT: __emutls_get_address
+; NATIVE: JIT session error:
 
 @x = thread_local global i32 42, align 4
 

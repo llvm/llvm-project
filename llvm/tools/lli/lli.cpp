@@ -971,6 +971,10 @@ static int runOrcJIT(const char *ProgName) {
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
 
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS())
+    Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
+        *EmulatedTLS;
+
   // Link process symbols unless NoProcessSymbols is set.
   Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);
 
