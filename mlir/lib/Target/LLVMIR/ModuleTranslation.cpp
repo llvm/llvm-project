@@ -1648,42 +1648,32 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
       });
 }
 
-/// Converts generic function metadata from `func` and attaches it to
-/// `llvmFunc`.
-static LogicalResult convertFunctionMetadata(ModuleTranslation &translation,
-                                             LLVMFuncOp func,
-                                             llvm::Function *llvmFunc) {
-  ArrayAttr metadata = func.getFunctionMetadataAttr();
-  if (!metadata)
-    return success();
+LogicalResult ModuleTranslation::convertFunctionMetadata() {
+  for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
+    ArrayAttr metadata = function.getFunctionMetadataAttr();
+    if (!metadata)
+      continue;
 
-  for (auto entry : metadata.getAsRange<LLVM::FunctionMetadataAttr>()) {
-    StringRef metadataName = entry.getMetadataName().getValue();
+    llvm::Function *llvmFunc = lookupFunction(function.getName());
+    for (auto entry : metadata.getAsRange<LLVM::FunctionMetadataAttr>()) {
+      StringRef metadataName = entry.getMetadataName().getValue();
 
-    FailureOr<llvm::Metadata *> md =
-        translation.convertMetadataAttr(entry.getNode(), [&]() {
-          return func.emitError()
-                 << "failed to convert function_metadata entry '"
-                 << metadataName << "': ";
-        });
-    if (failed(md))
-      return failure();
-    llvm::MDNode *node = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
-    if (!node) {
-      return func.emitError() << "failed to convert function_metadata entry '"
-                              << metadataName << "'";
+      FailureOr<llvm::Metadata *> md =
+          convertMetadataAttr(entry.getNode(), [&]() {
+            return function.emitError()
+                   << "failed to convert function_metadata entry '"
+                   << metadataName << "': ";
+          });
+      if (failed(md))
+        return failure();
+      llvm::MDNode *node = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
+      if (!node) {
+        return function.emitError()
+               << "failed to convert function_metadata entry '" << metadataName
+               << "'";
+      }
+      llvmFunc->addMetadata(metadataName, *node);
     }
-    llvmFunc->addMetadata(metadataName, *node);
-  }
-  return success();
-}
-
-static LogicalResult convertFunctionMetadata(ModuleTranslation &translation,
-                                             Operation *module) {
-  for (auto function : getModuleBody(module).getOps<LLVMFuncOp>()) {
-    llvm::Function *llvmFunc = translation.lookupFunction(function.getName());
-    if (failed(convertFunctionMetadata(translation, function, llvmFunc)))
-      return failure();
   }
   return success();
 }
@@ -2704,7 +2694,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.convertIFuncs()))
     return nullptr;
-  if (failed(convertFunctionMetadata(translator, module)))
+  if (failed(translator.convertFunctionMetadata()))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
