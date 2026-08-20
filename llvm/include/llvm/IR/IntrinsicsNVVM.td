@@ -3345,10 +3345,7 @@ foreach shape = ["32x32b", "16x32bx2"] in {
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
                       NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>] in {
   def int_nvvm_st_bulk :
-      DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
-
-  def int_nvvm_st_bulk_shared_cta :
-      DefaultAttrsIntrinsic<[], [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty]>;
+      DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_anyint_ty, llvm_i64_ty]>;
 }
 
 //

@@ -6180,12 +6180,26 @@ let Predicates = [SM100] in {
   def INT_NVVM_ST_BULK_GENERIC :
     BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
               "st.bulk",
-              [(int_nvvm_st_bulk addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
-
+              [(IntrinsicInAS<int_nvvm_st_bulk, AddrSpaceGeneric>
+                  addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
   def INT_NVVM_ST_BULK_SHARED_CTA:
     BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
               "st.bulk.shared::cta",
-              [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+              [(IntrinsicInAS<int_nvvm_st_bulk, AddrSpaceShared>
+                  addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+}
+
+let Predicates = [PTX90, SM100] in {
+  def INT_NVVM_ST_BULK_GENERIC_I32 :
+    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B32:$size, i64imm:$value),
+              "st.bulk",
+              [(IntrinsicInAS<int_nvvm_st_bulk, AddrSpaceGeneric>
+                  addr:$dest_addr, i32:$size, st_bulk_imm:$value)]>;
+  def INT_NVVM_ST_BULK_SHARED_CTA_I32:
+    BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B32:$size, i64imm:$value),
+              "st.bulk.shared::cta",
+              [(IntrinsicInAS<int_nvvm_st_bulk, AddrSpaceShared>
+                  addr:$dest_addr, i32:$size, st_bulk_imm:$value)]>;
 }
 
 //

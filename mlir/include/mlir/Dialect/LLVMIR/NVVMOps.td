@@ -5239,7 +5239,7 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
 //===----------------------------------------------------------------------===//
 
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
-  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
   let summary = "Bulk Store Op";
   let description = [{
@@ -5253,13 +5253,12 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = getStBulkIntrinsicId(
-          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
-    createIntrinsicCall(builder, intId,
-                      {$addr, $size, builder.getInt64($initVal)});
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_st_bulk,
+                        builder.getVoidTy(),
+                        {$addr, $size, builder.getInt64($initVal)});
   }];
   
-  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr) `,` type($size)";
   
   let hasVerifier = 1;
 }

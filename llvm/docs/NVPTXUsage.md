@@ -3607,8 +3607,10 @@ The following tables describes the possible values of the flag arguments
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.st.bulk(ptr addrspace(1) %dst, i64 %size, i64 immarg %initval)
-declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p0.i32(ptr %dst, i32 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p0.i64(ptr %dst, i64 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p3.i32(ptr addrspace(3) %dst, i32 %size, i64 immarg %initval)
+declare void @llvm.nvvm.st.bulk.p3.i64(ptr addrspace(3) %dst, i64 %size, i64 immarg %initval)
 ```
 
 ##### Overview:
@@ -3616,15 +3618,15 @@ declare void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %dst, i64 %size, i64
 The '`@llvm.nvvm.st.bulk.*`' intrinsics initialize a region of shared memory
 starting from the location specified by the destination address operand `%dst`.
 
-The integer operand `%size` specifies the amount of memory to be initialized in
-terms of number of bytes and must be a multiple of 8. Otherwise, the behavior
-is undefined.
+The integer operand `%size`, which may have type `i32` or `i64`, specifies the
+amount of memory to be initialized in terms of number of bytes and must be a
+multiple of 8. Otherwise, the behavior is undefined.
 
 The integer immediate operand `%initval` specifies the initialization value for
 the memory locations. The only numeric value allowed is 0.
 
-The `@llvm.nvvm.st.bulk.shared.cta` and `@llvm.nvvm.st.bulk` intrinsics are
-similar but the latter uses generic addressing (see [Generic Addressing](https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing)).
+The `@llvm.nvvm.st.bulk.p3.*` and `@llvm.nvvm.st.bulk.p0.*` intrinsics are
+similar, but the latter uses generic addressing (see [Generic Addressing](https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing)).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk).
 
