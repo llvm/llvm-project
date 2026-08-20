@@ -1614,7 +1614,8 @@ Currently, only the following parameter attributes are defined:
     a different pointer, as long as the object is never accessed through the
     `noalias` pointer. However, it does imply `nofreeobj` if such an access
     exists, for example in the form of the implied read of a `dereferenceable`
-    attribute.
+    attribute. In other words, the combination of `nofree`, `noalias` and
+    `dereferenceable` *does* imply `nofreeobj`.
 
 (nest)=
 
