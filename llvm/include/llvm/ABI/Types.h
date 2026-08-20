@@ -237,13 +237,18 @@ struct FieldInfo {
   uint64_t BitFieldWidth;
   bool IsBitField;
   bool IsUnnamedBitfield;
+  bool HasNoUniqueAddress;
+  bool IsVTablePointer;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false)
+            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false,
+            bool IsVTablePointer = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
-        IsUnnamedBitfield(IsUnnamedBitField) {}
+        IsUnnamedBitfield(IsUnnamedBitField),
+        HasNoUniqueAddress(HasNoUniqueAddress),
+        IsVTablePointer(IsVTablePointer) {}
 
   LLVM_ABI bool isEmpty() const;
 };
@@ -266,17 +271,20 @@ private:
   ArrayRef<FieldInfo> Fields;
   ArrayRef<FieldInfo> BaseClasses;
   ArrayRef<FieldInfo> VirtualBaseClasses;
+  ArrayRef<FieldInfo> DirectVirtualBaseClasses;
   StructPacking Packing;
   RecordFlags Flags;
 
 public:
   RecordType(ArrayRef<FieldInfo> StructFields, ArrayRef<FieldInfo> Bases,
-             ArrayRef<FieldInfo> VBases, TypeSize Size, Align Align,
+             ArrayRef<FieldInfo> VBases, ArrayRef<FieldInfo> DirectVBases,
+             TypeSize Size, Align Align,
              StructPacking Pack = StructPacking::Default,
              RecordFlags RecFlags = RecordFlags::None)
       : Type(TypeKind::Record, Size, Align), Fields(StructFields),
-        BaseClasses(Bases), VirtualBaseClasses(VBases), Packing(Pack),
-        Flags(RecFlags) {}
+        BaseClasses(Bases), VirtualBaseClasses(VBases),
+        DirectVirtualBaseClasses(DirectVBases), Packing(Pack), Flags(RecFlags) {
+  }
   uint32_t getNumFields() const { return Fields.size(); }
   StructPacking getPacking() const { return Packing; }
 
@@ -300,6 +308,9 @@ public:
   uint32_t getNumVirtualBaseClasses() const {
     return VirtualBaseClasses.size();
   }
+  uint32_t getNumDirectVirtualBaseClasses() const {
+    return DirectVirtualBaseClasses.size();
+  }
   bool isTransparentUnion() const {
     return static_cast<unsigned>(Flags & RecordFlags::IsTransparent) != 0;
   }
@@ -307,6 +318,9 @@ public:
   ArrayRef<FieldInfo> getBaseClasses() const { return BaseClasses; }
   ArrayRef<FieldInfo> getVirtualBaseClasses() const {
     return VirtualBaseClasses;
+  }
+  ArrayRef<FieldInfo> getDirectVirtualBaseClasses() const {
+    return DirectVirtualBaseClasses;
   }
 
   LLVM_ABI bool isEmpty() const;
@@ -372,12 +386,13 @@ public:
         VectorType(ElementType, NumElements, Align);
   }
 
-  const RecordType *getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                  Align Align,
-                                  StructPacking Pack = StructPacking::Default,
-                                  ArrayRef<FieldInfo> BaseClasses = {},
-                                  ArrayRef<FieldInfo> VirtualBaseClasses = {},
-                                  RecordFlags RecFlags = RecordFlags::None) {
+  const RecordType *
+  getRecordType(ArrayRef<FieldInfo> Fields, TypeSize Size, Align Align,
+                StructPacking Pack = StructPacking::Default,
+                ArrayRef<FieldInfo> BaseClasses = {},
+                ArrayRef<FieldInfo> VirtualBaseClasses = {},
+                RecordFlags RecFlags = RecordFlags::None,
+                ArrayRef<FieldInfo> DirectVirtualBaseClasses = {}) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
     std::copy(Fields.begin(), Fields.end(), FieldArray);
 
@@ -394,12 +409,23 @@ public:
                 VBaseArray);
     }
 
+    FieldInfo *DirectVBaseArray = nullptr;
+    if (!DirectVirtualBaseClasses.empty()) {
+      DirectVBaseArray =
+          Allocator.Allocate<FieldInfo>(DirectVirtualBaseClasses.size());
+      std::copy(DirectVirtualBaseClasses.begin(),
+                DirectVirtualBaseClasses.end(), DirectVBaseArray);
+    }
+
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
     ArrayRef<FieldInfo> BasesRef(BaseArray, BaseClasses.size());
     ArrayRef<FieldInfo> VBasesRef(VBaseArray, VirtualBaseClasses.size());
+    ArrayRef<FieldInfo> DirectVBasesRef(DirectVBaseArray,
+                                        DirectVirtualBaseClasses.size());
 
     return new (Allocator.Allocate<RecordType>())
-        RecordType(FieldsRef, BasesRef, VBasesRef, Size, Align, Pack, RecFlags);
+        RecordType(FieldsRef, BasesRef, VBasesRef, DirectVBasesRef, Size, Align,
+                   Pack, RecFlags);
   }
 
   const RecordType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
@@ -409,17 +435,17 @@ public:
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
     for (size_t I = 0, E = Fields.size(); I != E; ++I) {
-      const FieldInfo &Field = Fields[I];
-      new (&FieldArray[I])
-          FieldInfo(Field.FieldType, 0, Field.IsBitField, Field.BitFieldWidth,
-                    Field.IsUnnamedBitfield);
+      FieldInfo Field = Fields[I];
+      Field.OffsetInBits = 0;
+      new (&FieldArray[I]) FieldInfo(Field);
     }
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
 
     return new (Allocator.Allocate<RecordType>())
         RecordType(FieldsRef, ArrayRef<FieldInfo>(), ArrayRef<FieldInfo>(),
-                   Size, Align, Pack, RecFlags | RecordFlags::IsUnion);
+                   ArrayRef<FieldInfo>(), Size, Align, Pack,
+                   RecFlags | RecordFlags::IsUnion);
   }
 
   const ComplexType *getComplexType(const Type *ElementType, Align Align) {

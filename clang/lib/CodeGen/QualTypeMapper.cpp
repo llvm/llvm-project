@@ -388,25 +388,32 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   SmallVector<llvm::abi::FieldInfo, 16> Fields;
   SmallVector<llvm::abi::FieldInfo, 8> BaseClasses;
   SmallVector<llvm::abi::FieldInfo, 8> VirtualBaseClasses;
+  SmallVector<llvm::abi::FieldInfo, 4> DirectVirtualBaseClasses;
 
   // Add vtable pointer for polymorphic classes
   if (RD->isPolymorphic()) {
     const llvm::abi::Type *VtablePointer =
         createPointerTypeForPointee(ASTCtx.VoidPtrTy);
-    Fields.emplace_back(VtablePointer, 0);
+    Fields.emplace_back(VtablePointer, 0, /*IsBitField=*/false,
+                        /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
+                        /*HasNoUniqueAddress=*/false,
+                        /*IsVTablePointer=*/true);
   }
 
   for (const auto &Base : RD->bases()) {
-    if (Base.isVirtual())
-      continue;
-
     const RecordType *BaseRT = Base.getType()->castAs<RecordType>();
-    const llvm::abi::Type *BaseType = convertType(Base.getType());
-    uint64_t BaseOffset =
-        Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
-        8;
-
-    BaseClasses.emplace_back(BaseType, BaseOffset);
+    const CXXRecordDecl *BaseDecl = BaseRT->getAsCXXRecordDecl();
+    if (Base.isVirtual()) {
+      const llvm::abi::Type *BaseType = convertType(Base.getType());
+      uint64_t BaseOffset =
+          Layout.getVBaseClassOffset(BaseDecl).getQuantity() * 8;
+      DirectVirtualBaseClasses.emplace_back(BaseType, BaseOffset);
+    } else {
+      const llvm::abi::Type *BaseType = convertType(Base.getType());
+      uint64_t BaseOffset =
+          Layout.getBaseClassOffset(BaseDecl).getQuantity() * 8;
+      BaseClasses.emplace_back(BaseType, BaseOffset);
+    }
   }
 
   for (const auto &VBase : RD->vbases()) {
@@ -439,9 +446,9 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   if (RD->hasFlexibleArrayMember())
     RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
-  return Builder.getRecordType(Fields, Size, Alignment,
-                               llvm::abi::StructPacking::Default, BaseClasses,
-                               VirtualBaseClasses, RecFlags);
+  return Builder.getRecordType(
+      Fields, Size, Alignment, llvm::abi::StructPacking::Default, BaseClasses,
+      VirtualBaseClasses, RecFlags, DirectVirtualBaseClasses);
 }
 
 /// Converts enumeration types to their underlying integer representations.
@@ -568,8 +575,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }
