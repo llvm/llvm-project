@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
 
+// CHECK: [[UNROLL:#.*]] = #llvm.loop_unroll<disable = false, full = true>
+// CHECK: #loop_annotation = #llvm.loop_annotation<unroll = [[UNROLL]]>
+
 // CHECK-LABEL: func.func @parallel_independent_loop
 func.func @parallel_independent_loop(%buf: memref<16xi32>) {
   %c0 = arith.constant 0 : index
@@ -230,5 +233,26 @@ func.func @parallel_loop_auto_gang(%buf: memref<1xi32>) {
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}
+
+// -----
+
+// Preserve llvm.loop_annotation (e.g. from !dir$ unroll) when lowering acc.loop.
+// CHECK-LABEL: func.func @orphan_loop_unroll_annotation
+// CHECK-NOT: acc.loop
+// CHECK: scf.for {{.*}} {
+// CHECK: } {llvm.loop_annotation = #loop_annotation}
+func.func @orphan_loop_unroll_annotation(%buf: memref<8xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c0_i32 = arith.constant 0 : i32
+
+  acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
+    memref.store %c0_i32, %buf[%i] : memref<8xi32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>],
+                llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>} 
   return
 }
