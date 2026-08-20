@@ -380,6 +380,19 @@ struct UnrollMultiReductionPattern
     if (!targetShape)
       return failure();
     SmallVector<int64_t> originalSize = *reductionOp.getShapeForUnroll();
+    // This pattern unconditionally indexes into `targetShape` and the
+    // reduction's `isReducedDim` using the same rank as `originalSize`
+    // (e.g. to compute per-dimension offsets and the result shape). The
+    // native/target shape returned above may have a smaller rank than the
+    // op being unrolled (its trailing dimensions are then implicitly
+    // aligned with the leading dimensions of `originalSize`, see
+    // StaticTileOffsetRange), which this pattern does not handle. Bail out
+    // rather than building ops with mismatched offsets/sizes/strides.
+    if (targetShape->size() != originalSize.size())
+      return rewriter.notifyMatchFailure(
+          reductionOp, "unrolling multi_reduction with a native/target "
+                       "shape of different rank than the source vector is "
+                       "not supported");
     Location loc = reductionOp.getLoc();
     auto resultType = reductionOp->getResult(0).getType();
 

@@ -267,6 +267,24 @@ func.func @vector_multi_reduction_scalar(%v: vector<4x2xf32>, %acc: f32) -> f32 
 
 // -----
 
+// This is a negative test case to ensure that multi_reduction ops whose
+// source rank (3) does not match the rank of the configured native/target
+// shape (2x2) are not unrolled, rather than crashing while building an
+// extract_strided_slice op with mismatched offsets/sizes/strides.
+// See https://github.com/llvm/llvm-project/issues/216640.
+func.func @negative_multi_reduction_rank_mismatch(
+    %v : vector<8x12x4xf32>, %acc: vector<8x12xf32>) -> vector<8x12xf32> {
+  %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [2]
+      : vector<8x12x4xf32> to vector<8x12xf32>
+  return %0 : vector<8x12xf32>
+}
+// CHECK-LABEL: func @negative_multi_reduction_rank_mismatch
+//  CHECK-SAME:   %[[V:.*]]: vector<8x12x4xf32>, %[[ACC:.*]]: vector<8x12xf32>
+//       CHECK:   %[[R:.*]] = vector.multi_reduction <add>, %[[V]], %[[ACC]] [2] : vector<8x12x4xf32> to vector<8x12xf32>
+//       CHECK:   return %[[R]] : vector<8x12xf32>
+
+// -----
+
 func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32
   return %0 : f32
