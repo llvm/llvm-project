@@ -1001,7 +1001,7 @@ void OmpStructureChecker::CheckDirectiveInDoConcurrent(
       // Prior to OpenMP 6.0, no OpenMP directive, regardless of its "pure"
       // property, was allowed inside a DO CONCURRENT construct.
       context_.Say(source,
-          "The OpenMP directive '%s' is not allowed inside a DO CONCURRENT construct"_err_en_US,
+          "The OpenMP directive '%s' is not allowed in a DO CONCURRENT construct"_err_en_US,
           parser::omp::GetUpperName(id, version));
     } else {
       // Starting with OpenMP 6.0, directives that have the "pure" property

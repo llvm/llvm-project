@@ -11,11 +11,11 @@ contains
     integer, intent(inout) :: a(n)
     integer :: i, j
     do concurrent (i = 1:n)
-      !ERROR: The OpenMP directive 'SIMD' is not allowed inside a DO CONCURRENT construct
+      !ERROR: The OpenMP directive 'SIMD' is not allowed in a DO CONCURRENT construct
       !$omp simd
       do j = 1, n
       end do
-      !ERROR: The OpenMP directive 'BARRIER' is not allowed inside a DO CONCURRENT construct
+      !ERROR: The OpenMP directive 'BARRIER' is not allowed in a DO CONCURRENT construct
       !$omp barrier
     end do
   end subroutine

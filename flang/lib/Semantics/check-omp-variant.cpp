@@ -744,6 +744,10 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
     metadirectiveLoopVariants_.push_back(
         {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    // METADIRECTIVE is "pure", but its selected variant may not be.
+    // Check each variant independently.
+    CheckDirectiveInPureProcedure(x.DirName().source, dirId);
+    CheckDirectiveInDoConcurrent(x.DirName().source, dirId);
   }
 }
 
