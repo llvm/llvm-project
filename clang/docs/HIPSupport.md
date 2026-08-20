@@ -407,6 +407,63 @@ __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
 ```
 
+## Managed Variables
+
+The `__managed__` attribute can be applied to a global variable to indicate that
+the variable's memory is accessible by both host and device.
+A managed variable is emitted as an undefined global symbol in the device binary
+and is registered with the HIP runtime by `__hipRegisterManagedVariable` in the
+module init functions.
+
+### Restrictions
+`__managed__` variables have the following restrictions:
+
+- No dynamic initialization. Only constant initialization is permitted:
+
+  ```c++
+  struct A {
+    int a;
+    A() { a = 1; }
+  };
+
+  __managed__ A a; // error: dynamic initialization is not supported
+
+  ```
+
+- The address of a managed variable is not a constant expression, because
+  the runtime allocates the storage and defines the symbol at load time:
+
+  ```c++
+  __managed__ int x;
+
+  void foo() {
+    static constexpr auto a = &x; // error: constexpr variable 'a' must be
+                                  // initialized by a constant expression
+  }
+  ```
+
+- Shall not be used in the initializer of a static/thread-local object,
+  because that initialization may run before the HIP runtime has registered the
+  managed variable, leaving its address null.
+  Clang can diagnose direct uses of a managed variable within an initializer;
+  however, it will not follow function calls, constructors,
+  destructors, function pointers, or definitions in other translation units,
+  i.e. even if a managed variable is used there, an error won't be emitted.
+  Accessing a managed variable during static or thread-local initialization or
+  destruction is still undefined behavior, even if Clang does not emit a
+  diagnostic. Example:
+
+  ```c++
+  __managed__ int x;
+
+  int *hostglob = &x;             // error: invalid use of a __managed__ variable
+
+  int *getX() {
+    return &x;
+  }
+  int *p = getX();                // No error emitted.
+  ```
+
 ## C++17 Class Template Argument Deduction (CTAD) Support
 
 Clang supports C++17 Class Template Argument Deduction (CTAD) in both host and
