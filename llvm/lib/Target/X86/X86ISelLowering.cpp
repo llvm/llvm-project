@@ -51989,10 +51989,10 @@ static SDValue combineI8AndNotIntoI32AndNot(SDNode *N, const SDLoc &DL,
     return SDValue();
   }
 
-  X = DAG.getBitcast(MVT::i8, X);
   if (auto *C = dyn_cast<ConstantSDNode>(Y); C && !C->isOpaque())
     return SDValue();
 
+  X = DAG.getBitcast(MVT::i8, X);
   SDValue ExtX = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, X);
   SDValue ExtY = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Y);
   SDValue And =

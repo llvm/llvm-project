@@ -2199,11 +2199,42 @@ define i8 @andn8(i8 %x, i8 %y) {
   ret i8 %and
 }
 
-define i8 @andn8_v8i1(<8 x i1> %x, i8 %y) {
+define i8 @andn8_v8i1(<8 x i1> %x, i8 %y) nounwind {
 ; X86-LABEL: andn8_v8i1:
 ; X86:       # %bb.0:
-; X86:         andnl {{[0-9]+}}(%esp), %eax, %eax
-; X86:         retl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shlb $3, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %al, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    andb $3, %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shlb $3, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    andb $1, %ah
+; X86-NEXT:    orb %dl, %ah
+; X86-NEXT:    andb $3, %ah
+; X86-NEXT:    orb %cl, %ah
+; X86-NEXT:    andb $15, %ah
+; X86-NEXT:    orb %al, %ah
+; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: andn8_v8i1:
 ; X64:       # %bb.0:
