@@ -75,8 +75,18 @@ public:
 FunctionPass *createRISCVGatherScatterLoweringLegacyPass();
 void initializeRISCVGatherScatterLoweringLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVVectorPeepholePass();
-void initializeRISCVVectorPeepholePass(PassRegistry &);
+class RISCVVectorPeepholePass
+    : public OptionalPassInfoMixin<RISCVVectorPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createRISCVVectorPeepholeLegacyPass();
+void initializeRISCVVectorPeepholeLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);

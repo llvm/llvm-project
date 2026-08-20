@@ -12,7 +12,6 @@
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
 #include "RISCVTargetMachine.h"
-#include "RISCVVectorPeephole.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"

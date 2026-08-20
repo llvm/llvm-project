@@ -27,7 +27,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCVVectorPeephole.h"
+#include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
