@@ -337,11 +337,11 @@ public:
   APValue() : Kind(None), AllowConstexprUnknown(false) {}
   /// Creates an integer APValue holding the given value.
   explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
-    MakeInt(); setInt(std::move(I));
+    MakeInt(std::move(I));
   }
   /// Creates a float APValue holding the given value.
   explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
-    MakeFloat(); setFloat(std::move(F));
+    MakeFloat(std::move(F));
   }
   /// Creates a fixed-point APValue holding the given value.
   explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
@@ -767,14 +767,24 @@ public:
 
 private:
   void DestroyDataAndMakeUninit();
-  void MakeInt() {
+  void MakeInt(const APSInt &I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)&Data) APSInt(1);
+    new ((void *)&Data) APSInt(std::move(I));
     Kind = Int;
   }
-  void MakeFloat() {
+  void MakeInt(APSInt &&I) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) APFloat(0.0);
+    new ((void *)&Data) APSInt(std::move(I));
+    Kind = Int;
+  }
+  void MakeFloat(const APFloat &F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(F);
+    Kind = Float;
+  }
+  void MakeFloat(APFloat &&F) {
+    assert(isAbsent() && "Bad state change");
+    new ((void *)(char *)&Data) APFloat(std::move(F));
     Kind = Float;
   }
   void MakeFixedPoint(APFixedPoint &&FX) {

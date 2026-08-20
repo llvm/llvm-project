@@ -1181,9 +1181,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
-    case CC_SpirFunction:
-      // Do nothing. These CCs are not available as attributes.
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;

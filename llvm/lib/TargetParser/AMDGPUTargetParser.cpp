@@ -431,12 +431,21 @@ StringRef AMDGPU::getCanonicalArchName(const Triple &T, StringRef Arch) {
   return T.isAMDGCN() ? getArchNameAMDGCN(ProcKind) : getArchNameR600(ProcKind);
 }
 
-// Add each frontend feature in \p Info's bitset to \p Features. With \p
+// Capability features clang queries via the feature bitset but must not
+// serialize into the target-feature string.
+//
+// FIXME: This is hacky, we shouldn't have mismatches between the bitset and
+// feature string map.
+static const AMDGPUFeatureBitset FrontendOnlyFeatures = {
+    FEAT_FAST_FMAF, FEAT_FAST_DENORMAL_F32, FEAT_SUPPORTS_WAVE32,
+    FEAT_SUPPORTS_WGP};
+
+// Add a GPU's features (minus the frontend-only ones) to \p Features. With \p
 // Overwrite false, existing entries are kept so user -mattr overrides win.
 static void addGPUFeatures(const GPUInfo &Info, bool Overwrite,
                            StringMap<bool> &Features) {
   SmallVector<StringRef, NUM_FEATURES> Names;
-  getFeatureNames(Info.Features, Names);
+  getFeatureNames(Info.Features & ~FrontendOnlyFeatures, Names);
   for (StringRef Name : Names) {
     if (Overwrite)
       Features[Name] = true;

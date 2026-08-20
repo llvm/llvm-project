@@ -2057,12 +2057,9 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     return;
   if (!TuneCPU->empty()) {
     CmdArgs.push_back("-tune-cpu");
-    if (*TuneCPU == "native")
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      // TuneCPU might or might not be the original -mtune string, so we
-      // have to create a new copy here.
-      CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
+    // TuneCPU might or might not be the original -mtune string, so we
+    // have to create a new copy here.
+    CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   // Handle -mrvv-vector-bits=<bits>
@@ -6621,17 +6618,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
                     options::OPT_fno_unique_basic_block_section_names);
 
-  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
-                               options::OPT_fno_split_machine_functions)) {
-    if (!A->getOption().matches(options::OPT_fno_split_machine_functions)) {
-      // This codegen pass is only available on x86 and AArch64 ELF targets.
-      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
-        A->render(Args, CmdArgs);
-      else
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << TripleStr;
-    }
-  }
+  addSplitMachineFunctionsArgs(D, Args, CmdArgs, Triple);
 
   if (Arg *A =
           Args.getLastArg(options::OPT_fpartition_static_data_sections,

@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <string>
 
 namespace fir {
 
@@ -60,6 +61,11 @@ struct FIRToLLVMPassOptions {
   // the name of the global variable corresponding to a derived
   // type's descriptor.
   bool typeDescriptorsRenamedForAssembly = false;
+
+  // Name of the function to call when allocating CUDA Fortran descriptors
+  // during FIR-to-LLVM lowering. Must have the same signature as
+  // CUFAllocDescriptor. Empty defaults to CUFAllocDescriptor.
+  std::string cudaDescriptorAllocFunction;
 
   // Specify the calculation method for complex number division used by the
   // Conversion pass of the MLIR complex dialect.

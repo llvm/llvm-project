@@ -852,8 +852,15 @@ static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
   if (isa<ConstantPointerNull>(From) &&
       From->getType()->getPointerAddressSpace() == 0)
     return true;
+  // Allow replacement with dereferenceable constants. This is not strictly
+  // correct, but required for vtable assumptions.
+  auto IsBasedOnConstantGlobal = [](const Value *V) {
+    auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(V));
+    return GV && GV->isConstant();
+  };
   if (isa<Constant>(To) && To->getType()->isPointerTy() &&
-      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL) &&
+      IsBasedOnConstantGlobal(To))
     return true;
   return getUnderlyingObjectAggressive(From) ==
          getUnderlyingObjectAggressive(To);

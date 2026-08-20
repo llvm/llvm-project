@@ -1680,6 +1680,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   // If the alloca describes the variable itself, i.e. the expression in the
@@ -3352,12 +3355,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // Lib calls can be materialized by some passes, and won't be
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(*Call, LF)) {
-    return TLI.has(LF);
-  }
-
-  return false;
+  return TLI.has(TLI.getLibFunc(*Call));
 }
 
 void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
@@ -3916,9 +3914,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
-      TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
+      TLI->hasOptimizedCodeGen(TLI->getLibFunc(F->getName())) &&
       !F->doesNotAccessMemory())
     CI->addFnAttr(Attribute::NoBuiltin);
 }

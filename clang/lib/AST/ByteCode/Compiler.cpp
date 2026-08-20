@@ -3681,6 +3681,22 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
       return this->emitConstBool(E->getBoolValue(), E);
     return this->emitConst(E->getBoolValue(), E);
   }
+  if (E->isStoredAsComparisonResult()) {
+    const ComparisonCategoryInfo &CmpInfo =
+        Ctx.getASTContext().CompCategories.getInfoForType(E->getType());
+    const auto Result =
+        ComparisonCategoryResult(E->getAPValue().getInt().getZExtValue());
+    const Record *R = getRecord(E->getType());
+    if (!R || R->getNumFields() == 0)
+      return false;
+    const Record::Field *Field = R->getField(0U);
+    PrimType FieldT = classifyPrim(Field->Decl->getType());
+    if (!this->emitConst(CmpInfo.getValueInfo(Result)->getIntValue(), FieldT,
+                         E))
+      return false;
+    return this->emitInitField(FieldT, Field->Offset, E);
+  }
+
   PrimType T = classifyPrim(E->getType());
   return this->visitAPValue(E->getAPValue(), T, E);
 }
@@ -4218,14 +4234,11 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       if (E->isArray())
         Desc = nullptr; // We're not going to use it in this case.
       else
-        Desc = P.createDescriptor(E, *ElemT, /*SourceTy=*/nullptr,
-                                  Descriptor::InlineDescMD);
+        Desc = P.createDescriptor(E, *ElemT);
     } else {
-      Desc = P.createDescriptor(
-          E, ElementType.getTypePtr(),
-          E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
-          /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
-          /*IsVolatile=*/false, Init);
+      Desc = P.createDescriptor(E, ElementType.getTypePtr(), /*IsConst=*/false,
+                                /*IsTemporary=*/false, /*IsMutable=*/false,
+                                /*IsVolatile=*/false, Init);
     }
   }
 
@@ -5322,8 +5335,7 @@ unsigned Compiler<Emitter>::allocateLocalPrimitive(DeclOrExpr &&Src,
   // FIXME: There are cases where Src.isExpr() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
-  Descriptor *D = P.createDescriptor(Src, Ty, nullptr, Descriptor::InlineDescMD,
-                                     IsConst, Src.isExpr(),
+  Descriptor *D = P.createDescriptor(Src, Ty, nullptr, IsConst, Src.isExpr(),
                                      /*IsMutable=*/false, IsVolatile);
   D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
   Scope::Local Local = this->createLocal(D);
@@ -5352,9 +5364,8 @@ UnsignedOrNone Compiler<Emitter>::allocateLocal(DeclOrExpr &&Src, QualType Ty,
   }
 
   Descriptor *D = P.createDescriptor(
-      Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
-      IsTemporary, /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(),
-      Init);
+      Src, Ty.getTypePtr(), Ty.isConstQualified(), IsTemporary,
+      /*IsMutable=*/false, /*IsVolatile=*/Ty.isVolatileQualified(), Init);
   if (!D)
     return std::nullopt;
   D->IsConstexprUnknown = this->VariablesAreConstexprUnknown;
@@ -5371,9 +5382,8 @@ UnsignedOrNone Compiler<Emitter>::allocateTemporary(const Expr *E) {
   QualType Ty = E->getType();
   assert(!Ty->isRecordType());
 
-  Descriptor *D = P.createDescriptor(
-      E, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
-      /*IsTemporary=*/true);
+  Descriptor *D = P.createDescriptor(E, Ty.getTypePtr(), Ty.isConstQualified(),
+                                     /*IsTemporary=*/true);
 
   if (!D)
     return std::nullopt;
@@ -5680,8 +5690,7 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
   // Create a local variable to use as the instance.
   QualType Ty = VD->getType();
   Descriptor *D =
-      P.createDescriptor(VD, Ty.getTypePtr(), Descriptor::InlineDescMD,
-                         /*IsConst=*/Ty.isConstQualified(),
+      P.createDescriptor(VD, Ty.getTypePtr(), /*IsConst=*/Ty.isConstQualified(),
                          /*IsTemporary=*/false, /*IsMutable=*/false,
                          /*IsVolatile=*/Ty.isVolatileQualified(), nullptr);
   if (!D)

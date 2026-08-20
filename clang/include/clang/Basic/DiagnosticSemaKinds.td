@@ -550,10 +550,10 @@ def warn_import_implementation_partition_unit_in_interface_unit : Warning<
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_size: Warning<
   "return value of %0 is a large (%1 bytes) pass-by-value object; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_udt: Warning<
   "%0 has C-linkage specified, but returns user-defined type %1 which is "
   "incompatible with C">, InGroup<ReturnTypeCLinkage>;
@@ -1936,16 +1936,6 @@ def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
   "cannot befriend target of using declaration">;
-def warn_template_qualified_friend_unsupported
-    : Warning<
-          "dependent nested name specifier %0 for friend class declaration is "
-          "not supported; turning off access control for %1">,
-      InGroup<UnsupportedFriend>;
-def warn_template_qualified_friend_ignored
-    : Warning<"dependent nested name specifier %0 for friend template "
-              "declaration is "
-              "not supported; ignoring this friend declaration">,
-      InGroup<UnsupportedFriend>;
 def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "unqualified friend declaration referring to type outside of the nearest "
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
@@ -1955,6 +1945,16 @@ def err_friend_template_decl_multiple_specifiers: Error<
   "a friend declaration that befriends a template must contain exactly one type-specifier">;
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
+def err_pack_indexing_in_friend : Error<
+  "a pack indexing specifier cannot be used in a nested name specifier of a "
+  "friend declaration">;
+def err_dependent_friend_not_member_of_template_spec : Error<
+  "%0 does not name a class template">;
+def err_dependent_friend_not_member : Error<
+  "friend declaration does not name a member of a class template specialization">;
+def err_dependent_friend_undeduced_params : Error<
+  "%select{template parameter|template parameters}0 of friend declaration "
+  "cannot be deduced from %1">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
@@ -5324,11 +5324,16 @@ def note_ovl_candidate_deduced_mismatch : Note<
     "adjusted type of %select{|element of }4argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
+def note_friend_template_non_deduced_mismatch : Note<
+    "candidate friend template ignored: could not match "
+    "%diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
 // different types with the same name.  Remove this note when the above note
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
+def note_friend_template_non_deduced_mismatch_qualified : Note<
+    "candidate friend template ignored: could not match %q0 against %q1">;
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
@@ -13353,7 +13358,7 @@ def warn_invalid_default_version_priority
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
+  "cannot %select{use builtin operator '<=>'|default 'operator<=>'|compute order}1 "
   "because type '%0' was not found; include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "
@@ -13674,6 +13679,9 @@ def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
   "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def warn_riscv_attribute_interrupt_duplicate_type : Warning<
+  "RISC-V 'interrupt' attribute type '%0' specified more than once">,
+  InGroup<DiagGroup<"duplicate-interrupt-type">>;
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
