@@ -270,6 +270,7 @@ public:
 
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
+  bool tryFoldSGPRSplatRegSequence(MachineInstr &MI);
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
@@ -2527,10 +2528,91 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   return true;
 }
 
+// Try to optimize SGPR reg sequences that are splat <s, s> or <s, s, s, s>
+// where all uses are PackedSingleSGPR64BitInst, replacing with <s, undef, ...>
+bool SIFoldOperandsImpl::tryFoldSGPRSplatRegSequence(MachineInstr &MI) {
+  assert(MI.isRegSequence());
+
+  if (!ST->hasPackedFP64SingleSGPROps() && !ST->hasPackedU64SingleSGPROps())
+    return false;
+
+  Register Reg = MI.getOperand(0).getReg();
+
+  // Only optimize 128-bit SGPR register sequences
+  const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
+  if (!TRI->isSGPRClass(RegClass) || TRI->getRegSizeInBits(*RegClass) != 128)
+    return false;
+
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
+  if (!getRegSeqInit(Defs, Reg))
+    return false;
+
+  // Check if this is a splat pattern
+  if (Defs.size() <= 1)
+    return false;
+
+  const auto &[FirstOp, _] = Defs.front();
+  if (!FirstOp->isReg())
+    return false;
+
+  Register FirstReg = FirstOp->getReg();
+  unsigned FirstSubReg = FirstOp->getSubReg();
+
+  const TargetRegisterClass *FirstRegClass = MRI->getRegClass(FirstReg);
+  if (!TRI->isSGPRClass(FirstRegClass))
+    return false;
+
+  // Check remaining elements match first
+  if (!llvm::all_of(llvm::drop_begin(Defs), [&](const auto &Def) {
+        const auto &[Op, _] = Def;
+        return Op->isReg() && Op->getReg() == FirstReg &&
+               Op->getSubReg() == FirstSubReg;
+      }))
+    return false;
+
+  // Check if all uses are isSingleSGPRReadInst
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+    if (!AMDGPU::isPackedSingleSGPR64BitInst(UseMI.getOpcode()))
+      return false;
+  }
+
+  // Create new reg sequence with <s, undef, undef, ...>
+  Register NewDst = MRI->createVirtualRegister(RegClass);
+  MachineInstrBuilder RS = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                   TII->get(AMDGPU::REG_SEQUENCE), NewDst);
+
+  // Add the first operand
+  FirstOp->setIsKill(false);
+  RS.add(*FirstOp);
+  RS.addImm(Defs[0].second);
+
+  // Add undef for remaining lanes
+  // Create an undef virtual register for the same register class
+  Register UndefReg = MRI->createVirtualRegister(FirstRegClass);
+  for (unsigned i = 1; i < Defs.size(); ++i) {
+    RS.addReg(UndefReg, RegState::Undef);
+    RS.addImm(Defs[i].second);
+  }
+
+  // Replace all uses
+  MRI->replaceRegWith(Reg, NewDst);
+
+  LLVM_DEBUG(dbgs() << "Folded splat SGPR reg_sequence: " << MI << " into "
+                    << *RS);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // Try to fold a reg_sequence with vgpr output and agpr inputs into an
 // instruction which can take an agpr. So far that means a store.
 bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
   assert(MI.isRegSequence());
+
+  // Try to optimize SGPR splat sequences first
+  if (tryFoldSGPRSplatRegSequence(MI))
+    return true;
+
   auto Reg = MI.getOperand(0).getReg();
 
   if (!ST->hasGFX90AInsts() || !TRI->isVGPR(*MRI, Reg) ||
