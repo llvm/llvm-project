@@ -279,19 +279,9 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(
 
 } // namespace
 
-void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(WebAssemblyAsmPrinterBeginPass::name(),
-                            "wasm-asm-printer-begin");
-    PIC->addClassToPassName(WebAssemblyAsmPrinterPass::name(),
-                            "wasm-asm-printer");
-    PIC->addClassToPassName(WebAssemblyAsmPrinterEndPass::name(),
-                            "wasm-asm-printer-end");
-  }
 }
 
 Error WebAssemblyTargetMachine::buildCodeGenPipeline(

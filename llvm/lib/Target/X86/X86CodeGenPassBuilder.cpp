@@ -125,10 +125,8 @@ void X86CodeGenPassBuilder::addPreLegalizeMachineIR(
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass) {
-    // TODO(boomanaiden154): Add the MachineCombinerPass here once it has been
-    // ported to the new pass manager.
-  }
+  if (X86EnableMachineCombinerPass)
+    addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
 
@@ -275,18 +273,9 @@ void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
 
 } // namespace
 
-void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
-  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
-  // targets that currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(X86AsmPrinterBeginPass::name(),
-                            "x86-asm-printer-begin");
-    PIC->addClassToPassName(X86AsmPrinterPass::name(), "x86-asm-printer");
-    PIC->addClassToPassName(X86AsmPrinterEndPass::name(),
-                            "x86-asm-printer-end");
-  }
 }
 
 Error X86TargetMachine::buildCodeGenPipeline(

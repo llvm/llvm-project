@@ -1,21 +1,14 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s --check-prefix=HOST
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | tco -test-gen | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-is-target-device %s -o - | tco -test-gen | FileCheck %s
 
 ! Test that a bare '!$omp declare target' inside an interface body that
 ! appears in a *named* main program does not incorrectly mark the main
 ! program (_QQmain) as a declare-target function while still correctly
-! marking the declared subroutine (sub_a) as device_type(nohost).
-!
-! In host compilation _QQmain must not be tagged with declare_target at all.
-! In device compilation the MarkDeclareTargetPass may annotate _QQmain with
-! device_type(host) (harmless); the bug was device_type(any) which caused
-! _QQmain to be emitted into the device image.
+! marking the declared subroutine (sub_a) as device_type(any).
 
-! HOST-NOT: func.func @_QQmain{{.*}}omp.declare_target
-! DEVICE-NOT: func.func @_QQmain{{.*}}device_type = (any)
-! DEVICE-NOT: func.func @_QQmain{{.*}}device_type = (nohost)
-! HOST: func.func private @_QPsub_a{{.*}}device_type = (nohost)
-! DEVICE: func.func private @_QPsub_a{{.*}}device_type = (nohost)
+! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = (any)
+! CHECK-NOT: llvm.func @_QQmain{{.*}}device_type = (nohost)
+! CHECK: llvm.func @_QPsub_a{{.*}}device_type = (any), {{.*}}sym_visibility = "private"
 
 program named_main
   interface

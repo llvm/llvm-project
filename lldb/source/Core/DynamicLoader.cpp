@@ -13,9 +13,9 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -25,10 +25,13 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-interfaces.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <cassert>
@@ -244,13 +247,11 @@ GetBinaryNotFoundMessage(const DynamicLoader::BinarySpec &bin_spec) {
   return msg.GetString().str();
 }
 
-/// Search for a binary with a known UUID, and create a module for it.
+/// Reads the Target, so it has to be called for one binary at a time.
 ///
-/// Does not mutate the Target, but does read from it, and reaches the global
-/// shared module list, the symbol locator plugins, and a locate module callback
-/// the user may have installed.
-static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
-                            const FileSpecList &search_paths) {
+/// \return What to search for, or nothing when the binary is already in hand.
+static std::optional<SymbolLocator::Request>
+PrepareSearch(Target &target, DynamicLoader::BinarySpec &bin_spec) {
   ModuleSpec module_spec;
   module_spec.SetTarget(target.shared_from_this());
   module_spec.GetUUID() = bin_spec.uuid;
@@ -258,47 +259,55 @@ static void SearchForBinary(Target &target, DynamicLoader::BinarySpec &bin_spec,
   if (FileSystem::Instance().Exists(name_filespec))
     module_spec.GetFileSpec() = name_filespec;
 
-  // Has lldb already seen a module with this UUID?
-  // Or have external lookup enabled in DebugSymbols on macOS.
-  Status error = ModuleList::GetSharedModule(module_spec, bin_spec.module_sp,
-                                             nullptr, nullptr);
+  // Has lldb already seen a module with this UUID? A module whose symbols are
+  // already in hand is the answer, and searching would only find them again.
+  // Without them the search still has something to add.
+  ModuleList::GetSharedModule(module_spec, bin_spec.module_sp, nullptr, nullptr,
+                              /*invoke_locate_callback=*/true,
+                              /*invoke_symbol_locators=*/false);
+  if (bin_spec.module_sp && bin_spec.module_sp->GetSymbolFileFileSpec())
+    return std::nullopt;
 
-  // Can lldb's symbol/executable location schemes find an executable and
-  // symbol file.
-  if (!bin_spec.module_sp) {
-    StatisticsMap symbol_locator_map;
-    module_spec.GetSymbolFileSpec() = PluginManager::LocateExecutableSymbolFile(
-        module_spec, search_paths, symbol_locator_map);
-    ModuleSpec objfile_module_spec = PluginManager::LocateExecutableObjectFile(
-        module_spec, symbol_locator_map);
-    module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
-    if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
-        FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
-      bin_spec.module_sp = std::make_shared<Module>(module_spec);
-    }
+  SymbolLocator::Request request;
+  request.module_spec = module_spec;
+  request.platform = target.GetPlatform();
+  request.external_lookup = bin_spec.force_symbol_search;
+  request.description = GetBinaryDescription(bin_spec);
+  return request;
+}
 
-    if (bin_spec.module_sp) {
-      bin_spec.module_sp->GetSymbolLocatorStatistics().merge(
-          symbol_locator_map);
-    }
+/// The module is not registered with the Target until LoadBinaryInTarget.
+static void FinishSearch(DynamicLoader::BinarySpec &bin_spec,
+                         llvm::Expected<SymbolLocator::Result> located) {
+  if (!located) {
+    // Loading a binary that was never found already reports that, so a bare
+    // not-found error would only say it a second time. Any other error says
+    // something that report cannot.
+    llvm::Error error = located.takeError();
+    if (error.isA<SymbolLocator::NotFound>())
+      llvm::consumeError(std::move(error));
+    else
+      bin_spec.error = Status::FromError(std::move(error));
+    return;
   }
 
-  // If we haven't found a binary, or we don't have a SymbolFile, see
-  // if there is an external search tool that can find it.
-  if (!bin_spec.module_sp || !bin_spec.module_sp->GetSymbolFileFileSpec()) {
-    PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                               bin_spec.force_symbol_search);
-    if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-      bin_spec.module_sp = std::make_shared<Module>(module_spec);
-    } else if (bin_spec.force_symbol_search && error.Fail()) {
-      bin_spec.error = std::move(error);
-    }
-  }
+  if (located->symbol_error)
+    bin_spec.error = Status::FromError(std::move(*located->symbol_error));
 
-  // If we only found the executable, create a Module based on that.
-  if (!bin_spec.module_sp &&
-      FileSystem::Instance().Exists(module_spec.GetFileSpec()))
-    bin_spec.module_sp = std::make_shared<Module>(module_spec);
+  ModuleSP located_module_sp;
+  ModuleList::GetSharedModule(located->module_spec, located_module_sp, nullptr,
+                              nullptr, /*invoke_locate_callback=*/false,
+                              /*invoke_symbol_locators=*/false);
+
+  // A located binary always yields a module, whatever ObjectFile makes of the
+  // file, because the caller has nowhere else to record what the search found.
+  if (!located_module_sp)
+    located_module_sp = std::make_shared<Module>(located->module_spec);
+
+  // Published only now, so that a search that came up empty leaves whatever the
+  // shared module list had in hand.
+  bin_spec.module_sp = std::move(located_module_sp);
+  bin_spec.module_sp->GetSymbolLocatorStatistics().merge(located->statistics);
 }
 
 static void FindBinaryUUIDInMemory(Process *process,
@@ -314,14 +323,29 @@ void DynamicLoader::LocateBinaries(
   Target &target = process->GetTarget();
   const FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
 
+  // Reading a binary's UUID out of memory has to happen on this thread, and
+  // before any search, so that a binary whose UUID is not known yet still joins
+  // the batch.
+  llvm::SmallVector<BinarySpec *> to_search;
+  std::vector<SymbolLocator::Request> requests;
   for (BinarySpec &bin_spec : bin_specs) {
     if (!bin_spec.uuid.IsValid() && !bin_spec.value_is_offset)
       FindBinaryUUIDInMemory(process, bin_spec);
     if (!bin_spec.uuid.IsValid())
       continue;
-    Progress progress("Locating binary", GetBinaryDescription(bin_spec));
-    SearchForBinary(target, bin_spec, search_paths);
+    if (std::optional<SymbolLocator::Request> request =
+            PrepareSearch(target, bin_spec)) {
+      to_search.push_back(&bin_spec);
+      requests.push_back(std::move(*request));
+    }
   }
+
+  std::vector<llvm::Expected<SymbolLocator::Result>> located =
+      SymbolLocator::Locate(requests, search_paths,
+                            target.GetParallelModuleLoad());
+
+  for (auto [bin_spec, result] : llvm::zip_equal(to_search, located))
+    FinishSearch(*bin_spec, std::move(result));
 }
 
 llvm::Expected<ModuleSP>

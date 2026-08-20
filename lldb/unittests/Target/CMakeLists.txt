@@ -9,10 +9,12 @@ add_lldb_unittest(TargetTests
   MemoryTagMapTest.cpp
   ModuleCacheTest.cpp
   PathMappingListTest.cpp
+  RegisterTypeBuilderClangTest.cpp
   RemoteAwarePlatformTest.cpp
   ScratchTypeSystemTest.cpp
   StackFrameRecognizerTest.cpp
   SummaryStatisticsTest.cpp
+  TargetAPIMutexTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS
@@ -26,8 +28,10 @@ add_lldb_unittest(TargetTests
       lldbPluginPlatformLinux
       lldbPluginPlatformMacOSX
       lldbPluginPlatformAndroid
+      lldbPluginRegisterTypeBuilderClang
       lldbPluginSymbolFileBreakpad
       lldbPluginSymbolFileSymtab
+      lldbPluginTypeSystemClang
       lldbTarget
       lldbSymbol
       lldbUtility

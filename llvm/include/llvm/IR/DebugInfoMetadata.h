@@ -4019,7 +4019,7 @@ public:
   ///
   /// Results and return value:
   /// - Return false if the result can't be calculated for any reason.
-  /// - \p Result is set to nullopt if the intersect equals \p VarFarg.
+  /// - \p Result is set to nullopt if the intersect equals \p VarFrag.
   /// - \p Result contains a zero-sized fragment if there's no intersect.
   /// - \p OffsetFromLocationInBits is set to the difference between the first
   ///   bit of the variable location and the first bit of the slice. The
