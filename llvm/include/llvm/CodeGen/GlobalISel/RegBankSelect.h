@@ -66,8 +66,8 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 
