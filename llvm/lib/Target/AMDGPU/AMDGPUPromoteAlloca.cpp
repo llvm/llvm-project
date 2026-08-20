@@ -214,11 +214,6 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(
       ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
       DynamicVGPRBlockSize);
@@ -685,11 +680,13 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
         const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
         FixedVectorType *BitCastTy =
             FixedVectorType::get(NewElemTy, NewNumElts);
-        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *BCVal =
+            Builder.CreateBitPreservingCastChain(DL, CurVal, BitCastTy);
         Value *NewIdx = Builder.CreateLShr(
             Index, ConstantInt::get(Index->getType(), LShrAmt));
         Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
-        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Value *BCOut =
+            Builder.CreateBitPreservingCastChain(DL, ExtVal, AccessTy);
         Inst->replaceAllUsesWith(BCOut);
         return nullptr;
       }

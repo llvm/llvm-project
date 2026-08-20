@@ -30,6 +30,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
@@ -59,7 +60,12 @@ using namespace CodeGen;
 
 unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   switch (CC) {
-  default:
+  case CC_C:
+    // On SPIR/SPIR-V, CC_C is the AST-level default calling convention, but
+    // it still needs to lower to spir_func so IR consumers can rely on the
+    // calling convention to distinguish device functions.
+    if (Target.getTriple().isSPIROrSPIRV())
+      return llvm::CallingConv::SPIR_FUNC;
     return llvm::CallingConv::C;
   case CC_X86StdCall:
     return llvm::CallingConv::X86_StdCall;
@@ -89,8 +95,6 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::AArch64_VectorCall;
   case CC_AArch64SVEPCS:
     return llvm::CallingConv::AArch64_SVE_VectorCall;
-  case CC_SpirFunction:
-    return llvm::CallingConv::SPIR_FUNC;
   case CC_DeviceKernel:
     return CGM.getTargetCodeGenInfo().getDeviceKernelCallingConv();
   case CC_PreserveMost:
@@ -3185,6 +3189,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
+      assert(!ParamType->isIncompleteType() &&
+             "Pass-by-value parameter has incomplete definition?");
+
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
@@ -3237,6 +3244,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // if a load to this pointer can be speculatively executed.
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
+
+      // The `nofree` and `dereferenceable` attributes can already be inferred
+      // for `byval` arguments. We'll need to provide additional hints
+      // otherwise.
+      if (!AI.getIndirectByVal()) {
+        // Both 6.9.1 of the C standard and [basic.stc.auto] of the C++ standard
+        // require parameters to have automatic storage duration. Therefore, the
+        // underlying object of this pointer will not be freed during the
+        // function's execution.
+        Attrs.addAttribute(llvm::Attribute::NoFree);
+        Attrs.addDereferenceableAttr(
+            Context.getTypeSizeInChars(ParamType).getQuantity());
+      }
 
       // byval disables readnone and readonly.
       AddPotentialArgAccess();
@@ -5437,6 +5457,23 @@ llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
   return Call;
 }
 
+llvm::CallInst *CodeGenFunction::EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                                   ArrayRef<llvm::Value *> Args,
+                                                   llvm::Type *RetTy,
+                                                   const llvm::Twine &Name) {
+  SmallVector<llvm::Type *> ArgTys;
+  ArgTys.reserve(Args.size());
+  for (llvm::Value *Arg : Args)
+    ArgTys.push_back(Arg->getType());
+  llvm::Function *F = llvm::Intrinsic::getOrInsertDeclaration(
+      &CGM.getModule(), ID, RetTy, ArgTys);
+  llvm::CallInst *Call =
+      Builder.CreateCall(F, Args, getBundlesForFunclet(F), Name);
+  if (CGM.shouldEmitConvergenceTokens() && Call->isConvergent())
+    return cast<llvm::CallInst>(addConvergenceControlToken(Call));
+  return Call;
+}
+
 /// Emits a call or invoke to the given noreturn runtime function.
 void CodeGenFunction::EmitNoreturnRuntimeCallOrInvoke(
     llvm::FunctionCallee callee, ArrayRef<llvm::Value *> args) {
@@ -6350,13 +6387,71 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       else if (const auto *FPT =
                    Callee.getAbstractInfo().getCalleeFunctionProtoType())
         CST = QualType(FPT, 0);
+      else if (const auto *FT =
+                   Callee.getAbstractInfo().getCalleeFunctionType())
+        CST = QualType(FT, 0);
       else
         llvm_unreachable(
             "Cannot find the callee type to generate callee_type metadata.");
 
       // Set type identifier metadata of indirect calls for call graph section.
-      if (!CST.isNull())
+      if (!CST.isNull()) {
+        if (!CST->isFunctionProtoType()) {
+          // Reconstruct a prototype for unprototyped callees from the argument
+          // types passed at the call site (after default argument promotion).
+          //
+          // Basic Rationale & K&R-Style Definitions:
+          // The argument types in CallArgs have already undergone C default
+          // argument promotion (e.g., char/short -> int, float -> double).
+          // Furthermore, for a K&R-style
+          // definition (e.g., void foo(x) short x; { ... }), canonical C ABI
+          // semantics expect the promoted type (int) at the call boundary
+          // and implicitly cast down to the declared type (short) inside the
+          // function. Therefore, signature computation at K&R definition
+          // sites must also apply default argument promotion (yielding
+          // void(int), not void(short)) so definition and call sites match.
+          //
+          // Signature Strictness & Normalization:
+          // Since type identifier matching relies on exact hash equality, any
+          // tolerance for C compatibility rules must be done by normalizing
+          // types before hashing.
+          // - Standard C allows certain exceptions for unprototyped calls (and
+          //   variadic va_arg), such as differences in signedness (e.g.,
+          //   passing an int to an unsigned int parameter) or
+          //   interchangeability of enum types with their underlying integer
+          //   types.
+          // - Existing CFI normalization (e.g.,
+          //   -fsanitize-cfi-icall-experimental-normalize-integers) normalizes
+          //   types by bit-width and signedness (e.g., int vs long on LP64,
+          //   which C does not treat as compatible), but does not normalize
+          //   away signedness or enum mismatches.
+          // - In the future, whether to normalize away signedness, enums, or
+          //   integer bit-widths depends on whether call graph analysis should
+          //   err on the side of inclusion (admitting any C-valid call) or
+          //   strictness (like CFI). Any normalization applied here at the call
+          //   site must remain strictly matched with definition-site
+          //   type signature computation.
+          if (const auto *FNPT = CST->getAs<FunctionNoProtoType>()) {
+            SmallVector<QualType, 8> ParamTypes;
+            // CallArgs already contains default-promoted argument types for
+            // unprototyped calls.
+            for (const CallArg &Arg : CallArgs)
+              ParamTypes.push_back(Arg.getType());
+            FunctionProtoType::ExtProtoInfo EPI;
+            CST = getContext().getFunctionType(FNPT->getReturnType(),
+                                               ParamTypes, EPI);
+          }
+
+          llvm::Metadata *MD =
+              CGM.CreateMetadataIdentifierForCallGraphType(CST);
+          StringRef TypeStr;
+          if (auto *MDS = dyn_cast_or_null<llvm::MDString>(MD))
+            TypeStr = MDS->getString();
+
+          CGM.getDiags().Report(Loc, diag::warn_cgs_no_proto) << CST << TypeStr;
+        }
         CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+      }
     }
   }
 

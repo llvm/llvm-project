@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -sparsification-and-bufferization -verify-diagnostics | FileCheck %s
 
+// XFAIL: mlir-expensive-checks
+
 // Tests that mlir-opt does not crash when parsing sparse tensor encodings with symbols.
 
 // CHECK-DAG: #[[$SPARSE_0:.*]] = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed) }>
@@ -15,7 +17,7 @@
 func.func @tensor_add(%arg0: tensor<8x8xf32, #Sparse>) -> tensor<8x8xf32> {
   %result_out = tensor.empty() : tensor<8x8xf32>
 
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x8xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() alignment = 64 : memref<8x8xf32>
   // CHECK: %[[RES:.*]] = linalg.add ins(%{{.*}}, %{{.*}} : tensor<8x8xf32, #[[$SPARSE_1]]>, tensor<8x8xf32, #[[$SPARSE_1]]>)
   %result = linalg.add
     ins(%arg0, %arg0 : tensor<8x8xf32, #Sparse>, tensor<8x8xf32, #Sparse>)

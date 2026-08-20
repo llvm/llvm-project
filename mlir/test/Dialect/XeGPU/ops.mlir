@@ -540,37 +540,37 @@ gpu.func @fence() {
 
 // CHECK-LABEL: gpu.func @create_mem_desc({{.*}}) {
 gpu.func @create_mem_desc() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16>
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_with_stride({{.*}}) {
 gpu.func @create_mem_desc_with_stride() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_from_2d_memref({{.*}}) {
 gpu.func @create_mem_desc_from_2d_memref() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<16x64xf16, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<16x64xf16, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<16x64xf16, 3> -> !xegpu.mem_desc<16x64xf16>
-  %m = memref.alloca() {alignment = 1024} : memref<16x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<16x64xf16, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<16x64xf16, 3> -> !xegpu.mem_desc<16x64xf16>
   gpu.return
 }
 
 // CHECK-LABEL: gpu.func @create_mem_desc_with_stride_from_2d_memref({{.*}}) {
 gpu.func @create_mem_desc_with_stride_from_2d_memref() {
-  //CHECK: %[[ALLOC:.+]] = memref.alloca() {alignment = 1024 : i64} : memref<32x64xf16, 3>
+  //CHECK: %[[ALLOC:.+]] = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
   //CHECK: %[[SUBVIEW:.+]] = memref.subview %[[ALLOC]][16, 0] [16, 64] [1, 1] : memref<32x64xf16, 3> to memref<16x64xf16, strided<[64, 1], offset: 1024>, 3>
   //CHECK: %{{.+}} = xegpu.create_mem_desc %[[SUBVIEW]] : memref<16x64xf16, strided<[64, 1], offset: 1024>, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
-  %m = memref.alloca() {alignment = 1024} : memref<32x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
   %m_sub = memref.subview %m[16, 0][16, 64][1,1] : memref<32x64xf16, 3> to memref<16x64xf16, strided<[64, 1], offset: 1024>, 3>
   %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x64xf16, strided<[64, 1], offset: 1024>, 3> -> !xegpu.mem_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
@@ -578,9 +578,9 @@ gpu.func @create_mem_desc_with_stride_from_2d_memref() {
 
 // CHECK-LABEL: gpu.func @create_mem_desc_from_3d_memref({{.*}}) {
 gpu.func @create_mem_desc_from_3d_memref() {
-  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<1x16x64xf16, 3>
+  //CHECK: [[alloc:%.+]] = memref.alloca() alignment = 1024 : memref<1x16x64xf16, 3>
   //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
-  %m = memref.alloca() {alignment = 1024} : memref<1x16x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<1x16x64xf16, 3>
   %mem_desc = xegpu.create_mem_desc %m : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
   gpu.return
 }

@@ -695,7 +695,7 @@ protected:
                       .SetSkipReferences(m_command_options.m_skip_references));
     else
       entry = std::make_shared<TypeFormatImpl_EnumType>(
-          ConstString(m_command_options.m_custom_type_name),
+          m_command_options.m_custom_type_name,
           TypeFormatImpl::Flags()
               .SetCascades(m_command_options.m_cascade)
               .SetSkipPointers(m_command_options.m_skip_pointers)

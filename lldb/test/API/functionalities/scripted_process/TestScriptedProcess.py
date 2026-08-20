@@ -13,7 +13,7 @@ from lldbsuite.test import lldbtest
 import dummy_scripted_process
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -112,7 +112,7 @@ class ScriptedProcesTestCase(TestBase):
             log,
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""

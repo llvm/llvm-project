@@ -1,5 +1,5 @@
 #include "llvm/ExecutionEngine/Orc/ReOptimizeLayer.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
@@ -96,11 +96,10 @@ Error ReOptimizeLayer::addOrcRTLiteSupport(JITDylib &PlatformJD,
   Builder.SetInsertPoint(Entry);
 
   ExecutorAddr JITDispatchSym, JITDispatchCtxSym;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static,
-          makeJITDylibSearchOrder(&ES.getBootstrapJITDylib()),
-          {{ES.intern(rt::DispatchName), &JITDispatchSym},
-           {ES.intern(rt::DispatchCtxName), &JITDispatchCtxSym}}))
+  if (auto Err =
+          lookupAndApply(ES.getBootstrapJITDylib(),
+                         {recordAddr(rt::DispatchName, &JITDispatchSym),
+                          recordAddr(rt::DispatchCtxName, &JITDispatchCtxSym)}))
     return Err;
 
   Type *IntPtrTy = DL.getIntPtrType(*Ctx);

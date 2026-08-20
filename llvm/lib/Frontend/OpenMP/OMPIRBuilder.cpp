@@ -663,11 +663,15 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
       Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
   DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
 
-  Value *StrictFlag = Builder.getInt64(KernelArgs.StrictBlocksAndThreads);
-  StrictFlag = Builder.CreateShl(StrictFlag, 6);
+  Value *StrictBlocksFlag = Builder.getInt64(KernelArgs.StrictBlocks);
+  Value *StrictThreadsFlag = Builder.getInt64(KernelArgs.StrictThreads);
+
+  StrictBlocksFlag = Builder.CreateShl(StrictBlocksFlag, 6);
+  StrictThreadsFlag = Builder.CreateShl(StrictThreadsFlag, 7);
 
   Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
-  Flags = Builder.CreateOr(Flags, StrictFlag);
+  Flags = Builder.CreateOr(Flags, StrictBlocksFlag);
+  Flags = Builder.CreateOr(Flags, StrictThreadsFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -3398,7 +3402,10 @@ Value *OpenMPIRBuilder::createRuntimeShuffleFunction(InsertPointTy AllocaIP,
       Builder.CreateIntCast(WarpSize, Builder.getInt16Ty(), /*isSigned=*/true);
   Value *ShuffleCall =
       createRuntimeFunctionCall(ShuffleFunc, {ElemCast, Offset, WarpSizeCast});
-  return castValueToType(AllocaIP, ShuffleCall, CastTy);
+  // The shuffle runtime functions return a 32- or 64-bit value. Cast it back
+  // down to the requested element type, otherwise storing the result would
+  // write past the end of an element narrower than the shuffle width.
+  return castValueToType(AllocaIP, ShuffleCall, ElementType);
 }
 
 void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
@@ -3472,11 +3479,10 @@ void OpenMPIRBuilder::shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr,
       emitBranch(PreCondBB);
       emitBlock(ExitBB, CurFunc);
     } else {
+      // The shuffled value comes back as the chunk's integer type, so the
+      // store covers exactly this chunk regardless of what ElemType is.
       Value *Res = createRuntimeShuffleFunction(
           AllocaIP, Builder.CreateLoad(IntType, Ptr), IntType, Offset);
-      if (ElemType->isIntegerTy() && ElemType->getScalarSizeInBits() <
-                                         Res->getType()->getScalarSizeInBits())
-        Res = Builder.CreateTrunc(Res, ElemType);
       Builder.CreateStore(Res, ElemPtr);
       Ptr = Builder.CreateGEP(IntType, Ptr, {ConstantInt::get(IndexTy, 1)});
       ElemPtr =
@@ -5766,7 +5772,7 @@ void OpenMPIRBuilder::createScanBBs(ScanInfo *ScanRedInfo) {
 }
 CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
     DebugLoc DL, Value *TripCount, Function *F, BasicBlock *PreInsertBefore,
-    BasicBlock *PostInsertBefore, const Twine &Name) {
+    BasicBlock *PostInsertBefore, const Twine &Name, bool IsCollapsed) {
   Module *M = F->getParent();
   LLVMContext &Ctx = M->getContext();
   Type *IndVarTy = TripCount->getType();
@@ -5807,8 +5813,29 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
   Builder.CreateBr(Latch);
 
   Builder.SetInsertPoint(Latch);
-  Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
-                                  "omp_" + Name + ".next", /*HasNUW=*/true);
+  // Decide whether the induction variable increment can carry nsw.
+  //
+  // Single loops: nsw is always kept (matching Clang). Any Fortran program
+  // whose trip count overflows i32 is non-conforming per F2018 11.1.7.4.1, so
+  // for valid programs 0 <= count <= INT_MAX always holds.
+  //
+  // Collapsed loops: the trip count is a product that can overflow i32 even for
+  // a conforming program, so nsw is kept only when the product is a constant
+  // that provably fits, dropped otherwise.
+  bool HasNSW = Config.hasNoSignedWrap();
+  if (HasNSW) {
+    if (auto *CI = dyn_cast<ConstantInt>(TripCount)) {
+      unsigned BitWidth = CI->getType()->getIntegerBitWidth();
+      APInt SignedMax = APInt::getSignedMaxValue(BitWidth);
+      if (CI->getValue().ugt(SignedMax))
+        HasNSW = false;
+    } else if (IsCollapsed) {
+      HasNSW = false;
+    }
+  }
+  Value *Next =
+      Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
+                        "omp_" + Name + ".next", /*HasNUW=*/true, HasNSW);
   Builder.CreateBr(Header);
   IndVarPHI->addIncoming(Next, Latch);
 
@@ -6004,8 +6031,10 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
-    Value *Span = Builder.CreateMul(IV, Step);
-    Value *IndVar = Builder.CreateAdd(Span, Start);
+    Value *Span = Builder.CreateMul(IV, Step, "", /*HasNUW=*/false,
+                                    /*HasNSW=*/Config.hasNoSignedWrap());
+    Value *IndVar = Builder.CreateAdd(Span, Start, "", /*HasNUW=*/false,
+                                      /*HasNSW=*/Config.hasNoSignedWrap());
     if (InScan)
       ScanRedInfo->IV = IndVar;
     return BodyGenCB(Builder.saveIP(), IndVar);
@@ -6160,7 +6189,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(DL);
-    return Builder.CreateAdd(OldIV, LowerBound);
+    return Builder.CreateAdd(OldIV, LowerBound, "", /*HasNUW=*/false,
+                             /*HasNSW=*/Config.hasNoSignedWrap());
   });
 
   // In the "exit" block, call the "fini" function.
@@ -7005,7 +7035,8 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Create the collapsed loop control flow.
   CanonicalLoopInfo *Result =
       createLoopSkeleton(DL, CollapsedTripCount, F,
-                         OrigPreheader->getNextNode(), OrigAfter, "collapsed");
+                         OrigPreheader->getNextNode(), OrigAfter, "collapsed",
+                         /*IsCollapsed=*/true);
 
   // Build the collapsed loop body code.
   // Start with deriving the input loop induction variables from the collapsed
@@ -8107,7 +8138,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createOrderedThreadsSimd(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Directive OMPD = Directive::OMPD_ordered;
+  Directive OMPD = Directive::OMPD_ordered_blockassoc;
   Instruction *EntryCall = nullptr;
   Instruction *ExitCall = nullptr;
 
@@ -10139,7 +10170,8 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(
         NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
-        HasNoWait, /*StrictBlocksAndThreads=*/false, DynCGroupMemFallback);
+        HasNoWait, /*StrictBlocks=*/false, /*StrictThreads=*/false,
+        DynCGroupMemFallback);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
@@ -10569,8 +10601,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Start the mapper function code generation.
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", MapperFn);
-  auto SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   Value *MapperHandle = MapperFn->getArg(0);
   Value *BaseIn = MapperFn->getArg(1);
@@ -10884,7 +10917,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
   return MapperFn;
 }
 
