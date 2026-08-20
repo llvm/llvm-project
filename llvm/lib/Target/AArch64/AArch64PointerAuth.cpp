@@ -368,6 +368,8 @@ void AArch64PointerAuthImpl::authenticateLR(
   SmallVector<MachineInstr *, 2> SPMods;
   if (ArgumentStackToRestore > 0) {
     for (MachineInstr &MI : reverse(make_range(MBB.begin(), MBBI))) {
+      if (!MI.getFlag(MachineInstr::FrameDestroy))
+        break;
       if ((MI.getOpcode() == AArch64::ADDXri ||
            MI.getOpcode() == AArch64::SUBXri) &&
           MI.getOperand(0).getReg() == AArch64::SP &&
