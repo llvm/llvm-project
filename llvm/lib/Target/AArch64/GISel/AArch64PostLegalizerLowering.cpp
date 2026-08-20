@@ -1168,6 +1168,8 @@ bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   Register DstReg = MI.getOperand(0).getReg();
+  if (cast<GLoadStore>(MI).isAtomic())
+    return false;
   if (MRI.getType(DstReg).isVector())
     return false;
   // Match a store of a truncate.

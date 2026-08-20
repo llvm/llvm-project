@@ -1701,6 +1701,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ExpressionTraitExprClass:
     case Stmt::UnresolvedLookupExprClass:
     case Stmt::UnresolvedMemberExprClass:
+    case Stmt::DependentTemplateIdExprClass:
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
     case Stmt::PackExpansionExprClass:
@@ -2133,12 +2134,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet PreVisit;
       const auto *CDE = cast<CXXDeleteExpr>(S);
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
+
       ExplodedNodeSet PostVisit;
-      getCheckerManager().runCheckersForPostStmt(PostVisit, PreVisit, S, *this);
+      for (const auto i : PreVisit)
+        VisitCXXDeleteExpr(CDE, i, PostVisit);
 
-      for (const auto i : PostVisit)
-        VisitCXXDeleteExpr(CDE, i, Dst);
-
+      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       break;
     }
       // FIXME: ChooseExpr is really a constant.  We need to fix
@@ -2415,14 +2416,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return Engine.makeNode(BE, State, Pred);
 
-    if (State != Pred->getState()) {
-      // TODO: This intermediate transition is very likely to be irrelevant,
-      // remove it in a follow-up change.
-      Pred = Engine.makeNode(BE, State, Pred);
-      if (!Pred)
-        return nullptr;
-    }
-
     // FIXME:
     // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
     // since we are currently at the block entrance and the current reference
@@ -2439,15 +2432,6 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, State, Pred);
 
   // ... otherwise, discard this execution path.
-
-  if (State != Pred->getState()) {
-    // TODO: This intermediate transition is very likely to be irrelevant,
-    // remove it in a follow-up change.
-    Pred = Engine.makeNode(BE, State, Pred);
-    if (!Pred)
-      return nullptr;
-  }
-
   static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
   const ExplodedNode *Sink =
       Engine.makeNode(BE.withTag(&Tag), State, Pred, /*MarkAsSink=*/true);

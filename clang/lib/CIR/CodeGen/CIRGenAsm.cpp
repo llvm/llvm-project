@@ -539,7 +539,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
   else if (resultRegTypes.size() > 1)
     resultType = builder.getAnonRecordTy(
         resultRegTypes, /*packed=*/false,
-        /*padded=*/false, cir::RecordType::getAllDataKinds(resultRegTypes));
+        cir::RecordType::getAllDataKinds(resultRegTypes));
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
 

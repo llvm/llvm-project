@@ -843,6 +843,38 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   return false;
 }
 
+static bool isSafePointerArithmetic(const Expr *Ptr, const Expr *OffsetExpr,
+                                    BinaryOperatorKind Opcode,
+                                    const ASTContext &Ctx) {
+  Expr::EvalResult EVResult;
+
+  if (OffsetExpr->isValueDependent() ||
+      !OffsetExpr->EvaluateAsInt(EVResult, Ctx)) {
+    // Dynamic offsets are not safe.
+    return false;
+  }
+
+  uint64_t limit = 0;
+  const Expr *Base = Ptr->IgnoreParenImpCasts();
+
+  if (const auto *CATy = dyn_cast<ConstantArrayType>(
+          Base->getType()->getUnqualifiedDesugaredType())) {
+    limit = CATy->getLimitedSize();
+  } else if (const auto *SLiteral = dyn_cast<clang::StringLiteral>(Base)) {
+    limit = SLiteral->getLength() + 1;
+  } else {
+    return false;
+  }
+
+  llvm::APSInt OffsetVal = EVResult.Val.getInt();
+  if (Opcode == BO_Sub)
+    OffsetVal = -OffsetVal;
+
+  // If the offset is a constant, and it is within the bounds of the
+  // array, then it is safe.
+  return OffsetVal.isNonNegative() && OffsetVal.getLimitedValue() < limit;
+}
+
 // Constant fold a conditional expression 'cond ? A : B' to
 // - 'A', if 'cond' has constant true value;
 // - 'B', if 'cond' has constant false value.
@@ -1764,30 +1796,47 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *BO = dyn_cast<BinaryOperator>(S);
     if (!BO)
       return false;
     const auto *LHS = BO->getLHS();
     const auto *RHS = BO->getRHS();
+
+    const Expr *Ptr = nullptr;
+    const Expr *OffsetExpr = nullptr;
+
     // ptr at left
     if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub ||
         BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign) {
       if (hasPointerType(*LHS) && (RHS->getType()->isIntegerType() ||
                                    RHS->getType()->isEnumeralType())) {
-        Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*LHS));
-        Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
-        return true;
+        Ptr = LHS;
+        OffsetExpr = RHS;
       }
     }
     // ptr at right
     if (BO->getOpcode() == BO_Add && hasPointerType(*RHS) &&
         (LHS->getType()->isIntegerType() || LHS->getType()->isEnumeralType())) {
-      Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*RHS));
-      Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
-      return true;
+      Ptr = RHS;
+      OffsetExpr = LHS;
     }
-    return false;
+
+    if (!Ptr || !OffsetExpr)
+      return false;
+
+    // If -Wno-unsafe-buffer-usage-in-static-sized-array is used, suppress
+    // warnings for guaranteed safe pointer arithmetic.
+    if (Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc()) &&
+        isSafePointerArithmetic(Ptr, OffsetExpr, BO->getOpcode(), Ctx)) {
+      return false;
+    }
+
+    // Default: warn on all pointer arithmetic
+    Result.addNode(PointerArithmeticPointerTag, DynTypedNode::create(*Ptr));
+    Result.addNode(PointerArithmeticTag, DynTypedNode::create(*BO));
+    return true;
   }
 
   void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
