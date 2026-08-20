@@ -107,10 +107,10 @@ static std::string ResolveExecutablePath(llvm::StringRef exe_path,
 
   // Try to resolve using the process's cwd
   std::string cwd_link = "/proc/" + std::to_string(pid) + "/cwd";
-  ssize_t len = readlink(cwd_link.c_str(), cwd, sizeof(cwd) - 1);
+  ssize_t cwd_len = readlink(cwd_link.c_str(), cwd, sizeof(cwd) - 1);
 
-  if (len > 0) {
-    cwd[len] = '\0';
+  if (cwd_len > 0) {
+    cwd[cwd_len] = '\0';
     std::string full_path = std::string(cwd) + exe_path.str();
 
     if (realpath(full_path.c_str(), real_path) != nullptr) {
@@ -173,13 +173,23 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
     return false;
 
   std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
+
+  // pr_psargs holds argv[0] + arguments as a single string; take the first
+  // space-delimited token as the executable name.  Fall back to pr_fname (the
+  // short process name, always set by the kernel) when pr_psargs is empty
+  // this can happen for processes created via execv(..., nullptr)
   llvm::StringRef PathRef(
       psinfoData.pr_psargs,
       strnlen(psinfoData.pr_psargs, sizeof(psinfoData.pr_psargs)));
-  if (PathRef.empty())
-    return false;
 
   llvm::StringRef executable = PathRef.split(' ').first;
+  if (executable.empty()) {
+    executable = llvm::StringRef(
+        psinfoData.pr_fname,
+        strnlen(psinfoData.pr_fname, sizeof(psinfoData.pr_fname)));
+  }
+  if (executable.empty())
+    return false;
 
   // Resolve the executable path to an absolute path
   std::string resolved_path = ResolveExecutablePath(executable, pid);
