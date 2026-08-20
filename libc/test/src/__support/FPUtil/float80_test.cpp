@@ -16,9 +16,6 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
-// will be removed
-TEST(LlvmLibcFloat80Test, temp) { Float80 a(1.0f); }
-
 TEST(LlvmLibcFloat80Test, Operators) {
   Float80 a(1.0f), b(1.0f), c(2.0f), d(3.0f), pa(1.0f), na(-1.0f);
 
