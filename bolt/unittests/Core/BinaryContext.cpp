@@ -53,7 +53,6 @@ protected:
 
   void initializeBOLT() {
     const Triple TheTriple = GetParam();
-    Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
     // feature set for +relax, while other targets reject a non-null one.
     SubtargetFeatures Features;
@@ -68,6 +67,20 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 };
+
+TEST(RelocationHandlerTest, ArchitectureStateIsIndependent) {
+  std::unique_ptr<RelocationHandler> X86Handler =
+      createRelocationHandler(Triple::x86_64);
+  std::unique_ptr<RelocationHandler> AArch64Handler =
+      createRelocationHandler(Triple::aarch64);
+
+  EXPECT_EQ(X86Handler->getPC32(), ELF::R_X86_64_PC32);
+  EXPECT_EQ(AArch64Handler->getPC32(), ELF::R_AARCH64_PREL32);
+  EXPECT_TRUE(X86Handler->isSupported(ELF::R_X86_64_PC32));
+  EXPECT_FALSE(X86Handler->isSupported(ELF::R_AARCH64_CALL26));
+  EXPECT_TRUE(AArch64Handler->isSupported(ELF::R_AARCH64_CALL26));
+  EXPECT_FALSE(AArch64Handler->isSupported(ELF::R_X86_64_PC32));
+}
 } // namespace
 
 #ifdef X86_AVAILABLE
@@ -93,7 +106,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for CALL26 relocation for both backward
   // and forward branches.
   //
@@ -140,7 +153,7 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
-  // This test checks that encodeValueAArch64 used by flushPendingRelocations
+  // This test checks that AArch64 encodeValue used by flushPendingRelocations
   // returns correctly encoded values for R_AARCH64_JUMP26 relocation for both
   // backward and forward branches.
   //
