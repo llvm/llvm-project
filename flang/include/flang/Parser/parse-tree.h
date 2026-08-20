@@ -3910,6 +3910,11 @@ struct OmpAccessGroup {
   WRAPPER_CLASS_BOILERPLATE(OmpAccessGroup, Value);
 };
 
+struct OmpAdjustOp {
+  ENUM_CLASS(Value, Nothing, Need_Device_Ptr)
+  WRAPPER_CLASS_BOILERPLATE(OmpAdjustOp, Value);
+};
+
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
 //
 // alignment ->
@@ -4421,11 +4426,8 @@ struct OmpAbsentClause {
 
 struct OmpAdjustArgsClause {
   TUPLE_CLASS_BOILERPLATE(OmpAdjustArgsClause);
-  struct OmpAdjustOp {
-    ENUM_CLASS(Value, Nothing, Need_Device_Ptr)
-    WRAPPER_CLASS_BOILERPLATE(OmpAdjustOp, Value);
-  };
-  std::tuple<OmpAdjustOp, OmpObjectList> t;
+  MODIFIER_BOILERPLATE(OmpAdjustOp);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:264-265]
