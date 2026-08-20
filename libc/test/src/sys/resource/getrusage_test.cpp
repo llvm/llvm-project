@@ -17,7 +17,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-
 TEST(LlvmLibcGetrusageTest, BasicTest) {
   struct rusage usage = {};
   int res = LIBC_NAMESPACE::getrusage(RUSAGE_SELF, &usage);
@@ -33,8 +32,7 @@ TEST(LlvmLibcGetrusageTest, TestWhoInvalid) {
 }
 
 TEST(LlvmLibcGetrusageTest, TestUsageBadPointer) {
-  int res = LIBC_NAMESPACE::getrusage(RUSAGE_SELF, (struct rusage*)-1L);
+  int res = LIBC_NAMESPACE::getrusage(RUSAGE_SELF, (struct rusage *)-1L);
   EXPECT_EQ(res, -1);
   ASSERT_ERRNO_EQ(EFAULT);
-
 }

@@ -34,4 +34,4 @@ LIBC_INLINE ErrorOr<int> getrusage(int who, struct rusage *ru) {
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_GETRUSAGE_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_SYSCALL_WRAPPERS_GETRUSAGE_H

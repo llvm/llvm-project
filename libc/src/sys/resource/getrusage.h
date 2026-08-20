@@ -23,4 +23,4 @@ int getrusage(int who, struct rusage *usage);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif  // LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
+#endif // LLVM_LIBC_SRC_SYS_RESOURCE_GETRUSAGE_H
