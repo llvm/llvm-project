@@ -868,11 +868,44 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     if (auto *cxxRD = dyn_cast<CXXRecordDecl>(rd))
       hasTrivialDestructor = cxxRD->hasTrivialDestructor();
     const auto &astLayout = astContext.getASTRecordLayout(rd);
-    uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
 
-    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
-                                           mlirCtx, apk, hasTrivialDestructor,
-                                           recordAlignInBytes));
+    // A zero-width bit-field occupies no storage, so the record type has no
+    // member for it, but its declared type still counts as user data for
+    // argument passing.  The member list cannot carry it: a member's offset
+    // comes from the members before it, so adding one would move the rest.
+    SmallVector<int64_t> zeroWidthOffsets;
+    SmallVector<int64_t> zeroWidthWidths;
+    for (const FieldDecl *field : rd->fields()) {
+      if (!field->isZeroLengthBitField())
+        continue;
+      zeroWidthOffsets.push_back(
+          astLayout.getFieldOffset(field->getFieldIndex()));
+      zeroWidthWidths.push_back(astContext.getTypeSize(field->getType()));
+    }
+
+    mlir::DenseI64ArrayAttr offsetsAttr;
+    mlir::DenseI64ArrayAttr widthsAttr;
+    if (!zeroWidthOffsets.empty()) {
+      offsetsAttr = mlir::DenseI64ArrayAttr::get(mlirCtx, zeroWidthOffsets);
+      widthsAttr = mlir::DenseI64ArrayAttr::get(mlirCtx, zeroWidthWidths);
+    }
+
+    auto layoutForAlign = [&](uint64_t alignInBytes) {
+      return cir::RecordLayoutAttr::get(mlirCtx, apk, hasTrivialDestructor,
+                                        alignInBytes, offsetsAttr, widthsAttr);
+    };
+
+    cgm.addRecordLayout(ty->getName(),
+                        layoutForAlign(astLayout.getAlignment().getQuantity()));
+
+    // A base subobject is a separate type under its own name, so a lookup for
+    // it misses the entry above.  Its fields sit where the complete object
+    // puts them, so the bit-field lists carry over, but it covers only the
+    // non-virtual part and so takes getNonVirtualAlignment().
+    if (baseTy && baseTy.getName() && baseTy.getName() != ty->getName())
+      cgm.addRecordLayout(
+          baseTy.getName(),
+          layoutForAlign(astLayout.getNonVirtualAlignment().getQuantity()));
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

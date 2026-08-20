@@ -32,8 +32,8 @@ protected:
 };
 
 TEST_F(RecordLayoutAttrTest, CanPassInRegs) {
-  auto attr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 4);
+  auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                    true, 4, /*offsets=*/{}, /*widths=*/{});
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CanPassInRegs);
   EXPECT_TRUE(attr.getHasTrivialDtor());
   EXPECT_EQ(attr.getRecordAlign(), 4u);
@@ -41,23 +41,42 @@ TEST_F(RecordLayoutAttrTest, CanPassInRegs) {
 
 TEST_F(RecordLayoutAttrTest, CannotPassInRegs) {
   auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CannotPassInRegs,
-                                    false, 4);
+                                    false, 4, /*offsets=*/{}, /*widths=*/{});
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CannotPassInRegs);
   EXPECT_FALSE(attr.getHasTrivialDtor());
 }
 
 TEST_F(RecordLayoutAttrTest, CanNeverPassInRegs) {
-  auto attr = RecordLayoutAttr::get(
-      &context, ArgPassingKind::CanNeverPassInRegs, false, 8);
+  auto attr =
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanNeverPassInRegs, false,
+                            8, /*offsets=*/{}, /*widths=*/{});
   EXPECT_EQ(attr.getArgPassingKind(), ArgPassingKind::CanNeverPassInRegs);
   EXPECT_FALSE(attr.getHasTrivialDtor());
   EXPECT_EQ(attr.getRecordAlign(), 8u);
 }
 
 TEST_F(RecordLayoutAttrTest, HighAlignment) {
-  auto attr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 32);
+  auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                    true, 32, /*offsets=*/{}, /*widths=*/{});
   EXPECT_EQ(attr.getRecordAlign(), 32u);
+}
+
+TEST_F(RecordLayoutAttrTest, NoZeroWidthBitFields) {
+  auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                    true, 4, /*offsets=*/{}, /*widths=*/{});
+  EXPECT_FALSE(attr.getZeroWidthBitfieldOffsets());
+  EXPECT_FALSE(attr.getZeroWidthBitfieldWidths());
+}
+
+TEST_F(RecordLayoutAttrTest, ZeroWidthBitFields) {
+  auto offsets = mlir::DenseI64ArrayAttr::get(&context, {32, 96});
+  auto widths = mlir::DenseI64ArrayAttr::get(&context, {32, 64});
+  auto attr = RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs,
+                                    true, 16, offsets, widths);
+  EXPECT_EQ(attr.getZeroWidthBitfieldOffsets().asArrayRef(),
+            ArrayRef<int64_t>({32, 96}));
+  EXPECT_EQ(attr.getZeroWidthBitfieldWidths().asArrayRef(),
+            ArrayRef<int64_t>({32, 64}));
 }
 
 TEST_F(RecordLayoutAttrTest, RecordTypeUnchanged) {
@@ -75,7 +94,8 @@ TEST_F(RecordLayoutAttrTest, ModuleLevelLookup) {
   auto module = mlir::ModuleOp::create(loc);
 
   auto layoutAttr =
-      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 8);
+      RecordLayoutAttr::get(&context, ArgPassingKind::CanPassInRegs, true, 8,
+                            /*offsets=*/{}, /*widths=*/{});
 
   llvm::SmallVector<mlir::NamedAttribute> entries;
   entries.push_back(mlir::NamedAttribute(getName("TestRecord"), layoutAttr));
