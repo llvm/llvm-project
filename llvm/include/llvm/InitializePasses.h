@@ -275,7 +275,7 @@ LLVM_ABI void initializeRegAllocFastPass(PassRegistry &);
 LLVM_ABI void
 initializeRegAllocPriorityAdvisorAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegAllocScoringPass(PassRegistry &);
-LLVM_ABI void initializeRegBankSelectPass(PassRegistry &);
+LLVM_ABI void initializeRegBankSelectLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegToMemWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeRegUsageInfoCollectorLegacyPass(PassRegistry &);
 LLVM_ABI void initializeRegUsageInfoPropagationLegacyPass(PassRegistry &);
