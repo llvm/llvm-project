@@ -22,13 +22,14 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-static cl::opt<TargetLibraryInfoImpl::FastLibrary> ClFastLibrary(
-    "fast-library", cl::Hidden, cl::desc("fast functions library"),
-    cl::init(TargetLibraryInfoImpl::NoFastLibrary),
-    cl::values(clEnumValN(TargetLibraryInfoImpl::NoFastLibrary, "none",
-                          "Use default library"),
-               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
-                          "AMD fast math library")));
+static cl::opt<TargetLibraryInfoImpl::FastLibrary>
+    ClFastLibrary("fast-library", cl::Hidden,
+                  cl::desc("fast functions library"),
+                  cl::init(TargetLibraryInfoImpl::NoFastLibrary),
+                  cl::values(clEnumValN(TargetLibraryInfoImpl::NoFastLibrary,
+                                        "none", "Use default library"),
+                             clEnumValN(TargetLibraryInfoImpl::AMDLIBM,
+                                        "AMDLIBM", "AMD fast math library")));
 
 #define GET_TARGET_LIBRARY_INFO_STRING_TABLE
 #include "llvm/Analysis/TargetLibraryInfo.inc"
@@ -1421,8 +1422,9 @@ void TargetLibraryInfoImpl::addFastFunctionsFromMathLib(
   switch (FastLib) {
   case FastLibrary::AMDLIBM: {
     const DenseMap<StringRef, StringRef> FastLibFuncs = {
-#define TLI_DEFINE_FAST_LIB_FUNCS
-#include "llvm/Analysis/AMDLIBMFastFuncs.def"
+#define TLI_DEFINE_AMDLIBM_FASTFUNCS
+#include "llvm/Analysis/FastFuncs.def"
+#undef TLI_DEFINE_AMDLIBM_FASTFUNCS
     };
     LibFastFunctions.insert(FastLibFuncs.begin(), FastLibFuncs.end());
     break;
@@ -1436,8 +1438,8 @@ void TargetLibraryInfoImpl::setFastMathLib(enum FastLibrary FastLib) {
   FastMathLib = FastLib;
 }
 
-StringRef TargetLibraryInfoImpl::getFastFunctionFromMathLib(
-    StringRef FastFnName) const {
+StringRef
+TargetLibraryInfoImpl::getFastFunctionFromMathLib(StringRef FastFnName) const {
   auto Iter = LibFastFunctions.find(FastFnName);
   if (Iter == LibFastFunctions.end())
     return StringRef();
