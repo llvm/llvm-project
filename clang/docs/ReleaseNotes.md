@@ -93,6 +93,9 @@ features cannot lower the translation-unit ABI level;
   always passed the parts separately. `-fclang-abi-compat=23` restores the previous
   behavior. (#GH212109)
 
+- On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
+  or 16-byte aligned stack slot, matching GCC.
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
