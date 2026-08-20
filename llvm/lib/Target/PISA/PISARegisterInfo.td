@@ -11,12 +11,14 @@ let Namespace = "PISA" in {
   class PISARegisterClass<list<ValueType> regTypes, int alignment, dag regList>
       : RegisterClass<"PISA", regTypes, alignment, regList> {}
 
-  // .reg style registers.
+  // .reg style registers. See the PISA specification for register variables:
+  // https://intel.github.io/pisa/variables.html#register-variables
   class GeneralRegisterClass<list<ValueType> regTypes, int alignment,
                              dag regList>
       : PISARegisterClass<regTypes, alignment, regList> {}
 
-  // .pred style registers.
+  // .pred style registers. See the PISA specification for predicate variables:
+  // https://intel.github.io/pisa/variables.html#predicate-variables
   class PredRegisterClass<list<ValueType> regTypes, int alignment, dag regList>
       : PISARegisterClass<regTypes, alignment, regList> {}
 
