@@ -290,13 +290,15 @@ define i32 @out_of_bounds_offset() {
 ; CHECK-LABEL: define i32 @out_of_bounds_offset() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 123
+; CHECK-NEXT:    [[A3:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN1:%.*]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then1:
-; CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A2]], align 1
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A2]], i64 123
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A3]], i64 123
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    store i8 [[V]], ptr [[A2]], align 1
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
