@@ -56,7 +56,7 @@ set(sources
   X86FlagsCopyLowering.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp
-  X86GenAmdFastCalls.cpp
+  X86GenFastCalls.cpp
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
   X86ISelLoweringCall.cpp

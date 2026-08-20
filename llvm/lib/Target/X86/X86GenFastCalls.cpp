@@ -1,4 +1,4 @@
-//===-- X86GenAmdFastCalls.cpp --------------------------------------------===//
+//===-- X86GenFastCalls.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This transformation converts standard math function calls into their
-// corresponding AMD AOCL fast entry points for X86 targets, e.g.:
-//     tan ---> amd_fasttan
-// Such lowering is only legal under fast-math semantics and when the AMD
-// fast math library has been selected (-fast-library=AMDLIBM /
-// -ffastlib=AMDLIBM).
+// corresponding fast math library entry points for X86 targets when a fast
+// math library has been selected via -fast-library= / -ffastlib=.
 //
 //===----------------------------------------------------------------------===//
 
@@ -34,22 +31,22 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "x86-gen-aocl-fast"
+#define DEBUG_TYPE "x86-gen-fast-calls"
 
 using namespace llvm;
 
 namespace {
 
-class X86GenAmdFastCalls : public MachineFunctionPass {
+class X86GenFastCalls : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86GenAmdFastCalls() : MachineFunctionPass(ID) {}
+  X86GenFastCalls() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
   StringRef getPassName() const override {
-    return "X86 Generate AOCL Fast Entries";
+    return "X86 Generate Fast Library Calls";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -62,27 +59,25 @@ private:
   TargetLibraryInfo *TLI = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   bool isCandidateSafeToLower(MachineInstr *MI) const;
-  bool createAmdFastCall(MachineInstr *MI) const;
+  bool createFastCall(MachineInstr *MI) const;
 };
 
 } // namespace
 
-// Rewriting a math call to its AOCL fast-call variant is only legal under
+// Rewriting a math call to a fast library entry point is only legal under
 // fast-math semantics. By the time this late machine pass runs, the
 // per-operation fast-math flags carried by the original call have already been
 // lowered away, so we rely on the function-level fast-math attribute that the
-// frontend sets under -ffast-math. Together with the explicit
-// -fast-library=AMDLIBM opt-in (checked in runOnMachineFunction) this gates
-// the transformation.
-bool X86GenAmdFastCalls::isCandidateSafeToLower(MachineInstr *MI) const {
+// frontend sets under -ffast-math. Together with an explicit fast math library
+// selection (checked in runOnMachineFunction) this gates the transformation.
+bool X86GenFastCalls::isCandidateSafeToLower(MachineInstr *MI) const {
   const Function &F = MI->getMF()->getFunction();
   return F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 }
 
-/// Lowers math functions to AOCL fast entry points.
-///     e.g.: tan         --> amd_fasttan
+/// Lowers math functions to their fast library entry points.
 /// The callsite symbol is updated during lowering.
-bool X86GenAmdFastCalls::createAmdFastCall(MachineInstr *MI) const {
+bool X86GenFastCalls::createFastCall(MachineInstr *MI) const {
   StringRef CallSiteName = "";
   StringRef LibFastFnName = "";
   if (MI->getOperand(0).isSymbol()) {
@@ -119,7 +114,7 @@ bool X86GenAmdFastCalls::createAmdFastCall(MachineInstr *MI) const {
   return true;
 }
 
-bool X86GenAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
+bool X86GenFastCalls::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   if (skipFunction(MF.getFunction()))
@@ -144,33 +139,32 @@ bool X86GenAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
   if (!TLI)
     return Changed;
 
-  if (TLI->getFastMathLib() !=
-      TargetLibraryInfoImpl::FastLibrary::FAST_AMDLIBM) {
-    LLVM_DEBUG(dbgs() << "-fast-library=AMDLIBM not used so bailing out.\n";);
+  if (TLI->getFastMathLib() == TargetLibraryInfoImpl::FastLibrary::NoFastLibrary) {
+    LLVM_DEBUG(dbgs() << "No fast math library selected, bailing out.\n";);
     return Changed;
   }
 
   for (auto *CI : Callsites) {
     if (isCandidateSafeToLower(CI)) {
       LLVM_DEBUG(dbgs() << "Call Inst has fastMath flags\n";);
-      Changed |= createAmdFastCall(CI);
+      Changed |= createFastCall(CI);
     } else
       LLVM_DEBUG(dbgs() << "Call Inst does not have fastMath flags\n";);
   }
   return Changed;
 }
 
-char X86GenAmdFastCalls::ID = 0;
+char X86GenFastCalls::ID = 0;
 
-char &llvm::X86GenAmdFastCallsID = X86GenAmdFastCalls::ID;
+char &llvm::X86GenFastCallsID = X86GenFastCalls::ID;
 
-INITIALIZE_PASS_BEGIN(X86GenAmdFastCalls, DEBUG_TYPE,
-                      "Generate AMD Fast calls", false, false)
+INITIALIZE_PASS_BEGIN(X86GenFastCalls, DEBUG_TYPE,
+                      "Generate Fast Library Calls", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_END(X86GenAmdFastCalls, DEBUG_TYPE,
-                    "Generate AMD Fast calls", false, false)
+INITIALIZE_PASS_END(X86GenFastCalls, DEBUG_TYPE,
+                    "Generate Fast Library Calls", false, false)
 
-FunctionPass *llvm::createX86GenAmdFastCallsPass() {
-  return new X86GenAmdFastCalls();
+FunctionPass *llvm::createX86GenFastCallsPass() {
+  return new X86GenFastCalls();
 }

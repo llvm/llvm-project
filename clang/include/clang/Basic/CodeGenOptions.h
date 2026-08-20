@@ -113,7 +113,7 @@ public:
   /// Fast math functions library to use with -ffastlib=.
   enum FastLibrary {
     NoFastLibrary, // Use default library.
-    FAST_AMDLIBM   // AMD fast math library.
+    AMDLIBM        // AMD fast math library.
   };
 
   enum ObjCDispatchMethodKind {
