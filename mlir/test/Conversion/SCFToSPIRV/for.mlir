@@ -20,9 +20,9 @@ func.func @loop_kernel(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer
   // CHECK:        spirv.BranchConditional %[[CMP]], ^[[BODY:.*]], ^[[MERGE:.*]]
   // CHECK:      ^[[BODY]]:
   // CHECK:        %[[ZERO1:.*]] = spirv.Constant 0 : i32
-  // CHECK:        spirv.AccessChain {{%.*}}{{\[}}%[[ZERO1]], %[[INDVAR]]{{\]}}
+  // CHECK:        spirv.InBoundsAccessChain {{%.*}}{{\[}}%[[ZERO1]], %[[INDVAR]]{{\]}}
   // CHECK:        %[[ZERO2:.*]] = spirv.Constant 0 : i32
-  // CHECK:        spirv.AccessChain {{%.*}}[%[[ZERO2]], %[[INDVAR]]]
+  // CHECK:        spirv.InBoundsAccessChain {{%.*}}[%[[ZERO2]], %[[INDVAR]]]
   // CHECK:        %[[INCREMENT:.*]] = spirv.IAdd %[[INDVAR]], %[[STEP]] : i32
   // CHECK:        spirv.Branch ^[[HEADER]](%[[INCREMENT]] : i32)
   // CHECK:      ^[[MERGE]]

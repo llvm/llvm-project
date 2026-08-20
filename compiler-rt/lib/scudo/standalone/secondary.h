@@ -177,17 +177,21 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
     }
   }
 
-  const uptr MaxMteMappedBytes = 2 * PageSize;
-  if (useMemoryTagging<Config>(Options) && CommitSize > MaxMteMappedBytes) {
-    // If the headers cross page boundary then two pages need to be mapped with
-    // PROT_MTE, otherwise a single page is sufficient. We could do the math and
-    // apply PROT_MTE to only one page (likely enough in most scenarios), but if
-    // the chunk is cached then this might not be true for the new allocation
-    // while reusing the chunk. Hence, PROT_MTE is used on two pages always.
-    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxMteMappedBytes);
-    return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
+  // AllocPos is assumed to be page-aligned when memory tagging is enabled.
+  // Therefore the page right before AllocPos is MTE-tagged and the header
+  // resides in this MTE-tagged page.
+  if (useMemoryTagging<Config>(Options)) {
+    const uptr PageSize = getPageSizeCached();
+    const uptr MteStart = AllocPos - PageSize;
+
+    DCHECK(AllocPos % PageSize == 0U);
+    DCHECK(MteStart % PageSize == 0U);
+
+    DCHECK_GE(MteStart, CommitBase);
+    DCHECK_LE(AllocPos, CommitBase + CommitSize);
+    return MemMap.remap(MteStart, PageSize, "scudo:secondary",
                         MAP_MEMTAG | Flags) &&
-           MemMap.remap(UntaggedPos, CommitBase + CommitSize - UntaggedPos,
+           MemMap.remap(AllocPos, CommitBase + CommitSize - AllocPos,
                         "scudo:secondary", Flags);
   } else {
     const uptr RemapFlags =
@@ -302,22 +306,13 @@ public:
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
       if (Interval == 0 && !SCUDO_FUCHSIA) {
-        // Release the memory and make it inaccessible at the same time by
-        // creating a new MAP_NOACCESS mapping on top of the existing mapping.
-        // Fuchsia does not support replacing mappings by creating a new mapping
-        // on top so we just do the two syscalls there.
         Entry.Time = 0;
-        if (!mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
-                                  Entry.CommitBase, MAP_NOACCESS,
-                                  Entry.MemMap)) {
-          // A mmap failed, unmap and return.
-          unmapCallBack(Entry.MemMap);
-          return;
-        }
-      } else {
-        Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
-                                         MAP_NOACCESS);
+        Entry.MemMap.releaseAndZeroPagesToOS(Entry.CommitBase,
+                                             Entry.CommitSize);
       }
+      // MAP_NOACCESS or PROT_NONE does not strip PROT_MTE.
+      Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
+                                       MAP_NOACCESS);
       Entry.Flags = CachedBlock::NoAccess;
     }
 
@@ -792,13 +787,51 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   }
 
   if (useMemoryTagging<Config>(Options)) {
-    uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
-    if (Zeroed || (Entry.BlockBegin < NewBlockBegin)) {
-      storeTags(reinterpret_cast<uptr>(H), NewBlockBegin);
-    } else {
-      storeTags(untagPointer(NewBlockBegin), untagPointer(Entry.BlockBegin));
-      storeTags(reinterpret_cast<uptr>(H), NewBlockBegin);
+    const uptr PageSize = getPageSizeCached();
+    const uptr OldAllocPos =
+        untagPointer(Entry.BlockBegin) + Chunk::getHeaderSize();
+    const uptr NewAllocPos = untagPointer(roundUp(EntryHeaderPos, Alignment));
+    DCHECK_GE(Alignment, PageSize);
+
+    const uptr OldHeaderPage = OldAllocPos - PageSize;
+    const uptr NewHeaderPage = NewAllocPos - PageSize;
+
+    // Enabling or disabling memory tagging at runtime is unsupported.
+    // If MTE is enabled now, the cached entry was also allocated with MTE
+    // enabled, guaranteeing that both OldAllocPos and NewAllocPos are
+    // page-aligned.
+    CHECK(OldAllocPos % PageSize == 0U);
+    DCHECK(NewAllocPos % PageSize == 0U);
+
+    if (NewAllocPos != OldAllocPos) {
+      // The shift distance must be a multiple of PageSize
+      DCHECK_EQ((NewAllocPos > OldAllocPos ? NewAllocPos - OldAllocPos
+                                           : OldAllocPos - NewAllocPos) %
+                    PageSize,
+                0U);
+
+      const uptr MappingFlags = MAP_RESIZABLE | MAP_ALLOWNOMEM;
+
+      if (!Entry.MemMap.remap(NewHeaderPage, PageSize, "scudo:secondary",
+                              MAP_MEMTAG | MappingFlags)) {
+        unmap(Entry.MemMap);
+        return nullptr;
+      }
+      // Since PROT_MTE is sticky, setting memory permissions to MAP_NOACCESS
+      // (PROT_NONE) when caching the block does not clear the PROT_MTE flag
+      // from the kernel VMA. When we make the block RW again, the old header
+      // page still has MTE enabled. If the allocation shifted, we must
+      // explicitly remap the old header page without MAP_MEMTAG to disable MTE,
+      // as this page may now be part of the user payload or padding.
+      if (!Entry.MemMap.remap(OldHeaderPage, PageSize, "scudo:secondary",
+                              MappingFlags)) {
+        unmap(Entry.MemMap);
+        return nullptr;
+      }
     }
+
+    uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
+    storeTags(reinterpret_cast<uptr>(H), NewBlockBegin);
   }
 
   H->CommitBase = Entry.CommitBase;
@@ -847,11 +880,14 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
 
+  if (useMemoryTagging<Config>(Options))
+    Alignment = Max(Alignment, PageSize);
+
   // Note that cached blocks may have aligned address already. Thus we simply
   // pass the required size (`Size` + `getHeadersSize()`) to do cache look up.
   const uptr MinNeededSizeForCache = roundUp(Size + getHeadersSize(), PageSize);
 
-  if (Alignment < PageSize && Cache.canCache(MinNeededSizeForCache)) {
+  if (Alignment <= PageSize && Cache.canCache(MinNeededSizeForCache)) {
     void *Ptr = tryAllocateFromCache(Options, Size, Alignment, BlockEndPtr,
                                      FillContents);
     if (Ptr != nullptr)
