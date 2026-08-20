@@ -141,7 +141,7 @@ private:
 };
 
 /// Wrapper around SSAUpdater that uses TrackingVH to keep available values
-/// up-to-date when the original values are RAUW'd or deleted.  The plain
+/// up-to-date when the original values are RAUW'd or deleted. The plain
 /// SSAUpdater stores raw Value* pointers that become dangling when a value it
 /// holds is replaced and erased.
 class TrackingSSAUpdater {
