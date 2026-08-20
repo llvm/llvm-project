@@ -17,8 +17,7 @@ define void @mixed_i64_i32_accesses(
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
 ; UNMASKED-SVE2P1-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; UNMASKED-SVE2P1-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
@@ -57,7 +56,7 @@ define void @mixed_i64_i32_accesses(
 ; UNMASKED-SVE2P1-NEXT:    [[TMP31:%.*]] = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP30]], <vscale x 4 x i32> [[TMP27]], i64 8)
 ; UNMASKED-SVE2P1-NEXT:    [[TMP32:%.*]] = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP31]], <vscale x 4 x i32> [[TMP28]], i64 12)
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 16 x i32> [[TMP32]], ptr [[TMP20]], align 4
-; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP33]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
@@ -98,8 +97,7 @@ define void @mixed_i32_more_frequent_than_i64(
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
 ; UNMASKED-SVE2P1-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; UNMASKED-SVE2P1-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
-; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
@@ -153,7 +151,7 @@ define void @mixed_i32_more_frequent_than_i64(
 ; UNMASKED-SVE2P1-NEXT:    [[TMP44:%.*]] = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP43]], <vscale x 4 x i32> [[TMP40]], i64 8)
 ; UNMASKED-SVE2P1-NEXT:    [[TMP45:%.*]] = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP44]], <vscale x 4 x i32> [[TMP41]], i64 12)
 ; UNMASKED-SVE2P1-NEXT:    store <vscale x 16 x i32> [[TMP45]], ptr [[TMP33]], align 4
-; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP46:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP46]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
@@ -257,8 +255,7 @@ define i64 @i64_sum_reduction_scaled_partial_reduce(ptr noalias %a, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
-; UNMASKED-SVE2P1-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 3
-; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
@@ -277,7 +274,7 @@ define i64 @i64_sum_reduction_scaled_partial_reduce(ptr noalias %a, i64 %n) {
 ; UNMASKED-SVE2P1-NEXT:    [[TMP10]] = add <vscale x 2 x i64> [[VEC_PHI1]], [[TMP6]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP11]] = add <vscale x 2 x i64> [[VEC_PHI2]], [[TMP7]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP12]] = add <vscale x 2 x i64> [[VEC_PHI3]], [[TMP8]]
-; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
@@ -308,8 +305,7 @@ define i64 @find_last_i64_scaled_load(i64 %n, ptr noalias %data, i64 %threshold)
 ; UNMASKED-SVE2P1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
 ; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
-; UNMASKED-SVE2P1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 3
-; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; UNMASKED-SVE2P1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[THRESHOLD]], i64 0
 ; UNMASKED-SVE2P1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -350,7 +346,7 @@ define i64 @find_last_i64_scaled_load(i64 %n, ptr noalias %data, i64 %threshold)
 ; UNMASKED-SVE2P1-NEXT:    [[TMP29]] = select i1 [[TMP23]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[VEC_PHI1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP30]] = select i1 [[TMP23]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[VEC_PHI2]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP31]] = select i1 [[TMP23]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[VEC_PHI3]]
-; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; UNMASKED-SVE2P1-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
