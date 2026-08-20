@@ -1973,21 +1973,12 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "std::priority_queue summary provider",
                 "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
 
-  // Keep the synthetic Category child visible alongside the integer summary.
-  TypeSummaryImpl::Flags error_code_flags;
-  error_code_flags.SetCascades(true)
-      .SetSkipPointers(false)
-      .SetSkipReferences(false)
-      .SetDontShowChildren(false)
-      .SetDontShowValue(false)
-      .SetShowMembersOneLiner(false)
-      .SetHideItemNames(false);
   AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_code summary provider",
-                "std::error_code", error_code_flags);
+                "std::error_code", stl_summary_flags);
   AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_condition summary provider",
-                "std::error_condition", error_code_flags);
+                "std::error_condition", stl_summary_flags);
   AddCXXSynthetic(cpp_category_sp, GenericErrorCodeSyntheticFrontEndCreator,
                   "MSVC STL/libstdc++ std::error_code/error_condition "
                   "synthetic children",

@@ -1,5 +1,7 @@
 """Test std::error_code / std::error_condition summaries."""
 
+import re
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,14 +13,16 @@ class StdErrorCodeTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def check_value(self, name, summary):
-        value = self.frame().FindVariable(name)
-        self.assertSuccess(value.GetError())
-        self.assertEqual(value.summary, summary)
-        self.assertEqual(value.GetNumChildren(), 1)
-
-        category = value.GetChildMemberWithName("Category")
-        self.assertTrue(category.IsValid())
-        self.assertNotEqual(category.GetValueAsUnsigned(), 0)
+        self.expect_var_path(
+            name,
+            summary=summary,
+            children=[
+                ValueCheck(
+                    name="Category",
+                    value=re.compile(r"0x(?!0+$)[0-9a-fA-F]+$"),
+                )
+            ],
+        )
 
     def do_test(self):
         lldbutil.run_to_source_breakpoint(
