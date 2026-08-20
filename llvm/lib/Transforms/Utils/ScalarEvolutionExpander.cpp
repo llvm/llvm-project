@@ -542,7 +542,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
                           m_scev_UMax(m_SCEVConstant(C2), m_SCEV(UMaxRHS)))) &&
       C1->getAPInt() == -C2->getAPInt()) {
     Value *LHS = expand(UMaxRHS);
-    Value *RHS = expand(C2);
+    Value *RHS = C2->getValue();
     return Builder.CreateIntrinsic(Intrinsic::usub_sat, {S->getType()},
                                    {LHS, RHS});
   }
