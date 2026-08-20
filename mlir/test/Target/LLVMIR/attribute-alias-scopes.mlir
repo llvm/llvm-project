@@ -155,3 +155,26 @@ llvm.func @alias_scopes(%arg1 : !llvm.ptr) {
 // CHECK-DAG: ![[SCOPES12]] = !{![[SCOPE1]], ![[SCOPE2]]}
 // CHECK-DAG: ![[SCOPES13]] = !{![[SCOPE1]], ![[SCOPE3]]}
 // CHECK-DAG: ![[SCOPES23]] = !{![[SCOPE2]], ![[SCOPE3]]}
+
+// -----
+
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>, disjointScopes = true, description = "The disjoint domain">
+#alias_scope1 = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain>
+#alias_scope2 = #llvm.alias_scope<id = distinct[2]<>, domain = #alias_scope_domain>
+
+// CHECK-LABEL: @disjoint_alias_scopes
+llvm.func @disjoint_alias_scopes(%arg1 : !llvm.ptr, %arg2 : !llvm.ptr) {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1:[0-9]+]]{{$}}
+  llvm.store %0, %arg1 {alias_scopes = [#alias_scope1]} : i32, !llvm.ptr
+  // CHECK:  store {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]]{{$}}
+  llvm.store %0, %arg2 {alias_scopes = [#alias_scope2]} : i32, !llvm.ptr
+  llvm.return
+}
+
+// Check the translated metadata.
+// CHECK-DAG: ![[DOMAIN:[0-9]+]] = distinct !{![[DOMAIN]], i1 true, !"The disjoint domain"}
+// CHECK-DAG: ![[SCOPE1:[0-9]+]] = distinct !{![[SCOPE1]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPE2:[0-9]+]] = distinct !{![[SCOPE2]], ![[DOMAIN]]}
+// CHECK-DAG: ![[SCOPES1]] = !{![[SCOPE1]]}
+// CHECK-DAG: ![[SCOPES2]] = !{![[SCOPE2]]}
