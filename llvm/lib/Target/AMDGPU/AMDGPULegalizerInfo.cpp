@@ -24,8 +24,6 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
@@ -56,26 +54,6 @@ static cl::opt<bool> EnableNewLegality(
   cl::ReallyHidden);
 
 static constexpr unsigned MaxRegisterSize = 1024;
-
-// Register class is part of the CSE profile for every instruction that
-// references a register, so notify observers before changing it.
-static void setRegClassWithObserver(MachineIRBuilder &B,
-                                    MachineRegisterInfo &MRI, Register Reg,
-                                    const TargetRegisterClass *RC) {
-  GISelChangeObserver *Observer = B.getMF().getObserver();
-  if (!Observer) {
-    MRI.setRegClass(Reg, RC);
-    return;
-  }
-  SmallVector<MachineInstr *, 4> RegInstrs;
-  for (MachineInstr &MI : MRI.reg_instructions(Reg)) {
-    Observer->changingInstr(MI);
-    RegInstrs.push_back(&MI);
-  }
-  MRI.setRegClass(Reg, RC);
-  for (MachineInstr *MI : RegInstrs)
-    Observer->changedInstr(*MI);
-}
 
 // Round the number of elements to the next power of two elements
 static LLT getPow2VectorType(LLT Ty) {
@@ -3268,10 +3246,12 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
 
-  LLT ConstPtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
-
-  Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
-    B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT PCRegTy = PtrTy.getSizeInBits() == 32
+                    ? LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64)
+                    : PtrTy;
+  Register PCReg =
+      MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, PCRegTy});
 
   if (ST.has64BitLiterals()) {
     assert(GAFlags != SIInstrInfo::MO_NONE);
@@ -3290,11 +3270,10 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
       MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
   }
 
-  if (!B.getMRI()->getRegClassOrNull(PCReg))
-    setRegClassWithObserver(B, *B.getMRI(), PCReg, &AMDGPU::SReg_64RegClass);
-
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
+  else
+    B.buildCast(DstReg, PCReg);
   return true;
 }
 
@@ -3305,24 +3284,17 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
 
   if (RequiresHighHalf && ST.has64BitLiterals()) {
-    if (!MRI.getRegClassOrNull(DstReg))
-      setRegClassWithObserver(B, MRI, DstReg, &AMDGPU::SReg_64RegClass);
+    Register Addr =
+        MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, PtrTy});
     B.buildInstr(AMDGPU::S_MOV_B64)
-        .addDef(DstReg)
+        .addDef(Addr)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    B.buildCast(DstReg, Addr);
     return;
   }
 
   LLT I32 = LLT::integer(32);
-
-  // Use the destination directly, if and only if we store the lower address
-  // part only and we don't have a register class being set.
-  Register AddrLo = !RequiresHighHalf && !MRI.getRegClassOrNull(DstReg)
-                        ? DstReg
-                        : MRI.createGenericVirtualRegister(I32);
-
-  if (!MRI.getRegClassOrNull(AddrLo))
-    setRegClassWithObserver(B, MRI, AddrLo, &AMDGPU::SReg_32RegClass);
+  Register AddrLo = MRI.createVirtualRegister({&AMDGPU::SReg_32RegClass, I32});
 
   // Write the lower half.
   B.buildInstr(AMDGPU::S_MOV_B32)
@@ -3334,31 +3306,19 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     assert(PtrTy.getSizeInBits() == 64 &&
            "Must provide a 64-bit pointer type!");
 
-    Register AddrHi = MRI.createGenericVirtualRegister(I32);
-    MRI.setRegClass(AddrHi, &AMDGPU::SReg_32RegClass);
+    Register AddrHi =
+        MRI.createVirtualRegister({&AMDGPU::SReg_32RegClass, I32});
 
     B.buildInstr(AMDGPU::S_MOV_B32)
         .addDef(AddrHi)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_HI);
 
-    // Use the destination directly, if and only if we don't have a register
-    // class being set.
-    Register AddrDst = !MRI.getRegClassOrNull(DstReg)
-                           ? DstReg
-                           : MRI.createGenericVirtualRegister(LLT::integer(64));
-
-    if (!MRI.getRegClassOrNull(AddrDst))
-      setRegClassWithObserver(B, MRI, AddrDst, &AMDGPU::SReg_64RegClass);
+    Register AddrDst =
+        MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, LLT::integer(64)});
 
     B.buildMergeValues(AddrDst, {AddrLo, AddrHi});
-
-    // If we created a new register for the destination, cast the result into
-    // the final output.
-    if (AddrDst != DstReg)
-      B.buildCast(DstReg, AddrDst);
-  } else if (AddrLo != DstReg) {
-    // If we created a new register for the destination, cast the result into
-    // the final output.
+    B.buildCast(DstReg, AddrDst);
+  } else {
     B.buildCast(DstReg, AddrLo);
   }
 }
@@ -7798,23 +7758,7 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
   // We need a block split to make the real endpgm a terminator. We also don't
   // want to break phis in successor blocks, so we can't just delete to the
   // end of the block.
-  // An instruction's parent block is part of its CSE profile, so notify
-  // observers about the instructions moved by the split.
-  GISelChangeObserver *Observer = MF->getObserver();
-  SmallVector<MachineInstr *, 8> MovedInstrs;
-  MachineBasicBlock::iterator SplitPoint(&MI);
-  ++SplitPoint;
-  if (Observer && SplitPoint != BB.end()) {
-    for (MachineInstr &MovedMI : make_range(SplitPoint, BB.end())) {
-      Observer->changingInstr(MovedMI);
-      MovedInstrs.push_back(&MovedMI);
-    }
-  }
   BB.splitAt(MI, false /*UpdateLiveIns*/);
-  if (Observer) {
-    for (MachineInstr *MovedMI : MovedInstrs)
-      Observer->changedInstr(*MovedMI);
-  }
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
   MF->push_back(TrapBB);
   BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
@@ -8159,11 +8103,12 @@ bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
                                                  unsigned Width) const {
   MachineRegisterInfo &MRI = *B.getMRI();
   Register DstReg = MI.getOperand(0).getReg();
-  if (!MRI.getRegClassOrNull(DstReg))
-    setRegClassWithObserver(B, MRI, DstReg, &AMDGPU::SReg_32RegClass);
+  Register Result = MRI.createVirtualRegister(
+      {&AMDGPU::SReg_32RegClass, MRI.getType(DstReg)});
   B.buildInstr(AMDGPU::S_GETREG_B32_const)
-      .addDef(DstReg)
+      .addDef(Result)
       .addImm(AMDGPU::Hwreg::HwregEncoding::encode(HwReg, LowBit, Width));
+  B.buildCopy(DstReg, Result);
   MI.eraseFromParent();
   return true;
 }
@@ -8281,6 +8226,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       Register Def = MI.getOperand(1).getReg();
       Register Use = MI.getOperand(3).getReg();
+      const TargetRegisterClass *WaveMaskRC = TRI->getWaveMaskRegClass();
+      Register NewDef =
+          MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Def)});
+      Register NewUse =
+          MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Use)});
+      MachineInstr *UseDef = MRI.getVRegDef(Use);
+      Helper.Observer.changingInstr(*UseDef);
+      Helper.Observer.changingAllUsesOfReg(MRI, Use);
+      MRI.replaceRegWith(Use, NewUse);
+      Helper.Observer.changedInstr(*UseDef);
+      Helper.Observer.finishedChangingAllUsesOfReg();
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
 
@@ -8290,13 +8246,13 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
-          .addDef(Def)
-          .addUse(Use)
-          .addMBB(UncondBrTarget);
+            .addDef(NewDef)
+            .addUse(NewUse)
+            .addMBB(UncondBrTarget);
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
-            .addDef(Def)
-            .addUse(Use)
+            .addDef(NewDef)
+            .addUse(NewUse)
             .addMBB(UncondBrTarget);
       }
 
@@ -8309,10 +8265,11 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildBr(*CondBrTarget);
       }
 
-      setRegClassWithObserver(B, MRI, Def, TRI->getWaveMaskRegClass());
-      setRegClassWithObserver(B, MRI, Use, TRI->getWaveMaskRegClass());
       MI.eraseFromParent();
       BrCond->eraseFromParent();
+      Helper.Observer.changingAllUsesOfReg(MRI, Def);
+      MRI.replaceRegWith(Def, NewDef);
+      Helper.Observer.finishedChangingAllUsesOfReg();
       return true;
     }
 
@@ -8329,14 +8286,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
       Register Reg = MI.getOperand(2).getReg();
+      Register NewReg = MRI.createVirtualRegister(
+          {TRI->getWaveMaskRegClass(), MRI.getType(Reg)});
+      MachineInstr *RegDef = MRI.getVRegDef(Reg);
+      Helper.Observer.changingInstr(*RegDef);
+      Helper.Observer.changingAllUsesOfReg(MRI, Reg);
+      MRI.replaceRegWith(Reg, NewReg);
+      Helper.Observer.changedInstr(*RegDef);
+      Helper.Observer.finishedChangingAllUsesOfReg();
 
       if (Negated)
         std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
-      B.buildInstr(AMDGPU::SI_LOOP)
-        .addUse(Reg)
-        .addMBB(UncondBrTarget);
+      B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
 
       if (Br)
         Br->getOperand(0).setMBB(CondBrTarget);
@@ -8345,7 +8308,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MI.eraseFromParent();
       BrCond->eraseFromParent();
-      setRegClassWithObserver(B, MRI, Reg, TRI->getWaveMaskRegClass());
       return true;
     }
 
