@@ -21,6 +21,9 @@
 
 namespace llvm {
 
+class MachineIRBuilder;
+class MachineInstr;
+class MachineRegisterInfo;
 class TargetRegisterInfo;
 class AArch64RegisterInfo;
 
@@ -151,6 +154,12 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
 
 public:
   AArch64RegisterBankInfo(const TargetRegisterInfo &TRI);
+
+  /// Rewrite a scalar GPR G_CONSTANT smaller than 32 bits to an i32
+  /// G_CONSTANT plus G_TRUNC.
+  static Register widenNarrowGPRConstant(MachineIRBuilder &Builder,
+                                         MachineInstr &MI,
+                                         MachineRegisterInfo &MRI);
 
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
                     TypeSize Size) const override;
