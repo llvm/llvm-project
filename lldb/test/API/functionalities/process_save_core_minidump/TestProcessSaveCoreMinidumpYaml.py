@@ -30,9 +30,16 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
 
     @skipIfWindows
     def validate_regions_saved_correctly(
-        self, core_process, expected_region, expected_invalid_region=None
+        self,
+        core_process,
+        expected_region,
+        expected_invalid_region=None,
+        expected_invalid_bytes_read=0,
     ):
-        """Validate that the expected_region is saved in the core_proc, and that the expected invalid region is not saved, if not not none."""
+        """Validate that the expected_region is saved in the core_proc, and that
+        the expected invalid region is not saved, if not not none.
+        expected_invalid_bytes_read is how much of the invalid region survived
+        the save, zero when none of it is readable."""
 
         # Validate we can read the entire expected_region
         error = lldb.SBError()
@@ -51,13 +58,18 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         if expected_invalid_region is None:
             return
 
-        # Validate we can't read the original_region
-        core_process.ReadMemory(
+        # Validate only the saved part of the original_region can be read back.
+        content = core_process.ReadMemory(
             expected_invalid_region.begin,
             expected_invalid_region.end - expected_invalid_region.begin,
             error,
         )
-        self.assertTrue(error.Fail(), error.GetCString())
+        if expected_invalid_bytes_read == 0:
+            self.assertIsNone(content)
+            self.assertTrue(error.Fail(), error.GetCString())
+        else:
+            self.assertTrue(error.Success(), error.GetCString())
+            self.assertEqual(len(content), expected_invalid_bytes_read)
 
     @skipIfWindows
     def test_saving_sub_memory_range(self):
@@ -89,7 +101,10 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         expected_address_range = AddressRange(begin, end)
         expected_invalid_range = AddressRange(begin, 0x2020)
         self.validate_regions_saved_correctly(
-            core_process, expected_address_range, expected_invalid_range
+            core_process,
+            expected_address_range,
+            expected_invalid_range,
+            expected_invalid_bytes_read=size,
         )
 
     @skipIfWindows
@@ -243,5 +258,8 @@ class ProcessSaveCoreMinidumpTestCaseYaml(TestBase):
         expected_address_range = AddressRange(begin, end)
         expected_invalid_range = AddressRange(begin, begin + 0x1000)
         self.validate_regions_saved_correctly(
-            core_process, expected_address_range, expected_invalid_range
+            core_process,
+            expected_address_range,
+            expected_invalid_range,
+            expected_invalid_bytes_read=size,
         )
