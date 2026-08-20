@@ -391,7 +391,7 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Attempt to merge input.
   IFSStub Stub;
-  std::map<std::string, IFSSymbol> SymbolMap;
+  std::map<std::tuple<std::string, std::string>, IFSSymbol> SymbolMap;
   std::string PreviousInputFilePath;
   for (const std::string &InputFilePath : Config.InputFilePaths) {
     Expected<std::unique_ptr<IFSStub>> StubOrErr =
@@ -441,7 +441,8 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      auto [SI, Inserted] =
+          SymbolMap.try_emplace({Symbol.Name, Symbol.Version}, Symbol);
       if (Inserted)
         continue;
 
@@ -482,8 +483,8 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
       return -1;
     }
 
-  for (auto &Entry : SymbolMap)
-    Stub.Symbols.push_back(Entry.second);
+  for (const auto &[Name, Symbol] : SymbolMap)
+    Stub.Symbols.push_back(Symbol);
 
   // Change SoName before emitting stubs.
   if (Config.SoName)

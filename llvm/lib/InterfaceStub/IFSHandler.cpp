@@ -116,6 +116,7 @@ template <> struct MappingTraits<IFSTarget> {
 template <> struct MappingTraits<IFSSymbol> {
   static void mapping(IO &IO, IFSSymbol &Symbol) {
     IO.mapRequired("Name", Symbol.Name);
+    IO.mapOptional("Version", Symbol.Version, "");
     IO.mapRequired("Type", Symbol.Type);
     // The need for symbol size depends on the symbol type.
     if (Symbol.Type == IFSSymbolType::NoType) {
@@ -126,6 +127,7 @@ template <> struct MappingTraits<IFSSymbol> {
     } else if (Symbol.Type != IFSSymbolType::Func) {
       IO.mapOptional("Size", Symbol.Size);
     }
+    IO.mapOptional("Default", Symbol.Default, false);
     IO.mapOptional("Undefined", Symbol.Undefined, false);
     IO.mapOptional("Weak", Symbol.Weak, false);
     IO.mapOptional("Warning", Symbol.Warning);
