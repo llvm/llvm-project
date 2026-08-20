@@ -12,6 +12,8 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__tuple/simple_tuple.h>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
@@ -19,7 +21,6 @@
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,10 +39,12 @@ struct __perfect_forward_impl;
 template <class _Op, size_t... _Idx, class... _BoundArgs>
 struct __perfect_forward_impl<_Op, index_sequence<_Idx...>, _BoundArgs...> {
 private:
-  tuple<_BoundArgs...> __bound_args_;
+  using _TupleT _LIBCPP_NODEBUG = __simple_tuple<_BoundArgs...>;
+
+  _TupleT __bound_args_;
 
 public:
-  template <class... _Args, class = enable_if_t< is_constructible_v<tuple<_BoundArgs...>, _Args&&...> >>
+  template <class... _Args, enable_if_t<_And<is_constructible<_BoundArgs, _Args&&>...>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit constexpr __perfect_forward_impl(_Args&&... __bound_args)
       : __bound_args_(std::forward<_Args>(__bound_args)...) {}
 
@@ -53,9 +56,9 @@ public:
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) & noexcept(
-      noexcept(_Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...)))
-      -> decltype(_Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...)) {
-    return _Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...);
+      noexcept(_TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...)))
+      -> decltype(_TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...)) {
+    return _TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs&..., _Args...>>>
@@ -63,9 +66,9 @@ public:
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs const&..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const& noexcept(
-      noexcept(_Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...)))
-      -> decltype(_Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...)) {
-    return _Op()(std::get<_Idx>(__bound_args_)..., std::forward<_Args>(__args)...);
+      noexcept(_TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...)))
+      -> decltype(_TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...)) {
+    return _TupleT::__apply(__bound_args_, _Op(), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs const&..., _Args...>>>
@@ -73,9 +76,9 @@ public:
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) && noexcept(
-      noexcept(_Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...)))
-      -> decltype(_Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...)) {
-    return _Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...);
+      noexcept(_TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...)))
+      -> decltype(_TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...)) {
+    return _TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs..., _Args...>>>
@@ -83,9 +86,9 @@ public:
 
   template <class... _Args, class = enable_if_t<is_invocable_v<_Op, _BoundArgs const..., _Args...>>>
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const&& noexcept(
-      noexcept(_Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...)))
-      -> decltype(_Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...)) {
-    return _Op()(std::get<_Idx>(std::move(__bound_args_))..., std::forward<_Args>(__args)...);
+      noexcept(_TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...)))
+      -> decltype(_TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...)) {
+    return _TupleT::__apply(std::move(__bound_args_), _Op(), std::forward<_Args>(__args)...);
   }
 
   template <class... _Args, class = enable_if_t<!is_invocable_v<_Op, _BoundArgs const..., _Args...>>>

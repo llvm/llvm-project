@@ -390,9 +390,11 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__system_error/error_code.h>
 #    include <__system_error/error_condition.h>
 #    include <__thread/thread.h>
+#    include <__tuple/simple_tuple.h>
 #    include <__type_traits/add_reference.h>
 #    include <__type_traits/aligned_storage.h>
 #    include <__type_traits/conditional.h>
+#    include <__type_traits/conjunction.h>
 #    include <__type_traits/decay.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/invoke.h>
@@ -408,7 +410,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__utility/move.h>
 #    include <__utility/swap.h>
 #    include <stdexcept>
-#    include <tuple>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1831,7 +1832,8 @@ _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
 
 template <class _Fp, class... _Args>
 class _LIBCPP_HIDDEN __async_func {
-  tuple<_Fp, _Args...> __f_;
+  using _TupleT _LIBCPP_NODEBUG = __simple_tuple<_Fp, _Args...>;
+  _TupleT __f_;
 
 public:
   using _Rp _LIBCPP_NODEBUG = __invoke_result_t<_Fp, _Args...>;
@@ -1843,9 +1845,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI __async_func(__async_func&& __f) : __f_(std::move(__f.__f_)) {}
 
   _LIBCPP_HIDE_FROM_ABI _Rp operator()() {
-    return [&]<size_t... _Indices>(__index_sequence<_Indices...>) -> _Rp {
-      return std::__invoke(std::move(std::get<_Indices>(__f_))...);
-    }(__index_sequence_for<_Fp, _Args...>{});
+    return _TupleT::__apply(__f_, []<class... _LArgs>(_LArgs&&... __args) -> _Rp {
+      return std::__invoke(std::move(__args)...);
+    });
   }
 };
 

@@ -13,6 +13,7 @@
 // unique_lock(unique_lock const&) = delete;
 
 #include <mutex>
+#include <type_traits>
 
 #include "checking_mutex.h"
 

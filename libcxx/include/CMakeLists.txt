@@ -832,6 +832,7 @@ set(files
   __tuple/find_index.h
   __tuple/ignore.h
   __tuple/sfinae_helpers.h
+  __tuple/simple_tuple.h
   __tuple/tuple_element.h
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h
