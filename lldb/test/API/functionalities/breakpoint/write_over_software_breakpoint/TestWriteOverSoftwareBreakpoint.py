@@ -51,7 +51,7 @@ class WriteOverSoftwareBreakpoint(TestBase):
         # The breakpoint must be on an exact address, because we do not want
         # lldb to adjust it based on the debug information for prologues
         # and epilogues.
-        symbol_contexts = target.FindSymbols("place_break_here", lldb.eSymbolTypeCode)
+        symbol_contexts = target.FindSymbols("place_break_here")
         self.assertEqual(1, len(symbol_contexts))
         label_symbol = symbol_contexts[0].GetSymbol()
         self.assertTrue(label_symbol.IsValid())
