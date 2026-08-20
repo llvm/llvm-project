@@ -32,5 +32,6 @@ jobs:
 
     - run: |
         clang --version
+        clang-cl --version
 
 
