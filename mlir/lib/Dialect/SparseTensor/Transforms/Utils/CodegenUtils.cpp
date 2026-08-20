@@ -332,8 +332,8 @@ FlatSymbolRefAttr mlir::sparse_tensor::getFunc(ModuleOp module, StringRef name,
         FunctionType::get(context, operands.getTypes(), resultType));
     func.setPrivate();
     if (static_cast<bool>(emitCInterface))
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(context));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(context));
   }
   return result;
 }
