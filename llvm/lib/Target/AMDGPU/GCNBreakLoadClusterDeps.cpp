@@ -400,6 +400,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
              "There should be a conflicting register operand.  Where is it?");
       if (!findReplaceRegisterOperand(VecLoadIns, OpNum, BannedRegs))
         break;
+      ToReturn = true;
       
       tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
       WarConflicts =
@@ -421,6 +422,7 @@ bool GCNBreakLoadClusterDepsImpl::runOnMachineBasicBlock(
       bitset<AMDGPU::NUM_TARGET_REGS> SelfBannedRegs = BannedRegs | InsDefs;
       if (!findReplaceRegisterOperand(VecLoadIns, OpNum, SelfBannedRegs, true))
         break;
+      ToReturn = true;
       
       tie(InsDefs, InsUses) = getUsesAndDefsFor(VecLoadIns);
       SelfConflicts = InsUses & InsDefs;
