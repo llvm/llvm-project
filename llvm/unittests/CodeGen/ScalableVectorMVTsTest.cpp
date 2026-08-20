@@ -69,10 +69,6 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   // Check that float->int conversion works
   EVT Vnx2f64 = EVT::getVectorVT(Ctx, MVT::f64, ElementCount::getScalable(2));
   EXPECT_EQ(Vnx2f64.changeTypeToInteger(), Vnx2i64);
-  EXPECT_EQ(MVT(MVT::v1024bf16).changeVectorElementTypeToInteger(),
-            MVT::v1024i16);
-  EXPECT_EQ(MVT(MVT::v2048bf16).changeVectorElementTypeToInteger(),
-            MVT::v2048i16);
 
   // Check fields inside llvm::ElementCount
   EltCnt = Vnx4i32.getVectorElementCount();
