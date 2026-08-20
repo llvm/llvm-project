@@ -156,7 +156,8 @@ struct StateTy {
   /// Return all explicitly created blocking streams for \p Device.
   SmallPtrSet<StreamTy *, 8> getBlockingStreams(ol_device_handle_t Device);
 
-  /// Return true if \p Device has an initialized (i.e. previously used) legacy default stream.
+  /// Return true if \p Device has an initialized (i.e. previously used) legacy
+  /// default stream.
   bool hasLegacyDefaultStream(ol_device_handle_t Device);
 
   /// Create a stream for \p Device and register it with the process state.
