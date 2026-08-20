@@ -1,10 +1,10 @@
 // Test without serialization:
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -ast-dump %s \
 // RUN: | FileCheck -strict-whitespace %s
 //
 // Test with serialization:
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-pch -o %t %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -x c++ -include-pch %t -ast-dump-all /dev/null \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++20 -x c++ -include-pch %t -ast-dump-all /dev/null \
 // RUN: | FileCheck -strict-whitespace %s
 
 void test_type_trait() {
