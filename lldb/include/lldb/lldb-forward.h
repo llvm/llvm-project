@@ -282,6 +282,7 @@ class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
 class TypeSystemClang;
+class TypeSystemFortran;
 class UUID;
 class UnixSignals;
 class Unwind;
