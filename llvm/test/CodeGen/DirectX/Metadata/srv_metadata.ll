@@ -91,7 +91,7 @@ define void @test() #0 {
   ; since it does not have a binding. Use <2 x i16> element type to make sure
   ; it does not match any of the other resources.
   %heap_resource = tail call target("dx.TypedBuffer", <2 x i16>, 0, 0, 0)
-            @llvm.dx.resource.handlefromheap(i32 5, i1 false)
+            @llvm.dx.resource.handlefromheap(i32 5)
 
   ret void
 }

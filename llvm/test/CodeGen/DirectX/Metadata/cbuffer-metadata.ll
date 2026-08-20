@@ -80,7 +80,7 @@ define void @test() #0 {
   ; };
   ; ConstantBuffer CB4<HeapCB> = ResourceDescriptorHeap[10];
   %CB4.cb_h = call target("dx.CBuffer", %__cblayout_HeapCB)
-            @llvm.dx.resource.handlefromheap(i32 10, i1 false)
+            @llvm.dx.resource.handlefromheap(i32 10)
 
   ret void
 }

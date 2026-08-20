@@ -3,10 +3,10 @@
 
 define void @inc_and_dec() {
 entry:
-  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromheap(i32 10, i1 false)
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromheap(i32 10)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   
-  %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromheap(i32 10, i1 false)
+  %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromheap(i32 10)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle2, i8 1)
   ret void
 }
