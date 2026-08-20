@@ -49,8 +49,6 @@ TEST_F(AMDGPUMFMACoExecRules, Basic) {
     ASSERT_NE(ST->getInstrInfo(), nullptr);
     if (!ST->getInstrInfo()->isMFMAorWMMA(Op))
       continue;
-    if (MCII->get(Op).isPseudo())
-      continue;
 
     FeatureBitset Required = AMDGPU_MC::computeRequiredFeatures(Op);
     if (!Required.test(AMDGPU_MC::Feature_HasGFX950InstsBit))

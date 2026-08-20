@@ -74,37 +74,66 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
 
   switch (Opcode) {
   // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X32_BF16_e64:
+  case V_MFMA_F32_16X16X32_BF16_vgprcd_e64:
   case V_MFMA_F32_16X16X32_BF16_gfx940_acd:
   case V_MFMA_F32_16X16X32_BF16_gfx940_vcd:
+  case V_MFMA_I32_16X16X64_I8_e64:
+  case V_MFMA_I32_16X16X64_I8_vgprcd_e64:
   case V_MFMA_I32_16X16X64_I8_gfx940_acd:
   case V_MFMA_I32_16X16X64_I8_gfx940_vcd:
+  case V_MFMA_F32_16X16X32_F16_e64:
+  case V_MFMA_F32_16X16X32_F16_vgprcd_e64:
   case V_MFMA_F32_16X16X32_F16_gfx940_acd:
   case V_MFMA_F32_16X16X32_F16_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
     // GFX9 Shader Programming Guide lists those SMFMAC separately, but for
     // intended purposes here all those instructions are the same. This comment
     // is to simplify reverse mapping to the SPG.
+  case V_SMFMAC_F32_16X16X64_BF16_e64:
   case V_SMFMAC_F32_16X16X64_BF16_gfx940:
+  case V_SMFMAC_I32_16X16X128_I8_e64:
   case V_SMFMAC_I32_16X16X128_I8_gfx940:
+  case V_SMFMAC_F32_16X16X128_BF8_BF8_e64:
   case V_SMFMAC_F32_16X16X128_BF8_BF8_gfx940:
+  case V_SMFMAC_F32_16X16X128_BF8_FP8_e64:
   case V_SMFMAC_F32_16X16X128_BF8_FP8_gfx940:
+  case V_SMFMAC_F32_16X16X128_FP8_BF8_e64:
   case V_SMFMAC_F32_16X16X128_FP8_BF8_gfx940:
+  case V_SMFMAC_F32_16X16X128_FP8_FP8_e64:
   case V_SMFMAC_F32_16X16X128_FP8_FP8_gfx940:
+  case V_SMFMAC_F32_16X16X64_F16_e64:
   case V_SMFMAC_F32_16X16X64_F16_gfx940:
     Res.TotalWindow = 8;
     allowCoExec(Res, CoExecMask::SALU, 1);
@@ -113,24 +142,44 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return Res;
 
   // 8-cycle occupancy, 12-cycle window.
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
   case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_e64:
+  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
   case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
     Res.TotalWindow = 12;
@@ -141,18 +190,46 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return Res;
 
   // 4-cycle occupancy, 8-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X16_BF16_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_e64:
+  case V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_BF16_vgprcd_e64:
   case V_MFMA_F32_32X32X16_BF16_gfx940_acd:
   case V_MFMA_F32_32X32X16_BF16_gfx940_vcd:
+  case V_MFMA_I32_32X32X32_I8_e64:
+  case V_MFMA_I32_32X32X32_I8_mac_e64:
+  case V_MFMA_I32_32X32X32_I8_mac_vgprcd_e64:
+  case V_MFMA_I32_32X32X32_I8_vgprcd_e64:
   case V_MFMA_I32_32X32X32_I8_gfx940_acd:
   case V_MFMA_I32_32X32X32_I8_gfx940_vcd:
+  case V_MFMA_F32_32X32X16_F16_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_e64:
+  case V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X16_F16_vgprcd_e64:
   case V_MFMA_F32_32X32X16_F16_gfx940_acd:
   case V_MFMA_F32_32X32X16_F16_gfx940_vcd:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
@@ -163,6 +240,22 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
     Res.TotalWindow = 8;
     allowCoExec(Res, CoExecMask::SALU, 1);
     allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
@@ -170,16 +263,56 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return Res;
 
   // 16-cycle occupancy, 20-cycle window.
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_vcd:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
+  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_acd:
   case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_vcd:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
+  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
   case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
@@ -198,12 +331,19 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return Res;
 
   // 9-cycle occupancy, 12-cycle window.
+  case V_SMFMAC_F32_32X32X32_BF16_e64:
   case V_SMFMAC_F32_32X32X32_BF16_gfx940:
+  case V_SMFMAC_I32_32X32X64_I8_e64:
   case V_SMFMAC_I32_32X32X64_I8_gfx940:
+  case V_SMFMAC_F32_32X32X64_BF8_BF8_e64:
   case V_SMFMAC_F32_32X32X64_BF8_BF8_gfx940:
+  case V_SMFMAC_F32_32X32X64_BF8_FP8_e64:
   case V_SMFMAC_F32_32X32X64_BF8_FP8_gfx940:
+  case V_SMFMAC_F32_32X32X64_FP8_BF8_e64:
   case V_SMFMAC_F32_32X32X64_FP8_BF8_gfx940:
+  case V_SMFMAC_F32_32X32X64_FP8_FP8_e64:
   case V_SMFMAC_F32_32X32X64_FP8_FP8_gfx940:
+  case V_SMFMAC_F32_32X32X32_F16_e64:
   case V_SMFMAC_F32_32X32X32_F16_gfx940:
     Res.TotalWindow = 12;
     allowCoExec(Res, CoExecMask::SALU, 1);
