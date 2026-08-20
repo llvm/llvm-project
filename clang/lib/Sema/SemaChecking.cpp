@@ -14034,7 +14034,16 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     UK_Count = UK_ModAsSideEffect + 1
   };
 
-  enum WarningKind { WK_UseAndMod, WK_ModAndMod, WK_Volatile_UseAndUse };
+  enum WarningKind {
+    /// A warning message is one for unsequenced use and modification
+    WK_UseAndMod, 
+
+    /// A warning message is one for multiple unsequenced modification
+    WK_ModAndMod, 
+
+    /// A warning message is one for multiple unsequenced volatile use
+    WK_Volatile_UseAndUse 
+  };
 
   /// Bundle together a sequencing region and the expression corresponding
   /// to a specific usage. One Usage is stored for each usage kind in UsageInfo.

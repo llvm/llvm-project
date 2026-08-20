@@ -228,6 +228,8 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
+- Improved ``-Wunsequenced`` by taking into account the volatile qualifier.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
