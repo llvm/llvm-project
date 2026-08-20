@@ -2265,3 +2265,171 @@ func.func @test_legacy_block_scaled_const_splat_mxint8() -> tensor<2x32x!tosa.bl
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 1.0}>> : 0 : i8>}> : () -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
   return %0 : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled
+func.func @test_compose_block_scaled(%data: tensor<2x32xf4E2M1FN>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x32xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_dynamic_outer_dimension
+func.func @test_compose_block_scaled_dynamic_outer_dimension(%data: tensor<?x64xf4E2M1FN>, %scale: tensor<?x2xf8E8M0FNU>) -> tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<?x64xf4E2M1FN>, tensor<?x2xf8E8M0FNU>) -> tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_dynamic_inner_dimension
+func.func @test_compose_block_scaled_dynamic_inner_dimension(%data: tensor<2x?xf4E2M1FN>, %scale: tensor<2x?xf8E8M0FNU>) -> tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x?xf4E2M1FN>, tensor<2x?xf8E8M0FNU>) -> tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_dynamic_inputs
+func.func @test_compose_block_scaled_dynamic_inputs(%data: tensor<?x?xf4E2M1FN>, %scale: tensor<?x?xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<?x?xf4E2M1FN>, tensor<?x?xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_dynamic_output
+func.func @test_compose_block_scaled_dynamic_output(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<2x2xf8E8M0FNU>) -> tensor<?x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) -> tensor<?x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<?x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_unranked_data
+func.func @test_compose_block_scaled_unranked_data(%data: tensor<*xf4E2M1FN>, %scale: tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<*xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_unranked_scale
+func.func @test_compose_block_scaled_unranked_scale(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<*xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<*xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_unranked_output
+func.func @test_compose_block_scaled_unranked_output(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<2x2xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_unranked
+func.func @test_compose_block_scaled_unranked(%data: tensor<*xf4E2M1FN>, %scale: tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_complementary_dynamic_components
+func.func @test_compose_block_scaled_complementary_dynamic_components(%data: tensor<?x64xf4E2M1FN>, %scale: tensor<2x?xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<?x64xf4E2M1FN>, tensor<2x?xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_compose_block_scaled_dynamic_components_unranked_output
+func.func @test_compose_block_scaled_dynamic_components_unranked_output(%data: tensor<2x?xf4E2M1FN>, %scale: tensor<?x2xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x?xf4E2M1FN>, tensor<?x2xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled
+func.func @test_decompose_block_scaled(%packed: tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) {
+  %result_data, %result_scale = tosa.decompose_block_scaled %packed : (tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<2x1xf8E8M0FNU>)
+  return %result_data, %result_scale : tensor<2x32xf4E2M1FN>, tensor<2x1xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_multiple_blocks
+func.func @test_decompose_block_scaled_multiple_blocks(%packed: tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x3x64xf4E2M1FN>, tensor<2x3x2xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x3x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x3x64xf4E2M1FN>, tensor<2x3x2xf8E8M0FNU>)
+  return %data, %scale : tensor<2x3x64xf4E2M1FN>, tensor<2x3x2xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_rank_one
+func.func @test_decompose_block_scaled_rank_one(%packed: tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<64xf4E2M1FN>, tensor<2xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<64xf4E2M1FN>, tensor<2xf8E8M0FNU>)
+  return %data, %scale : tensor<64xf4E2M1FN>, tensor<2xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_dynamic_outer_dimension
+func.func @test_decompose_block_scaled_dynamic_outer_dimension(%packed: tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x64xf4E2M1FN>, tensor<?x2xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x64xf4E2M1FN>, tensor<?x2xf8E8M0FNU>)
+  return %data, %scale : tensor<?x64xf4E2M1FN>, tensor<?x2xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_dynamic_inner_dimension
+func.func @test_decompose_block_scaled_dynamic_inner_dimension(%packed: tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x?xf4E2M1FN>, tensor<2x?xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x?xf4E2M1FN>, tensor<2x?xf8E8M0FNU>)
+  return %data, %scale : tensor<2x?xf4E2M1FN>, tensor<2x?xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_dynamic_results
+func.func @test_decompose_block_scaled_dynamic_results(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x?xf4E2M1FN>, tensor<?x?xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x?xf4E2M1FN>, tensor<?x?xf8E8M0FNU>)
+  return %data, %scale : tensor<?x?xf4E2M1FN>, tensor<?x?xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_refined_results
+func.func @test_decompose_block_scaled_refined_results(%packed: tensor<?x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<?x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %data, %scale : tensor<2x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_unranked_data
+func.func @test_decompose_block_scaled_unranked_data(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %data, %scale : tensor<*xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_unranked_scale
+func.func @test_decompose_block_scaled_unranked_scale(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<*xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<*xf8E8M0FNU>)
+  return %data, %scale : tensor<2x64xf4E2M1FN>, tensor<*xf8E8M0FNU>
+}
+
+// -----
+
+// CHECK-LABEL: test_decompose_block_scaled_unranked
+func.func @test_decompose_block_scaled_unranked(%packed: tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>) {
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>)
+  return %data, %scale : tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>
+}

@@ -434,6 +434,8 @@ def Tosa_BlockShape
 
 def Tosa_BlockShapeAttr
     : EnumAttr<Tosa_Dialect, Tosa_BlockShape, "block_shape"> {
+  let assemblyFormat = "`<` $value `>`";
+
   let extraClassDeclaration = [{
     static uint32_t getBlockShapeValue(BlockShape blockShape) {
       return static_cast<uint32_t>(blockShape);

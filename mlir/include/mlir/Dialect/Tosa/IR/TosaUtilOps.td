@@ -24,6 +24,9 @@ include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 include "mlir/Dialect/Tosa/IR/TosaTypesBase.td"
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 
+//===----------------------------------------------------------------------===//
+// Operator: apply_scale
+//===----------------------------------------------------------------------===//
 def Tosa_ApplyScaleOp :
   Tosa_Op<"apply_scale",
           [Pure] # ElementwiseMappable.traits> {
@@ -73,6 +76,59 @@ def Tosa_YieldOp : Tosa_Op<"yield", [
   );
 
   let assemblyFormat = "$inputs attr-dict `:` type($inputs)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: compose_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_ComposeBlockScaledOp : Tosa_Op<"compose_block_scaled", [Pure]> {
+    let summary = "Compose a block scaled tensor from data and scale tensors";
+
+    let description = [{
+        Compose a block scaled tensor from a data tensor and a scale tensor.
+    }];
+
+    let arguments = (ins
+        Tosa_Tensor:$data,
+        Tosa_Tensor:$scale,
+        Tosa_BlockShapeAttr:$block_shape
+    );
+
+    let results = (outs
+        Tosa_Tensor:$output
+    );
+
+    let hasVerifier = 1;
+
+    let assemblyFormat =
+      "operands `block_shape` `` $block_shape attr-dict `:` "
+      "functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: decompose_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_DecomposeBlockScaledOp : Tosa_Op<"decompose_block_scaled", [Pure]> {
+    let summary = "Decompose a block scaled tensor into data and scale tensors";
+
+    let description = [{
+        Decompose a block scaled input tensor into a data tensor and a scale
+        tensor.
+    }];
+
+    let arguments = (ins
+        Tosa_Tensor:$input
+    );
+
+    let results = (outs
+        Tosa_Tensor:$data,
+        Tosa_Tensor:$scale
+    );
+
+    let hasVerifier = 1;
+
+    let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TOSA_UTIL_OPS
