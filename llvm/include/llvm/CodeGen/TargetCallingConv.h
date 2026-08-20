@@ -211,15 +211,6 @@ namespace ISD {
 
     unsigned getPointerAddrSpace() const { return PointerAddrSpace; }
     void setPointerAddrSpace(unsigned AS) { PointerAddrSpace = AS; }
-
-    bool operator==(const ArgFlagsTy &Other) const {
-      return FlagVals == Other.FlagVals && MemAlign == Other.MemAlign &&
-             OrigAlign == Other.OrigAlign &&
-             ByValOrByRefSize == Other.ByValOrByRefSize &&
-             PointerAddrSpace == Other.PointerAddrSpace;
-    }
-
-    bool operator!=(const ArgFlagsTy &Other) const { return !(*this == Other); }
 };
 
   /// InputArg - This struct carries flags and type information about a
