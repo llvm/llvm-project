@@ -463,6 +463,12 @@ static ExprResult buildPromiseCall(Sema &S, VarDecl *Promise,
   return buildMemberCall(S, PromiseRef.get(), Loc, Name, Args);
 }
 
+static void markCoroutineParametersReferenced(FunctionDecl &FD) {
+  for (auto *PD : FD.parameters())
+    if (!PD->getType()->isDependentType())
+      PD->setReferenced();
+}
+
 VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
@@ -556,6 +562,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
         VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
         VD->setInitStyle(VarDecl::CallInit);
         CheckCompleteVariableDeclaration(VD);
+        markCoroutineParametersReferenced(*FD);
       }
     } else
       ActOnUninitializedDecl(VD);
@@ -1449,6 +1456,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
+  bool PlacementArgsAreCoroutineParameters = false;
   DeclarationName NewName =
       S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
@@ -1502,8 +1510,11 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we
   // shouldn't lookup placement arguments.
-  if (PromiseContainsNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
-    return false;
+  if (PromiseContainsNew) {
+    if (!collectPlacementArgs(S, FD, Loc, PlacementArgs))
+      return false;
+    PlacementArgsAreCoroutineParameters = true;
+  }
 
   LookupAllocationFunction();
 
@@ -1569,6 +1580,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     if (!StdNoThrow)
       return false;
     PlacementArgs = {StdNoThrow};
+    PlacementArgsAreCoroutineParameters = false;
     OperatorNew = nullptr;
     LookupAllocationFunction(AllocationFunctionScope::Global);
   }
@@ -1655,8 +1667,11 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       isAlignedAllocation(IAP.PassAlignment))
     NewArgs.push_back(FrameAlignment);
 
-  if (OperatorNew->getNumParams() > NewArgs.size())
+  if (OperatorNew->getNumParams() > NewArgs.size()) {
     llvm::append_range(NewArgs, PlacementArgs);
+    if (PlacementArgsAreCoroutineParameters)
+      markCoroutineParametersReferenced(FD);
+  }
 
   ExprResult NewExpr =
       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);
