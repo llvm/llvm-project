@@ -1145,9 +1145,9 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
           Twine(PluginOptPrefix) + "-vector-library=" + OptVal.value()));
   }
 
-  // Pass scalar math library arguments to LTO.
-  if (Arg *ArgScalarLib = Args.getLastArg(options::OPT_fsclrlib)) {
-    StringRef Name = ArgScalarLib->getValue();
+  // Pass fast math library arguments to LTO.
+  if (Arg *ArgFastLib = Args.getLastArg(options::OPT_ffastlib)) {
+    StringRef Name = ArgFastLib->getValue();
     if (Name == "AMDLIBM")
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + "-fast-library=" + Name));

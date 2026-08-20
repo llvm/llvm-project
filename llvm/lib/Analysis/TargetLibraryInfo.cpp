@@ -22,13 +22,13 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
-static cl::opt<TargetLibraryInfoImpl::ScalarLibrary> ClScalarLibrary(
+static cl::opt<TargetLibraryInfoImpl::FastLibrary> ClFastLibrary(
     "fast-library", cl::Hidden, cl::desc("fast functions library"),
-    cl::init(TargetLibraryInfoImpl::Default_Scalar_Library),
-    cl::values(clEnumValN(TargetLibraryInfoImpl::Default_Scalar_Library, "none",
+    cl::init(TargetLibraryInfoImpl::NoFastLibrary),
+    cl::values(clEnumValN(TargetLibraryInfoImpl::NoFastLibrary, "none",
                           "Use default library"),
-               clEnumValN(TargetLibraryInfoImpl::SCALAR_AMDLIBM, "AMDLIBM",
-                          "AMD scalar math library")));
+               clEnumValN(TargetLibraryInfoImpl::FAST_AMDLIBM, "AMDLIBM",
+                          "AMD fast math library")));
 
 #define GET_TARGET_LIBRARY_INFO_STRING_TABLE
 #include "llvm/Analysis/TargetLibraryInfo.inc"
@@ -911,7 +911,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
   initialize(*this, T, StandardNamesStrTable, VecLib);
-  addScalarFunctionsFromMathLib(ClScalarLibrary);
+  addFastFunctionsFromMathLib(ClFastLibrary);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
@@ -923,8 +923,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
-  LibScalarFunctions = TLI.LibScalarFunctions;
-  ScalarMathLib = TLI.ScalarMathLib;
+  LibFastFunctions = TLI.LibFastFunctions;
+  FastMathLib = TLI.FastMathLib;
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
@@ -938,8 +938,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
-  LibScalarFunctions = TLI.LibScalarFunctions;
-  ScalarMathLib = TLI.ScalarMathLib;
+  LibFastFunctions = TLI.LibFastFunctions;
+  FastMathLib = TLI.FastMathLib;
 }
 
 TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
@@ -950,8 +950,8 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
-  LibScalarFunctions = TLI.LibScalarFunctions;
-  ScalarMathLib = TLI.ScalarMathLib;
+  LibFastFunctions = TLI.LibFastFunctions;
+  FastMathLib = TLI.FastMathLib;
   return *this;
 }
 
@@ -964,8 +964,8 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   SizeOfInt = TLI.SizeOfInt;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
-  LibScalarFunctions = TLI.LibScalarFunctions;
-  ScalarMathLib = TLI.ScalarMathLib;
+  LibFastFunctions = TLI.LibFastFunctions;
+  FastMathLib = TLI.FastMathLib;
   return *this;
 }
 
@@ -1415,38 +1415,38 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   }
 }
 
-void TargetLibraryInfoImpl::addScalarFunctionsFromMathLib(
-    enum ScalarLibrary ScalarLib) {
-  setScalarMathLib(ScalarLib);
-  switch (ScalarLib) {
-  case ScalarLibrary::SCALAR_AMDLIBM: {
-    const DenseMap<StringRef, StringRef> ScalarAOCLFuncs = {
-#define TLI_DEFINE_SCALAR_AOCL_FUNCS
-#include "llvm/Analysis/ScalarAOCLFuncs.def"
+void TargetLibraryInfoImpl::addFastFunctionsFromMathLib(
+    enum FastLibrary FastLib) {
+  setFastMathLib(FastLib);
+  switch (FastLib) {
+  case FastLibrary::FAST_AMDLIBM: {
+    const DenseMap<StringRef, StringRef> FastAOCLFuncs = {
+#define TLI_DEFINE_FAST_AOCL_FUNCS
+#include "llvm/Analysis/FastAOCLFuncs.def"
     };
-    LibScalarFunctions.insert(ScalarAOCLFuncs.begin(), ScalarAOCLFuncs.end());
+    LibFastFunctions.insert(FastAOCLFuncs.begin(), FastAOCLFuncs.end());
     break;
   }
-  case ScalarLibrary::Default_Scalar_Library:
+  case FastLibrary::NoFastLibrary:
     break;
   }
 }
 
-void TargetLibraryInfoImpl::setScalarMathLib(enum ScalarLibrary ScalarLib) {
-  ScalarMathLib = ScalarLib;
+void TargetLibraryInfoImpl::setFastMathLib(enum FastLibrary FastLib) {
+  FastMathLib = FastLib;
 }
 
-StringRef TargetLibraryInfoImpl::getScalarFunctionFromMathLib(
-    StringRef ScalarFnName) const {
-  auto Iter = LibScalarFunctions.find(ScalarFnName);
-  if (Iter == LibScalarFunctions.end())
+StringRef TargetLibraryInfoImpl::getFastFunctionFromMathLib(
+    StringRef FastFnName) const {
+  auto Iter = LibFastFunctions.find(FastFnName);
+  if (Iter == LibFastFunctions.end())
     return StringRef();
   return Iter->second;
 }
 
-TargetLibraryInfoImpl::ScalarLibrary
-TargetLibraryInfoImpl::getScalarMathLib() const {
-  return ScalarMathLib;
+TargetLibraryInfoImpl::FastLibrary
+TargetLibraryInfoImpl::getFastMathLib() const {
+  return FastMathLib;
 }
 
 bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {

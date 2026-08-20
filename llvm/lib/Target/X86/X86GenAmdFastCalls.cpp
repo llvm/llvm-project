@@ -1,4 +1,4 @@
-//===-- X86GenScalarAmdFastCalls.cpp --------------------------------------===//
+//===-- X86GenAmdFastCalls.cpp --------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This transformation converts standard scalar math function calls into their
-// corresponding AMD AOCL scalar library entries for X86 targets, e.g.:
+// This transformation converts standard math function calls into their
+// corresponding AMD AOCL fast entry points for X86 targets, e.g.:
 //     tan ---> amd_fasttan
 // Such lowering is only legal under fast-math semantics and when the AMD
 // fast math library has been selected (-fast-library=AMDLIBM /
@@ -34,22 +34,22 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "x86-gen-scalar-aocl"
+#define DEBUG_TYPE "x86-gen-aocl-fast"
 
 using namespace llvm;
 
 namespace {
 
-class X86GenScalarAmdFastCalls : public MachineFunctionPass {
+class X86GenAmdFastCalls : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86GenScalarAmdFastCalls() : MachineFunctionPass(ID) {}
+  X86GenAmdFastCalls() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
   StringRef getPassName() const override {
-    return "X86 Generate Scalar AOCL Entries";
+    return "X86 Generate AOCL Fast Entries";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -62,29 +62,29 @@ private:
   TargetLibraryInfo *TLI = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   bool isCandidateSafeToLower(MachineInstr *MI) const;
-  bool createScalarAOCLCall(MachineInstr *MI) const;
+  bool createAmdFastCall(MachineInstr *MI) const;
 };
 
 } // namespace
 
-// Rewriting a scalar math call to its AOCL fast-call variant is only legal
-// under fast-math semantics. By the time this late machine pass runs, the
+// Rewriting a math call to its AOCL fast-call variant is only legal under
+// fast-math semantics. By the time this late machine pass runs, the
 // per-operation fast-math flags carried by the original call have already been
 // lowered away, so we rely on the function-level fast-math attribute that the
 // frontend sets under -ffast-math. Together with the explicit
 // -fast-library=AMDLIBM opt-in (checked in runOnMachineFunction) this gates
 // the transformation.
-bool X86GenScalarAmdFastCalls::isCandidateSafeToLower(MachineInstr *MI) const {
+bool X86GenAmdFastCalls::isCandidateSafeToLower(MachineInstr *MI) const {
   const Function &F = MI->getMF()->getFunction();
   return F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 }
 
-/// Lowers scalar math functions to scalar AOCL functions.
+/// Lowers math functions to AOCL fast entry points.
 ///     e.g.: tan         --> amd_fasttan
 /// The callsite symbol is updated during lowering.
-bool X86GenScalarAmdFastCalls::createScalarAOCLCall(MachineInstr *MI) const {
+bool X86GenAmdFastCalls::createAmdFastCall(MachineInstr *MI) const {
   StringRef CallSiteName = "";
-  StringRef LibScalarFnName = "";
+  StringRef LibFastFnName = "";
   if (MI->getOperand(0).isSymbol()) {
     CallSiteName = MI->getOperand(0).getSymbolName();
   } else if (MI->getOperand(0).isGlobal()) {
@@ -97,29 +97,29 @@ bool X86GenScalarAmdFastCalls::createScalarAOCLCall(MachineInstr *MI) const {
   if (CallSiteName.empty()) {
     return false;
   }
-  LibScalarFnName = TLI->getScalarFunctionFromMathLib(CallSiteName);
-  if (LibScalarFnName.empty()) {
+  LibFastFnName = TLI->getFastFunctionFromMathLib(CallSiteName);
+  if (LibFastFnName.empty()) {
     LLVM_DEBUG(dbgs() << "Fast call not supported\n";);
     return false;
   }
   LLVM_DEBUG(dbgs() << "Candidate Func has fast Call variant available = "
-                    << LibScalarFnName << "\n";);
-  MI->getOperand(0).ChangeToES(LibScalarFnName.data(),
+                    << LibFastFnName << "\n";);
+  MI->getOperand(0).ChangeToES(LibFastFnName.data(),
                                MI->getOperand(0).getTargetFlags());
 
   LLVM_DEBUG(dbgs() << "Successfully replaced with fastcall= "
-                    << LibScalarFnName << "\n";);
+                    << LibFastFnName << "\n";);
 
   ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "Passed", MI->getDebugLoc(),
                                      MI->getParent())
-           << "Successfully replaced with fastcall= " << LibScalarFnName
+           << "Successfully replaced with fastcall= " << LibFastFnName
            << "\n";
   });
   return true;
 }
 
-bool X86GenScalarAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
+bool X86GenAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   if (skipFunction(MF.getFunction()))
@@ -144,8 +144,8 @@ bool X86GenScalarAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
   if (!TLI)
     return Changed;
 
-  if (TLI->getScalarMathLib() !=
-      TargetLibraryInfoImpl::ScalarLibrary::SCALAR_AMDLIBM) {
+  if (TLI->getFastMathLib() !=
+      TargetLibraryInfoImpl::FastLibrary::FAST_AMDLIBM) {
     LLVM_DEBUG(dbgs() << "-fast-library=AMDLIBM not used so bailing out.\n";);
     return Changed;
   }
@@ -153,24 +153,24 @@ bool X86GenScalarAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
   for (auto *CI : Callsites) {
     if (isCandidateSafeToLower(CI)) {
       LLVM_DEBUG(dbgs() << "Call Inst has fastMath flags\n";);
-      Changed |= createScalarAOCLCall(CI);
+      Changed |= createAmdFastCall(CI);
     } else
       LLVM_DEBUG(dbgs() << "Call Inst does not have fastMath flags\n";);
   }
   return Changed;
 }
 
-char X86GenScalarAmdFastCalls::ID = 0;
+char X86GenAmdFastCalls::ID = 0;
 
-char &llvm::X86GenScalarAmdFastCallsID = X86GenScalarAmdFastCalls::ID;
+char &llvm::X86GenAmdFastCallsID = X86GenAmdFastCalls::ID;
 
-INITIALIZE_PASS_BEGIN(X86GenScalarAmdFastCalls, DEBUG_TYPE,
-                      "Generate Scalar AMD Fast calls", false, false)
+INITIALIZE_PASS_BEGIN(X86GenAmdFastCalls, DEBUG_TYPE,
+                      "Generate AMD Fast calls", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_END(X86GenScalarAmdFastCalls, DEBUG_TYPE,
-                    "Generate Scalar AMD Fast calls", false, false)
+INITIALIZE_PASS_END(X86GenAmdFastCalls, DEBUG_TYPE,
+                    "Generate AMD Fast calls", false, false)
 
-FunctionPass *llvm::createX86GenScalarAmdFastCallsPass() {
-  return new X86GenScalarAmdFastCalls();
+FunctionPass *llvm::createX86GenAmdFastCallsPass() {
+  return new X86GenAmdFastCalls();
 }

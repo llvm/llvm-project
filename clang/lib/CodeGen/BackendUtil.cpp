@@ -142,15 +142,15 @@ static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   return FileName;
 }
 
-/// Populate the scalar math library mappings on \p TLII according to the
+/// Populate the fast math library mappings on \p TLII according to the
 /// -ffastlib= selection.
-static void addScalarMathLibrary(TargetLibraryInfoImpl &TLII,
-                                 const CodeGenOptions &CodeGenOpts) {
-  switch (CodeGenOpts.getScalarLib()) {
-  case CodeGenOptions::SCALAR_AMDLIBM:
-    TLII.addScalarFunctionsFromMathLib(TargetLibraryInfoImpl::SCALAR_AMDLIBM);
+static void addFastMathLibrary(TargetLibraryInfoImpl &TLII,
+                               const CodeGenOptions &CodeGenOpts) {
+  switch (CodeGenOpts.getFastLib()) {
+  case CodeGenOptions::FAST_AMDLIBM:
+    TLII.addFastFunctionsFromMathLib(TargetLibraryInfoImpl::FAST_AMDLIBM);
     break;
-  case CodeGenOptions::Default_Scalar_Library:
+  case CodeGenOptions::NoFastLibrary:
     break;
   }
 }
@@ -1015,7 +1015,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // preset TLI.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
-  addScalarMathLibrary(*TLII, CodeGenOpts);
+  addFastMathLibrary(*TLII, CodeGenOpts);
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Register all the basic analyses with the managers.
@@ -1285,7 +1285,7 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
   // Add LibraryInfo.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
-  addScalarMathLibrary(*TLII, CodeGenOpts);
+  addFastMathLibrary(*TLII, CodeGenOpts);
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   const llvm::TargetOptions &Options = TM->Options;

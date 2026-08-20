@@ -109,10 +109,10 @@ class TargetLibraryInfoImpl {
   /// on VectorFnName rather than ScalarFnName.
   std::vector<VecDesc> ScalarDescs;
 
-  /// Mapping from a standard scalar math function name to its AMD scalar math
-  /// library fast-call equivalent (e.g. "tan" -> "amd_fasttan"). Populated when
-  /// an AMD scalar math library is selected.
-  DenseMap<StringRef, StringRef> LibScalarFunctions;
+  /// Mapping from a standard math function name to its AMD fast math library
+  /// fast-call equivalent (e.g. "tan" -> "amd_fasttan"). Populated when an AMD
+  /// fast math library is selected.
+  DenseMap<StringRef, StringRef> LibFastFunctions;
 
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
@@ -120,13 +120,13 @@ class TargetLibraryInfoImpl {
                                        const Module &M) const;
 
 public:
-  /// Scalar math library selection used for lowering standard scalar math
-  /// calls to faster, library-specific entry points.
-  enum ScalarLibrary {
-    Default_Scalar_Library, // Use default library.
-    SCALAR_AMDLIBM          // AMD scalar math library.
+  /// Fast math library selection used for lowering standard math calls to
+  /// faster, library-specific entry points.
+  enum FastLibrary {
+    NoFastLibrary, // Use default library.
+    FAST_AMDLIBM   // AMD fast math library.
   };
-  ScalarLibrary ScalarMathLib = Default_Scalar_Library;
+  FastLibrary FastMathLib = NoFastLibrary;
 
   TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(
@@ -195,19 +195,19 @@ public:
   addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
                                      const llvm::Triple &TargetTriple);
 
-  /// Populate the scalar math function mappings for the given scalar library
-  /// and record it as the selected scalar math library.
-  LLVM_ABI void addScalarFunctionsFromMathLib(enum ScalarLibrary ScalarLib);
+  /// Populate the fast math function mappings for the given fast math library
+  /// and record it as the selected fast math library.
+  LLVM_ABI void addFastFunctionsFromMathLib(enum FastLibrary FastLib);
 
-  /// Return the library-specific scalar function name for \p F, or an empty
+  /// Return the library-specific fast function name for \p F, or an empty
   /// StringRef if no mapping exists.
-  LLVM_ABI StringRef getScalarFunctionFromMathLib(StringRef F) const;
+  LLVM_ABI StringRef getFastFunctionFromMathLib(StringRef F) const;
 
-  /// Return the currently selected scalar math library.
-  LLVM_ABI ScalarLibrary getScalarMathLib() const;
+  /// Return the currently selected fast math library.
+  LLVM_ABI FastLibrary getFastMathLib() const;
 
-  /// Set the selected scalar math library.
-  LLVM_ABI void setScalarMathLib(enum ScalarLibrary ScalarLib);
+  /// Set the selected fast math library.
+  LLVM_ABI void setFastMathLib(enum FastLibrary FastLib);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
@@ -414,11 +414,11 @@ public:
                                       bool Masked) const {
     return Impl->getVectorMappingInfo(F, VF, Masked);
   }
-  StringRef getScalarFunctionFromMathLib(StringRef F) const {
-    return Impl->getScalarFunctionFromMathLib(F);
+  StringRef getFastFunctionFromMathLib(StringRef F) const {
+    return Impl->getFastFunctionFromMathLib(F);
   }
-  TargetLibraryInfoImpl::ScalarLibrary getScalarMathLib() const {
-    return Impl->getScalarMathLib();
+  TargetLibraryInfoImpl::FastLibrary getFastMathLib() const {
+    return Impl->getFastMathLib();
   }
 
   /// Tests if the function is both available and a candidate for optimized code

@@ -98,7 +98,7 @@
 ; CHECK-NEXT:       X86 Domain Reassignment Pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; O3-NEXT:          Machine Optimization Remark Emitter
-; O3-NEXT:          X86 Generate Scalar AOCL Entries
+; O3-NEXT:          X86 Generate AOCL Fast Entries
 ; O3-NEXT:          Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs

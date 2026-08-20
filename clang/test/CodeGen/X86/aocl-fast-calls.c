@@ -1,6 +1,6 @@
 // Verify that the -ffastlib=AMDLIBM driver flag, together with fast-math at -O3,
-// rewrites scalar math library calls into their AMD AOCL fast-call equivalents
-// for X86, and leaves them untouched without the flag.
+// rewrites math library calls into their AMD AOCL fast-call equivalents for X86,
+// and leaves them untouched without the flag.
 
 // REQUIRES: x86-registered-target
 

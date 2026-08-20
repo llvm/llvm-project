@@ -5982,7 +5982,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fsclrlib)) {
+  if (Arg *A = Args.getLastArg(options::OPT_ffastlib)) {
     StringRef Name = A->getValue();
     if (Name == "AMDLIBM") {
       if (Triple.getArch() != llvm::Triple::x86 &&
