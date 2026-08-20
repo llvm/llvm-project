@@ -15,8 +15,6 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -2862,18 +2860,25 @@ struct RISCVFrameSortingObject {
 
 void RISCVFrameLowering::orderFrameObjects(
     const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
-  // PEI has already removed callee-saved, dead, stack-protector, EH and other
-  // special objects from ObjectsToAllocate. The remaining objects are safe to
-  // reorder.
+  // PEI never adds callee-saved, dead, stack-protector, EH, scavenging,
+  // non-default-stack-ID or other special objects to ObjectsToAllocate, so
+  // the objects seen here are safe to reorder.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   DenseMap<int, unsigned> Index;
-  SmallVector<RISCVFrameSortingObject, 0> Sorting;
+  SmallVector<RISCVFrameSortingObject> Sorting;
   Sorting.reserve(ObjectsToAllocate.size());
 
   for (int FI : ObjectsToAllocate) {
+    assert(MFI.getStackID(FI) == TargetStackID::Default &&
+           "Only default stack objects should be reordered");
+    // Variable-sized objects report a size of zero. Give them a non-zero
+    // sentinel so the density comparison below does not degenerate. Their
+    // placement does not matter much in practice: they occupy no space in
+    // the static frame and are addressed by adjusting SP at runtime rather
+    // than through a frame index offset.
     int64_t Size = MFI.getObjectSize(FI);
-    RISCVFrameSortingObject Obj{FI, Size > 0 ? static_cast<uint64_t>(Size) : 1,
+    RISCVFrameSortingObject Obj{FI, Size > 0 ? static_cast<uint64_t>(Size) : 4,
                                 MFI.getObjectAlign(FI)};
     Index[FI] = Sorting.size();
     Sorting.push_back(Obj);
