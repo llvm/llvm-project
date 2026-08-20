@@ -8,6 +8,15 @@
 // RUN: -flax-vector-conversions=none -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg,sroa \
 // RUN: | FileCheck --check-prefix=CONSTRAINED --implicit-check-not=fpexcept.maytrap %s
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -fclangir -emit-cir -o - %s \
+// RUN: | FileCheck --check-prefix=CIR --implicit-check-not='cir.call_llvm_intrinsic "fma"' --implicit-check-not='cir.call_llvm_intrinsic "sqrt"' %s %}
+// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.2a \
+// RUN: -fexperimental-strict-floating-point -ffp-exception-behavior=maytrap -DEXCEPT=1 \
+// RUN: -flax-vector-conversions=none -disable-O0-optnone -fclangir -emit-llvm -o - %s \
+// RUN: | opt -S -passes=mem2reg,sroa \
+// RUN: | FileCheck --check-prefix=LLVM --implicit-check-not=fpexcept.maytrap --implicit-check-not=' @llvm.fma.' --implicit-check-not=' @llvm.sqrt.' %s %}
 
 // REQUIRES: aarch64-registered-target
 
@@ -39,6 +48,10 @@
 // CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <4 x half> @llvm.experimental.constrained.sqrt.v4f16(<4 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2:[0-9]+]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[VSQRT_I]]
 //
+// CIR-LABEL: cir.func {{.*}}@vsqrt_f16(
+// CIR: cir.sqrt %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vsqrt_f16(
+// LLVM: call <4 x half> @llvm.experimental.constrained.sqrt.v4f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x4_t test_vsqrt_f16(float16x4_t a) {
   return vsqrt_f16(a);
 }
@@ -61,6 +74,10 @@ float16x4_t test_vsqrt_f16(float16x4_t a) {
 // CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <8 x half> @llvm.experimental.constrained.sqrt.v8f16(<8 x half> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[VSQRT_I]]
 //
+// CIR-LABEL: cir.func {{.*}}@vsqrtq_f16(
+// CIR: cir.sqrt %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vsqrtq_f16(
+// LLVM: call <8 x half> @llvm.experimental.constrained.sqrt.v8f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x8_t test_vsqrtq_f16(float16x8_t a) {
   return vsqrtq_f16(a);
 }
@@ -95,6 +112,10 @@ float16x8_t test_vsqrtq_f16(float16x8_t a) {
 // CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[TMP7]], <4 x half> [[TMP8]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
+// CIR-LABEL: cir.func {{.*}}@vfma_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfma_f16(
+// LLVM: call <4 x half> @llvm.experimental.constrained.fma.v4f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
   return vfma_f16(a, b, c);
 }
@@ -129,6 +150,10 @@ float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[TMP7]], <8 x half> [[TMP8]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
+// CIR-LABEL: cir.func {{.*}}@vfmaq_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfmaq_f16(
+// LLVM: call <8 x half> @llvm.experimental.constrained.fma.v8f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
   return vfmaq_f16(a, b, c);
 }
@@ -237,6 +262,10 @@ float16x8_t test_vfmsq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[FMLA2:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[FMLA]], <4 x half> [[LANE]], <4 x half> [[FMLA1]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[FMLA2]]
 //
+// CIR-LABEL: cir.func {{.*}}@test_vfma_lane_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfma_lane_f16(
+// LLVM: call <4 x half> @llvm.experimental.constrained.fma.v4f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x4_t test_vfma_lane_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
   return vfma_lane_f16(a, b, c, 3);
 }
@@ -309,6 +338,10 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b, float16x4_t c) {
 // CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <4 x half> @llvm.experimental.constrained.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[TMP7]], <4 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <4 x half> [[TMP9]]
 //
+// CIR-LABEL: cir.func {{.*}}@test_vfma_laneq_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfma_laneq_f16(
+// LLVM: call <4 x half> @llvm.experimental.constrained.fma.v4f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
   return vfma_laneq_f16(a, b, c, 7);
 }
@@ -345,6 +378,10 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b, float16x8_t c) {
 // CONSTRAINED-NEXT:    [[TMP9:%.*]] = call <8 x half> @llvm.experimental.constrained.fma.v8f16(<8 x half> [[LANE]], <8 x half> [[TMP7]], <8 x half> [[TMP6]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret <8 x half> [[TMP9]]
 //
+// CIR-LABEL: cir.func {{.*}}@test_vfmaq_laneq_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfmaq_laneq_f16(
+// LLVM: call <8 x half> @llvm.experimental.constrained.fma.v8f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16x8_t test_vfmaq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
   return vfmaq_laneq_f16(a, b, c, 7);
 }
@@ -455,6 +492,10 @@ float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = call half @llvm.experimental.constrained.fma.f16(half [[B]], half [[EXTRACT]], half [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR2]]
 // CONSTRAINED-NEXT:    ret half [[TMP0]]
 //
+// CIR-LABEL: cir.func {{.*}}@test_vfmah_lane_f16(
+// CIR: cir.fma %{{.*}}, %{{.*}}, %{{.*}} : !cir.f16 {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+// LLVM-LABEL: @test_vfmah_lane_f16(
+// LLVM: call half @llvm.experimental.constrained.fma.f16({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
   return vfmah_lane_f16(a, b, c, 3);
 }

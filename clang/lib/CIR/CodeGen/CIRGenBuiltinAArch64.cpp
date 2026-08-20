@@ -204,6 +204,16 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              builder.getStringAttr(intrinsicName.value()),
                              funcResTy, args)
         .getResult();
+  } else if constexpr (std::is_same_v<Operation, cir::FMAOp>) {
+    assert(args.size() == 3 && "fma expects three operands");
+    return Operation::create(builder, loc, funcResTy, args[0], args[1], args[2],
+                             builder.getConstrainedFPAttr())
+        .getResult();
+  } else if constexpr (std::is_same_v<Operation, cir::SqrtOp>) {
+    assert(args.size() == 1 && "sqrt expects one operand");
+    return Operation::create(builder, loc, funcResTy, args[0],
+                             builder.getConstrainedFPAttr())
+        .getResult();
   } else {
     return Operation::create(builder, loc, funcResTy, args).getResult();
   }
@@ -2487,6 +2497,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // evaluation.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
+  CIRGenFPOptionsRAII fpOptsRAII(*this, expr);
+
   // Some intrinsics are equivalent - if they are use the base intrinsic ID.
   auto it = llvm::find_if(neonEquivalentIntrinsicMap, [builtinID](auto &p) {
     return p.first == builtinID;
@@ -3386,7 +3398,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
-    assert(!cir::MissingFeatures::emitConstrainedFPCall());
     return emitNeonCallToOp<cir::SqrtOp>(cgm, builder, {ty}, ops, std::nullopt,
                                          ty, loc);
   case NEON::BI__builtin_neon_vrbit_v:

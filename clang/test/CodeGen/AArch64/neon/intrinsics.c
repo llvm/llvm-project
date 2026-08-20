@@ -3,6 +3,8 @@
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefix=LLVM-STRICT --implicit-check-not=' @llvm.sqrt.' %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fexperimental-strict-floating-point -ffp-exception-behavior=strict -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefix=CIR-STRICT --implicit-check-not='cir.call_llvm_intrinsic "sqrt"' %}
 
 //=============================================================================
 // NOTES
@@ -1790,7 +1792,11 @@ float64x1_t test_vsqrt_f64(float64x1_t a) {
 }
 
 // LLVM-LABEL: @test_vsqrtq_f64(
+// LLVM-STRICT-LABEL: @test_vsqrtq_f64(
+// LLVM-STRICT: call <2 x double> @llvm.experimental.constrained.sqrt.v2f64({{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CIR-LABEL: @vsqrtq_f64(
+// CIR-STRICT-LABEL: cir.func {{.*}}@vsqrtq_f64(
+// CIR-STRICT: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double> {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
 float64x2_t test_vsqrtq_f64(float64x2_t a) {
 // CIR: cir.sqrt %{{.*}} : !cir.vector<2 x !cir.double>
 
