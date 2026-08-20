@@ -259,10 +259,11 @@ void InefficientVectorOperationCheck::check(
     ReserveSize = std::string(LoopEndSource);
   }
 
-  auto Diag = diag(AppendCall->getBeginLoc(),
-                   "%0 is called inside a loop; consider pre-allocating the "
-                   "container capacity before the loop")
-              << AppendCall->getMethodDecl()->getDeclName();
+  const auto Diag =
+      diag(AppendCall->getBeginLoc(),
+           "%0 is called inside a loop; consider pre-allocating the "
+           "container capacity before the loop")
+      << AppendCall->getMethodDecl()->getDeclName();
   if (!ReserveSize.empty()) {
     const std::string ReserveStmt =
         (VarName + PartialReserveStmt + "(" + ReserveSize + ");\n").str();

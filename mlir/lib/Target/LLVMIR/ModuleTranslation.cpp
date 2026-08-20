@@ -1241,9 +1241,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
     auto *var = new llvm::GlobalVariable(
         *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
-        /*InsertBefore=*/nullptr,
-        op.getThreadLocal_() ? llvm::GlobalValue::GeneralDynamicTLSModel
-                             : llvm::GlobalValue::NotThreadLocal,
+        /*InsertBefore=*/nullptr, convertThreadLocalModeToLLVM(op.getTlsMode()),
         op.getAddrSpace(), op.getExternallyInitialized());
 
     if (std::optional<mlir::SymbolRefAttr> comdat = op.getComdat()) {
@@ -1368,9 +1366,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         type, op.getAddrSpace(), linkage, op.getSymName(), /*placeholder*/ cst,
         &llvmMod);
 
-    var->setThreadLocalMode(op.getThreadLocal_()
-                                ? llvm::GlobalAlias::GeneralDynamicTLSModel
-                                : llvm::GlobalAlias::NotThreadLocal);
+    var->setThreadLocalMode(convertThreadLocalModeToLLVM(op.getTlsMode()));
 
     // Note there is no need to setup the comdat because GlobalAlias calls into
     // the aliasee comdat information automatically.
@@ -1618,6 +1614,23 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
         }
         return emitError() << "could not resolve metadata reference '"
                            << a.getName() << "'";
+      })
+      .Case([&](MDNullAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::ConstantAsMetadata::get(llvm::ConstantPointerNull::get(
+            llvm::PointerType::get(llvmContext, a.getAddressSpace())));
+      })
+      .Case([&](MDAddrSpaceCastAttr a) -> FailureOr<llvm::Metadata *> {
+        FailureOr<llvm::Metadata *> arg =
+            convertMetadataAttr(a.getArg(), emitError);
+        if (failed(arg))
+          return failure();
+        // The verifier restricts the operand to pointer-valued metadata
+        // attributes, all of which translate to a ConstantAsMetadata.
+        auto *argAsMD = cast<llvm::ConstantAsMetadata>(*arg);
+        return llvm::ConstantAsMetadata::get(
+            llvm::ConstantExpr::getAddrSpaceCast(
+                argAsMD->getValue(),
+                llvm::PointerType::get(llvmContext, a.getAddressSpace())));
       })
       .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
         SmallVector<llvm::Metadata *> operands;
@@ -2063,6 +2076,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     llvmFunc->setCallingConv(convertCConvToLLVM(function.getCConv()));
     mapFunction(function.getName(), llvmFunc);
+    if (function.getFunctionMetadataAttr())
+      return function.emitError()
+             << "not yet implemented: translating function_metadata to LLVM IR";
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.

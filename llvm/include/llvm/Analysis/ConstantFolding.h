@@ -171,6 +171,7 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
 
 LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
                                          ArrayRef<Constant *> Ops, Type *Ty,
+                                         const DataLayout &DL,
                                          Function *CxtF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type

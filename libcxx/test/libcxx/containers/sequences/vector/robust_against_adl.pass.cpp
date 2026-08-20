@@ -34,6 +34,7 @@ struct MyAlloc {
 
 int main(int, char**) {
   std::vector<bool, MyAlloc<bool>> vb;
+  (void)vb;
   // std::fill_n triggers ADL because __bit_iterator has the container type as a template argument
   // std::vector<bool, MyAlloc<bool>> wb(100);
 

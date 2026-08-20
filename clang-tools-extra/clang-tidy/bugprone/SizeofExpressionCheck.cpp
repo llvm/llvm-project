@@ -97,7 +97,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Some of the checks should not match in template code to avoid false
   // positives if sizeof is applied on template argument.
 
-  auto LoopCondExpr =
+  const auto LoopCondExpr =
       [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
         return stmt(anyOf(forStmt(hasCondition(InnerMatcher)),
                           whileStmt(hasCondition(InnerMatcher)),
@@ -375,15 +375,14 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     const auto *SzOfExpr = Result.Nodes.getNodeAs<Expr>("sizeof-expr");
 
-    if (const auto *Type = dyn_cast<ArrayType>(SizeofArgTy)) {
-      // check if the array element size is larger than one. If true,
-      // the size of the array is higher than the number of elements
-      if (!getSizeOfType(Ctx, Type->getElementType().getTypePtr()).isOne()) {
-        diag(SzOfExpr->getBeginLoc(),
-             "suspicious usage of 'sizeof' in the loop")
-            << SzOfExpr->getSourceRange();
-      }
-    }
+    // check if the array element size is larger than one. If true,
+    // the size of the array is higher than the number of elements
+    if (const auto *Type = dyn_cast<ArrayType>(SizeofArgTy);
+        Type &&
+        !getSizeOfType(Ctx, Type->getElementType().getTypePtr()).isOne())
+      diag(SzOfExpr->getBeginLoc(), "suspicious usage of 'sizeof' in the loop")
+          << SzOfExpr->getSourceRange();
+
   } else if (const auto *E = Result.Nodes.getNodeAs<Expr>("sizeof-pointer")) {
     diag(E->getBeginLoc(), "suspicious usage of 'sizeof()' on an expression "
                            "of pointer type")

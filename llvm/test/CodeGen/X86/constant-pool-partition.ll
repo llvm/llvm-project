@@ -26,46 +26,62 @@ target triple = "x86_64-grtev4-linux-gnu"
 ;; For function @cold_func
 ; CHECK:       .section	.rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI0_0:
-; CHECK-NEXT:	     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
-; CHECK-NEXT:  .section	.rodata.cst8.unlikely.,"aM",@progbits,8
+; CHECK-NEXT: .type .LCPI0_0,@object
+; CHECK-NEXT: .LCPI0_0:
+; CHECK:	         .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
+; CHECK-NEXT:      .size .LCPI0_0, 8
+; CHECK: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI0_1:
-; CHECK-NEXT:	     .quad	0x3eb0000000000000              # double 9.5367431640625E-7
-; CHECK-NEXT:  .section        .rodata.cst8,"aM",@progbits,8
+; CHECK-NEXT: .type .LCPI0_1,@object
+; CHECK-NEXT: .LCPI0_1:
+; CHECK:	         .quad	0x3eb0000000000000              # double 9.5367431640625E-7
+; CHECK-NEXT:      .size .LCPI0_1, 8
+; CHECK: .section        .rodata.cst8,"aM",@progbits,8
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI0_2:
-; CHECK-NEXT:      .quad  0x3fc0000000000000              # double 0.125
+; CHECK-NEXT: .type .LCPI0_2,@object
+; CHECK-NEXT: .LCPI0_2:
+; CHECK:           .quad  0x3fc0000000000000              # double 0.125
+; CHECK-NEXT:      .size .LCPI0_2, 8
 
 ;; For function @unprofiled_func_double
 ; CHECK:       .section        .rodata.cst8,"aM",@progbits,8
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI1_0:
-; CHECK-NEXT:     .quad   0x3fc0000000000000              # double 0.125
+; CHECK-NEXT: .type .LCPI1_0,@object
+; CHECK-NEXT: .LCPI1_0:
+; CHECK:           .quad   0x3fc0000000000000              # double 0.125
+; CHECK-NEXT:      .size .LCPI1_0, 8
 
 ;; For function @unprofiled_func_float
 ; CHECK:       .section        .rodata.cst4,"aM",@progbits,4
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI2_0:
-; CHECK-NEXT:     .long   0x3e000000              # float 0.125
+; CHECK-NEXT: .type .LCPI2_0,@object
+; CHECK-NEXT: .LCPI2_0:
+; CHECK:           .long   0x3e000000              # float 0.125
+; CHECK-NEXT:      .size .LCPI2_0, 4
 
 ;; For function @hot_func
 ; CHECK:	     .section	.rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI3_0:
-; CHECK-NEXT:     .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
-; CHECK-NEXT:  .section        .rodata.cst16.hot.,"aM",@progbits,16
+; CHECK-NEXT: .type .LCPI3_0,@object
+; CHECK-NEXT: .LCPI3_0:
+; CHECK:           .quad	0x3fe5c28f5c28f5c3              # double 0.68000000000000005
+; CHECK-NEXT:      .size .LCPI3_0, 8
+; CHECK: .section        .rodata.cst16.hot.,"aM",@progbits,16
 ; CHECK-NEXT:      .p2align
-; CHECK-NEXT:    .LCPI3_1:
+; CHECK-NEXT: .type .LCPI3_1,@object
+; CHECK-NEXT: .LCPI3_1:
+; CHECK:           .long   2147483648                      # 0x80000000
 ; CHECK-NEXT:      .long   2147483648                      # 0x80000000
 ; CHECK-NEXT:      .long   2147483648                      # 0x80000000
 ; CHECK-NEXT:      .long   2147483648                      # 0x80000000
-; CHECK-NEXT:      .long   2147483648                      # 0x80000000
-; CHECK-NEXT:    .LCPI3_2:
-; CHECK-NEXT:      .long   2147484090                      # 0x800001ba
+; CHECK-NEXT:      .size .LCPI3_1, 16
+; CHECK-NEXT: .type .LCPI3_2,@object
+; CHECK-NEXT: .LCPI3_2:
+; CHECK:           .long   2147484090                      # 0x800001ba
 ; CHECK-NEXT:      .long   2147483748                      # 0x80000064
 ; CHECK-NEXT:      .long   2147483648                      # 0x80000000
 ; CHECK-NEXT:      .long   2147483648                      # 0x80000000
+; CHECK-NEXT:      .size .LCPI3_2, 16
 
 ; CHECK:       .section	.rodata.cst32,"aM",@progbits,32
 ; CHECK-NEXT:  .globl	val

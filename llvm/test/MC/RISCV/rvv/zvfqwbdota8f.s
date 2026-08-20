@@ -10,22 +10,22 @@
 # CHECK-ENCODING: [0x57,0x70,0x00,0x1c]
 vsetvli zero, zero, e8alt, m1, ta, ma
 
-# CHECK-INST: vfqwbdota.vv v8, v16, v12, 1
+# CHECK-INST: vfqwbdota.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x14,0x16,0xbb]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension){{$}}
-vfqwbdota.vv v8, v16, v12, 1
+vfqwbdota.vv v8, v16, v12, 8
 
-# CHECK-INST: vfqwbdota.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vfqwbdota.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x14,0x26,0xb9]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension){{$}}
-vfqwbdota.vv v8, v16, v12, 2, v0.t
+vfqwbdota.vv v8, v16, v12, 16, v0.t
 
-# CHECK-INST: vfqwbdota.alt.vv v8, v16, v12, 1
+# CHECK-INST: vfqwbdota.alt.vv v8, v16, v12, 8
 # CHECK-ENCODING: [0x77,0x14,0x16,0xbf]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension){{$}}
-vfqwbdota.alt.vv v8, v16, v12, 1
+vfqwbdota.alt.vv v8, v16, v12, 8
 
-# CHECK-INST: vfqwbdota.alt.vv v8, v16, v12, 2, v0.t
+# CHECK-INST: vfqwbdota.alt.vv v8, v16, v12, 16, v0.t
 # CHECK-ENCODING: [0x77,0x14,0x26,0xbd]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension){{$}}
-vfqwbdota.alt.vv v8, v16, v12, 2, v0.t
+vfqwbdota.alt.vv v8, v16, v12, 16, v0.t

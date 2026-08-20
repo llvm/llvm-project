@@ -110,8 +110,27 @@ public:
       // No TLS on DriverKit.
     } else if (Triple.isXROS())
       this->TLSSupported = true;
-    else if (Triple.isAppleFirmware())
-      this->TLSSupported = true;
+    else if (Triple.isAppleFirmware()) {
+      if (Triple.isAArch64() || Triple.isARM())
+        this->TLSSupported = true;
+      else if (Triple.isThumb()) {
+        switch (Triple.getSubArch()) {
+        case llvm::Triple::NoSubArch:
+        case llvm::Triple::ARMSubArch_v4t:
+        case llvm::Triple::ARMSubArch_v5:
+        case llvm::Triple::ARMSubArch_v5te:
+        case llvm::Triple::ARMSubArch_v6:
+        case llvm::Triple::ARMSubArch_v6k:
+        case llvm::Triple::ARMSubArch_v6m:
+          // Thumb-1 doesn't support TLS.
+          break;
+
+        default:
+          this->TLSSupported = true;
+          break;
+        }
+      }
+    }
 
     this->MCountName = "\01mcount";
   }
