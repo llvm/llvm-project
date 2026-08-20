@@ -17,16 +17,17 @@ using namespace lldb_private;
 namespace {
 
 ValueObjectSP GetValue(ValueObject &valobj) {
-  ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Myval");
+  ValueObjectSP value_sp = valobj.GetChildMemberWithName("_Myval"); // MSVC STL.
   if (!value_sp)
-    value_sp = valobj.GetChildMemberWithName("_M_value");
+    value_sp = valobj.GetChildMemberWithName("_M_value"); // libstdc++.
   return value_sp;
 }
 
 ValueObjectSP GetCategory(ValueObject &valobj) {
-  ValueObjectSP category_sp = valobj.GetChildMemberWithName("_Mycat");
+  ValueObjectSP category_sp =
+      valobj.GetChildMemberWithName("_Mycat"); // MSVC STL.
   if (!category_sp)
-    category_sp = valobj.GetChildMemberWithName("_M_cat");
+    category_sp = valobj.GetChildMemberWithName("_M_cat"); // libstdc++.
   return category_sp;
 }
 
