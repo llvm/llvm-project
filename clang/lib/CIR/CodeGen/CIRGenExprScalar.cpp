@@ -2174,16 +2174,14 @@ struct FixedPointBuilder {
                         mlir::Value rhs,
                         const llvm::FixedPointSemantics &rhsSema) {
     auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
-    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
 
     mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
     mlir::Value result;
     if (commonSema.isSaturated()) {
-      result = builder.emitIntrinsicCallOp(
-          loc, useSigned ? "sadd.sat" : "uadd.sat", wideLhs.getType(),
-          mlir::ValueRange{wideLhs, wideRhs});
+      result = builder.createAdd(loc, wideLhs, wideRhs,
+                                 cir::OverflowBehavior::Saturated);
     } else {
       result = builder.createAdd(loc, wideLhs, wideRhs);
     }
@@ -2197,16 +2195,14 @@ struct FixedPointBuilder {
                         mlir::Value rhs,
                         const llvm::FixedPointSemantics &rhsSema) {
     auto commonSema = getCommonBinopSemantic(lhsSema, rhsSema);
-    bool useSigned = commonSema.isSigned() || commonSema.hasUnsignedPadding();
 
     mlir::Value wideLhs = createFixedToFixed(lhs, lhsSema, commonSema);
     mlir::Value wideRhs = createFixedToFixed(rhs, rhsSema, commonSema);
 
     mlir::Value result;
     if (commonSema.isSaturated()) {
-      result = builder.emitIntrinsicCallOp(
-          loc, useSigned ? "ssub.sat" : "usub.sat", wideLhs.getType(),
-          mlir::ValueRange{wideLhs, wideRhs});
+      result = builder.createSub(loc, wideLhs, wideRhs,
+                                 cir::OverflowBehavior::Saturated);
     } else {
       result = builder.createSub(loc, wideLhs, wideRhs);
     }
@@ -2594,8 +2590,9 @@ mlir::Value ScalarExprEmitter::emitFixedPointBinOp(const BinOpInfo &ops) {
       // computation result type.
       lhsTy = cao->getComputationLHSType();
       resultTy = cao->getComputationResultType();
-    } else
+    } else {
       lhsTy = binOp->getLHS()->getType();
+    }
   } else if (const auto *unOp = dyn_cast<UnaryOperator>(ops.e)) {
     lhsTy = unOp->getSubExpr()->getType();
     rhsTy = unOp->getSubExpr()->getType();

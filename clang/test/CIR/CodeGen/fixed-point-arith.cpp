@@ -515,7 +515,7 @@ _Fract dec2(_Fract a) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: %[[ADD:.*]] = cir.call_llvm_intrinsic "sadd.sat" %[[LOAD_A]], %[[LOAD_B]] : (!s32i, !s32i) -> !s32i
+// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
 // CIR-NEXT: cir.store %[[ADD]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: define {{.*}}i32 @satAdd(
@@ -535,7 +535,7 @@ _Sat _Accum satAdd(_Sat _Accum a, _Accum b) {
 // CIR-NEXT: %[[RET:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
 // CIR:      %[[LOAD_A:.*]] = cir.load align(4) %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT: %[[LOAD_B:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT: %[[SUB:.*]] = cir.call_llvm_intrinsic "ssub.sat" %[[LOAD_A]], %[[LOAD_B]] : (!s32i, !s32i) -> !s32i
+// CIR-NEXT: %[[SUB:.*]] = cir.sub sat %[[LOAD_A]], %[[LOAD_B]] : !s32i
 // CIR-NEXT: cir.store %[[SUB]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: define {{.*}}i32 @satSub(
@@ -686,7 +686,7 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[MIN]] : !cir.int<s, 47>
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[MIN]] else %[[SELECT]] : (!cir.bool, !cir.int<s, 47>, !cir.int<s, 47>) -> !cir.int<s, 47>
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !cir.int<s, 47> -> !s32i
-// CIR-NEXT: %[[SUB:.*]] = cir.call_llvm_intrinsic "ssub.sat" %[[LOAD_A]], %[[TRUNC]] : (!s32i, !s32i) -> !s32i
+// CIR-NEXT: %[[SUB:.*]] = cir.sub sat %[[LOAD_A]], %[[TRUNC]] : !s32i
 // CIR-NEXT: cir.store align(4) %[[SUB]], %[[A]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT: cir.store %[[SUB]], %[[RET]] : !s32i, !cir.ptr<!s32i>
 
@@ -714,7 +714,7 @@ _Sat _Accum satInc(_Sat _Accum a) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[MIN]] : !cir.int<s, 31>
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[MIN]] else %[[SELECT]] : (!cir.bool, !cir.int<s, 31>, !cir.int<s, 31>) -> !cir.int<s, 31>
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !cir.int<s, 31> -> !s16i
-// CIR-NEXT: %[[ADD:.*]] = cir.call_llvm_intrinsic "sadd.sat" %[[LOAD_F]], %[[TRUNC]] : (!s16i, !s16i) -> !s16i
+// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_F]], %[[TRUNC]] : !s16i
 // CIR-NEXT: cir.store align(2) %[[ADD]], %[[F]] : !s16i, !cir.ptr<!s16i>
 // CIR-NEXT: cir.store %[[LOAD_F]], %[[RET]] : !s16i, !cir.ptr<!s16i>
 
@@ -743,7 +743,7 @@ _Sat _Fract satDec(_Sat _Fract f) {
 // CIR-NEXT: %[[CMP:.*]] = cir.cmp lt %[[SELECT]], %[[ZERO]] : !s32i
 // CIR-NEXT: %[[SELECT2:.*]] = cir.select if %[[CMP]] then %[[ZERO]] else %[[SELECT]] : (!cir.bool, !s32i, !s32i) -> !s32i
 // CIR-NEXT: %[[TRUNC:.*]] = cir.cast integral %[[SELECT2]] : !s32i -> !u16i
-// CIR-NEXT: %[[ADD:.*]] = cir.call_llvm_intrinsic "uadd.sat" %[[LOAD_A]], %[[TRUNC]] : (!u16i, !u16i) -> !u16i
+// CIR-NEXT: %[[ADD:.*]] = cir.add sat %[[LOAD_A]], %[[TRUNC]] : !u16i
 // CIR-NEXT: cir.store align(2) %[[ADD]], %[[A]] : !u16i, !cir.ptr<!u16i>
 // CIR-NEXT: cir.store %[[ADD]], %[[RET]] : !u16i, !cir.ptr<!u16i>
 
