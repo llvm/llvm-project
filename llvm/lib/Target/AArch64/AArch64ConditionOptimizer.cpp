@@ -53,7 +53,6 @@
 //
 // See optimizeCrossBlock() and optimizeIntraBlock() for implementation details.
 //
-// TODO: maybe handle TBNZ/TBZ the same way as CMP when used instead for "a < 0"
 // TODO: For cross-block:
 //   - allow second branching to be anything if it doesn't require adjusting
 //
@@ -144,6 +143,8 @@ private:
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
   std::pair<MachineInstr *, AArch64CC::CondCode>
   findCondConsumer(MachineBasicBlock *MBB);
+  std::tuple<MachineInstr *, MachineInstr *, AArch64CC::CondCode>
+  isCmpToTbzPattern(MachineBasicBlock &MBB);
 };
 
 class AArch64ConditionOptimizerLegacy : public MachineFunctionPass {
@@ -532,6 +533,33 @@ bool AArch64ConditionOptimizerImpl::commitPendingPair(
   return Changed;
 }
 
+std::tuple<MachineInstr *, MachineInstr *, AArch64CC::CondCode>
+AArch64ConditionOptimizerImpl::isCmpToTbzPattern(MachineBasicBlock &MBB) {
+  // Get the Bcc terminator for the given MBB.
+  MachineInstr *BrMI = getBccTerminator(&MBB);
+  if (!BrMI)
+    return {nullptr, nullptr, AArch64CC::Invalid};
+  // Get the CMP/CMN instruction consumed by the Bcc terminator.
+  MachineInstr *CmpMI = findAdjustableCmp(BrMI);
+  if (!CmpMI)
+    return {nullptr, nullptr, AArch64CC::Invalid};
+  // Check if the immediate operand is zero.
+  MachineOperand &Op = CmpMI->getOperand(2);
+  if (!Op.isImm() || Op.getImm() != 0)
+    return {nullptr, nullptr, AArch64CC::Invalid};
+  // Get the condition code used by Bcc.
+  int CCOpIdx =
+      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(*BrMI);
+  if (CCOpIdx < 0)
+    return {nullptr, nullptr, AArch64CC::Invalid};
+  AArch64CC::CondCode CC =
+      (AArch64CC::CondCode)(int)BrMI->getOperand(CCOpIdx).getImm();
+  // Only GE and LT can be represented by a sign-bit test.
+  if (CC != AArch64CC::GE && CC != AArch64CC::LT)
+    return {nullptr, nullptr, AArch64CC::Invalid};
+  return {BrMI, CmpMI, CC};
+}
+
 // This function transforms cmps and their consuming conditionals (CmpCondPairs)
 // 1. Same direction: when both conditions are the same (e.g. GT/GT or LT/LT)
 //    and immediates differ by 1
@@ -607,7 +635,58 @@ bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
   // consumer would be affected by any CMP adjustment we make.
   if (!nzcvLivesOut(&MBB))
     Changed |= commitPendingPair(PendingPair, PairsByReg);
-
+  
+  // Check if there is any CMP/CMN + Bcc sequence which
+  // can be converted to TBZ/TBNZ.
+  auto [BrMI, CmpMI, CC] = isCmpToTbzPattern(MBB);
+  
+  if (BrMI && CmpMI) {
+    Register Reg = CmpMI->getOperand(1).getReg();
+  
+    MachineBasicBlock *TBB = nullptr;
+    MachineBasicBlock *FBB = nullptr;
+    SmallVector<MachineOperand, 4> Cond;
+  
+    if (TII->analyzeBranch(MBB, TBB, FBB, Cond))
+      return false;
+    if (!TBB)
+      return false;
+  
+    unsigned CmpOpc = CmpMI->getOpcode();
+    // Determine the new TBZ/TBNZ opcode and bit position.
+    unsigned TbzOpc;
+    unsigned Bit;
+  
+    switch (CmpOpc) {
+    // 32-bit comparison
+    case AArch64::SUBSWri:
+    case AArch64::ADDSWri:
+      Bit = 31;
+      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZW
+                                   : AArch64::TBNZW;
+      break;
+    // 64-bit comparison
+    case AArch64::SUBSXri:
+    case AArch64::ADDSXri:
+      Bit = 63;
+      TbzOpc = CC == AArch64CC::GE ? AArch64::TBZX
+                                   : AArch64::TBNZX;
+      break;
+    default:
+      return false;
+    }
+    // Build the new tbz/tbnz instruction
+    BuildMI(MBB, BrMI, BrMI->getDebugLoc(), TII->get(TbzOpc))
+        .addReg(Reg)
+        .addImm(Bit)
+        .addMBB(TBB);
+    // Remove the old Compare and Branch instructions
+    CmpMI->eraseFromParent();
+    BrMI->eraseFromParent();
+  
+    Changed = true;
+  }
+  
   return Changed;
 }
 
