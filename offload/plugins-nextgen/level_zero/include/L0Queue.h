@@ -264,6 +264,8 @@ public:
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
+  Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size) override;
   Error memoryFillFallbackImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) override;
 

@@ -445,10 +445,18 @@ Error L0SyncQueueTy::hostCallImpl(void (*Callback)(void *), void *UserData) {
   return CmdList->hostSynchronize();
 }
 
+Error L0SyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
+                                    size_t PatternSize, size_t Size) {
+  if (auto Err = L0QueueTy::memoryFillImpl(Ptr, Pattern, PatternSize, Size))
+    return Err;
+  return CmdList->hostSynchronize();
+}
+
 Error L0SyncQueueTy::memoryFillFallbackImpl(void *Ptr, const void *Pattern,
                                             size_t PatternSize, size_t Size) {
   const auto TgtType = Device.getMemAllocType(Ptr);
-  if (TgtType == ZE_MEMORY_TYPE_HOST || TgtType == ZE_MEMORY_TYPE_SHARED)
+  if (TgtType == ZE_MEMORY_TYPE_HOST ||
+      (TgtType == ZE_MEMORY_TYPE_SHARED && !Device.isDiscreteDevice()))
     return memoryFillHostImpl(Ptr, Pattern, PatternSize, Size);
   return L0QueueTy::memoryFillFallbackImpl(Ptr, Pattern, PatternSize, Size);
 }
