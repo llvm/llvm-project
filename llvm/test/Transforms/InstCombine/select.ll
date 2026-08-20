@@ -5903,4 +5903,21 @@ define i1 @select_chain_scalable_vector(<vscale x 2 x i4> %x, <vscale x 2 x i4> 
   ret i1 %b
 }
 
-
+; Negative test
+define i1 @select_chain_large_vec(<8388609 x i4> %x, <8388609 x i4> %y) {
+; CHECK-LABEL: define i1 @select_chain_large_vec(
+; CHECK-SAME: <8388609 x i4> [[X:%.*]], <8388609 x i4> [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <8388609 x i4> [[X]], [[Y]]
+; CHECK-NEXT:    [[B0:%.*]] = extractelement <8388609 x i1> [[CMP]], i64 0
+; CHECK-NEXT:    [[B1:%.*]] = extractelement <8388609 x i1> [[CMP]], i64 1
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[B0]], i1 [[B1]], i1 false
+; CHECK-NEXT:    ret i1 [[B]]
+;
+entry:
+  %cmp = icmp sgt <8388609 x i4> %x, %y
+  %b0 = extractelement <8388609 x i1> %cmp, i64 0
+  %b1 = extractelement <8388609 x i1> %cmp, i64 1
+  %b = select i1 %b0, i1 %b1, i1 false
+  ret i1 %b
+}

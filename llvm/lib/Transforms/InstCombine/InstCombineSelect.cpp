@@ -4616,6 +4616,8 @@ static Instruction *foldSelectExtractEl(SelectInst &SI,
     if (!VecTy)
       return nullptr;
     unsigned NumElts = VecTy->getNumElements();
+    if (NumElts > IntegerType::MAX_INT_BITS)
+      return nullptr;
 
     // Check range bounds and redundant case where indices are equal
     uint64_t Idx1 = C1->getZExtValue();
