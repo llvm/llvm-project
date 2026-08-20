@@ -12719,11 +12719,6 @@ def err_omp_unsupported_structured_binding_init : Error<
   "structured binding initialized from temporary object|"
   "structured binding initialized from move expression|"
   "tuple-like structured binding}0 is not yet supported">;
-def err_omp_bindings_from_same_decomposition_with_different_dsa : Error<
-  "bindings from the same structured binding declaration cannot have "
-  "different data-sharing attributes">;
-def note_omp_previous_dsa_for_binding : Note<
-  "previous binding from the same declaration has '%0' attribute here">;
 def err_omp_decomposition_bindings_different_capture_kinds : Error<
   "bindings from structured binding %0 require conflicting capture kinds "
   "(by-reference vs. by-copy)">;
