@@ -41,7 +41,7 @@ func.func @avx512_mask_compress(%k1: vector<16xi1>, %a1: vector<16xf32>,
   // CHECK: x86.avx512.mask.compress {{.*}} : vector<16xf32>
   %0 = x86.avx512.mask.compress %k1, %a1 : vector<16xf32>
   // CHECK: x86.avx512.mask.compress {{.*}} : vector<16xf32>
-  %1 = x86.avx512.mask.compress %k1, %a1 {constant_src = dense<5.0> : vector<16xf32>} : vector<16xf32>
+  %1 = x86.avx512.mask.compress %k1, %a1 constant_src = dense<5.0> : vector<16xf32>: vector<16xf32>
   // CHECK: x86.avx512.mask.compress {{.*}} : vector<8xi64>
   %2 = x86.avx512.mask.compress %k2, %a2, %a2 : vector<8xi64>, vector<8xi64>
   return %0, %1, %2 : vector<16xf32>, vector<16xf32>, vector<8xi64>

@@ -2340,6 +2340,8 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isSignedIntegerOrEnumerationType();
 
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
     switch (BT->getKind()) {
@@ -3765,8 +3767,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:

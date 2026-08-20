@@ -462,6 +462,22 @@ DECODE_SDWA(Src32)
 DECODE_SDWA(Src16)
 DECODE_SDWA(VopcDst)
 
+#define DECODE_SDWA_IMM_FIELD(Name, MaxImm)                                    \
+  static DecodeStatus Name(MCInst &Inst, unsigned Imm, uint64_t /* Addr */,    \
+                           const MCDisassembler * /* Decoder */) {             \
+    if (Imm > (MaxImm))                                                        \
+      return MCDisassembler::Fail;                                             \
+    return addOperand(Inst, MCOperand::createImm(Imm));                        \
+  }
+
+// The 3-bit SDWA sel fields only define values up to DWORD; 7 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWASel, AMDGPU::SDWA::SdwaSel::DWORD)
+// The 2-bit SDWA dst_unused field only defines values up to UNUSED_PRESERVE;
+// 3 is reserved.
+DECODE_SDWA_IMM_FIELD(decodeSDWADstUnused,
+                      AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+#undef DECODE_SDWA_IMM_FIELD
+
 static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
                                      uint64_t /* Addr */,
                                      const MCDisassembler *Decoder) {

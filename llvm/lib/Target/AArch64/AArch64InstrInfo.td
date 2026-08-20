@@ -6079,7 +6079,6 @@ defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd
 defm XTN    : SIMDMixedTwoVector<0, 0b10010, "xtn", trunc>;
 
 // Patterns for plain partial add reductions, which lower to [SU]ADALP.
-// A zero accumulator has nothing to add to, so it lowers to [SU]ADDLP.
 multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag immOneV> {
   def : Pat<(DstVT (partial_reduce_smla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
             (!cast<Instruction>("SADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
@@ -6087,6 +6086,7 @@ multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag im
   def : Pat<(DstVT (partial_reduce_umla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
             (!cast<Instruction>("UADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
 
+  // A zero accumulator has nothing to add to so it lowers to [SU]ADDLP.
   def : Pat<(DstVT (partial_reduce_smla (DstVT immAllZerosV), SrcVT:$Input,
                                         (SrcVT immOneV))),
             (!cast<Instruction>("SADDLP" # SrcVT # "_" # DstVT) $Input)>;

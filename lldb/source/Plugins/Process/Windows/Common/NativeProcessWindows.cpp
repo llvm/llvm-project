@@ -232,8 +232,10 @@ Status NativeProcessWindows::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return ProcessDebugger::GetMemoryRegionInfo(load_addr, range_info);
 }
 
-Status NativeProcessWindows::ReadMemory(lldb::addr_t addr, void *buf,
-                                        size_t size, size_t &bytes_read) {
+Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
+                                        void *buf, size_t size,
+                                        size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 

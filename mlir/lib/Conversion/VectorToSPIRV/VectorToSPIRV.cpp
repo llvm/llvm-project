@@ -743,9 +743,9 @@ struct VectorLoadOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = loadOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, loadOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           loadOp, "failed to get memref element pointer");
@@ -809,9 +809,9 @@ struct VectorStoreOpConverter final
 
     const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
     auto loc = storeOp.getLoc();
-    Value accessChain =
-        spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
-                             adaptor.getIndices(), loc, rewriter);
+    Value accessChain = spirv::getElementPtr(
+        typeConverter, memrefType, adaptor.getBase(), adaptor.getIndices(), loc,
+        rewriter, storeOp.getVectorType().getNumElements());
     if (!accessChain)
       return rewriter.notifyMatchFailure(
           storeOp, "failed to get memref element pointer");
