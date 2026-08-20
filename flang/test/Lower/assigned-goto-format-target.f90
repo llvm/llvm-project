@@ -57,7 +57,10 @@ end subroutine
 ! the statement that begins the construct rather than the one that ends it, so
 ! control enters the construct normally instead of jumping into its interior.
 ! CHECK-LABEL: func.func @_QPbranch_target_kinds(
-! CHECK:         fir.select %{{.*}} : i32 [10, ^bb{{[0-9]+}}, 20, ^bb{{[0-9]+}}, 30, ^bb{{[0-9]+}}, 40, ^bb{{[0-9]+}}, unit, ^bb{{[0-9]+}}]
+! CHECK:         fir.select %{{.*}} : i32 [
+! CHECK-SAME:      10, ^bb{{[0-9]+}}, 20, ^bb{{[0-9]+}},
+! CHECK-SAME:      30, ^bb{{[0-9]+}}, 40, ^bb{{[0-9]+}},
+! CHECK-SAME:      unit, ^bb{{[0-9]+}}]
 subroutine branch_target_kinds(n)
   integer :: n, j
   assign 10 to j

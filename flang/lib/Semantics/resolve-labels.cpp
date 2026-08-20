@@ -1256,7 +1256,7 @@ static void RecordBranchTargets(
 bool AnalyzeLabels(SemanticsContext &context, const parser::Program &program) {
   ParseTreeAnalyzer analysis{LabelAnalysis(context, program)};
   if (!CheckConstraints(analysis, context)) {
-    // The program will not be lowered, so there is nothing to record for.
+    // The program will not be lowered, so there is nothing to record.
     return false;
   }
   RecordBranchTargets(analysis, context);

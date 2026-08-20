@@ -1023,10 +1023,14 @@ private:
             auto &label = std::get<parser::Label>(s.t);
             const auto *sym = std::get<parser::Name>(s.t).symbol;
             assert(sym && "missing AssignStmt symbol");
-            lower::pft::Evaluation *target{
-                labelEvaluationMap->find(label)->second};
+            auto labelIter{labelEvaluationMap->find(label)};
+            assert(labelIter != labelEvaluationMap->end() &&
+                   "assigned label has no evaluation");
+            lower::pft::Evaluation *target{labelIter->second};
             assert(target && "missing branch target evaluation");
-            if (!target->isA<parser::FormatStmt>()) {
+            // Consult the same classification the assigned GO TO uses, so the
+            // two agree on which statements may be branched to.
+            if (semanticsContext.IsRecordedBranchTarget(target->position)) {
               target->isNewBlock = true;
               for (lower::pft::Evaluation *parent = target->parentConstruct;
                    parent; parent = parent->parentConstruct) {
@@ -1052,17 +1056,12 @@ private:
             // wrappability analyses can see any escape from an enclosing
             // construct.
             auto markIfBranchTarget = [&](parser::Label label) {
-              if (!label)
-                return;
-
+              assert(label && "missing branch target label");
               auto iter{labelEvaluationMap->find(label)};
-              if (iter == labelEvaluationMap->end())
-                return;
-
+              assert(iter != labelEvaluationMap->end() &&
+                     "branch target label has no evaluation");
               lower::pft::Evaluation *target{iter->second};
-              if (!target)
-                return;
-
+              assert(target && "missing branch target evaluation");
               if (semanticsContext.IsRecordedBranchTarget(target->position))
                 markBranchTarget(eval, *target);
             };
