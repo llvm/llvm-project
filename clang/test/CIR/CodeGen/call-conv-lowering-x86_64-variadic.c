@@ -13,8 +13,6 @@ typedef struct { __int128 w; char c; } WideChar;
 
 int vf(Pair2 p, ...);
 
-// CIR: cir.func private @vf(!u64i, ...) -> !s32i
-
 int call_scalar(Pair2 p, int a, double d) { return vf(p, a, d); }
 
 // CIR-LABEL: cir.func {{.*}}@call_scalar(%arg0: !u64i loc({{.+}}), %arg1: !s32i {llvm.noundef} loc({{.+}}), %arg2: !cir.double {llvm.noundef} loc({{.+}})) -> !s32i
@@ -24,6 +22,8 @@ int call_scalar(Pair2 p, int a, double d) { return vf(p, a, d); }
 // CIR:         %[[DV:[0-9]+]] = cir.load align(8) %[[DSLOT]] : !cir.ptr<!cir.double>, !cir.double
 // CIR:         %[[PV:[0-9]+]] = cir.load %{{[0-9]+}} : !cir.ptr<!u64i>, !u64i
 // CIR:         cir.call @vf(%[[PV]], %[[AV]], %[[DV]]) : (!u64i, !s32i {llvm.noundef}, !cir.double {llvm.noundef}) -> !s32i
+
+// CIR: cir.func private @vf(!u64i, ...) -> !s32i
 
 // LLVM-LABEL: define dso_local i32 @call_scalar(
 // LLVM-SAME:    i64 %[[P:[0-9a-zA-Z._]+]], i32 noundef %[[A:[0-9a-zA-Z._]+]], double noundef %[[D:[0-9a-zA-Z._]+]])

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
+#include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -128,10 +129,8 @@ void X86CodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
-  if (X86EnableMachineCombinerPass) {
-    // TODO(boomanaiden154): Add the MachineCombinerPass here once it has been
-    // ported to the new pass manager.
-  }
+  if (X86EnableMachineCombinerPass)
+    addMachineFunctionPass(MachineCombinerPass(), PMW);
   addMachineFunctionPass(X86CmovConversionPass(), PMW);
 }
 
