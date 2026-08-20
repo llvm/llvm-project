@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/writer.h"
 #include "src/time/strftime_core/strftime_main.h"
 
 namespace LIBC_NAMESPACE_DECL {

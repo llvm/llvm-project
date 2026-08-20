@@ -42,6 +42,7 @@ types:
   - type_name: __getoptargv_t
   - type_name: __exec_envp_t
   - type_name: __exec_argv_t
+  - type_name: useconds_t
 enums: []
 objects:
   - object_name: environ
@@ -127,6 +128,14 @@ functions:
       - type: int
       - type: int
       - type: int
+  - name: execle
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: '...'
   - name: execv
     standards:
       - posix
@@ -384,6 +393,12 @@ functions:
     return_type: pid_t
     arguments:
       - type: void
+  - name: sleep
+    standards:
+      - posix
+    return_type: unsigned int
+    arguments:
+      - type: unsigned int
   - name: symlink
     standards:
       - posix
@@ -426,6 +441,12 @@ functions:
       - type: int
       - type: const char *
       - type: int
+  - name: usleep
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: useconds_t
   - name: write
     standards:
       - posix

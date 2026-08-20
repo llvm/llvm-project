@@ -10,7 +10,8 @@
 # RUN: llc -verify-machineinstrs -mcpu=znver4 -mattr=-false-deps-expand -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST,ALL
 # RUN: llc -verify-machineinstrs -mcpu=znver5 -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=SLOW,ALL
 # RUN: llc -verify-machineinstrs -mcpu=znver5 -mattr=-false-deps-expand -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST,ALL
-# RUN: llc -verify-machineinstrs -mcpu=znver6 -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST,ALL
+# RUN: llc -verify-machineinstrs -mcpu=znver6 -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=SLOW,ALL
+# RUN: llc -verify-machineinstrs -mcpu=znver6 -mattr=-false-deps-expand -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST,ALL
 
 ---
 name:            expandb_rrz_128

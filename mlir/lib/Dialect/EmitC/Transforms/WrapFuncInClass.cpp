@@ -17,6 +17,7 @@
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace emitc;
@@ -47,7 +48,8 @@ struct WrapFuncInClassPass
     });
 
     RewritePatternSet patterns(&getContext());
-    populateWrapFuncInClass(patterns, funcName, globalsUsedByFuncs);
+    populateWrapFuncInClass(patterns, funcName, classNameFormat,
+                            globalsUsedByFuncs);
 
     walkAndApplyPatterns(moduleOp, std::move(patterns));
 
@@ -67,15 +69,16 @@ struct WrapFuncInClassPass
 class WrapFuncInClass : public OpRewritePattern<FuncOp> {
 public:
   WrapFuncInClass(
-      MLIRContext *context, StringRef funcName,
+      MLIRContext *context, StringRef funcName, StringRef classNameFormat,
       const DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove)
       : OpRewritePattern<FuncOp>(context), funcName(funcName),
-        globalsToMove(globalsToMove) {}
+        classNameFormat(classNameFormat), globalsToMove(globalsToMove) {}
 
   LogicalResult matchAndRewrite(FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto className = funcOp.getSymNameAttr().str() + "Class";
+    std::string className = llvm::formatv(
+        /*Validate=*/false, classNameFormat.c_str(), funcOp.getName());
     ClassOp newClassOp = ClassOp::create(rewriter, funcOp.getLoc(), className);
 
     SmallVector<std::pair<StringAttr, TypeAttr>> fields;
@@ -111,6 +114,15 @@ public:
     Location loc = funcOp.getLoc();
     FuncOp newFuncOp = FuncOp::create(rewriter, loc, (funcName), funcType);
 
+    // Rewrite globals while they are still descendants of the matched op.
+    funcOp.walk([&](GetGlobalOp getGlobalOp) {
+      rewriter.setInsertionPoint(getGlobalOp);
+      GetFieldOp getFieldOp =
+          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
+                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
+      rewriter.replaceOp(getGlobalOp, getFieldOp);
+    });
+
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
 
@@ -132,14 +144,6 @@ public:
     if (failed(newFuncOp.eraseArguments(argsToErase)))
       newFuncOp->emitOpError("failed to erase all arguments using BitVector");
 
-    newFuncOp.walk([&](GetGlobalOp getGlobalOp) {
-      rewriter.setInsertionPoint(getGlobalOp);
-      GetFieldOp getFieldOp =
-          GetFieldOp::create(rewriter, getGlobalOp.getLoc(),
-                             getGlobalOp.getType(), getGlobalOp.getNameAttr());
-      rewriter.replaceOp(getGlobalOp, getFieldOp);
-    });
-
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
@@ -149,13 +153,18 @@ private:
   /// function.
   std::string funcName;
 
+  /// Format string used to create the wrapper class name where the
+  /// function-name placeholder '{}' is optional.
+  std::string classNameFormat;
+
   /// Map of FuncOp and the GlobalOps it uses which need to be moved into the
   /// ClassOp wrapper.
   DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> globalsToMove;
 };
 
 void mlir::emitc::populateWrapFuncInClass(
-    RewritePatternSet &patterns, StringRef funcName,
+    RewritePatternSet &patterns, StringRef funcName, StringRef classNameFormat,
     DenseMap<FuncOp, DenseSet<GlobalOp>> &globalsToMove) {
-  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName, globalsToMove);
+  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName,
+                                classNameFormat, globalsToMove);
 }

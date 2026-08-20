@@ -24,7 +24,6 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -661,6 +660,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                     /*RawBuffer=*/true, /*HasCounter=*/false)
         .addByteAddressBufferLoadMethods()
         .addByteAddressBufferStoreMethods()
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -670,6 +670,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/true,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferInterlockedMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -841,6 +842,8 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedOr",
                             "__builtin_hlsl_interlocked_or");
+  defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedXor",
+                            "__builtin_hlsl_interlocked_xor");
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
@@ -852,31 +855,7 @@ void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
 void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (!isa<CXXRecordDecl>(Tag))
     return;
-  auto Record = cast<CXXRecordDecl>(Tag);
-
-  // If this is a specialization, we need to get the underlying templated
-  // declaration and complete that.
-  if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(Record)) {
-    if (!isa<ClassTemplatePartialSpecializationDecl>(TDecl)) {
-      ClassTemplateDecl *Template = TDecl->getSpecializedTemplate();
-      llvm::SmallVector<ClassTemplatePartialSpecializationDecl *, 4> Partials;
-      Template->getPartialSpecializations(Partials);
-      ClassTemplatePartialSpecializationDecl *MatchedPartial = nullptr;
-      for (auto *Partial : Partials) {
-        sema::TemplateDeductionInfo Info(TDecl->getLocation());
-        if (SemaPtr->DeduceTemplateArguments(Partial, TDecl->getTemplateArgs(),
-                                             Info) ==
-            TemplateDeductionResult::Success) {
-          MatchedPartial = Partial;
-          break;
-        }
-      }
-      if (MatchedPartial)
-        Record = MatchedPartial;
-      else
-        Record = Template->getTemplatedDecl();
-    }
-  }
+  auto *Record = cast<CXXRecordDecl>(Tag);
   Record = Record->getCanonicalDecl();
   auto It = Completions.find(Record);
   if (It == Completions.end())

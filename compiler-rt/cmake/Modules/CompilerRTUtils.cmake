@@ -319,7 +319,6 @@ macro(load_llvm_config)
   # LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
   # when the target platform does not support shared libraries.
   get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
-  message(NOTICE "HAS_SHARED_SUPPORT is ${HAS_SHARED_SUPPORT}")
   if (NOT HAS_SHARED_SUPPORT)
     set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
   endif()
@@ -497,6 +496,8 @@ function(filter_builtin_sources inout_var name)
         if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_cname}")
           message(STATUS "For ${name} builtins preferring ${_file} to ${_cname}")
           list(REMOVE_ITEM intermediate ${_cname})
+          string(REGEX REPLACE "\\.c$" ".cpp" _cppname "${_cname}")
+          list(REMOVE_ITEM intermediate ${_cppname})
         endif()
       endforeach()
     endif()
@@ -590,9 +591,9 @@ function(add_compiler_rt_install_targets name)
                               -DCMAKE_INSTALL_DO_STRIP=1
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
     set_target_properties(install-${ARG_PARENT_TARGET} PROPERTIES
-                          FOLDER "Compiler-RT/Installation")
+                          FOLDER "compiler-rt/Installation")
     set_target_properties(install-${ARG_PARENT_TARGET}-stripped PROPERTIES
-                          FOLDER "Compiler-RT/Installation")
+                          FOLDER "compiler-rt/Installation")
     add_dependencies(install-compiler-rt install-${ARG_PARENT_TARGET})
     add_dependencies(install-compiler-rt-stripped install-${ARG_PARENT_TARGET}-stripped)
   endif()

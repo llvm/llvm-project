@@ -32,6 +32,27 @@ define amdgpu_kernel void @kern_i8(i8 %arg) #0 {
   ret void
 }
 
+define amdgpu_kernel void @kern_i8_noundef(i8 noundef %arg) #0 {
+; HSA-LABEL: @kern_i8_noundef(
+; HSA-NEXT:    [[KERN_I8_NOUNDEF_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I8_NOUNDEF_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]{{$}}
+; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; HSA-NEXT:    store i8 [[TMP2]], ptr addrspace(1) poison, align 1
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @kern_i8_noundef(
+; MESA-NEXT:    [[KERN_I8_NOUNDEF_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[ARG_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[KERN_I8_NOUNDEF_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META0]]{{$}}
+; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
+; MESA-NEXT:    store i8 [[TMP2]], ptr addrspace(1) poison, align 1
+; MESA-NEXT:    ret void
+;
+  store i8 %arg, ptr addrspace(1) poison, align 1
+  ret void
+}
+
 define amdgpu_kernel void @kern_i16(i16 %arg) #0 {
 ; HSA-LABEL: @kern_i16(
 ; HSA-NEXT:    [[KERN_I16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
@@ -1808,7 +1829,7 @@ define amdgpu_kernel void @noundef_f16(half noundef %arg0) {
 ; HSA-LABEL: @noundef_f16(
 ; HSA-NEXT:    [[NOUNDEF_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F16_KERNARG_SEGMENT]], i64 0
-; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]], !noundef [[META0]]
+; HSA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 16, !invariant.load [[META0]]
 ; HSA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; HSA-NEXT:    [[ARG0_LOAD:%.*]] = bitcast i16 [[TMP2]] to half
 ; HSA-NEXT:    call void (...) @llvm.fake.use(half [[ARG0_LOAD]])
@@ -1817,7 +1838,7 @@ define amdgpu_kernel void @noundef_f16(half noundef %arg0) {
 ; MESA-LABEL: @noundef_f16(
 ; MESA-NEXT:    [[NOUNDEF_F16_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(260) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; MESA-NEXT:    [[ARG0_KERNARG_OFFSET_ALIGN_DOWN:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NOUNDEF_F16_KERNARG_SEGMENT]], i64 36
-; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META0]], !noundef [[META0]]
+; MESA-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[ARG0_KERNARG_OFFSET_ALIGN_DOWN]], align 4, !invariant.load [[META0]]
 ; MESA-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; MESA-NEXT:    [[ARG0_LOAD:%.*]] = bitcast i16 [[TMP2]] to half
 ; MESA-NEXT:    call void (...) @llvm.fake.use(half [[ARG0_LOAD]])

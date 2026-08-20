@@ -68,7 +68,7 @@ public:
   virtual InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const {
+                       const TTI::TargetCostKind CostKind) const {
     llvm_unreachable("Not implemented");
   }
 
@@ -1159,9 +1159,7 @@ public:
     return VF;
   }
 
-  virtual bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
-    return false;
-  }
+  virtual bool preferFixedOverScalableIfEqualCost() const { return false; }
 
   virtual bool preferInLoopReduction(RecurKind Kind, Type *Ty) const {
     return false;

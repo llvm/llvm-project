@@ -302,8 +302,7 @@ define void @signed_postinc_iv_step_1(i64 %end) {
 ; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[IV]], [[END]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:

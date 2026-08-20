@@ -83,7 +83,6 @@ endif()
 # LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
 # when the target platform does not support shared libraries.
 get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
-message(NOTICE "HAS_SHARED_SUPPORT is ${HAS_SHARED_SUPPORT}")
 if (NOT HAS_SHARED_SUPPORT)
   set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
 endif()

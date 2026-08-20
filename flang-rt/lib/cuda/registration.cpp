@@ -48,14 +48,6 @@ void RTDEF(CUFRegisterVariable)(
   __cudaRegisterVar(module, varSym, varName, varName, 0, size, 0, 0);
 }
 
-void RTDEF(CUFRegisterExternalVariable)(
-    void **module, char *varSym, const char *varName, int64_t size) {
-  // Tell the CUDA driver to bind the device-side global <varName> to the
-  // host-resident storage at <varSym>. Kernel accesses to <varName> then go
-  // through the host address; HMM/ATS handles migration.
-  __cudaRegisterHostVar(module, varName, varSym, size);
-}
-
 void RTDEF(CUFRegisterManagedVariable)(
     void **module, void **varSym, char *varName, int64_t size) {
   __cudaRegisterManagedVar(module, varSym, varName, varName, 0, size, 0, 0);

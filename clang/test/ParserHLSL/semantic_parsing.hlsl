@@ -36,9 +36,9 @@ void UnicodePony(int GI : ℮) { }
 // mentioned in N3337.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1949r7.html
 
-// expected-error@+2 {{unexpected character <U+1F60A>}}
+// expected-error@+2 {{unexpected character '😊' U+1F60A}}
 // expected-error@+1 {{expected HLSL Semantic identifier}}
 void UTFPony(int GI : 😊) { }
 
-// expected-error@+1 {{character <U+1F60A> not allowed in an identifier}}
+// expected-error@+1 {{character '😊' U+1F60A not allowed in an identifier}}
 void SmilingPony(int GI : PonyWithA😊) { }
