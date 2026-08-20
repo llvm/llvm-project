@@ -204,6 +204,20 @@ namespace PrivateSibling {
   static_assert(dynamic_cast<E*>((B*)&g) == nullptr);
 }
 
+namespace PrivateBase {
+  struct A {};
+  struct B : public A {};
+  struct C : private B{}; // both-note {{constrained by private inheritance here}}
+  struct D : public C{};
+  constexpr bool foo() {
+    D d;
+    A *a = dynamic_cast<A*>(&d); // both-error {{cannot cast 'PrivateBase::D' to its private base class 'PrivateBase::A'}}
+
+    return a != nullptr;
+  }
+  static_assert(foo());
+}
+
 namespace Field {
   struct X {
     mutable int n = 0;
