@@ -170,3 +170,16 @@ func.func @foreach_bcoo(%A: tensor<4x4x4xf64, #BCOO>) {
   }
   return
 }
+
+#Symbolic = #sparse_tensor.encoding<{
+  map = [c](i, j) -> (c * 3 * i : dense, i : dense, j : compressed)
+}>
+
+// CHECK-LABEL: func.func @symbolic_crd_translate(
+// CHECK: sparse_tensor.crd_translate dim_to_lvl
+func.func @symbolic_crd_translate(%i: index, %j: index)
+    -> (index, index, index) {
+  %l0, %l1, %l2 = sparse_tensor.crd_translate dim_to_lvl [%i, %j]
+      as #Symbolic : index, index, index
+  return %l0, %l1, %l2 : index, index, index
+}
