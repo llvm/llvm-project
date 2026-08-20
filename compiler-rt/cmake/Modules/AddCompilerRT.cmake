@@ -1,5 +1,4 @@
 include(ExternalProject)
-include(AddLLVM)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
 include(LLVMVersion)
@@ -49,12 +48,18 @@ function(set_compiler_rt_windows_version_resource_properties name resource_file)
       "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}")
   endif()
 
-  set_windows_version_resource_properties(${name} ${resource_file}
-    VERSION_MAJOR ${LLVM_VERSION_MAJOR}
-    VERSION_MINOR ${LLVM_VERSION_MINOR}
-    VERSION_PATCHLEVEL ${LLVM_VERSION_PATCH}
-    VERSION_STRING "${version_string}"
-    PRODUCT_NAME "compiler-rt")
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_FLAGS /nologo)
+  set_property(SOURCE ${resource_file}
+               PROPERTY COMPILE_DEFINITIONS
+               "RC_VERSION_FIELD_1=${LLVM_VERSION_MAJOR}"
+               "RC_VERSION_FIELD_2=${LLVM_VERSION_MINOR}"
+               "RC_VERSION_FIELD_3=${LLVM_VERSION_PATCH}"
+               "RC_VERSION_FIELD_4=0"
+               "RC_FILE_VERSION=\"${version_string}\""
+               "RC_INTERNAL_NAME=\"${name}\""
+               "RC_PRODUCT_NAME=\"compiler-rt\""
+               "RC_PRODUCT_VERSION=\"${version_string}\"")
 endfunction()
 
 # Tries to add an "object library" target for a given list of OSs and/or
