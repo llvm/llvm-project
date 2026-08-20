@@ -3796,19 +3796,20 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(
-      builder, state, clauses.iterated, clauses.affinityVars,
-      clauses.allocateVars, clauses.allocatorVars,
-      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
-      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
-      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.final, clauses.ifExpr, clauses.inReductionVars,
-      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-      clauses.priority, /*private_vars=*/clauses.privateVars,
-      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                clauses.dependIterated, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
+                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+                clauses.priority, /*private_vars=*/clauses.privateVars,
+                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.threadset, clauses.untied,
+                clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
@@ -3878,7 +3879,8 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
       /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
       clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadset,
+      clauses.untied);
   state.addAttribute("omp.combined", UnitAttr::get(ctx));
 }
 

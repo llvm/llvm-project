@@ -3519,7 +3519,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dependencies, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
-          moduleTranslation.lookupValue(taskOp.getPriority()));
+          moduleTranslation.lookupValue(taskOp.getPriority()),
+          taskOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -4156,7 +4157,8 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
           contextOp.getMergeable(),
           moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
-          taskStructMgr.getStructPtr());
+          taskStructMgr.getStructPtr(),
+          contextOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();

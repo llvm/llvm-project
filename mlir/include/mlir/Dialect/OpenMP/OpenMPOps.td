@@ -1033,7 +1033,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
     OpenMP_FinalClause, OpenMP_IfClause,
     OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
-    OpenMP_UntiedClause, OpenMP_DetachClause
+    OpenMP_ThreadsetClause, OpenMP_UntiedClause, OpenMP_DetachClause
   ], singleRegion = true> {
   let summary = "task construct";
   let description = [{
@@ -1080,7 +1080,7 @@ def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     OpenMP_IfClause, OpenMP_InReductionClauseSkip<assemblyFormat = true>,
     OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
     OpenMP_PriorityClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
-    OpenMP_UntiedClause
+    OpenMP_ThreadsetClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "OutlinableOpenMPOpInterface wrapper for taskloop construct";
   let description = [{
