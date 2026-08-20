@@ -516,7 +516,7 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
 
-- Fixed a crash when a redeclaration of a function template or an out-of-line
+- Fixed an assertion when a redeclaration of a function template or an out-of-line
   definition of a member of a class template added a default argument to a
   parameter that follows a parameter pack (e.g.
   `template <typename... T> S::S(T..., int = 10) {}`). Clang now diagnoses the
