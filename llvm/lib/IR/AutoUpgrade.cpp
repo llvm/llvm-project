@@ -5634,13 +5634,11 @@ static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
            "missing argument outside the default range");
     Type *ParamTy = NewFT->getParamType(Idx);
 
-    // Only integer types are supported (i1, i8, i16, i32, i64).
     if (!ParamTy->isIntegerTy())
       return false;
     NewArgs.push_back(ConstantInt::get(ParamTy, Defaults[Idx - FirstDefault]));
   }
 
-  // Preserve operand bundles by creating the call with them.
   SmallVector<OperandBundleDef, 1> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
   CallInst *NewCall = Builder.CreateCall(NewFn, NewArgs, OpBundles);
