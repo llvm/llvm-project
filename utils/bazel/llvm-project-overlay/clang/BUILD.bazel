@@ -1948,6 +1948,7 @@ cc_library(
         ":ast",
         ":basic",
         ":codegen",
+        ":config",
         ":driver",
         ":edit",
         ":frontend",
