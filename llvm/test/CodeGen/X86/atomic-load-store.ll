@@ -73,34 +73,20 @@ define <1 x i16> @atomic_vec1_i16(ptr %x) {
 }
 
 define <1 x i32> @atomic_vec1_i8_zext(ptr %x) {
-; CHECK-O3-LABEL: atomic_vec1_i8_zext:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movzbl (%rdi), %eax
-; CHECK-O3-NEXT:    movzbl %al, %eax
-; CHECK-O3-NEXT:    retq
-;
-; CHECK-O0-LABEL: atomic_vec1_i8_zext:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movb (%rdi), %al
-; CHECK-O0-NEXT:    movzbl %al, %eax
-; CHECK-O0-NEXT:    retq
+; CHECK-LABEL: atomic_vec1_i8_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzbl (%rdi), %eax
+; CHECK-NEXT:    retq
   %ret = load atomic <1 x i8>, ptr %x acquire, align 1
   %zret = zext <1 x i8> %ret to <1 x i32>
   ret <1 x i32> %zret
 }
 
 define <1 x i64> @atomic_vec1_i16_sext(ptr %x) {
-; CHECK-O3-LABEL: atomic_vec1_i16_sext:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    movzwl (%rdi), %eax
-; CHECK-O3-NEXT:    movswq %ax, %rax
-; CHECK-O3-NEXT:    retq
-;
-; CHECK-O0-LABEL: atomic_vec1_i16_sext:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movw (%rdi), %ax
-; CHECK-O0-NEXT:    movswq %ax, %rax
-; CHECK-O0-NEXT:    retq
+; CHECK-LABEL: atomic_vec1_i16_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movswq (%rdi), %rax
+; CHECK-NEXT:    retq
   %ret = load atomic <1 x i16>, ptr %x acquire, align 2
   %sret = sext <1 x i16> %ret to <1 x i64>
   ret <1 x i64> %sret
