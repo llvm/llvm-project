@@ -10142,6 +10142,46 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
+void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
+  const auto *FT = FD->getType()->getAs<FunctionType>();
+  if (!FT)
+    return;
+
+  StringRef Tag;
+  switch (FT->getCallConv()) {
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    Tag = "riscv_vls_cc_" #ABI_VLEN;                                           \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+  default:
+    return;
+  }
+
+  SmallVector<StringRef, 4> Tags;
+  if (const auto *Old = FD->getAttr<AbiTagAttr>())
+    llvm::append_range(Tags, Old->tags());
+  if (llvm::is_contained(Tags, Tag))
+    return;
+  Tags.push_back(Tag);
+
+  auto *Attr = AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size());
+  FD->dropAttr<AbiTagAttr>();
+  FD->addAttr(Attr);
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -10773,6 +10813,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
+  addImplicitCallingConvAbiTag(NewFD);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
       !NewTVA->isDefaultVersion() &&
