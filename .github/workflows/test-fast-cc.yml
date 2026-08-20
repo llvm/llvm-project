@@ -11,6 +11,7 @@ jobs:
     - run: |
         New-Item -Path "C:\temp-download" -ItemType "Directory" -Force ;
         New-Item -Path "C:\clang" -ItemType "Directory" -Force ;
+        Set-Location C:\temp-download ;
         Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-${env:LLVM_VERSION}/clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" ;
         (Get-FileHash -Path "C:\temp-download\clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ;
         xz.exe -d -qq clang+llvm-${env:LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz ;
