@@ -415,10 +415,12 @@ const char *ValueObjectVariable::GetLocationAsCString() {
     return ValueObject::GetLocationAsCString();
 }
 
-bool ValueObjectVariable::CanSetValue() {
+llvm::Error ValueObjectVariable::CanSetValue() {
   // Refresh the resolved location so m_resolved_value_is_implicit is current.
   UpdateValueIfNeeded();
-  return !m_resolved_value_is_implicit && ValueObject::CanSetValue();
+  if (m_resolved_value_is_implicit)
+    return llvm::createStringError("variable is not in a writable location");
+  return ValueObject::CanSetValue();
 }
 
 bool ValueObjectVariable::SetValueFromCString(const char *value_str,
@@ -428,8 +430,8 @@ bool ValueObjectVariable::SetValueFromCString(const char *value_str,
     return false;
   }
 
-  if (m_resolved_value_is_implicit) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
 
@@ -462,8 +464,8 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  if (m_resolved_value_is_implicit) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
 
