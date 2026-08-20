@@ -30,6 +30,18 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
   EvalMode = Parent.EvalMode;
 }
 
+InterpState::InterpState(Expr::EvalStatus &Status, Program &P, InterpStack &Stk,
+                         Context &Ctx, SourceMapper *M)
+    : State(Ctx.getASTContext(), Status), M(M), P(P), Stk(Stk), Ctx(Ctx),
+      BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = true;
+  CheckingPotentialConstantExpression = false;
+  CheckingForUndefinedBehavior = true;
+  EvalMode = EvaluationMode::ConstantExpression;
+}
+
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
     : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),

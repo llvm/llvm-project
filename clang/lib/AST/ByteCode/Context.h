@@ -67,6 +67,7 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+  void registerRedecl(const VarDecl *VD, const APValue &V);
 
   /// Evaluates the destruction of a variable.
   bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
