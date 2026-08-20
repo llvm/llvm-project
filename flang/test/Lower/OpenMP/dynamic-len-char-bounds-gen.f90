@@ -15,5 +15,5 @@ end subroutine TestCharLenBounds
 !CHECK: %[[STRIDE:.*]] = arith.constant 1 : index
 !CHECK: %[[EXTENT:.*]]:2 = fir.unboxchar %[[DECLARE]]#0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 !CHECK: %[[UB:.*]] = arith.subi %[[EXTENT]]#1, %[[STRIDE]] : index
-!CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB_START_IDX]] : index) upper_bound(%[[UB]] : index) extent(%[[EXTENT]]#1 : index) stride(%[[STRIDE]] : index) start_idx(%[[LB_START_IDX]] : index) {stride_in_bytes = true}
+!CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB_START_IDX]] : index) upper_bound(%[[UB]] : index) extent(%[[EXTENT]]#1 : index) stride(%[[STRIDE]] : index) start_idx(%[[LB_START_IDX]] : index) stride_in_bytes(true)
 !CHECK: %{{.*}} = omp.map.info {{.*}} bounds(%[[BOUNDS]]) {{.*}}

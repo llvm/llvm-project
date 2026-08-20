@@ -357,12 +357,11 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
   if (!Root.isReg())
     return std::nullopt;
   Register RootReg = Root.getReg();
-  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
 
-  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
-      RootDef->getOperand(2).getImm() == Bits) {
-    return {
-        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  Register SrcReg;
+  if (mi_match(RootReg, *MRI,
+               m_GSExtInReg(m_Reg(SrcReg), m_SpecificImm(Bits)))) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SrcReg); }}};
   }
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
@@ -1013,12 +1012,8 @@ bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I) const {
         }
       }
 
-      MachineInstr *AVLDef = MRI->getVRegDef(AVLReg);
-      if (AVLDef && AVLDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-        const auto *C = AVLDef->getOperand(1).getCImm();
-        if (C->getValue().isAllOnes())
-          VLMax = true;
-      }
+      if (mi_match(AVLReg, *MRI, m_AllOnes()))
+        VLMax = true;
     }
 
     if (VLMax) {

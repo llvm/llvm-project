@@ -2025,6 +2025,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          ISD::VECTOR_MATCH,
                          ISD::MGATHER,
                          ISD::MSCATTER,
+                         ISD::MLOAD,
                          ISD::VP_GATHER,
                          ISD::VP_SCATTER,
                          ISD::SRL,
@@ -20922,6 +20923,62 @@ static SDValue performVP_STORECombine(SDNode *N, SelectionDAG &DAG,
       VPStore->isCompressingStore());
 }
 
+/// Given
+/// ```
+/// %s = <0, 1, 2, 3, ...>
+/// %M = splat %m
+/// %p = setcc ult %s, %M
+/// %v = mask.load %addr, %p, %passthru
+/// ```
+/// we can turn this use a vp.load + vp.merge instead to avoid
+/// emitting mask. The VL of these two vp operations would be
+/// `min(%m, <number of vector elements>)`
+static SDValue performMaskedLoadToVPLoadCombine(MaskedLoadSDNode *MLoad,
+                                                SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
+  EVT MaskVT = MLoad->getMask().getValueType();
+  assert(MaskVT.isVector());
+  if (!MaskVT.isFixedLengthVector())
+    return SDValue();
+  unsigned NumElements = MaskVT.getVectorNumElements();
+  SDLoc DL(MLoad);
+
+  SDValue SetCCLHS, SetCCRHS;
+  ISD::CondCode CC;
+  if (!sd_match(MLoad->getMask(), m_SetCC(m_Value(SetCCLHS), m_Value(SetCCRHS),
+                                          m_CondCode(CC))) ||
+      SetCCLHS->getOpcode() != ISD::BUILD_VECTOR ||
+      !(CC == ISD::SETULT || CC == ISD::SETLT) ||
+      !SetCCLHS.getValueType().isInteger())
+    return SDValue();
+  bool IsSigned = ISD::isSignedIntSetCC(CC);
+
+  SDValue Boundary = DAG.getSplatValue(SetCCRHS, /*LegalizeType=*/true);
+  if (!Boundary)
+    return SDValue();
+
+  // Return {a,n} from a build_vector sequence of {a, a+n, a+2n, a+3n, ....}
+  auto StepVector = cast<BuildVectorSDNode>(SetCCLHS)->isArithmeticSequence();
+  if (!StepVector || !StepVector->first.isZero() || !StepVector->second.isOne())
+    return SDValue();
+  EVT LenVT = Boundary.getValueType();
+
+  SDValue VL = DAG.getNode(IsSigned ? ISD::SMIN : ISD::UMIN, DL, LenVT,
+                           Boundary, DAG.getConstant(NumElements, DL, LenVT));
+
+  SDValue VPLoad = DAG.getLoadVP(
+      MLoad->getValueType(0), DL, MLoad->getChain(), MLoad->getBasePtr(),
+      DAG.getAllOnesConstant(DL, MaskVT), VL, MLoad->getPointerInfo(),
+      MLoad->getBaseAlign(), MLoad->getMemOperand()->getFlags(), AAMDNodes());
+  if (MLoad->getPassThru().isUndef())
+    return DAG.getMergeValues({VPLoad, VPLoad.getValue(1)}, DL);
+  // Insert vp.merge if there is a passthru.
+  SDValue VPMerge = DAG.getNode(ISD::VP_MERGE, DL, MLoad->getValueType(0),
+                                DAG.getAllOnesConstant(DL, MaskVT), VPLoad,
+                                MLoad->getPassThru(), VL);
+  return DAG.getMergeValues({VPMerge, VPLoad.getValue(1)}, DL);
+}
+
 // Convert from one FMA opcode to another based on whether we are negating the
 // multiply result and/or the accumulator.
 // NOTE: Only supports RVV operations with VL.
@@ -24385,6 +24442,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                        DAG.getConstant(1, DL, XLenVT), N->getOperand(3),
                        N->getOperand(4));
   }
+  case ISD::MLOAD:
+    return performMaskedLoadToVPLoadCombine(cast<MaskedLoadSDNode>(N), DAG);
   }
 
   return SDValue();

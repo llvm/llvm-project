@@ -415,31 +415,7 @@ template< unsigned hasField::*ptr>
 void changeFieldPtr(hasField &hf) {
   hf.*ptr = 1;
 }
-// CIR-BEFORE-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
-// CIR-BEFORE: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
-// CIR-BEFORE: %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR-BEFORE: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
-// CIR-BEFORE: %[[GET_DM:.*]] = cir.const #cir.data_member<[0]> : !cir.data_member<!u32i in !rec_hasField>
-// CIR-BEFORE: %[[GET_MEM:.*]] = cir.get_runtime_member %[[LOAD_ARG]][%[[GET_DM]] : !cir.data_member<!u32i in !rec_hasField>] : !cir.ptr<!rec_hasField> -> !cir.ptr<!u32i>
-// CIR-BEFORE: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
 
-// CIR-AFTER-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
-// CIR-AFTER: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
-// CIR-AFTER: %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR-AFTER: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
-// CIR-AFTER: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CIR-AFTER: %[[ARG_AS_PTR:.*]] = cir.cast bitcast %[[LOAD_ARG]] : !cir.ptr<!rec_hasField> -> !cir.ptr<!s8i>
-// CIR-AFTER: %[[STRIDE:.*]] = cir.ptr_stride %[[ARG_AS_PTR]], %[[ZERO]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
-// CIR-AFTER: %[[GET_MEM:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!s8i> -> !cir.ptr<!u32i>
-// CIR-AFTER: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
-
-// LLVM-LABEL: define linkonce_odr void @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
-// LLVM: %[[ARG:.*]] = alloca ptr
-// LLVM: %[[LOAD_ARG:.*]] = load ptr, ptr %[[ARG]]
-// LLVM: %[[GET_MEM:.*]] = getelementptr i8, ptr %[[LOAD_ARG]], i64 0
-// LLVM: store i32 1, ptr %[[GET_MEM]]
-
-// OGCG has these ordered separately, so this has to live here :/
 // OGCG-LABEL: define dso_local void @_Z11useHasFieldv()
 // OGCG:   %[[X:.*]] = alloca ptr
 // OGCG:   store ptr @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_, ptr %[[X]]
@@ -479,4 +455,28 @@ void useHasField() {
 // LLVM:   store ptr @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_, ptr %[[X]]
 // LLVM:   %[[LOAD_X:.*]] = load ptr, ptr %[[X]]
 // LLVM:   call void %[[LOAD_X]]({{.*}})
+
+// CIR-BEFORE-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// CIR-BEFORE: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
+// CIR-BEFORE: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-BEFORE: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
+// CIR-BEFORE: %[[GET_DM:.*]] = cir.const #cir.data_member<[0]> : !cir.data_member<!u32i in !rec_hasField>
+// CIR-BEFORE: %[[GET_MEM:.*]] = cir.get_runtime_member %[[LOAD_ARG]][%[[GET_DM]] : !cir.data_member<!u32i in !rec_hasField>] : !cir.ptr<!rec_hasField> -> !cir.ptr<!u32i>
+// CIR-BEFORE: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
+
+// CIR-AFTER-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// CIR-AFTER: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
+// CIR-AFTER: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-AFTER: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
+// CIR-AFTER: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CIR-AFTER: %[[ARG_AS_PTR:.*]] = cir.cast bitcast %[[LOAD_ARG]] : !cir.ptr<!rec_hasField> -> !cir.ptr<!s8i>
+// CIR-AFTER: %[[STRIDE:.*]] = cir.ptr_stride %[[ARG_AS_PTR]], %[[ZERO]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER: %[[GET_MEM:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!s8i> -> !cir.ptr<!u32i>
+// CIR-AFTER: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
+
+// LLVM-LABEL: define linkonce_odr void @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// LLVM: %[[ARG:.*]] = alloca ptr
+// LLVM: %[[LOAD_ARG:.*]] = load ptr, ptr %[[ARG]]
+// LLVM: %[[GET_MEM:.*]] = getelementptr i8, ptr %[[LOAD_ARG]], i64 0
+// LLVM: store i32 1, ptr %[[GET_MEM]]
 
