@@ -5122,28 +5122,38 @@ private:
 } // end anonymous namespace
 
 void ScalarEvolution::inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
-  if (!AR->isAffine())
+  if (!AR->isAffine() || (AR->hasNoUnsignedWrap() && AR->hasNoSignedWrap()))
     return;
 
-  // Force computation of ranges, which will also perform range-based flag
-  // inference.
-  if (!AR->hasNoSignedWrap())
-    (void)getSignedRange(AR);
+  // Infer NUW/NSW.
+  SCEVNoWrapFlags NoWrap = AR->getNoWrapFlags();
+  unsigned BitWidth = getTypeSizeInBits(AR->getType());
+  const SCEV *BECount = getConstantMaxBackedgeTakenCount(AR->getLoop());
+  if (isa<SCEVCouldNotCompute>(BECount))
+    return;
+  APInt MaxBECount = cast<SCEVConstant>(BECount)->getAPInt();
 
-  if (!AR->hasNoUnsignedWrap())
-    (void)getUnsignedRange(AR);
+  if (MaxBECount.getBitWidth() > BitWidth &&
+      MaxBECount.getActiveBits() <= BitWidth)
+    MaxBECount = MaxBECount.trunc(BitWidth);
+  else if (MaxBECount.getBitWidth() < BitWidth)
+    MaxBECount = MaxBECount.zext(BitWidth);
+  if (MaxBECount.getBitWidth() != BitWidth)
+    return;
+  NoWrap = setFlags(NoWrap, getRangeForAffineAR(AR->getStart(),
+                                                AR->getStepRecurrence(*this),
+                                                MaxBECount)
+                                .second);
 
-  if (!AR->hasNoSelfWrap()) {
-    const SCEV *BECount = getConstantMaxBackedgeTakenCount(AR->getLoop());
-    if (const SCEVConstant *BECountMax = dyn_cast<SCEVConstant>(BECount)) {
-      ConstantRange StepCR = getSignedRange(AR->getStepRecurrence(*this));
-      const APInt &BECountAP = BECountMax->getAPInt();
-      unsigned NoOverflowBitWidth =
-        BECountAP.getActiveBits() + StepCR.getMinSignedBits();
-      if (NoOverflowBitWidth <= getTypeSizeInBits(AR->getType()))
-        const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(SCEV::FlagNW);
-    }
+  // Otherwise, try to infer NW.
+  if (!hasFlags(NoWrap, SCEV::FlagNUW | SCEV::FlagNSW)) {
+    ConstantRange StepCR = getSignedRange(AR->getStepRecurrence(*this));
+    unsigned NoOverflowBitWidth =
+        MaxBECount.getActiveBits() + StepCR.getMinSignedBits();
+    if (NoOverflowBitWidth < BitWidth)
+      NoWrap = setFlags(NoWrap, SCEV::FlagNW);
   }
+  const_cast<SCEVAddRecExpr *>(AR)->setNoWrapFlags(NoWrap);
 }
 
 SCEV::NoWrapFlags
