@@ -226,6 +226,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  dev_t
+  HDRS
+    dev_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.dev_t
+)
+
+add_proxy_header_library(
   mode_t
   HDRS
     mode_t.h
@@ -372,6 +380,14 @@ add_proxy_header_library(
     pthread_barrier_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.pthread_barrier_t
+)
+
+add_proxy_header_library(
+  sem_t
+  HDRS
+    sem_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.sem_t
 )
 
 add_proxy_header_library(

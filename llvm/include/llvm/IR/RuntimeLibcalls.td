@@ -59,6 +59,8 @@ def IsAAPCS_ABI : LibcallPredicate<[{isAAPCS_ABI(TT, ABIName)}]>;
 def IsEABI4 : LibcallPredicate<[{EABIVersion == EABI::EABI4}]>;
 def IsEABI5 : LibcallPredicate<[{EABIVersion == EABI::EABI5}]>;
 
+def IsLongDoubleF128 : LibcallPredicate<[{LongDoubleFormat == LongDoubleFormat::IEEEquad}]>;
+
 def IsAMDGPU : LibcallPredicate<[{TT.isAMDGPU()}]>;
 def IsARM : LibcallPredicate<[{TT.isARM()}]>;
 def IsThumb : LibcallPredicate<[{TT.isThumb()}]>;
@@ -108,6 +110,10 @@ def IsArchXtensa : LibcallPredicate<[{TT.getArch() == Triple::xtensa}]>;
 def isOSDarwin : RuntimeLibcallAvailability<(all_of IsOSDarwin)>;
 def isOSOpenBSD : RuntimeLibcallAvailability<(all_of IsOSOpenBSD)>;
 def isNotOSOpenBSD : RuntimeLibcallAvailability<(not IsOSOpenBSD)>;
+
+// True when the C `long double` type is IEEE fp128.
+def isLongDoubleF128 : RuntimeLibcallAvailability<(all_of IsLongDoubleF128)>;
+
 def isOSWindows : RuntimeLibcallAvailability<(all_of IsOSWindows)>;
 def isNotOSWindows : RuntimeLibcallAvailability<(not IsOSWindows)>;
 def isNotOSLinux : RuntimeLibcallAvailability<(not IsOSLinux)>;
@@ -1988,17 +1994,28 @@ defvar DefaultRuntimeLibcallImpls_f128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "_F128"));
 
+// The l-suffixed libm functions are fp128 only when long double is fp128.
+defvar DefaultRuntimeLibcallImpls_longdouble_f128 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry), "l_f128"));
+
 // FIXME: Ideally we would just use dags everywhere, but for the
 // arm64ec case we need iterable lists so we can add the # prefix
+//
+// The fp128 long double libcalls are added on a per-target basis.
 defvar DefaultRuntimeLibcallImplsBaseList =
 !listremove(
   !listremove(
-    !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
-                DefaultRuntimeLibcallImpls_f80),
-                DefaultRuntimeLibcallImpls_ppcf128);
+    !listremove(
+      !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                  DefaultRuntimeLibcallImpls_f80),
+                  DefaultRuntimeLibcallImpls_ppcf128),
+                  DefaultRuntimeLibcallImpls_longdouble_f128);
 
 defvar DefaultRuntimeLibcallImpls =
   (add DefaultRuntimeLibcallImplsBaseList,
+       LibcallImpls<(add DefaultRuntimeLibcallImpls_longdouble_f128),
+                    isLongDoubleF128>,
        ExceptionModelCalls);
 
 /// Default set of libcall impls for 32-bit architectures.
@@ -2179,20 +2196,35 @@ def isWindowsArm64EC : RuntimeLibcallAvailability<(all_of IsWindowsArm64EC)>;
 def isAArch64_ILP64
     : RuntimeLibcallAvailability<(all_of IsAArch64_ILP64)>;
 
+// frexpl/ldexpl/exp10l are added separately based on the Target Triple.
+defvar AArch64LongDoubleF128Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
+// fp128 long double, excluding the Windows math runtime (which lacks frexpl/
+// ldexpl) and Darwin (which lacks exp10l).
+def isLongDoubleF128NotWinMath : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (any_of (not IsOSWindows), IsOSCygMing))>;
+def isLongDoubleF128NotDarwin : RuntimeLibcallAvailability<
+  (all_of IsLongDoubleF128, (not IsOSDarwin))>;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
   (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF128, LibmHasLdexpF128,
+       // The l-suffixed libm functions are fp128 only when long double is.
+       LibcallImpls<(add frexpl_f128, ldexpl_f128), isLongDoubleF128NotWinMath>,
+       LibcallImpls<(add AArch64LongDoubleF128Body), isLongDoubleF128>,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        MacOSUnlockedIO,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       DefaultLibmExp10,
+       LibmHasExp10F32, LibmHasExp10F64,
+       // exp10l is fp128 only when long double is.
+       LibcallImpls<(add exp10l_f128), isLongDoubleF128NotDarwin>,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
        LibcallImpls<(add __chkstk), isOSWindows>,
@@ -2694,15 +2726,18 @@ def ARMSystemLibrary
                                         AEABIOverrides),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
-           LibmHasFrexpF128, LibmHasLdexpF128,
+           // The l-suffixed libm functions are fp128 only when long double is.
+           LibcallImpls<(add frexpl_f128, ldexpl_f128, sincosl_f128,
+                             exp10l_f128),
+                        isLongDoubleF128>,
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
            LibcallImpls<(add __chkstk), isOSWindows>,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
-           LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-           DefaultLibmExp10,
+           LibmHasSinCosF32, LibmHasSinCosF64,
+           LibmHasExp10F32, LibmHasExp10F64,
            LibcSafestackPointerAddress,
 
            AEABICalls,
@@ -3386,6 +3421,11 @@ defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_
 
 defvar MemChkLibcalls = [__memcpy_chk, __memset_chk, __memmove_chk];
 
+// frexpl/ldexpl/exp10l are added separately below with their own guards.
+defvar X86LongDoubleF128Body =
+    !listremove(DefaultRuntimeLibcallImpls_longdouble_f128,
+                [frexpl_f128, ldexpl_f128, exp10l_f128]);
+
 defvar X86CommonLibcalls =
   (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides, MemChkLibcalls),
        DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern, MacOSUnlockedIO,
@@ -3396,6 +3436,9 @@ defvar X86CommonLibcalls =
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
        LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
+       // The l-suffixed long double math is fp128 only when long double is fp128
+       // (e.g. x86_64 Android/OHOS). frexpl/ldexpl/exp10l are added above.
+       LibcallImpls<(add X86LongDoubleF128Body), isLongDoubleF128>,
        DefaultRuntimeLibcallImpls_f80,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,

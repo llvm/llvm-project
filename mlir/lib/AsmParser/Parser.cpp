@@ -405,6 +405,14 @@ ParseResult Parser::parseFloatFromLiteral(std::optional<APFloat> &result,
     if (!val)
       return emitError(tok.getLoc()) << "floating point value too large";
 
+    // A type with no signed representation, such as f8E8M0FNU, has no encoding
+    // for this value at all; the conversion below would keep the sign bit and
+    // produce a value that asserts when it is printed.
+    if (isNegative && !APFloat::semanticsHasSignedRepr(semantics))
+      return emitError(tok.getLoc())
+             << "negative floating point literal for a type with no signed "
+                "representation";
+
     result.emplace(isNegative ? -*val : *val);
     bool unused;
     result->convert(semantics, APFloat::rmNearestTiesToEven, &unused);

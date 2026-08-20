@@ -901,6 +901,7 @@ public:
       return builder.getConstInt(loc, cgf.convertType(e->getType()),
                                  (uint64_t)e->getBoolValue());
     }
+    assert(e->getType()->isIntegerType() && "not a scalar type trait");
     return builder.getConstInt(loc, e->getAPValue().getInt());
   }
   mlir::Value
@@ -932,6 +933,9 @@ public:
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
   }
 
+  mlir::Value emitFixedPointConversion(mlir::Value src, QualType srcTy,
+                                       QualType dstTy, mlir::Location loc);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -945,12 +949,28 @@ public:
     // this function more, and although fixed point numbers are represented by
     // integers, we do not want to follow any logic that assumes they should be
     // treated as integers.
-    // TODO(leonardchan): When necessary, add another if statement checking for
-    // conversions to fixed point types from other types.
-    // conversions to fixed point types from other types.
-    if (srcType->isFixedPointType() || dstType->isFixedPointType()) {
-      cgf.getCIRGenModule().errorNYI(loc, "fixed point conversions");
-      return {};
+    if (srcType->isFixedPointType()) {
+      if (dstType->isBooleanType()) {
+        cir::BoolType boolTy = builder.getBoolTy();
+        return cir::CastOp::create(builder, cgf.getLoc(loc), boolTy,
+                                   cir::CastKind::int_to_bool, src);
+      }
+
+      if (dstType->isFixedPointType() || dstType->isIntegerType() ||
+          dstType->isRealFloatingType())
+        return emitFixedPointConversion(src, srcType, dstType, cgf.getLoc(loc));
+
+      llvm_unreachable("Unhandled scalar conversion from a fixed point type to "
+                       "another type.");
+    } else if (dstType->isFixedPointType()) {
+      if (srcType->isIntegerType() || srcType->isRealFloatingType()) {
+        // This also includes converting booleans and enums to fixed point
+        // types.
+        return emitFixedPointConversion(src, srcType, dstType, cgf.getLoc(loc));
+      }
+
+      llvm_unreachable("Unhandled scalar conversion to a fixed point type from "
+                       "another type.");
     }
 
     srcType = srcType.getCanonicalType();
@@ -1948,6 +1968,344 @@ static bool isIntegerVectorBinOp(mlir::Type ty) {
   return vecTy && mlir::isa<cir::IntType>(vecTy.getElementType());
 }
 
+// Construct a cir.fmuladd op to represent a fused mul-add of `mulOp` and
+// `addend`. Use negMul and negAdd to negate the first operand of the mul or
+// the addend respectively. This allows fmuladd to represent a*b-c, or c-a*b.
+// Patterns in LLVM should catch the negated forms and translate them to
+// efficient operations.
+static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
+                                mlir::Value addend, CIRGenBuilderTy &builder,
+                                bool negMul, bool negAdd) {
+  mlir::Location loc = builder.getFusedLoc({mulOp.getLoc(), addLoc});
+  mlir::Value mulOp0 = mulOp.getLhs();
+  mlir::Value mulOp1 = mulOp.getRhs();
+  if (negMul)
+    mulOp0 = builder.createFNeg(loc, mulOp0);
+  if (negAdd)
+    addend = builder.createFNeg(loc, addend);
+
+  // Carry the mul's fenv attribute so a constrained fmul yields a constrained
+  // fmuladd; the builder is under the add's FP options, not the mul's.
+  mlir::Value fmuladd =
+      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
+                             addend, mulOp.getFenvAttr());
+  mulOp.erase();
+  return fmuladd;
+}
+
+// Check whether it would be legal to emit a cir.fmuladd op to represent op
+// and if so, build it.
+//
+// Checks that (a) the operation is fusable, and (b) -ffp-contract=on.
+// Does NOT check the type of the operation - it's assumed that this function
+// will be called from contexts where it's known that the type is contractable.
+static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
+                                  CIRGenBuilderTy &builder,
+                                  bool isSub = false) {
+  assert((op.opcode == BO_Add || op.opcode == BO_AddAssign ||
+          op.opcode == BO_Sub || op.opcode == BO_SubAssign) &&
+         "Only fadd/fsub can be the root of an fmuladd.");
+
+  // Check whether this op is fusable, i.e. -ffp-contract=on. -ffp-contract=fast
+  // needs fast-math flags on the fmul/fadd, which CIR does not model yet, so it
+  // fuses nowhere for now.
+  assert(!cir::MissingFeatures::fastMathFlags());
+  if (!op.fpFeatures.allowFPContractWithinStatement())
+    return nullptr;
+
+  mlir::Value lhs = op.lhs;
+  mlir::Value rhs = op.rhs;
+
+  // Peek through fneg to look for fmul. Make sure the fneg has no other users,
+  // and that it is the only use of its operand.
+  bool negLHS = false;
+  if (auto lhsNeg = lhs.getDefiningOp<cir::FNegOp>()) {
+    if (lhsNeg.getResult().use_empty() && lhsNeg.getInput().hasOneUse()) {
+      lhs = lhsNeg.getInput();
+      negLHS = true;
+    }
+  }
+
+  bool negRHS = false;
+  if (auto rhsNeg = rhs.getDefiningOp<cir::FNegOp>()) {
+    if (rhsNeg.getResult().use_empty() && rhsNeg.getInput().hasOneUse()) {
+      rhs = rhsNeg.getInput();
+      negRHS = true;
+    }
+  }
+
+  // We have a potentially fusable op. Look for a mul on one of the operands.
+  // Also make sure that the mul result isn't used directly. In that case,
+  // there's no point creating a muladd operation.
+  if (auto lhsMul = lhs.getDefiningOp<cir::FMulOp>()) {
+    if (lhsMul.getResult().use_empty() || negLHS) {
+      // If we looked through fneg, erase it.
+      if (negLHS)
+        op.lhs.getDefiningOp<cir::FNegOp>().erase();
+      return buildFMulAdd(loc, lhsMul, op.rhs, builder, negLHS, isSub);
+    }
+  }
+  if (auto rhsMul = rhs.getDefiningOp<cir::FMulOp>()) {
+    if (rhsMul.getResult().use_empty() || negRHS) {
+      // If we looked through fneg, erase it.
+      if (negRHS)
+        op.rhs.getDefiningOp<cir::FNegOp>().erase();
+      return buildFMulAdd(loc, rhsMul, op.lhs, builder, isSub ^ negRHS, false);
+    }
+  }
+
+  return nullptr;
+}
+
+namespace {
+// A CIR-specific generating version of the llvm::FixedPointBuilder.
+struct FixedPointBuilder {
+  FixedPointBuilder(CIRGenBuilderTy &builder, mlir::Location loc)
+      : builder(builder), loc(loc) {}
+
+  mlir::Value createFixedToFloating(mlir::Value src,
+                                    const llvm::FixedPointSemantics &srcSema,
+                                    mlir::Type dstTy) {
+    mlir::Type opTy = getAccommodatingFloatType(dstTy, srcSema);
+    // Convert the raw fixed-point value directly to floating point. If the
+    // value is too large to fit, it will be rounded, not truncated.
+    mlir::Value result =
+        builder.createCast(loc, cir::CastKind::int_to_float, src, opTy);
+    // Rescale the integral-in-floating point by the scaling factor.  This is
+    // lossless, except for overflow to infinity which is unlikely.
+    const llvm::fltSemantics &opSemantics =
+        mlir::cast<cir::FPTypeInterface>(opTy).getFloatSemantics();
+    llvm::APFloat scaleVal(
+        std::pow(2.0, -static_cast<int>(srcSema.getScale())));
+    bool losesInfo;
+    scaleVal.convert(opSemantics, llvm::APFloat::rmNearestTiesToEven,
+                     &losesInfo);
+    (void)losesInfo;
+
+    cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
+    result = builder.createFMul(loc, result, fpConst);
+
+    if (opTy != dstTy)
+      result = builder.createFloatingCast(result, dstTy);
+    return result;
+  }
+
+  mlir::Value createFloatingToFixed(mlir::Value src,
+                                    const llvm::FixedPointSemantics &dstSema) {
+
+    bool useSigned = dstSema.isSigned() || dstSema.hasUnsignedPadding();
+    mlir::Value result = src;
+    mlir::Type opTy = getAccommodatingFloatType(src.getType(), dstSema);
+
+    if (opTy != src.getType())
+      result = builder.createFloatingCast(result, opTy);
+
+    // Rescale the floating point value so that its significant bits (for the
+    // purposes of the conversion) are in the integral range.
+    const llvm::fltSemantics &opSemantics =
+        mlir::cast<cir::FPTypeInterface>(opTy).getFloatSemantics();
+    llvm::APFloat scaleVal(std::pow(2.0, dstSema.getScale()));
+    bool losesInfo;
+    scaleVal.convert(opSemantics, llvm::APFloat::rmNearestTiesToEven,
+                     &losesInfo);
+    (void)losesInfo;
+
+    cir::ConstantOp fpConst = builder.getConstFP(loc, opTy, scaleVal);
+    result = builder.createFMul(loc, result, fpConst);
+
+    cir::IntType resultTy = cir::IntType::get(
+        builder.getContext(), dstSema.getWidth(), dstSema.isSigned());
+
+    if (dstSema.isSaturated()) {
+      result = builder.emitIntrinsicCallOp(
+          loc, useSigned ? "fptosi.sat" : "fptoui.sat", resultTy, result);
+    } else {
+      result = builder.createCast(loc, cir::CastKind::float_to_int, result,
+                                  resultTy);
+    }
+
+    // When saturating unsigned-with-padding using signed operations, we may
+    // get negative values. Emit an extra clamp to zero.
+    if (dstSema.isSaturated() && dstSema.hasUnsignedPadding()) {
+      mlir::Value zero = builder.getNullValue(result.getType(), loc);
+      mlir::Value isNeg =
+          builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
+      result = builder.createSelect(loc, isNeg, zero, result);
+    }
+
+    return result;
+  }
+
+  mlir::Value createFixedToInteger(mlir::Value src,
+                                   const llvm::FixedPointSemantics &srcSema,
+                                   unsigned dstWidth, bool dstIsSigned) {
+    return convert(
+        src, srcSema,
+        llvm::FixedPointSemantics::GetIntegerSemantics(dstWidth, dstIsSigned),
+        /*dstIsInteger=*/true);
+  }
+
+  mlir::Value createIntegerToFixed(mlir::Value src, unsigned srcIsSigned,
+                                   const llvm::FixedPointSemantics &dstSema) {
+    unsigned srcWidth;
+    if (mlir::isa<cir::BoolType>(src.getType())) {
+      assert(!srcIsSigned);
+      srcWidth = 1;
+      src = builder.createBoolToInt(
+          src, cir::IntType::get(builder.getContext(), 1, /*isSigned=*/false));
+    } else {
+      srcWidth = mlir::cast<cir::IntType>(src.getType()).getWidth();
+    }
+    return convert(
+        src,
+        llvm::FixedPointSemantics::GetIntegerSemantics(srcWidth, srcIsSigned),
+        dstSema, /*dstIsInteger=*/false);
+  }
+
+  mlir::Value createFixedToFixed(mlir::Value src,
+                                 const llvm::FixedPointSemantics &srcSema,
+                                 const llvm::FixedPointSemantics &dstSema) {
+    return convert(src, srcSema, dstSema, /*dstIsInteger=*/false);
+  }
+
+private:
+  mlir::Value convert(mlir::Value src, const llvm::FixedPointSemantics &srcSema,
+                      const llvm::FixedPointSemantics &dstSema,
+                      bool dstIsInteger) {
+    unsigned srcWidth = srcSema.getWidth();
+    unsigned dstWidth = dstSema.getWidth();
+    unsigned srcScale = srcSema.getScale();
+    unsigned dstScale = dstSema.getScale();
+    bool srcIsSigned = srcSema.isSigned();
+    bool dstIsSigned = dstSema.isSigned();
+
+    mlir::Value result = src;
+    unsigned resultWidth = srcWidth;
+
+    // Downscale.
+    if (dstScale < srcScale) {
+      // When converting to integers, we round towards zero. For negative
+      // numbers, right shifting rounds towards negative infinity. In this case,
+      // we can just round up before shifting.
+      if (dstIsInteger && srcIsSigned) {
+        mlir::Value zero = builder.getNullValue(result.getType(), loc);
+        mlir::Value isNegative =
+            builder.createCompare(loc, cir::CmpOpKind::lt, result, zero);
+        mlir::Value lowBits = builder.getConstAPInt(
+            loc, result.getType(),
+            llvm::APInt::getLowBitsSet(srcWidth, srcScale));
+        mlir::Value rounded = builder.createAdd(loc, result, lowBits);
+        result = builder.createSelect(loc, isNegative, rounded, result);
+      }
+      result = builder.createShiftRight(loc, result, srcScale - dstScale);
+    }
+
+    cir::IntType dstIntTy =
+        cir::IntType::get(builder.getContext(), dstWidth, dstSema.isSigned());
+
+    if (!dstSema.isSaturated()) {
+      // Resize.
+      result = builder.createIntCast(result, dstIntTy);
+      // Upscale.
+      if (dstScale > srcScale)
+        result = builder.createShiftLeft(loc, result, dstScale - srcScale);
+    } else {
+      // Adjust the number of fractional bits.
+      if (dstScale > srcScale) {
+        // Compare to DstWidth to prevent resizing twice.
+        resultWidth = std::max(srcWidth + dstScale - srcScale, dstWidth);
+        cir::IntType upscaledTy =
+            cir::IntType::get(builder.getContext(), resultWidth, srcIsSigned);
+        result = builder.createIntCast(result, upscaledTy);
+        result = builder.createShiftLeft(loc, result, dstScale - srcScale);
+      }
+
+      // Handle saturation.
+      bool fewerIntBits = dstSema.getIntegralBits() < srcSema.getIntegralBits();
+      if (fewerIntBits) {
+        mlir::Value max = builder.getConstAPInt(
+            loc, result.getType(),
+            llvm::APFixedPoint::getMax(dstSema).getValue().extOrTrunc(
+                resultWidth));
+
+        mlir::Value tooHigh =
+            builder.createCompare(loc, cir::CmpOpKind::gt, result, max);
+        result = builder.createSelect(loc, tooHigh, max, result);
+      }
+
+      // Cannot overflow min to dest type if src is unsigned since all fixed
+      // point types can cover the unsigned min of 0.
+      if (srcIsSigned && (fewerIntBits || !dstIsSigned)) {
+        mlir::Value min = builder.getConstAPInt(
+            loc, result.getType(),
+            llvm::APFixedPoint::getMin(dstSema).getValue().extOrTrunc(
+                resultWidth));
+        mlir::Value tooLow =
+            builder.createCompare(loc, cir::CmpOpKind::lt, result, min);
+        result = builder.createSelect(loc, tooLow, min, result);
+      }
+
+      // Resize the integer part to get the final destination size.
+      if (resultWidth != dstWidth)
+        result = builder.createIntCast(result, dstIntTy);
+    }
+    return result;
+  }
+
+  mlir::Type getAccommodatingFloatType(mlir::Type ty,
+                                       const llvm::FixedPointSemantics &sema) {
+    const llvm::fltSemantics *floatSema =
+        &mlir::cast<cir::FPTypeInterface>(ty).getFloatSemantics();
+    while (!sema.fitsInFloatSemantics(*floatSema))
+      floatSema = llvm::APFixedPoint::promoteFloatSemantics(floatSema);
+    cir::FPTypeInterface accommodating =
+        cir::getFloatingPointType(*floatSema, builder.getContext());
+    assert(accommodating && "no float type for semantics?");
+    return accommodating;
+  }
+
+  CIRGenBuilderTy &builder;
+  mlir::Location loc;
+};
+} // namespace
+
+mlir::Value ScalarExprEmitter::emitFixedPointConversion(mlir::Value src,
+                                                        QualType srcTy,
+                                                        QualType dstTy,
+                                                        mlir::Location loc) {
+  assert(srcTy->isFixedPointType() || dstTy->isFixedPointType());
+
+  FixedPointBuilder fpBuilder(builder, loc);
+  mlir::Value result;
+  if (srcTy->isRealFloatingType()) {
+    assert(dstTy->isFixedPointType());
+    result = fpBuilder.createFloatingToFixed(
+        src, cgf.getContext().getFixedPointSemantics(dstTy));
+  } else if (dstTy->isRealFloatingType()) {
+    assert(srcTy->isFixedPointType());
+    result = fpBuilder.createFixedToFloating(
+        src, cgf.getContext().getFixedPointSemantics(srcTy),
+        cgf.convertType(dstTy));
+  } else {
+    llvm::FixedPointSemantics srcFPSema =
+        cgf.getContext().getFixedPointSemantics(srcTy);
+    llvm::FixedPointSemantics dstFPSema =
+        cgf.getContext().getFixedPointSemantics(dstTy);
+
+    if (dstTy->isIntegerType())
+      result = fpBuilder.createFixedToInteger(
+          src, srcFPSema, dstFPSema.getWidth(), dstFPSema.isSigned());
+    else if (srcTy->isIntegerType())
+      result =
+          fpBuilder.createIntegerToFixed(src, srcFPSema.isSigned(), dstFPSema);
+    else {
+      assert(srcTy->isFixedPointType() && dstTy->isFixedPointType());
+      result = fpBuilder.createFixedToFixed(src, srcFPSema, dstFPSema);
+    }
+  }
+  return result;
+}
+
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
@@ -2047,6 +2405,9 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
 
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    // Try to form an fmuladd.
+    if (mlir::Value fmuladd = tryEmitFMulAdd(loc, ops, builder))
+      return fmuladd;
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
 
@@ -2095,6 +2456,10 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 
     if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+      // Try to form an fmuladd.
+      if (mlir::Value fmuladd =
+              tryEmitFMulAdd(loc, ops, builder, /*isSub=*/true))
+        return fmuladd;
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
 
@@ -2442,16 +2807,37 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     cgf.emitIgnoredExpr(subExpr);
     return {};
 
+  case CK_FixedPointCast:
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_FixedPointToBoolean:
+    assert(subExpr->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(destTy->isBooleanType() && "Expected dest type to be boolean type");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_FixedPointToIntegral:
+    assert(subExpr->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(destTy->isIntegerType() && "Expected dest type to be an integer");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
+  case CK_IntegralToFixedPoint:
+    assert(subExpr->getType()->isIntegerType() &&
+           "Expected src type to be an integer");
+    assert(destTy->isFixedPointType() &&
+           "Expected dest type to be fixed point type");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
   case CK_FloatingCast:
   case CK_FixedPointToFloating:
   case CK_FloatingToFixedPoint: {
-    if (kind == CK_FixedPointToFloating || kind == CK_FloatingToFixedPoint) {
-      cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                     "fixed point casts");
-      return {};
-    }
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ce);
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());

@@ -221,6 +221,10 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Vector sizes to generate for Varying typed arguments (e.g., [2,3,4]).
   list<int> VaryingVecSizes = [];
 
+  // Whether to generate a dependent-size vector template overload for N > 4.
+  // Sizes 1 through 4 use scalar and concrete vector overloads.
+  bit VaryingLongVector = 0;
+
   // Matrix dimensions to generate for Varying typed arguments.
   list<MatDim> VaryingMatDims = [];
 
@@ -321,6 +325,7 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 \param Val The input value.
 }];
   let VaryingTypes = SignedTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -736,6 +741,7 @@ def hlsl_dot : HLSLTwoArgBuiltin<"dot", "__builtin_hlsl_dot"> {
 }];
   let ReturnType = VaryingElemType;
   let VaryingTypes = NumericTypesNoDbl;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 

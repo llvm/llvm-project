@@ -324,6 +324,33 @@ config_setting(
 )
 
 config_setting(
+    name = "is_aarch64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_clang_cl",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_aarch64_windows_msvc",
+    constraint_values = [
+        "@platforms//cpu:aarch64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
     name = "is_x86_64_windows_clang_mingw",
     constraint_values = [
         "@platforms//cpu:x86_64",
@@ -456,6 +483,7 @@ cc_library(
             "-pthread",
             "-ldl",
         ],
+        "@platforms//os:emscripten": [],
         "//conditions:default": [
             "-pthread",
             "-ldl",
@@ -1439,7 +1467,10 @@ cc_library(
             "include/llvm/Analysis/Utils/*.h",
         ],
     ) + ["include/llvm-c/Analysis.h"],
-    copts = llvm_copts + ["-ftrapping-math"],
+    copts = llvm_copts + select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": ["-ftrapping-math"],
+    }),
     features = ["-parse_headers"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
@@ -4410,7 +4441,6 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/SPS/**/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -4455,11 +4485,10 @@ cc_library(
         "lib/ExecutionEngine/Orc/Shared/*.cpp",
     ]),
     hdrs = glob([
-        "include/llvm/ExecutionEngine/Orc/Shared/*.h",
-        "include/llvm/ExecutionEngine/Orc/RTBridge/*.h",
-    ] + [
+        "include/llvm/ExecutionEngine/Orc/Shared/**/*.h",
+    ]) + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
-    ]),
+    ],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4975,6 +5004,7 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
@@ -5550,6 +5580,7 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
+        "@platforms//os:emscripten": [],
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [

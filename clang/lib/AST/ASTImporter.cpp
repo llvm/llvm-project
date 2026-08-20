@@ -185,6 +185,8 @@ namespace clang {
       return Importer.importInto(To, From);
     }
 
+    Expected<FriendDecl::FriendUnion> importFriendUnion(FriendDecl *D);
+
     // Use this to import pointers of specific type.
     template <typename ImportT>
     [[nodiscard]] Error importInto(ImportT *&To, ImportT *From) {
@@ -539,6 +541,7 @@ namespace clang {
     ExpectedDecl VisitFieldDecl(FieldDecl *D);
     ExpectedDecl VisitIndirectFieldDecl(IndirectFieldDecl *D);
     ExpectedDecl VisitFriendDecl(FriendDecl *D);
+    ExpectedDecl VisitFriendTemplateDecl(FriendTemplateDecl *D);
     ExpectedDecl VisitObjCIvarDecl(ObjCIvarDecl *D);
     ExpectedDecl VisitVarDecl(VarDecl *D);
     ExpectedDecl VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -679,6 +682,7 @@ namespace clang {
     ExpectedStmt VisitCXXMemberCallExpr(CXXMemberCallExpr *E);
     ExpectedStmt VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E);
     ExpectedStmt VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E);
+    ExpectedStmt VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E);
     ExpectedStmt VisitCXXUnresolvedConstructExpr(CXXUnresolvedConstructExpr *E);
     ExpectedStmt VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E);
     ExpectedStmt VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E);
@@ -2040,9 +2044,10 @@ ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
-  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  HLSLAttributedResourceType::Attributes ToAttrs = T->getAttrs();
   QualType ToWrappedType = importChecked(Err, T->getWrappedType());
   QualType ToContainedType = importChecked(Err, T->getContainedType());
+  ToAttrs.SampleCountExpr = importChecked(Err, T->getSampleCountExpr());
   if (Err)
     return std::move(Err);
 
@@ -4392,19 +4397,15 @@ struct FriendCountAndPosition {
 
 static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
                                FriendDecl *FD2) {
-  if ((!FD1->getFriendType()) != (!FD2->getFriendType()))
+  if (FD1->getKind() != FD2->getKind())
     return false;
-
-  if (const TypeSourceInfo *TSI = FD1->getFriendType())
-    return Importer.IsStructurallyEquivalent(
-        TSI->getType(), FD2->getFriendType()->getType(), /*Complain=*/false);
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
       Importer.getToContext().getLangOpts(), FD1->getASTContext(),
       FD2->getASTContext(), NonEquivalentDecls,
       StructuralEquivalenceKind::Default,
-      /* StrictTypeSpelling = */ false, /* Complain = */ false);
+      /*StrictTypeSpelling=*/false, /*Complain=*/false);
   return Ctx.IsEquivalent(FD1, FD2);
 }
 
@@ -4424,8 +4425,28 @@ static FriendCountAndPosition getFriendCountAndPosition(ASTImporter &Importer,
   }
 
   assert(FriendPosition && "Friend decl not found in own parent.");
-
   return {FriendCount, *FriendPosition};
+}
+
+Expected<FriendDecl::FriendUnion>
+ASTNodeImporter::importFriendUnion(FriendDecl *D) {
+  if (NamedDecl *FriendD = D->getFriendDecl()) {
+    NamedDecl *ToFriendD;
+    if (Error Err = importInto(ToFriendD, FriendD))
+      return std::move(Err);
+
+    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
+        !FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator))
+      ToFriendD->setObjectOfFriendDecl(false);
+
+    return ToFriendD;
+  }
+
+  // The friend is a type, not a decl.
+  auto TSIOrErr = import(D->getFriendType());
+  if (TSIOrErr)
+    return *TSIOrErr;
+  return TSIOrErr.takeError();
 }
 
 ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
@@ -4454,32 +4475,10 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
 
   // Not found. Create it.
   // The declarations will be put into order later by ImportDeclContext.
-  FriendDecl::FriendUnion ToFU;
-  if (NamedDecl *FriendD = D->getFriendDecl()) {
-    NamedDecl *ToFriendD;
-    if (Error Err = importInto(ToFriendD, FriendD))
-      return std::move(Err);
-
-    if (FriendD->getFriendObjectKind() != Decl::FOK_None &&
-        !(FriendD->isInIdentifierNamespace(Decl::IDNS_NonMemberOperator)))
-      ToFriendD->setObjectOfFriendDecl(false);
-
-    ToFU = ToFriendD;
-  } else { // The friend is a type, not a decl.
-    if (auto TSIOrErr = import(D->getFriendType()))
-      ToFU = *TSIOrErr;
-    else
-      return TSIOrErr.takeError();
-  }
-
-  SmallVector<TemplateParameterList *, 1> ToTPLists(D->NumTPLists);
-  auto **FromTPLists = D->getTrailingObjects();
-  for (unsigned I = 0; I < D->NumTPLists; I++) {
-    if (auto ListOrErr = import(FromTPLists[I]))
-      ToTPLists[I] = *ListOrErr;
-    else
-      return ListOrErr.takeError();
-  }
+  auto ToFUOrErr = importFriendUnion(D);
+  if (!ToFUOrErr)
+    return ToFUOrErr.takeError();
+  FriendDecl::FriendUnion ToFU = *ToFUOrErr;
 
   auto LocationOrErr = import(D->getLocation());
   if (!LocationOrErr)
@@ -4494,13 +4493,81 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   FriendDecl *FrD;
   if (GetImportedOrCreateDecl(FrD, D, Importer.getToContext(), DC,
                               *LocationOrErr, ToFU, *FriendLocOrErr,
-                              *EllipsisLocOrErr, ToTPLists))
+                              *EllipsisLocOrErr))
     return FrD;
 
   FrD->setAccess(D->getAccess());
   FrD->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(FrD);
   return FrD;
+}
+
+ExpectedDecl ASTNodeImporter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
+  DeclContext *DC, *LexicalDC;
+  if (Error Err = ImportDeclContext(D, DC, LexicalDC))
+    return std::move(Err);
+
+  const auto *RD = cast<CXXRecordDecl>(DC);
+  SmallVector<FriendTemplateDecl *, 2> ImportedEquivalentFriends;
+  for (FriendDecl *ImportedFriend : RD->friends()) {
+    auto *ImportedFriendTemplate = dyn_cast<FriendTemplateDecl>(ImportedFriend);
+    if (ImportedFriendTemplate &&
+        IsEquivalentFriend(Importer, D, ImportedFriendTemplate))
+      ImportedEquivalentFriends.push_back(ImportedFriendTemplate);
+  }
+
+  FriendCountAndPosition CountAndPosition =
+      getFriendCountAndPosition(Importer, D);
+  assert(ImportedEquivalentFriends.size() <= CountAndPosition.TotalCount &&
+         "Class with non-matching friends is imported, ODR check wrong?");
+
+  if (ImportedEquivalentFriends.size() == CountAndPosition.TotalCount)
+    return Importer.MapImported(
+        D, ImportedEquivalentFriends[CountAndPosition.IndexOfDecl]);
+
+  FriendTemplateDecl::FriendUnion ToFU;
+  if (D->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    auto ToFUOrErr = importFriendUnion(D);
+    if (!ToFUOrErr)
+      return ToFUOrErr.takeError();
+    ToFU = *ToFUOrErr;
+  }
+
+  TemplateName ToTemplate;
+  const TemplateName FromTemplate = D->getFriendTemplateName();
+  if (!FromTemplate.isNull()) {
+    if (Error Err = importInto(ToTemplate, FromTemplate))
+      return std::move(Err);
+  }
+
+  ArrayRef<TemplateParameterList *> FromTPLs = D->getTemplateParameterLists();
+  SmallVector<TemplateParameterList *, 1> ToTPLs(FromTPLs.size());
+  if (Error Err = ImportContainerChecked(FromTPLs, ToTPLs))
+    return std::move(Err);
+
+  auto LocationOrErr = import(D->getLocation());
+  if (!LocationOrErr)
+    return LocationOrErr.takeError();
+
+  auto FriendLocOrErr = import(D->getFriendLoc());
+  if (!FriendLocOrErr)
+    return FriendLocOrErr.takeError();
+
+  auto EllipsisLocOrErr = import(D->getEllipsisLoc());
+  if (!EllipsisLocOrErr)
+    return EllipsisLocOrErr.takeError();
+
+  FriendTemplateDecl *FTD;
+  if (GetImportedOrCreateDecl(FTD, D, Importer.getToContext(), DC,
+                              *LocationOrErr, ToFU, *FriendLocOrErr, ToTPLs,
+                              *EllipsisLocOrErr, ToTemplate))
+    return FTD;
+
+  FTD->setAccess(D->getAccess());
+  FTD->setLexicalDeclContext(LexicalDC);
+  LexicalDC->addDeclInternal(FTD);
+  return FTD;
 }
 
 ExpectedDecl ASTNodeImporter::VisitObjCIvarDecl(ObjCIvarDecl *D) {
@@ -8761,6 +8828,29 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
 }
 
 ExpectedStmt
+ASTNodeImporter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  Error Err = Error::success();
+  auto ToName = importChecked(Err, E->getTemplateName());
+  auto ToDeclName = importChecked(Err, E->getName());
+  auto ToNameLoc = importChecked(Err, E->getNameLoc());
+  if (Err)
+    return std::move(Err);
+
+  DeclarationNameInfo ToNameInfo(ToDeclName, ToNameLoc);
+  if (Error Err = ImportDeclarationNameLoc(E->getNameInfo(), ToNameInfo))
+    return std::move(Err);
+
+  TemplateArgumentListInfo ToTAInfo;
+  if (Error Err =
+          ImportTemplateArgumentListInfo(E->getLAngleLoc(), E->getRAngleLoc(),
+                                         E->template_arguments(), ToTAInfo))
+    return std::move(Err);
+
+  return DependentTemplateIdExpr::Create(Importer.getToContext(), ToNameInfo,
+                                         ToName, ToTAInfo);
+}
+
+ExpectedStmt
 ASTNodeImporter::VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
   Error Err = Error::success();
   auto ToQualifierLoc = importChecked(Err, E->getQualifierLoc());
@@ -9820,6 +9910,16 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
       auto *ToD = CreatedToD;
       ImportedDecls.erase(Pos);
 
+      // Remove the imported type mapping as well.
+      // The imported type can point to a declaration that failed to import
+      // later.
+      if (const auto *FromTD = dyn_cast<TagDecl>(FromD)) {
+        if (const Type *FromTy =
+                getFromContext().getCanonicalTagType(FromTD).getTypePtr()) {
+          ImportedTypes.erase(FromTy);
+        }
+      }
+
       // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
       // (e.g. with namespaces) that several decls from the 'from' context are
       // mapped to the same decl in the 'to' context.  If we removed entries
@@ -9873,6 +9973,14 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           break;
         PrevFromDi = FromDi;
         setImportDeclError(FromDi, ErrOut);
+
+        if (const auto *FromTDi = dyn_cast<TagDecl>(FromDi)) {
+          if (const Type *FromTyi =
+                  getFromContext().getCanonicalTagType(FromTDi).getTypePtr()) {
+            ImportedTypes.erase(FromTyi);
+          }
+        }
+
         //FIXME Should we remove these Decls from ImportedDecls?
         // Set the error for the mapped to Decl, which is in the "to" context.
         auto Ii = ImportedDecls.find(FromDi);

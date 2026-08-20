@@ -1237,7 +1237,7 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
   // vleff's AVL. It will be greater than or equal to the output VL.
   if (CommonVL.isReg()) {
     const MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
-    if (RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
+    if (VLMI && RISCVInstrInfo::isFaultOnlyFirstLoad(*VLMI) &&
         !MDT->dominates(VLMI, &MI))
       CommonVL = VLMI->getOperand(RISCVII::getVLOpNum(VLMI->getDesc()));
   }
@@ -1260,6 +1260,9 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     return true;
   }
   MachineInstr *VLMI = MRI->getVRegDef(CommonVL.getReg());
+  if (!VLMI)
+    return false;
+
   auto VLDominates = [this, &VLMI](const MachineInstr &MI) {
     return MDT->dominates(VLMI, &MI);
   };

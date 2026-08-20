@@ -52,7 +52,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added `nofreeobj` attribute for attributes and returns, which forbids
+  freeing the underlying object (as opposed to only frees through that specific
+  pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
+  semantics.
+
 ### Changes to LLVM infrastructure
+
+* Removed `TargetOptions::FloatABIType`. The soft float ABI should be
+  controlled by setting the `"float-abi"` module flag.
 
 ### Changes to building LLVM
 
@@ -86,6 +94,10 @@ Makes programs 10x faster by doing Special New Thing.
   is used, it will be zero-extended or truncated as needed.
 
 ### Changes to the ARM Backend
+
+* Using the hard-float procedure call standard without floating-point registers
+  is now an error. Previously this would fall back to the soft-float PCS while
+  still emitting the hard-float ABI attribute tag.
 
 ### Changes to the AVR Backend
 
@@ -136,6 +148,17 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
+
+#### SBAPI
+
+* A [bug](https://github.com/llvm/llvm-project/issues/211787) involving SBValues
+  representing a register set was fixed. The methods `GetIndexOfChildWithName`
+  and `GetChildMemberWithName` were incorrectly looking up values in all
+  register sets. This meant that `GetIndexOfChildWithName` could return an index
+  greater than the size of the set, and that `GetChildMemberWithName` could
+  return values that were actually in a different set. Both methods are now fixed
+  so that they are limited to the registers within the register set. Scripts
+  using these methods may have to be updated as a result.
 
 #### Windows
 

@@ -679,13 +679,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     llvm::Type *RetTy = ConvertType(E->getType());
     if (E->getNumArgs() <= 4) {
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getSampleIntrinsic(), Args);
+      return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleIntrinsic(), Args,
+                               RetTy);
     }
 
     Args.push_back(emitHlslClamp(*this, E, 4));
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getSampleClampIntrinsic(), Args);
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleClampIntrinsic(),
+                             Args, RetTy);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_bias: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -704,13 +704,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(emitHlslOffset(*this, E, 4, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    if (E->getNumArgs() <= 5)
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getSampleBiasIntrinsic(), Args);
+    if (E->getNumArgs() <= 5) {
+      return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasIntrinsic(),
+                               Args, RetTy);
+    }
 
     Args.push_back(emitHlslClamp(*this, E, 5));
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(), Args);
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
+                             Args, RetTy);
   }
   case Builtin::BI__builtin_hlsl_resource_sample_grad: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -788,6 +789,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getLoadLevelIntrinsic(), Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_load_ms: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *CoordOp = EmitScalarExpr(E->getArg(1));
+    Value *SampleOp = EmitScalarExpr(E->getArg(2));
+    if (SampleOp->getType() != Builder.getInt32Ty())
+      SampleOp = Builder.CreateIntCast(SampleOp, Builder.getInt32Ty(),
+                                       /*isSigned=*/true);
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
+
+    SmallVector<Value *, 4> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(CoordOp);
+    Args.push_back(SampleOp);
+    Args.push_back(emitHlslOffset(*this, E, 3, getOffsetType(CGM, RT)));
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getLoadMSIntrinsic(), Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_sample_cmp: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
@@ -839,20 +859,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return Builder.CreateIntrinsic(
-        ConvertType(E->getType()),
-        CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
-        {HandleOp, SamplerOp, CoordOp});
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getCalculateLodIntrinsic(),
+                             {HandleOp, SamplerOp, CoordOp},
+                             ConvertType(E->getType()));
   }
   case Builtin::BI__builtin_hlsl_resource_calculate_lod_unclamped: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
 
-    return Builder.CreateIntrinsic(
-        ConvertType(E->getType()),
+    return EmitIntrinsicCall(
         CGM.getHLSLRuntime().getCalculateLodUnclampedIntrinsic(),
-        {HandleOp, SamplerOp, CoordOp});
+        {HandleOp, SamplerOp, CoordOp}, ConvertType(E->getType()));
   }
   case Builtin::BI__builtin_hlsl_resource_gather: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));

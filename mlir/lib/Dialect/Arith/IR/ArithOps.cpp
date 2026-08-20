@@ -1295,6 +1295,9 @@ OpFoldResult arith::AddFOp::fold(FoldAdaptor adaptor) {
   // addf(x, -0) -> x
   if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()))
     return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+    return getLhs();
 
   auto rm = getRoundingmode();
   return constFoldBinaryOp<FloatAttr>(
@@ -1317,6 +1320,9 @@ void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
   // subf(x, +0) -> x
   if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
+    return getLhs();
+  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
+      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
     return getLhs();
 
   auto rm = getRoundingmode();
@@ -1822,6 +1828,9 @@ convertFloatValue(APFloat sourceValue,
 
 OpFoldResult arith::ExtUIOp::fold(FoldAdaptor adaptor) {
   if (auto lhs = getIn().getDefiningOp<ExtUIOp>()) {
+    // Only the inner extension's nneg speaks about the surviving source; the
+    // outer flag described the already-extended value.
+    setNonNeg(lhs.getNonNeg());
     getInMutable().assign(lhs.getIn());
     return getResult();
   }

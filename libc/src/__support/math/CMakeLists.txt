@@ -314,13 +314,14 @@ add_header_library(
     atan2f128.h
   DEPENDS
     .atan_utils
-    libc.src.__support.integer_literals
-    libc.src.__support.uint128
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+    libc.src.__support.uint128
 )
 
 add_header_library(
@@ -813,7 +814,7 @@ add_header_library(
   HDRS
     ceilf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -1117,7 +1118,7 @@ add_header_library(
   HDRS
     fminf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -1948,7 +1949,7 @@ add_header_library(
   HDRS
     llroundf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2062,7 +2063,7 @@ add_header_library(
   HDRS
     lroundf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2240,7 +2241,7 @@ add_header_library(
   HDRS
     nearbyintf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2506,7 +2507,7 @@ add_header_library(
   HDRS
     roundevenf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -2549,7 +2550,7 @@ add_header_library(
   HDRS
     roundf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -3667,7 +3668,7 @@ add_header_library(
   HDRS
     floorf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
@@ -3733,7 +3734,7 @@ add_header_library(
   HDRS
     fmaxf128.h
   DEPENDS
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
 )
@@ -5398,12 +5399,12 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.common
     libc.src.__support.macros.optimization
     libc.src.__support.uint128
-    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(
