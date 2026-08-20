@@ -8,7 +8,7 @@ subroutine copy_then_reduction()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPcopy_then_reduction()
-! CHECK: acc.reduction varPtr({{.*}}) recipe({{.*}}) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.reduction varPtr({{.*}}) recipe({{.*}}) name("x") -> !fir.ref<i32>
 ! CHECK-NOT: acc.copy
 ! CHECK: acc.parallel reduction({{.*}}) {
 
@@ -20,6 +20,6 @@ subroutine reduction_then_copy()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPreduction_then_copy()
-! CHECK: acc.reduction varPtr({{.*}}) recipe({{.*}}) -> !fir.ref<i32> {name = "x"}
+! CHECK: acc.reduction varPtr({{.*}}) recipe({{.*}}) name("x") -> !fir.ref<i32>
 ! CHECK-NOT: acc.copy
 ! CHECK: acc.parallel reduction({{.*}}) {
