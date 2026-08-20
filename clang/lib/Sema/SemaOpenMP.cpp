@@ -19121,7 +19121,8 @@ static bool isValidInteropVariable(Sema &SemaRef, Expr *InteropVarExpr,
   if (SemaRef.LookupName(Result, SemaRef.getCurScope())) {
     NamedDecl *ND = Result.getFoundDecl();
     if (const auto *TD = dyn_cast<TypeDecl>(ND)) {
-      InteropType = QualType(TD->getTypeForDecl(), 0);
+      InteropType = SemaRef.Context.getTypeDeclType(
+          ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, TD);
     } else {
       HasError = true;
     }
