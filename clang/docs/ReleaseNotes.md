@@ -400,6 +400,9 @@ features cannot lower the translation-unit ABI level;
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
+  later, matching the behavior in C++11 through C++17. (#GH161689)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
