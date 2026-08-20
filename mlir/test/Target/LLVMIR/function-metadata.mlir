@@ -36,85 +36,33 @@ llvm.func @declaration_metadata() attributes {
 
 // -----
 
-// CHECK-LABEL: define void @uses_later()
-// CHECK-SAME: !callee ![[LATER_NODE:[0-9]+]]
-llvm.func @uses_later() attributes {
+// Function metadata is converted after functions and ifuncs are mapped, so
+// references to symbols declared later in the module can be resolved.
+// CHECK-LABEL: define void @uses_later_symbols()
+// CHECK-SAME: !refs ![[LATER_NODE:[0-9]+]]
+llvm.func @uses_later_symbols() attributes {
   function_metadata = [
-    #llvm.func_metadata<"callee", #llvm.md_node<#llvm.md_string<"later">, #llvm.md_global_value<@later>>>
+    #llvm.func_metadata<"refs", #llvm.md_node<
+      #llvm.md_global_value<@later_function>,
+      #llvm.md_global_value<@later_ifunc>
+    >>
   ]
 } {
   llvm.return
 }
 
-llvm.func @later() {
+llvm.func @later_function() {
   llvm.return
 }
 
-// CHECK-DAG: ![[LATER_NODE]] = !{!"later", ptr @later}
+llvm.mlir.ifunc external @later_ifunc : !llvm.func<void ()>, !llvm.ptr @later_ifunc_resolver
 
-// -----
-
-llvm.mlir.global internal @metadata_global(0 : i32) : i32
-
-// CHECK-LABEL: define void @uses_global()
-// CHECK-SAME: !callee ![[GLOBAL_NODE:[0-9]+]]
-llvm.func @uses_global() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"callee", #llvm.md_node<#llvm.md_global_value<@metadata_global>>>
-  ]
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[GLOBAL_NODE]] = !{ptr @metadata_global}
-
-// -----
-
-llvm.func @metadata_alias_target() {
-  llvm.return
-}
-
-llvm.mlir.alias external @metadata_alias : !llvm.func<void ()> {
-  %0 = llvm.mlir.addressof @metadata_alias_target : !llvm.ptr
+llvm.func @later_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.addressof @later_function : !llvm.ptr
   llvm.return %0 : !llvm.ptr
 }
 
-// CHECK-LABEL: define void @uses_alias()
-// CHECK-SAME: !callee ![[ALIAS_NODE:[0-9]+]]
-llvm.func @uses_alias() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"callee", #llvm.md_node<#llvm.md_global_value<@metadata_alias>>>
-  ]
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[ALIAS_NODE]] = !{ptr @metadata_alias}
-
-// -----
-
-llvm.mlir.ifunc external @metadata_ifunc : !llvm.func<void ()>, !llvm.ptr @metadata_ifunc_resolver
-
-llvm.func @metadata_ifunc_resolver() -> !llvm.ptr {
-  %0 = llvm.mlir.addressof @metadata_ifunc_target : !llvm.ptr
-  llvm.return %0 : !llvm.ptr
-}
-
-llvm.func @metadata_ifunc_target() {
-  llvm.return
-}
-
-// CHECK-LABEL: define void @uses_ifunc()
-// CHECK-SAME: !callee ![[IFUNC_NODE:[0-9]+]]
-llvm.func @uses_ifunc() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"callee", #llvm.md_node<#llvm.md_global_value<@metadata_ifunc>>>
-  ]
-} {
-  llvm.return
-}
-
-// CHECK-DAG: ![[IFUNC_NODE]] = !{ptr @metadata_ifunc}
+// CHECK-DAG: ![[LATER_NODE]] = !{ptr @later_function, ptr @later_ifunc}
 
 // -----
 
