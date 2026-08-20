@@ -4,11 +4,16 @@
 define <2 x double> @speculate_v2f64(i32 %n, <2 x double> %a, <2 x double> %b, i1 %other) {
 ; CHECK-LABEL: define <2 x double> @speculate_v2f64(
 ; CHECK-SAME: i32 [[N:%.*]], <2 x double> [[A:%.*]], <2 x double> [[B:%.*]], i1 [[OTHER:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[OTHER]], label %[[MERGE:.*]], label %[[GUARDED:.*]]
+; CHECK:       [[GUARDED]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[MERGE]]
+; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[SCALED:%.*]] = fadd <2 x double> [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], <2 x double> [[SCALED]], <2 x double> [[B]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OTHER]], <2 x double> zeroinitializer, <2 x double> [[SPEC_SELECT]]
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[R:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SCALED]], %[[THEN]] ], [ [[B]], %[[GUARDED]] ]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
 entry:

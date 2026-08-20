@@ -8,11 +8,12 @@ define <4 x float> @speculate_v4f32(i32 %n, <4 x float> %a, <4 x float> %b, i1 %
 ; CHECK-NEXT:    br i1 [[OTHER]], label %[[MERGE:.*]], label %[[GUARDED:.*]]
 ; CHECK:       [[GUARDED]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[MERGE]]
+; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <4 x float> [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], <4 x float> [[ADD]], <4 x float> [[B]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <4 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[GUARDED]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi <4 x float> [ zeroinitializer, %[[ENTRY]] ], [ [[ADD]], %[[THEN]] ], [ [[B]], %[[GUARDED]] ]
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
 entry:
@@ -38,11 +39,12 @@ define <8 x half> @speculate_v8f16(i32 %n, <8 x half> %a, <8 x half> %b, i1 %oth
 ; CHECK-NEXT:    br i1 [[OTHER]], label %[[MERGE:.*]], label %[[GUARDED:.*]]
 ; CHECK:       [[GUARDED]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[MERGE]]
+; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <8 x half> [[A]], [[B]]
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], <8 x half> [[ADD]], <8 x half> [[B]]
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <8 x half> [ zeroinitializer, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[GUARDED]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi <8 x half> [ zeroinitializer, %[[ENTRY]] ], [ [[ADD]], %[[THEN]] ], [ [[B]], %[[GUARDED]] ]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
 entry:

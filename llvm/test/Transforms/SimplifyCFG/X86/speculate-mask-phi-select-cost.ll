@@ -4,16 +4,11 @@
 define <8 x i1> @speculate_v8i1(i32 %n, <8 x i1> %a, <8 x i1> %b, i1 %other) {
 ; CHECK-LABEL: define <8 x i1> @speculate_v8i1(
 ; CHECK-SAME: i32 [[N:%.*]], <8 x i1> [[A:%.*]], <8 x i1> [[B:%.*]], i1 [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 [[OTHER]], label %[[MERGE:.*]], label %[[GUARDED:.*]]
-; CHECK:       [[GUARDED]]:
+; CHECK-NEXT:  [[GUARDED:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[MERGE]]
-; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[AND:%.*]] = and <8 x i1> [[A]], [[B]]
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <8 x i1> [ zeroinitializer, %[[ENTRY]] ], [ [[AND]], %[[THEN]] ], [ [[B]], %[[GUARDED]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], <8 x i1> [[AND]], <8 x i1> [[B]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OTHER]], <8 x i1> zeroinitializer, <8 x i1> [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret <8 x i1> [[R]]
 ;
 entry:
@@ -35,16 +30,11 @@ merge:
 define <16 x i1> @speculate_v16i1(i32 %n, <16 x i1> %a, <16 x i1> %b, i1 %other) {
 ; CHECK-LABEL: define <16 x i1> @speculate_v16i1(
 ; CHECK-SAME: i32 [[N:%.*]], <16 x i1> [[A:%.*]], <16 x i1> [[B:%.*]], i1 [[OTHER:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 [[OTHER]], label %[[MERGE:.*]], label %[[GUARDED:.*]]
-; CHECK:       [[GUARDED]]:
+; CHECK-NEXT:  [[GUARDED:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[MERGE]]
-; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[AND:%.*]] = and <16 x i1> [[A]], [[B]]
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[R:%.*]] = phi <16 x i1> [ zeroinitializer, %[[ENTRY]] ], [ [[AND]], %[[THEN]] ], [ [[B]], %[[GUARDED]] ]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], <16 x i1> [[AND]], <16 x i1> [[B]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OTHER]], <16 x i1> zeroinitializer, <16 x i1> [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret <16 x i1> [[R]]
 ;
 entry:
