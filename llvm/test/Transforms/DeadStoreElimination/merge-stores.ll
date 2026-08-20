@@ -250,6 +250,6 @@ define void @killing_store_atomic_unordered(ptr %p) {
 !29 = !{i32 1}
 
 ; Domains and scopes which might alias
-!30 = !{!30}
+!30 = !{!30, i1 false}
 !31 = !{!31, !30}
 !32 = !{!31}

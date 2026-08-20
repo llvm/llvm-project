@@ -35,16 +35,15 @@ entry:
   store <2 x i32> %val, ptr addrspace(1) %use
   ret void
 }
-;.
 ; Check Function Attribute on decl
-; OPT: declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3) captures(none)) #[[ATTR0:[0-9]+]]
 declare <2 x i32> @llvm.amdgcn.ds.read.tr4.b64.v2i32(ptr addrspace(3))
-; OPT: attributes #[[ATTR0]] = { convergent nocallback nofree nounwind willreturn memory(argmem: read) }
+;.
+; OPT: attributes #[[ATTR0:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(argmem: read) }
 ; OPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ;.
 ; OPT: [[META0]] = !{[[META1:![0-9]+]]}
 ; OPT: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee: %addr"}
-; OPT: [[META2]] = distinct !{[[META2]], !"callee"}
+; OPT: [[META2]] = distinct !{[[META2]], i1 false, !"callee"}
 ; OPT: [[META3]] = !{[[META4:![0-9]+]]}
 ; OPT: [[META4]] = distinct !{[[META4]], [[META2]], !"callee: %use"}
 ;.

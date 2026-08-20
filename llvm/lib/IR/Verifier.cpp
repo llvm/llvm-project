@@ -5584,14 +5584,18 @@ void Verifier::visitAliasScopeMetadata(const MDNode *MD) {
   Check(Domain != nullptr, "second scope operand must be MDNode", MD);
 
   unsigned NumDomainOps = Domain->getNumOperands();
-  Check(NumDomainOps >= 1 && NumDomainOps <= 2,
-        "domain must have one or two operands", Domain);
+  Check(NumDomainOps >= 2 && NumDomainOps <= 3,
+        "domain must have two or three operands", Domain);
   Check(Domain->getOperand(0).get() == Domain ||
             isa<MDString>(Domain->getOperand(0)),
         "first domain operand must be self-referential or string", Domain);
-  if (NumDomainOps == 2)
-    Check(isa<MDString>(Domain->getOperand(1)),
-          "second domain operand must be string (if used)", Domain);
+  const auto *Disjoint =
+      mdconst::dyn_extract_or_null<ConstantInt>(Domain->getOperand(1));
+  Check(Disjoint && Disjoint->getBitWidth() == 1,
+        "second domain operand must be an i1 constant", Domain);
+  if (NumDomainOps == 3)
+    Check(isa<MDString>(Domain->getOperand(2)),
+          "third domain operand must be string (if used)", Domain);
 }
 
 void Verifier::visitAliasScopeListMetadata(const MDNode *MD) {

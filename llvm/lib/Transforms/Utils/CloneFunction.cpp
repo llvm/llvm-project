@@ -1157,6 +1157,20 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                               StringRef Ext, LLVMContext &Context) {
   MDBuilder MDB(Context);
 
+  // A cloned scope has to go into a clone of its domain if that domain has
+  // disjoint scopes: the copies of a duplicated access are in the same memory
+  // region, so they must not become implicitly noalias with each other.
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
+  auto GetClonedDomain = [&](const MDNode *Domain) {
+    if (!Domain || !AliasScopeDomainNode(Domain).hasDisjointScopes())
+      return const_cast<MDNode *>(Domain);
+    MDNode *&ClonedDomain = ClonedDomains[Domain];
+    if (!ClonedDomain)
+      ClonedDomain = MDB.createAnonymousAliasScopeDomain(
+          AliasScopeDomainNode(Domain).getName(), /*DisjointScopes=*/true);
+    return ClonedDomain;
+  };
+
   for (MDNode *ScopeList : NoAliasDeclScopes) {
     for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
@@ -1170,7 +1184,7 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
           Name = std::string(Ext);
 
         MDNode *NewScope = MDB.createAnonymousAliasScope(
-            const_cast<MDNode *>(SNANode.getDomain()), Name);
+            GetClonedDomain(SNANode.getDomain()), Name);
         ClonedScopes.insert(std::make_pair(MD, NewScope));
       }
     }

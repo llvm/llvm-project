@@ -25,4 +25,4 @@ for.body:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"x: %a"}
-!2 = distinct !{!2, !"x"}
+!2 = distinct !{!2, i1 false, !"x"}

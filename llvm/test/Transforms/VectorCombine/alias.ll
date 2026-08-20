@@ -5,13 +5,13 @@ define <4 x i32> @quux(ptr addrspace(3) %arg) {
 ; CHECK-LABEL: define <4 x i32> @quux(
 ; CHECK-SAME: ptr addrspace(3) [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = load i8, ptr addrspace(3) [[ARG]], align 4, !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = load i8, ptr addrspace(3) [[ARG]], align 4, !tbaa [[TBAA0:![0-9]+]], !alias.scope [[META4:![0-9]+]], !noalias [[META4]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 1
-; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = load i8, ptr addrspace(3) [[TMP0]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT1:%.*]] = load i8, ptr addrspace(3) [[TMP0]], align 1, !tbaa [[TBAA0]], !alias.scope [[META4]], !noalias [[META4]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 2
-; CHECK-NEXT:    [[EXTRACTELEMENT2:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 2, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT2:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 2, !tbaa [[TBAA0]], !alias.scope [[META4]], !noalias [[META4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i8>, ptr addrspace(3) [[ARG]], i64 0, i64 3
-; CHECK-NEXT:    [[EXTRACTELEMENT3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1, !tbaa [[TBAA0]], !alias.scope [[META0]], !noalias [[META0]]
+; CHECK-NEXT:    [[EXTRACTELEMENT3:%.*]] = load i8, ptr addrspace(3) [[TMP2]], align 1, !tbaa [[TBAA0]], !alias.scope [[META4]], !noalias [[META4]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[EXTRACTELEMENT]] to i32
 ; CHECK-NEXT:    [[ZEXT4:%.*]] = zext i8 [[EXTRACTELEMENT1]] to i32
 ; CHECK-NEXT:    [[ZEXT5:%.*]] = zext i8 [[EXTRACTELEMENT2]] to i32
@@ -41,16 +41,15 @@ bb:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}
 !3 = !{!"Simple C/C++ TBAA"}
 !4 = !{!"omnipotent char", !3, i64 0}
 !5 = !{!"i8", !4, i64 0}
 ;.
-; CHECK: [[TBAA0]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 0}
-; CHECK: [[META3]] = !{!"i8", [[META4:![0-9]+]]}
-; CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-; CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]]}
-;.
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}
+; CHECK: [[META1]] = !{!"i8", [[META2:![0-9]+]]}
+; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
+; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], i1 false}

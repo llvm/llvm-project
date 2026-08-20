@@ -97,7 +97,7 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}
 !3 = !{!4}
 !4 = distinct !{!4, !5}
-!5 = distinct !{!5}
+!5 = distinct !{!5, i1 false}

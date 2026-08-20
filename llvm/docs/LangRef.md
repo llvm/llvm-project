@@ -7608,11 +7608,20 @@ used for example during inlining.  As the noalias function parameters are
 turned into noalias scope metadata, a new domain is used every time the
 function is inlined.
 
-The metadata identifying each domain is itself a list containing one or two
+The metadata identifying each domain is itself a list containing two or three
 entries. The first entry is the name of the domain. Note that if the name is a
 string then it can be combined across functions and translation units. A
-self-reference can be used to create globally unique domain names. A
-descriptive string may optionally be provided as a second list entry.
+self-reference can be used to create globally unique domain names. The second
+entry is an `i1` constant that marks the domain as having disjoint scopes when
+it is `true`. A descriptive string may optionally be provided as a third list
+entry.
+
+If an alias scope domain has disjoint scopes, tagging an instruction with an
+`alias.scope` within that domain implicitly tags that instruction with a
+`noalias` set containing all scopes in that domain not present in the
+instruction's `!alias.scope` list. This makes it unnecessary to spell out the
+complement of each scope when a group of N pointers is known to be mutually
+non-aliasing.
 
 The metadata identifying each scope is also itself a list containing two or
 three entries. The first entry is the name of the scope. Note that if the name
@@ -7625,8 +7634,8 @@ For example,
 
 ```llvm
 ; Two scope domains:
-!0 = !{!0}
-!1 = !{!1}
+!0 = !{!0, i1 false}
+!1 = !{!1, i1 false}
 
 ; Some scopes in these domains:
 !2 = !{!2, !0}
@@ -7652,6 +7661,30 @@ store float %2, ptr %arrayidx.i2, align 4, !noalias !6
 ; !alias.scope list):
 %2 = load float, ptr %c, align 4, !alias.scope !6
 store float %0, ptr %arrayidx.i, align 4, !noalias !7
+```
+
+And, with a domain whose scopes are disjoint,
+
+```llvm
+; A domain with disjoint scopes and three scopes within it:
+!0 = !{!0, i1 true, !"disjoint domain"}
+!1 = !{!1, !0}
+!2 = !{!2, !0}
+!3 = !{!3, !0}
+
+; Some scope lists:
+!4 = !{!1}
+!5 = !{!2}
+!6 = !{!2, !3}
+!7 = !{!1, !3}
+
+; These two instructions don't alias, because tagging them with !1 and !2
+; implicitly tags them with !noalias !6 and !noalias !7, respectively:
+%0 = load float, ptr %a, align 4, !alias.scope !4
+store float %0, ptr %b, align 4, !alias.scope !5
+
+; This instruction could be either in scope !1 or !3, so is implicitly !noalias !5.
+%1 = load float, ptr %ac, align 4, !alias.scope !7
 ```
 
 (fpmath-metadata)=
@@ -25811,7 +25844,7 @@ exit:
   ret void
 }
 
-!0 = !{!0} ; domain
+!0 = !{!0, i1 false} ; domain
 !1 = !{!1, !0} ; scope
 !2 = !{!1} ; scope list
 ```

@@ -36,7 +36,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"callee0: %a"}
-!2 = distinct !{!2, !"callee0"}
+!2 = distinct !{!2, i1 false, !"callee0"}
 !3 = !{!4}
 !4 = distinct !{!4, !5, !"callee1: %a"}
-!5 = distinct !{!5, !"callee1"}
+!5 = distinct !{!5, i1 false, !"callee1"}

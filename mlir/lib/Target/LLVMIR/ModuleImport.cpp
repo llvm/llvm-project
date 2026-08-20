@@ -563,9 +563,9 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
-    if (aliasDomain->getNumOperands() >= 2)
-      if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
-        description = builder.getStringAttr(operand->getString());
+    StringRef name = llvm::AliasScopeDomainNode(aliasDomain).getName();
+    if (!name.empty())
+      description = builder.getStringAttr(name);
     Attribute idAttr = getIdAttr(aliasDomain);
     return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
   };
@@ -584,7 +584,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
           !verifyDescription(scope, 2))
         return emitError(loc) << "unsupported alias scope node: "
                               << diagMD(scope, llvmModule.get());
-      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 1))
+      if (!verifySelfRefOrString(domain) || !verifyDescription(domain, 2))
         return emitError(loc) << "unsupported alias domain node: "
                               << diagMD(domain, llvmModule.get());
 

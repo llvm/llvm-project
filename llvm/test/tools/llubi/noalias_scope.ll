@@ -9,7 +9,7 @@ entry:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"func: %agg.result"}
-!2 = distinct !{!2, !"func"}
+!2 = distinct !{!2, i1 false, !"func"}
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
 ; CHECK-NEXT:   ret void

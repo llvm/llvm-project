@@ -89,7 +89,7 @@ declare void @llvm.var.annotation(ptr, ptr, ptr, i32, ptr)
 !3 = !DIFile(filename: "debug-label.c", directory: "./")
 !4 = !{ !5 }
 !5 = distinct !{ !5, !6, !"foo: var" }
-!6 = distinct !{ !6, !"foo" }
+!6 = distinct !{!6, i1 false, !"foo"}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
 !8 = !DILocation(line: 0, scope: !1)
 !9 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "clang")

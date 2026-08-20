@@ -313,13 +313,13 @@ define amdgpu_kernel void @k123() {
 ; OPT: !4 = !{i32 1}
 ; OPT: !5 = !{!6}
 ; OPT: !6 = distinct !{!6, !7}
-; OPT: !7 = distinct !{!7}
+; OPT: !7 = distinct !{!7, i1 false}
 ; OPT: !8 = !{!9}
 ; OPT: !9 = distinct !{!9, !7}
 ; OPT: !10 = !{i32 0}
 ; OPT: !11 = !{!12}
 ; OPT: !12 = distinct !{!12, !13}
-; OPT: !13 = distinct !{!13}
+; OPT: !13 = distinct !{!13, i1 false}
 ; OPT: !14 = !{!15}
 ; OPT: !15 = distinct !{!15, !13}
 

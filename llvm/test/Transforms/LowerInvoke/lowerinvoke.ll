@@ -44,4 +44,4 @@ lpad:
 !0 = !{!"branch_weights", i32 100, i32 1}
 !1 = !{!2}
 !2 = distinct !{!2, !3}
-!3 = distinct !{!3}
+!3 = distinct !{!3, i1 false}

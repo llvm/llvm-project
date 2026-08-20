@@ -2286,9 +2286,11 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
-    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    llvm::SmallVector<llvm::Metadata *, 3> operands;
     // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
+    operands.push_back(
+        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(ctx)));
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
