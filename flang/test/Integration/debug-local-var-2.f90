@@ -37,7 +37,7 @@
 ! BOTH-LABEL: }
 
 program mn
-! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "MN", {{.*}})
+! BOTH-DAG: ![[MAIN:.*]] = distinct !DISubprogram(name: "mn", {{.*}})
 
 ! BOTH-DAG: ![[TYI32:.*]] = !DIBasicType(name: "integer(kind=4)", size: 32, encoding: DW_ATE_signed)
 ! BOTH-DAG: ![[TYI64:.*]] = !DIBasicType(name: "integer(kind=8)", size: 64, encoding: DW_ATE_signed)

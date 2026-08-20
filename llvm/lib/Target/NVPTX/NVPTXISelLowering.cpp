@@ -5546,6 +5546,16 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(4);
+    Infos.push_back(Info);
+    return;
   }
 }
 

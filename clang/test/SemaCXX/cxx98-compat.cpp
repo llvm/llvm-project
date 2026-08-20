@@ -227,8 +227,7 @@ void TrivialButNonPODThroughEllipsis() {
 }
 
 struct HasExplicitConversion {
-  // FIXME I think we should generate this diagnostic in C++20
-  explicit operator bool(); // not-cpp20-warning {{explicit conversion functions are incompatible with C++98}}
+  explicit operator bool(); // expected-warning {{explicit conversion functions are incompatible with C++98}}
 };
 
 struct Struct {};
