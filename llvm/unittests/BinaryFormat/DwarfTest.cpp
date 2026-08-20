@@ -58,6 +58,7 @@ TEST(DwarfTest, getOperationEncoding) {
 }
 
 TEST(DwarfTest, SubOperationEncoding) {
+  // Test that the enum-to-string user encodings roundtrip.
   EXPECT_EQ("DW_OP_LLVM_nop",
             SubOperationEncodingString(DW_OP_LLVM_user, DW_OP_LLVM_nop));
   EXPECT_EQ(DW_OP_LLVM_nop,
