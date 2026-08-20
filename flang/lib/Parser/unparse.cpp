@@ -2285,6 +2285,14 @@ public:
     Walk(std::get<OmpDefaultmapClause::ImplicitBehavior>(x.t));
     Walk(":", std::get<std::optional<std::list<Modifier>>>(x.t));
   }
+  void Unparse(const OmpDoacross &x) {
+    using Modifier = OmpDoacross::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t));
+    if (auto &&vector{std::get<std::optional<OmpIterationVector>>(x.t)}) {
+      Put(": ");
+      Walk(vector->v, ", ");
+    }
+  }
   void Unparse(const OmpDependClause::TaskDep &x) {
     using Modifier = OmpDependClause::TaskDep::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2337,11 +2345,6 @@ public:
       unparseClauses();
     }
   }
-  void Unparse(const OmpDoacross::Sink &x) {
-    Word("SINK: ");
-    Walk(x.v.v);
-  }
-  void Unparse(const OmpDoacross::Source &) { Word("SOURCE"); }
   void Unparse(const OmpDynGroupprivateClause &x) {
     using Modifier = OmpDynGroupprivateClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2928,6 +2931,7 @@ public:
   WALK_NESTED_ENUM(OmpProcBindClause, AffinityPolicy) // OMP proc_bind
   WALK_NESTED_ENUM(OmpDefaultClause, DataSharingAttribute) // OMP default
   WALK_NESTED_ENUM(OmpDefaultmapClause, ImplicitBehavior) // OMP defaultmap
+  WALK_NESTED_ENUM(OmpDependenceType, Value)
   WALK_NESTED_ENUM(OmpVariableCategory, Value) // OMP variable-category
   WALK_NESTED_ENUM(OmpLastprivateModifier, Value) // OMP lastprivate-modifier
   WALK_NESTED_ENUM(OmpChunkModifier, Value) // OMP chunk-modifier

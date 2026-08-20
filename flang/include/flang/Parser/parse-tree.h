@@ -4614,11 +4614,9 @@ struct OmpIterationVector {
 // See: depend-clause, doacross-clause
 struct OmpDoacross {
   OmpDependenceType::Value GetDepType() const;
-
-  WRAPPER_CLASS(Sink, OmpIterationVector);
-  EMPTY_CLASS(Source);
-  UNION_CLASS_BOILERPLATE(OmpDoacross);
-  std::variant<Sink, Source> u;
+  MODIFIER_BOILERPLATE(OmpDependenceType);
+  TUPLE_CLASS_BOILERPLATE(OmpDoacross);
+  std::tuple<MODIFIERS(), std::optional<OmpIterationVector>> t;
 };
 
 // Ref: [4.5:169-172], [5.0:255-259], [5.1:288-292], [5.2:323-326]
