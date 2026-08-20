@@ -297,7 +297,7 @@ public:
         auto AttrStr = Attr.getKindAsString();
         if (!AttrStr.consume_front("no-builtin-"))
           continue;
-        if (LibFunc LF = getLibFunc(AttrStr); LF != NotLibFunc)
+        if (LibFunc LF = getLibFunc(AttrStr))
           setUnavailable(LF);
       }
     }
