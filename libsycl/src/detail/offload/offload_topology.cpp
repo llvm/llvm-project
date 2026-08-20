@@ -10,54 +10,31 @@
 #include <detail/offload/offload_topology.hpp>
 #include <detail/offload/offload_utils.hpp>
 
+#include <algorithm>
 #include <array>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
-// Platforms for this backend
-range_view<const ol_platform_handle_t> OffloadTopology::getPlatforms() const {
-  return {MPlatforms.data(), MPlatforms.size()};
-}
-
-// Devices for a specific platform (PlatformId is index into Platforms)
-range_view<ol_device_handle_t>
-OffloadTopology::getDevices(size_t PlatformId) const {
-  if (PlatformId >= MDeviceRange.size()) {
-    return {nullptr, 0};
-  }
-  return MDeviceRange[PlatformId];
-}
-
 void OffloadTopology::registerNewPlatformsAndDevices(
-    Platform2DevContainer &PlatformsAndDev) {
-  if (!PlatformsAndDev.size())
-    return;
-
-  // MDeviceRange is populated with iterators of MDevices. Allocate required
-  // space in advance to keep them valid.
-  MDevices.reserve(PlatformsAndDev.size());
-
-  for (auto &[Platform, NewDev] : PlatformsAndDev) {
-    MDevices.push_back(NewDev);
-
-    // Platform is not unique within PlatformsAndDev but the container is sorted
-    if (MPlatforms.empty() || MPlatforms.back() != Platform) {
-      MPlatforms.push_back(Platform);
-      range_view<ol_device_handle_t> R{&MDevices.back(), 1 /*Size == 1*/};
-      MDeviceRange.push_back(R);
-    } else {
-      // Device is inserted already, just increment device count for the current
-      // platform
-      MDeviceRange.back().len++;
+    const Platform2DevContainer &PlatformsAndDev) {
+  for (const OffloadDeviceDesc &Entry : PlatformsAndDev) {
+    auto GroupIt = std::find_if(MPlatformGroups.begin(), MPlatformGroups.end(),
+                                [&](const OffloadPlatformGroup &Group) {
+                                  return Group.Platform == Entry.Platform &&
+                                         Group.ContextGroupIndex ==
+                                             Entry.ContextGroupIndex;
+                                });
+    if (GroupIt == MPlatformGroups.end()) {
+      MPlatformGroups.push_back({Entry.Platform, Entry.ContextGroupIndex, {}});
+      GroupIt = MPlatformGroups.end() - 1;
     }
+    GroupIt->Devices.push_back(Entry.Device);
   }
 }
 
 void discoverOffloadDevices() {
-  // liboffload returns devices sorted by backend + platform. We rely on this
-  // behavior during device enumeration.
   using PerBackendDataType =
       std::array<Platform2DevContainer, OL_PLATFORM_BACKEND_LAST>;
 
@@ -96,7 +73,15 @@ void discoverOffloadDevices() {
         if (OlBackend >= OL_PLATFORM_BACKEND_LAST)
           return true;
 
-        (*Data)[static_cast<size_t>(OlBackend)].push_back({Platform, Dev});
+        uint32_t ContextGroupIndex = 0;
+        Res = callNoCheck(olGetDeviceInfo, Dev,
+                          OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
+                          sizeof(ContextGroupIndex), &ContextGroupIndex);
+        if (Res != OL_SUCCESS)
+          ContextGroupIndex = 0;
+
+        (*Data)[static_cast<size_t>(OlBackend)].push_back(
+            {Platform, Dev, ContextGroupIndex});
         return true;
       },
       &Mapping);

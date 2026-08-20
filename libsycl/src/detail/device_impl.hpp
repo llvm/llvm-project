@@ -44,13 +44,7 @@ public:
   /// All device impls must be created in corresponding platform ctor.
   explicit DeviceImpl(ol_device_handle_t Device, PlatformImpl &Platform,
                       PrivateTag)
-      : MOffloadDevice(Device), MPlatform(Platform) {
-    ol_result_t Res = callNoCheck(
-        olGetDeviceInfo, MOffloadDevice, OL_DEVICE_INFO_CONTEXT_GROUP_INDEX,
-        sizeof(MContextGroupIndex), &MContextGroupIndex);
-    if (isFailed(Res))
-      MContextGroupIndex = 0;
-  }
+      : MOffloadDevice(Device), MPlatform(Platform) {}
 
   ~DeviceImpl() = default;
 
@@ -130,13 +124,9 @@ public:
   /// \return the corresponding liboffload device handle.
   ol_device_handle_t getOLHandle() const { return MOffloadDevice; }
 
-  /// \return the context compatibility group this device belongs to.
-  uint32_t getContextGroupIndex() const { return MContextGroupIndex; }
-
 private:
   ol_device_handle_t MOffloadDevice = {};
   PlatformImpl &MPlatform;
-  uint32_t MContextGroupIndex = 0;
 };
 
 } // namespace detail

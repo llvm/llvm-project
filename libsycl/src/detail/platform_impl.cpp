@@ -16,7 +16,6 @@
 #include <detail/platform_impl.hpp>
 
 #include <algorithm>
-#include <map>
 #include <memory>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -24,20 +23,6 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 bool PlatformImpl::rediscoverIfEmpty = false;
-
-PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
-  auto &PlatformCache = getPlatformCache();
-  for (auto &PlatImpl : PlatformCache) {
-    assert(PlatImpl && "Platform impl can not be nullptr");
-    if (PlatImpl->getOLHandleRef() == Platform)
-      return *PlatImpl;
-  }
-
-  throw sycl::exception(
-      sycl::make_error_code(sycl::errc::runtime),
-      "Platform for requested handle can't be created. This handle is not in "
-      "the list of platforms discovered by liboffload");
-}
 
 const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
   static auto InitPlatforms = []() {
@@ -49,10 +34,9 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
     for (const auto &Topo : getOffloadTopologies()) {
       if (Topo.getBackend() == OL_PLATFORM_BACKEND_HOST)
         continue;
-      size_t PlatformIndex = 0;
-      for (const auto &OffloadPlatform : Topo.getPlatforms()) {
+      for (const auto &PlatformGroup : Topo.getPlatformGroups()) {
         PlatformCache.emplace_back(std::make_unique<PlatformImpl>(
-            OffloadPlatform, PlatformIndex++, PrivateTag{}));
+            PlatformGroup.Platform, PlatformGroup.Devices, PrivateTag{}));
       }
     }
   };
@@ -69,41 +53,30 @@ const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
   return PlatformCache;
 }
 
-PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
+PlatformImpl::PlatformImpl(ol_platform_handle_t Platform,
+                           const std::vector<ol_device_handle_t> &Devices,
                            PrivateTag)
-    : MOffloadPlatform(Platform), MOffloadPlatformIndex(PlatformIndex) {
+    : MOffloadPlatform(Platform) {
+  assert(!Devices.empty() && "Platform must contain at least one device");
+
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   callAndThrow(olGetPlatformInfo, MOffloadPlatform, OL_PLATFORM_INFO_BACKEND,
                sizeof(Backend), &Backend);
   MBackend = convertBackend(Backend);
-  MOffloadBackend = Backend;
 
-  const auto &Topologies = getOffloadTopologies();
-  auto RootTopologyIt = std::find_if(
-      Topologies.begin(), Topologies.end(), [&](const OffloadTopology &Topo) {
-        return Topo.getBackend() == MOffloadBackend;
-      });
-
-  assert(RootTopologyIt != Topologies.end() &&
-         "Root topology for platform must always exist");
-  auto DevRange = RootTopologyIt->getDevices(MOffloadPlatformIndex);
-  MRootDevices.reserve(DevRange.size());
-  std::for_each(DevRange.begin(), DevRange.end(),
-                [&](const ol_device_handle_t &Device) {
-                  MRootDevices.emplace_back(std::make_unique<DeviceImpl>(
-                      Device, *this, DeviceImpl::PrivateTag{}));
-                });
-
-  std::map<uint32_t, std::vector<DeviceImpl *>> GroupedDevices;
-  for (const auto &Device : MRootDevices)
-    GroupedDevices[Device->getContextGroupIndex()].push_back(Device.get());
-
-  MDefaultContexts.reserve(GroupedDevices.size());
-  for (auto &[GroupIdx, DeviceImpls] : GroupedDevices) {
-    MDefaultContexts.push_back(
-        {GroupIdx, ContextImpl::create(std::move(DeviceImpls),
-                                       defaultAsyncHandler, property_list{})});
+  MRootDevices.reserve(Devices.size());
+  for (const ol_device_handle_t &Device : Devices) {
+    MRootDevices.emplace_back(
+        std::make_unique<DeviceImpl>(Device, *this, DeviceImpl::PrivateTag{}));
   }
+
+  std::vector<DeviceImpl *> DeviceImpls;
+  DeviceImpls.reserve(MRootDevices.size());
+  for (const auto &Device : MRootDevices)
+    DeviceImpls.push_back(Device.get());
+
+  MDefaultContext = ContextImpl::create(std::move(DeviceImpls),
+                                        defaultAsyncHandler, property_list{});
 }
 
 const std::vector<DeviceImplUPtr> &PlatformImpl::getRootDevices() const {
@@ -148,18 +121,9 @@ void PlatformImpl::iterateDevices(
   }
 }
 
-ContextImpl &PlatformImpl::getDefaultContext(const DeviceImpl &Device) {
-  assert(!MDefaultContexts.empty() &&
-         "Default contexts must be created in platform ctor");
-
-  uint32_t GroupIdx = Device.getContextGroupIndex();
-  for (auto &Entry : MDefaultContexts) {
-    if (Entry.ContextGroupIndex == GroupIdx)
-      return *Entry.Context;
-  }
-
-  assert(false && "No default context for device's context group");
-  __builtin_unreachable();
+ContextImpl &PlatformImpl::getDefaultContext() {
+  assert(MDefaultContext && "Default context must be created in platform ctor");
+  return *MDefaultContext;
 }
 
 } // namespace detail
