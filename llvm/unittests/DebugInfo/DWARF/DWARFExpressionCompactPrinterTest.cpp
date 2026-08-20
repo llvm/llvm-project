@@ -232,7 +232,7 @@ TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux) {
 }
 
 // A trailing operation must still decode, proving the selector consumed
-// the bytes of its ULEB128 operand encoding.
+// the bytes of its ULEB128 encoding.
 TEST(NVIDIAMux, Full_DW_OP_LLVM_NVIDIA_mux_TrailingOp) {
   const uint8_t Enc[] = {DW_OP_LLVM_user, DW_OP_LLVM_NVIDIA_mux, 0xa5, 0x01,
                          DW_OP_stack_value};
