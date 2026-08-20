@@ -23,7 +23,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
-#include "llvm/ADT/bit.h"
 #include <stack>
 
 using namespace clang;
@@ -1131,19 +1130,9 @@ static void getAPINotesObjectSelectorSubsets(
     RefQualifierField = 1u << 2,
   };
 
-  constexpr unsigned ObjectSelectorSubsetMasks[] = {
-      ConstField,
-      VolatileField,
-      RefQualifierField,
-      ConstField | VolatileField,
-      ConstField | RefQualifierField,
-      VolatileField | RefQualifierField,
-      ConstField | VolatileField | RefQualifierField,
-  };
-
-  // Apply less-constrained object selectors before more-constrained ones so
-  // entries that specify more Object fields can refine earlier effects.
-  for (unsigned Mask : ObjectSelectorSubsetMasks) {
+  // Enumerate every non-empty subset of the method's object properties.
+  constexpr unsigned AllFields = ConstField | VolatileField | RefQualifierField;
+  for (unsigned Mask = 1; Mask <= AllFields; ++Mask) {
     api_notes::FunctionObjectSelector Subset;
     if (Mask & ConstField)
       Subset.Const = ObjectSelector.Const;
@@ -1461,12 +1450,6 @@ void Sema::ProcessAPINotes(Decl *D) {
               }
             }
 
-            // Apply less constrained object selectors first, then more
-            // constrained ones. This gives specific selectors refinement
-            // precedence over broad defaults. For example,
-            // Object:{Const:true} can provide defaults for all const methods,
-            // while Object:{Const:true, Ref:lvalue} can override them for
-            // const lvalue methods.
             for (const api_notes::FunctionSelector &BaseSelector :
                  BaseSelectors) {
               if (BaseSelector.Object) {
