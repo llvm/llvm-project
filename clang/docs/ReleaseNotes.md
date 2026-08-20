@@ -93,6 +93,9 @@ features cannot lower the translation-unit ABI level;
   always passed the parts separately. `-fclang-abi-compat=23` restores the previous
   behavior. (#GH212109)
 
+- On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
+  or 16-byte aligned stack slot, matching GCC.
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -134,6 +137,9 @@ features cannot lower the translation-unit ABI level;
   modes.
 
 #### C++2c Feature Support
+
+- Added `__builtin_type_order` for compatibility with GCC as part of the
+  implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
 - Clang now supports [P3533R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3533r2.html) (constexpr virtual inheritance).
 
@@ -208,6 +214,13 @@ features cannot lower the translation-unit ABI level;
   (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
   `-fsanitize=shadow-call-stack`. The selected register must also be reserved
   with the matching `-ffixed-<reg>`.
+
+- Added `-fmodules-ignore-search-path=<path>`, the search-path counterpart to
+  `-fmodules-ignore-macro=<macro>`: the path is dropped from the context hash of
+  every module and physically removed from every module build, and kept only for
+  the translation unit itself. This lets builds that differ only in a search
+  path share one module cache, and is only sound when no module needs the path
+  -- a lookup that would have resolved through an ignored path simply fails.
 
 ### Deprecated Compiler Flags
 
@@ -396,6 +409,13 @@ features cannot lower the translation-unit ABI level;
 - `-Wunsafe-buffer-usage` now warns about unsafe two-parameter constructors of
   `std::string_view` (pointer and size), consistent with the existing warning for `std::span`.
 
+- `-Wno-unsafe-buffer-usage-in-static-sized-array` now also suppresses warnings
+  for pointer arithmetic on statically-sized arrays when the offset is a
+  non-negative constant within the array bounds.
+
+- `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
+  later, matching the behavior in C++11 through C++17. (#GH161689)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -416,6 +436,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
+- Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -434,6 +456,10 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+
+- Fixed a crash when an `address_space` attribute with a dependent argument was
+  written after the declarator-id, where it appertains to the declared entity
+  rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
 
@@ -495,6 +521,13 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
+
+- Fixed an assertion when a redeclaration of a function template or an out-of-line
+  definition of a member of a class template added a default argument to a
+  parameter that follows a parameter pack (e.g.
+  `template <typename... T> S::S(T..., int = 10) {}`).  (#GH216211)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -504,6 +537,8 @@ features cannot lower the translation-unit ABI level;
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 - Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
@@ -553,6 +588,12 @@ features cannot lower the translation-unit ABI level;
 #### LoongArch Support
 
 #### RISC-V Support
+
+- Fixed a bug where the `interrupt` attribute did not accept `machine` together
+  with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
+
+- Added a new warning when the same interrupt type is specified more than
+  once in a RISC-V `interrupt` attribute.
 
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If

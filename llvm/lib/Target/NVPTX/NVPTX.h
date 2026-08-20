@@ -25,6 +25,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+class SelectionDAGISelPass;
 class FunctionPass;
 class MachineFunctionPass;
 class NVPTXTargetMachine;

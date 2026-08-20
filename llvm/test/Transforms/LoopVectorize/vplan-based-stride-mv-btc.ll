@@ -213,15 +213,14 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-NO-MV-SCALABLE-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[STRIDE]], 1
-; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH1]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_BODY]]:
@@ -230,7 +229,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <vscale x 4 x i64>, ptr [[TMP5]], align 8
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; COMPARE-NO-MV-SCALABLE:       [[MIDDLE_BLOCK]]:
@@ -257,15 +256,14 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-LAA-MV-SCALABLE-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_SCEVCHECK]]:
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_BODY]]:
@@ -274,7 +272,7 @@ define void @non_constant_btc(ptr noalias %p.out, ptr %p, i64 %stride, i64 %n) v
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP4]], align 8
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; COMPARE-LAA-MV-SCALABLE:       [[MIDDLE_BLOCK]]:
@@ -478,17 +476,16 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-NO-MV-SCALABLE-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[STRIDE]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_BODY]]:
@@ -499,7 +496,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -527,17 +524,16 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-LAA-MV-SCALABLE-NEXT:  [[SCALAR_PH:.*]]:
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[STRIDE]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[HEADER]]:
@@ -548,7 +544,7 @@ define void @stride_as_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscale_range
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -752,17 +748,16 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 1
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[HEADER]]:
@@ -773,7 +768,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -802,17 +797,16 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[HEADER]]:
@@ -823,7 +817,7 @@ define void @stride_dependent_btc(ptr noalias %p.out, ptr %p, i64 %stride) vscal
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -1055,15 +1049,14 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N:%.*]] = mul i64 [[M]], [[STRIDE]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[STRIDE]], 1
-; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH1:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH1]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_BODY]]:
@@ -1072,7 +1065,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <vscale x 4 x i64>, ptr [[TMP5]], align 8
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; COMPARE-NO-MV-SCALABLE:       [[MIDDLE_BLOCK]]:
@@ -1100,15 +1093,14 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N:%.*]] = mul i64 [[M]], [[STRIDE]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_SCEVCHECK]]:
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_BODY]]:
@@ -1117,7 +1109,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP4]], align 8
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; COMPARE-LAA-MV-SCALABLE:       [[MIDDLE_BLOCK]]:
@@ -1294,17 +1286,16 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[HEADER]]:
@@ -1315,7 +1306,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1344,17 +1335,16 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[HEADER]]:
@@ -1365,7 +1355,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -1734,7 +1724,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_MEMCHECK]]:
@@ -1745,30 +1735,29 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP7]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP7]], i64 0
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-NO-MV-SCALABLE:       [[HEADER]]:
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[HEADER]] ]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP8]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[HEADER]] ]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP9:%.*]] = mul <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[P]], <vscale x 4 x i64> [[TMP9]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP9]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[HEADER]] ]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i64, ptr [[P]], <vscale x 4 x i64> [[TMP8]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> align 8 [[WIDE_GEP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i64> poison)
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[P2]], i64 [[INDEX]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP10]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP11:%.*]] = add <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[TMP11]], ptr [[TMP12]], align 8
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[P2]], i64 [[INDEX]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i64>, ptr [[TMP11]], align 8
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP12:%.*]] = add <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[TMP12]], ptr [[TMP13]], align 8
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
 ; COMPARE-NO-MV-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; COMPARE-NO-MV-SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; COMPARE-NO-MV-SCALABLE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -1798,7 +1787,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N:%.*]] = add i64 [[STRIDE]], 3
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_MEMCHECK]]:
@@ -1809,13 +1798,12 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[VECTOR_PH]]:
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP1]], 2
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP7]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP7]], i64 0
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP2]], i64 0
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br label %[[HEADER:.*]]
 ; COMPARE-LAA-MV-SCALABLE:       [[HEADER]]:
@@ -1829,7 +1817,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP11:%.*]] = add <vscale x 4 x i64> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[P_OUT]], i64 [[INDEX]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    store <vscale x 4 x i64> [[TMP11]], ptr [[TMP12]], align 8
-; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
+; COMPARE-LAA-MV-SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; COMPARE-LAA-MV-SCALABLE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP12:![0-9]+]]
