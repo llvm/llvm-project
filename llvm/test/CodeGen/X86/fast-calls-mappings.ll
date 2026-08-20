@@ -1,7 +1,7 @@
-; Exercises the fast math->AOCL fast-call name mapping under fast-math at -O3
-; with -fast-library=AMDLIBM on X86: float variants, *_finite aliases and
-; inverse-trig functions are rewritten, while math calls with no AOCL mapping
-; (e.g. cbrt) are left untouched.
+; Exercises the fast math library name mapping under fast-math at -O3 with
+; -fast-library=AMDLIBM on X86: float variants, *_finite aliases and
+; inverse-trig functions are rewritten, while math calls with no fast library
+; mapping (e.g. cbrt) are left untouched.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -fast-library=AMDLIBM < %s \
 ; RUN:   | FileCheck %s --check-prefix=AMD
@@ -111,7 +111,7 @@ define double @call_exp_finite(double %x) #0 {
 ; AMD-LABEL: call_exp_finite:
 ; AMD: callq{{.*}}amd_fastexp
 
-; cbrt has no AOCL mapping and must not be rewritten.
+; cbrt has no fast library mapping and must not be rewritten.
 define double @call_cbrt_unmapped(double %x) #0 {
   %r = call double @cbrt(double %x)
   %a = fadd double %r, %x

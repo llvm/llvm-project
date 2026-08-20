@@ -1,5 +1,5 @@
 // Verify that the -ffastlib=AMDLIBM driver flag, together with fast-math at -O3,
-// rewrites math library calls into their AMD AOCL fast-call equivalents for X86,
+// rewrites math library calls into their fast library entry points for X86,
 // and leaves them untouched without the flag.
 
 // REQUIRES: x86-registered-target
@@ -33,7 +33,7 @@ float call_tanf(float x) { return tanf(x) + x; }
 // STD-LABEL: call_tanf:
 // STD: callq{{.*}}tanf
 
-// cbrt has no AOCL mapping and must stay even with the option enabled.
+// cbrt has no fast library mapping and must stay even with the option enabled.
 double call_cbrt(double x) { return cbrt(x) + x; }
 // AMD-LABEL: call_cbrt:
 // AMD-NOT: amd_fast

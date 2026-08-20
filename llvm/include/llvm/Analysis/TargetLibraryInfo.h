@@ -124,7 +124,7 @@ public:
   /// faster, library-specific entry points.
   enum FastLibrary {
     NoFastLibrary, // Use default library.
-    FAST_AMDLIBM   // AMD fast math library.
+    AMDLIBM        // AMD fast math library.
   };
   FastLibrary FastMathLib = NoFastLibrary;
 

@@ -147,8 +147,8 @@ static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
 static void addFastMathLibrary(TargetLibraryInfoImpl &TLII,
                                const CodeGenOptions &CodeGenOpts) {
   switch (CodeGenOpts.getFastLib()) {
-  case CodeGenOptions::FAST_AMDLIBM:
-    TLII.addFastFunctionsFromMathLib(TargetLibraryInfoImpl::FAST_AMDLIBM);
+  case CodeGenOptions::AMDLIBM:
+    TLII.addFastFunctionsFromMathLib(TargetLibraryInfoImpl::AMDLIBM);
     break;
   case CodeGenOptions::NoFastLibrary:
     break;

@@ -3970,7 +3970,7 @@ def ffastlib : Joined<["-"], "ffastlib=">, Group<f_Group>,
     HelpText<"Use the given fast math functions library.">,
     Values<"AMDLIBM,none">,
     NormalizedValuesScope<"CodeGenOptions">,
-    NormalizedValues<["FAST_AMDLIBM", "NoFastLibrary"]>,
+    NormalizedValues<["AMDLIBM", "NoFastLibrary"]>,
     MarshallingInfoEnum<CodeGenOpts<"FastLib">, "NoFastLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;

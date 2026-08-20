@@ -27,7 +27,7 @@ static cl::opt<TargetLibraryInfoImpl::FastLibrary> ClFastLibrary(
     cl::init(TargetLibraryInfoImpl::NoFastLibrary),
     cl::values(clEnumValN(TargetLibraryInfoImpl::NoFastLibrary, "none",
                           "Use default library"),
-               clEnumValN(TargetLibraryInfoImpl::FAST_AMDLIBM, "AMDLIBM",
+               clEnumValN(TargetLibraryInfoImpl::AMDLIBM, "AMDLIBM",
                           "AMD fast math library")));
 
 #define GET_TARGET_LIBRARY_INFO_STRING_TABLE
@@ -1419,12 +1419,12 @@ void TargetLibraryInfoImpl::addFastFunctionsFromMathLib(
     enum FastLibrary FastLib) {
   setFastMathLib(FastLib);
   switch (FastLib) {
-  case FastLibrary::FAST_AMDLIBM: {
-    const DenseMap<StringRef, StringRef> FastAOCLFuncs = {
-#define TLI_DEFINE_FAST_AOCL_FUNCS
-#include "llvm/Analysis/FastAOCLFuncs.def"
+  case FastLibrary::AMDLIBM: {
+    const DenseMap<StringRef, StringRef> FastLibFuncs = {
+#define TLI_DEFINE_FAST_LIB_FUNCS
+#include "llvm/Analysis/AMDLIBMFastFuncs.def"
     };
-    LibFastFunctions.insert(FastAOCLFuncs.begin(), FastAOCLFuncs.end());
+    LibFastFunctions.insert(FastLibFuncs.begin(), FastLibFuncs.end());
     break;
   }
   case FastLibrary::NoFastLibrary:

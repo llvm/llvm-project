@@ -110,7 +110,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86PreLegalizerCombinerLegacyPass(PR);
   initializeX86PostLegalizerCombinerLegacyPass(PR);
   initializeX86WinEHUnwindV3Pass(PR);
-  initializeX86GenAmdFastCallsPass(PR);
+  initializeX86GenFastCallsPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -536,10 +536,9 @@ void X86PassConfig::addPreRegAlloc() {
 
 void X86PassConfig::addMachineSSAOptimization() {
   addPass(createX86DomainReassignmentLegacyPass());
-  // Generate x86 target-specific function calls for math functions that are
-  // available in the AMD AOCL fast math library.
+  // Generate x86 target-specific fast math library calls.
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
-    addPass(createX86GenAmdFastCallsPass());
+    addPass(createX86GenFastCallsPass());
   TargetPassConfig::addMachineSSAOptimization();
 }
 

@@ -1,6 +1,6 @@
 ; Verify that, under fast-math at -O3 with -fast-library=AMDLIBM, math library
-; calls are rewritten to their AMD AOCL fast-call equivalents on X86, and that
-; they are left untouched without the option.
+; calls are rewritten to their fast library entry points on X86, and that they
+; are left untouched without the option.
 
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O3 -fast-library=AMDLIBM < %s \
 ; RUN:   | FileCheck %s --check-prefix=AMD
@@ -47,8 +47,8 @@ entry:
 ; STD-LABEL: call_log:
 ; STD: callq{{.*}}log
 
-; Without the fast-math attributes the call must not be rewritten even when the
-; AMD fast math library is selected.
+; Without the fast-math attributes the call must not be rewritten even when a
+; fast math library is selected.
 define double @call_tan_no_fastmath(double %x) {
 entry:
   %r = call double @tan(double %x)
