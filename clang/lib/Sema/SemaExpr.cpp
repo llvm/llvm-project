@@ -11921,13 +11921,15 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
           QualType NewPteTy = Context.getAddrSpaceQualType(
               lpointee.getUnqualifiedType(), ResultAddrSpace);
           QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          LHS = ImpCastExprToType(LHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+          LHS = ImpCastExprToType(LHS.get(), NewPtrTy,
+                                  CK_AddressSpaceConversion);
         }
         if (RAddrSpace != ResultAddrSpace) {
           QualType NewPteTy = Context.getAddrSpaceQualType(
               rpointee.getUnqualifiedType(), ResultAddrSpace);
           QualType NewPtrTy = Context.getPointerType(NewPteTy);
-          RHS = ImpCastExprToType(RHS.get(), NewPtrTy, CK_AddressSpaceConversion);
+          RHS = ImpCastExprToType(RHS.get(), NewPtrTy,
+                                  CK_AddressSpaceConversion);
         }
       }
 
