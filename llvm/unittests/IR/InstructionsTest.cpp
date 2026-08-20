@@ -861,6 +861,27 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
     GI->dropPoisonGeneratingFlags();
     ASSERT_FALSE(GI->isInBounds());
   }
+
+  {
+    Value *Ptr = B.CreateIntToPtr(Arg0, B.getPtrTy(1));
+    auto *ASC = cast<AddrSpaceCastInst>(
+        B.CreateAddrSpaceCast(Ptr, B.getPtrTy(), "", /*IsNonNull*/ true));
+    EXPECT_TRUE(ASC->hasNonNull());
+    EXPECT_TRUE(ASC->hasPoisonGeneratingFlags());
+    ASC->dropPoisonGeneratingFlags();
+    EXPECT_FALSE(ASC->hasNonNull());
+    EXPECT_FALSE(ASC->hasPoisonGeneratingFlags());
+  }
+
+  {
+    // A ConstantExpr addrspacecast is an Operator but not an
+    // AddrSpaceCastInst; hasPoisonGeneratingFlags() must not assume the
+    // instruction subclass.
+    Constant *NullPtr = Constant::getNullValue(B.getPtrTy(1));
+    auto *CE =
+        cast<Operator>(ConstantExpr::getAddrSpaceCast(NullPtr, B.getPtrTy()));
+    EXPECT_FALSE(CE->hasPoisonGeneratingFlags());
+  }
 }
 
 TEST(InstructionsTest, GEPIndices) {
