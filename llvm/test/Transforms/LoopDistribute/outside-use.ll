@@ -52,19 +52,19 @@ define void @f() {
 ; CHECK-NEXT:    [[LOADC_LVER_ORIG:%.*]] = load i32, ptr [[ARRAYIDXC_LVER_ORIG]], align 4
 ; CHECK-NEXT:    [[SUM_ADD_LVER_ORIG]] = add nuw nsw i32 [[SUM_LVER_ORIG]], [[LOADC_LVER_ORIG]]
 ; CHECK-NEXT:    [[EXITCOND_LVER_ORIG:%.*]] = icmp eq i64 [[ADD_LVER_ORIG]], 20
-; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY_LVER_ORIG]]
+; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY_LVER_ORIG]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[FOR_BODY_PH_LDIST1]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY_LDIST1:.*]]
 ; CHECK:       [[FOR_BODY_LDIST1]]:
 ; CHECK-NEXT:    [[IND_LDIST1:%.*]] = phi i64 [ 0, %[[FOR_BODY_PH_LDIST1]] ], [ [[ADD_LDIST1:%.*]], %[[FOR_BODY_LDIST1]] ]
 ; CHECK-NEXT:    [[ARRAYIDXA_LDIST1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IND_LDIST1]]
-; CHECK-NEXT:    [[LOADA_LDIST1:%.*]] = load i32, ptr [[ARRAYIDXA_LDIST1]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[LOADA_LDIST1:%.*]] = load i32, ptr [[ARRAYIDXA_LDIST1]], align 4, !alias.scope [[META2:![0-9]+]], !noalias [[META5:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDXB_LDIST1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IND_LDIST1]]
-; CHECK-NEXT:    [[LOADB_LDIST1:%.*]] = load i32, ptr [[ARRAYIDXB_LDIST1]], align 4, !alias.scope [[META5:![0-9]+]]
+; CHECK-NEXT:    [[LOADB_LDIST1:%.*]] = load i32, ptr [[ARRAYIDXB_LDIST1]], align 4, !alias.scope [[META7:![0-9]+]]
 ; CHECK-NEXT:    [[MULA_LDIST1:%.*]] = mul i32 [[LOADB_LDIST1]], [[LOADA_LDIST1]]
 ; CHECK-NEXT:    [[ADD_LDIST1]] = add nuw nsw i64 [[IND_LDIST1]], 1
 ; CHECK-NEXT:    [[ARRAYIDXA_PLUS_4_LDIST1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[ADD_LDIST1]]
-; CHECK-NEXT:    store i32 [[MULA_LDIST1]], ptr [[ARRAYIDXA_PLUS_4_LDIST1]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    store i32 [[MULA_LDIST1]], ptr [[ARRAYIDXA_PLUS_4_LDIST1]], align 4, !alias.scope [[META2]], !noalias [[META5]]
 ; CHECK-NEXT:    [[EXITCOND_LDIST1:%.*]] = icmp eq i64 [[ADD_LDIST1]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND_LDIST1]], label %[[FOR_BODY_PH:.*]], label %[[FOR_BODY_LDIST1]]
 ; CHECK:       [[FOR_BODY_PH]]:
@@ -74,18 +74,18 @@ define void @f() {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[FOR_BODY_PH]] ], [ [[SUM_ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i64 [[IND]], 1
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IND]]
-; CHECK-NEXT:    [[LOADC:%.*]] = load i32, ptr [[ARRAYIDXC]], align 4, !alias.scope [[META3]]
+; CHECK-NEXT:    [[LOADC:%.*]] = load i32, ptr [[ARRAYIDXC]], align 4, !alias.scope [[META5]]
 ; CHECK-NEXT:    [[SUM_ADD]] = add nuw nsw i32 [[SUM]], [[LOADC]]
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], 20
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END_LOOPEXIT2:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    [[SUM_ADD_LVER_PH:%.*]] = phi i32 [ [[SUM_ADD_LVER_ORIG]], %[[FOR_BODY_LVER_ORIG]] ]
+; CHECK-NEXT:    [[SUM_ADD_LCSSA_PH:%.*]] = phi i32 [ [[SUM_ADD_LVER_ORIG]], %[[FOR_BODY_LVER_ORIG]] ]
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END_LOOPEXIT2]]:
-; CHECK-NEXT:    [[SUM_ADD_LVER_PH3:%.*]] = phi i32 [ [[SUM_ADD]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_ADD_LCSSA_PH3:%.*]] = phi i32 [ [[SUM_ADD]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[SUM_ADD_LVER:%.*]] = phi i32 [ [[SUM_ADD_LVER_PH]], %[[FOR_END_LOOPEXIT]] ], [ [[SUM_ADD_LVER_PH3]], %[[FOR_END_LOOPEXIT2]] ]
+; CHECK-NEXT:    [[SUM_ADD_LVER:%.*]] = phi i32 [ [[SUM_ADD_LCSSA_PH]], %[[FOR_END_LOOPEXIT]] ], [ [[SUM_ADD_LCSSA_PH3]], %[[FOR_END_LOOPEXIT2]] ]
 ; CHECK-NEXT:    store i32 [[SUM_ADD_LVER]], ptr @SUM, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -127,11 +127,13 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 ;.
-; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
-; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isdistributed", i32 1}
+; CHECK: [[META2]] = !{[[META3:![0-9]+]]}
+; CHECK: [[META3]] = distinct !{[[META3]], [[META4:![0-9]+]]}
+; CHECK: [[META4]] = distinct !{[[META4]], i1 false, !"LVerDomain"}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META2]]}
+; CHECK: [[META6]] = distinct !{[[META6]], [[META4]]}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META4]]}
 ;.

@@ -21,7 +21,7 @@ define void @test_load_load_combine_metadata(ptr, ptr, ptr) {
 ; CHECK: ![[RANGE]] = !{i32 0, i32 5}
 !0 = !{ i32 0, i32 5 }
 !1 = !{ i32 7, i32 9 }
-!2 = !{!2}
+!2 = !{!2, i1 false}
 !3 = !{!3, !2}
 !4 = !{!4, !2}
 !5 = !{!3}

@@ -83,6 +83,6 @@ attributes #0 = { argmemonly nounwind }
 !6 = !{!"double", !3, i64 0}
 !7 = !{!8}
 !8 = distinct !{!8, !9, !"add: %addend"}
-!9 = distinct !{!9, !"add"}
+!9 = distinct !{!9, i1 false, !"add"}
 !10 = !{!11}
 !11 = distinct !{!11, !9, !"add: %data"}

@@ -188,7 +188,7 @@ loop:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
 ; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]], !"LVerDomain"}
+; CHECK: [[META7]] = distinct !{[[META7]], i1 false, !"LVerDomain"}
 ; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
 ; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}

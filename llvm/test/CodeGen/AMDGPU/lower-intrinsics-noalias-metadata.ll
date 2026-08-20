@@ -166,7 +166,7 @@ bb:
 declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.amdgcn.s.cluster.barrier()
 
-!0 = distinct !{!0, !"domain"}
+!0 = distinct !{!0, i1 false, !"domain"}
 !2 = distinct !{!2, !0, !"global_scope"}
 !3 = distinct !{!3, !0, !"lds_scope"}
 !1 = !{!2}

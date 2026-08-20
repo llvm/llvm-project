@@ -358,7 +358,7 @@ attributes #1 = { "target-features"="+64bit,+v" }
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
 ; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; CHECK: [[META9]] = !{[[META10:![0-9]+]], [[META11:![0-9]+]]}
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META8]]}

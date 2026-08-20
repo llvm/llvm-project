@@ -1585,6 +1585,34 @@ void TempMDNodeDeleter::operator()(MDNode *Node) const {
   MDNode::deleteTemporary(Node);
 }
 
+/// Wrapper around alias scope domain metedata to allow accessing their fields,
+/// including surfacing the optional `i1 disjoint` parameter, hiding the details
+/// of the metadata encoding.
+class AliasScopeDomainNode {
+  const MDNode *Node = nullptr;
+
+public:
+  AliasScopeDomainNode() = default;
+  explicit AliasScopeDomainNode(const MDNode *N) : Node(N) {}
+
+  /// Get the MDNode for this AliasScopeDomainNode.
+  const MDNode *getNode() const { return Node; }
+
+  StringRef getName() const {
+    if (Node->getNumOperands() > 2)
+      if (MDString *N = dyn_cast_or_null<MDString>(Node->getOperand(2)))
+        return N->getString();
+    return StringRef();
+  }
+
+  /// Return true if this domain has disjoint scopes.
+  bool hasDisjointScopes() const {
+    const Constant *Disjoint =
+        mdconst::dyn_extract_or_null<Constant>(Node->getOperand(1));
+    return Disjoint && Disjoint->isOneValue();
+  }
+};
+
 /// This is a simple wrapper around an MDNode which provides a higher-level
 /// interface by hiding the details of how alias analysis information is encoded
 /// in its operands.

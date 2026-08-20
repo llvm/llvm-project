@@ -44,7 +44,7 @@ declare i32 @foo(ptr) readonly
 
 !0 = distinct !{!0, !2, !"callee0: %a"}
 !1 = distinct !{!1, !2, !"callee0: %b"}
-!2 = distinct !{!2, !"callee0"}
+!2 = distinct !{!2, i1 false, !"callee0"}
 
 !3 = !{!0}
 !4 = !{!1}
@@ -52,7 +52,7 @@ declare i32 @foo(ptr) readonly
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee0: %a"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"callee0"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"callee0"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]], !"callee0: %b"}
 ;.

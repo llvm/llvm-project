@@ -16,4 +16,4 @@ declare dso_local spir_func void @_Z22__spirv_ControlBarrierjjj(i32, i32, i32)
 
 !1 = !{!2}
 !2 = distinct !{!2, !3}
-!3 = distinct !{!3}
+!3 = distinct !{!3, i1 false}

@@ -92,7 +92,7 @@ for.end:                                          ; preds = %for.body
 
 ; Domain for the second loop versioning for the top loop after
 ; distribution.
-; CHECK: !17 = distinct !{!17, !"LVerDomain"}
+; CHECK: !17 = distinct !{!17, i1 false, !"LVerDomain"}
 ; CHECK: !19 = distinct !{!19, !17}
 ; CHECK: !20 = distinct !{!20, !17}
 ; CHECK: !21 = distinct !{!21, !17}
@@ -102,7 +102,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK: !34 = distinct !{!34, !35}
 ; Domain for the second loop versioning for the bottom loop after
 ; distribution.
-; CHECK: !35 = distinct !{!35, !"LVerDomain"}
+; CHECK: !35 = distinct !{!35, i1 false, !"LVerDomain"}
 ; CHECK: !36 = !{!21, !37}
 ; CHECK: !37 = distinct !{!37, !35}
 ; CHECK: !38 = !{!19, !39}
