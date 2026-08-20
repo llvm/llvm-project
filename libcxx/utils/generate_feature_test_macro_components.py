@@ -1540,7 +1540,7 @@ feature_test_macros = [
             },
             "headers": ["ranges"],
             "unimplemented": True,
-        },        
+        },
         {
             "name": "__cpp_lib_void_t",
             "values": {"c++17": 201411},
