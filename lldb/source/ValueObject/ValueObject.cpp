@@ -821,8 +821,8 @@ uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
@@ -1716,8 +1716,8 @@ static const char *ConvertBoolean(lldb::LanguageType language_type,
 
 bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   error.Clear();
-  if (GetIsConstant()) {
-    error = Status::FromErrorString("Cannot change the value of a constant");
+  if (llvm::Error err = CanSetValue()) {
+    error = Status::FromError(std::move(err));
     return false;
   }
   // Make sure our value is up to date first so that our location and location
