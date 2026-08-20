@@ -147,7 +147,7 @@ void LiveIntervals::clear() {
   RegMaskSlots.clear();
   RegMaskBits.clear();
   RegMaskBlocks.clear();
-  SingleRegMask = nullptr;
+  RegMaskIntersection.clear();
 
   for (LiveRange *LR : RegUnitRanges)
     delete LR;
@@ -250,6 +250,13 @@ void LiveIntervals::computeVirtRegs() {
 
 void LiveIntervals::computeRegMasks() {
   RegMaskBlocks.resize(MF->getNumBlockIDs());
+  RegMaskIntersection.resize(TRI->getNumRegs(), true);
+
+  auto addRegMask = [&](SlotIndex Slot, const uint32_t *Mask) {
+    RegMaskSlots.push_back(Slot);
+    RegMaskBits.push_back(Mask);
+    RegMaskIntersection.clearBitsNotInMask(Mask);
+  };
 
   // Find all instructions with regmask operands.
   for (const MachineBasicBlock &MBB : *MF) {
@@ -257,26 +264,22 @@ void LiveIntervals::computeRegMasks() {
     RMB.first = RegMaskSlots.size();
 
     // Some block starts, such as EH funclets, create masks.
-    if (const uint32_t *Mask = MBB.getBeginClobberMask(TRI)) {
-      RegMaskSlots.push_back(Indexes->getMBBStartIdx(&MBB));
-      RegMaskBits.push_back(Mask);
-    }
+    if (const uint32_t *Mask = MBB.getBeginClobberMask(TRI))
+      addRegMask(Indexes->getMBBStartIdx(&MBB), Mask);
 
     // Unwinders may clobber additional registers.
     // FIXME: This functionality can possibly be merged into
     // MachineBasicBlock::getBeginClobberMask().
     if (MBB.isEHPad())
-      if (auto *Mask = TRI->getCustomEHPadPreservedMask(*MBB.getParent())) {
-        RegMaskSlots.push_back(Indexes->getMBBStartIdx(&MBB));
-        RegMaskBits.push_back(Mask);
-      }
+      if (auto *Mask = TRI->getCustomEHPadPreservedMask(*MBB.getParent()))
+        addRegMask(Indexes->getMBBStartIdx(&MBB), Mask);
 
     for (const MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isRegMask())
           continue;
-        RegMaskSlots.push_back(Indexes->getInstructionIndex(MI).getRegSlot());
-        RegMaskBits.push_back(MO.getRegMask());
+        addRegMask(Indexes->getInstructionIndex(MI).getRegSlot(),
+                   MO.getRegMask());
       }
     }
 
@@ -285,23 +288,11 @@ void LiveIntervals::computeRegMasks() {
     // half-open.
     if (const uint32_t *Mask = MBB.getEndClobberMask(TRI)) {
       assert(!MBB.empty() && "empty return block?");
-      RegMaskSlots.push_back(
-          Indexes->getInstructionIndex(MBB.back()).getRegSlot());
-      RegMaskBits.push_back(Mask);
+      addRegMask(Indexes->getInstructionIndex(MBB.back()).getRegSlot(), Mask);
     }
 
     // Compute the number of register mask instructions in this block.
     RMB.second = RegMaskSlots.size() - RMB.first;
-  }
-
-  if (!RegMaskBits.empty()) {
-    SingleRegMask = RegMaskBits.front();
-    for (const uint32_t *Mask : RegMaskBits) {
-      if (Mask != SingleRegMask) {
-        SingleRegMask = nullptr;
-        break;
-      }
-    }
   }
 }
 
@@ -1034,16 +1025,16 @@ bool LiveIntervals::checkRegMaskInterference(const LiveInterval &LI,
   bool Found = false;
   // Utility to union regmasks.
   auto unionBitMask = [&](unsigned Idx) {
-      if (!Found) {
-        // This is the first overlap. Initialize UsableRegs to all ones.
-        UsableRegs.clear();
-        UsableRegs.resize(TRI->getNumRegs(), true);
-        Found = true;
-      }
-      // Remove usable registers clobbered by this mask.
-      UsableRegs.clearBitsNotInMask(Bits[Idx]);
-      // Reapplying the same mask cannot change UsableRegs.
-      return SingleRegMask != nullptr;
+    if (!Found) {
+      // This is the first overlap. Initialize UsableRegs to all ones.
+      UsableRegs.clear();
+      UsableRegs.resize(TRI->getNumRegs(), true);
+      Found = true;
+    }
+    // Remove usable registers clobbered by this mask.
+    UsableRegs.clearBitsNotInMask(Bits[Idx]);
+    // No remaining mask can change an already fully intersected result.
+    return UsableRegs == RegMaskIntersection;
   };
   while (true) {
     assert(*SlotI >= LiveI->start);
