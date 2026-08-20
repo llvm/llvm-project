@@ -1271,7 +1271,7 @@ static inline MOBClause makeMobClause(
 }
 
 TYPE_PARSER(construct<OmpAdjustArgsClause>(
-    maybe(nonemptyList(Parser<OmpAdjustArgsClause::Modifier>{} / ":")),
+    maybe(nonemptyList(Parser<OmpAdjustArgsClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
 // [5.0] 2.10.1 affinity([aff-modifier:] locator-list)
