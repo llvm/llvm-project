@@ -42,11 +42,15 @@
 /// wouldn't be created, or when your know a newer processor is being
 /// targeted, or when optimizing for minimum code size.
 ///
+/// Widening the loads in this pass can leave behind zero extends of values
+/// that are already zero extended, so as a second step these are removed.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -60,6 +64,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 using namespace llvm;
 
 #define FIXUPBW_DESC "X86 Byte/Word Instruction Fixup"
@@ -72,6 +77,11 @@ static cl::opt<bool>
     FixupBWInsts("fixup-byte-word-insts",
                  cl::desc("Change byte and word instructions to larger sizes"),
                  cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EliminateRedundantZExts(
+    "fixup-bw-eliminate-redundant-zext",
+    cl::desc("Remove zero extends of already zero extended values"),
+    cl::init(true), cl::Hidden);
 
 namespace {
 class X86FixupBWInstImpl {
@@ -110,6 +120,10 @@ private:
   // possible.  Return the replacement instruction if OK, return nullptr
   // otherwise.
   MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
+
+  /// Remove the zero extends in \p MBB of values that an earlier instruction
+  /// in the same block (widened by this pass) has already zero extended. 
+  void eliminateRedundantZeroExtends(MachineBasicBlock &MBB);
 
   MachineFunction *MF = nullptr;
 
@@ -174,8 +188,11 @@ bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
 
   // Process all basic blocks.
-  for (auto &MBB : MF)
+  for (auto &MBB : MF) {
     processBasicBlock(MF, MBB);
+    if (EliminateRedundantZExts)
+      eliminateRedundantZeroExtends(MBB);
+  }
 
   LLVM_DEBUG(dbgs() << "End X86FixupBWInsts\n";);
 
@@ -429,6 +446,99 @@ X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
   }
 
   return nullptr;
+}
+
+void X86FixupBWInstImpl::eliminateRedundantZeroExtends(MachineBasicBlock &MBB) {
+  // Return the number of source bits in the zero extending mov.
+  auto DefinedZeroExtendedValueBits =
+      [](const MachineInstr &MI) -> std::optional<unsigned> {
+    switch (MI.getOpcode()) {
+    case X86::MOVZX32rm8:
+    case X86::MOVZX32rr8:
+      return 8;
+    case X86::MOVZX32rm16:
+    case X86::MOVZX32rr16:
+      return 16;
+    default:
+      return std::nullopt;
+    }
+  };
+
+  // Maps what is currently known about each 32 bit register to the number
+  // of low bits its value is known to be zero extended from: 8 for a value
+  // in [0, 0xFF] and 16 for one in [0, 0xFFFF]. Only tracks registers within
+  // a single block.
+  SmallDenseMap<MCRegister, unsigned, 8> Known;
+
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+    if (MI.isDebugInstr())
+      continue;
+
+    // Only match 8 and 16 bit register to register extends. Loads can't be
+    // eliminated. The 64 bit target versions are handled by the 32 bit
+    // versions.
+    unsigned Opc = MI.getOpcode();
+    if (Opc == X86::MOVZX32rr8 || Opc == X86::MOVZX32rr16) {
+      // The extend is redundant if the value is already zero extended from no
+      // more bits than it reads.
+      unsigned ReadBits = Opc == X86::MOVZX32rr8 ? 8 : 16;
+      MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
+      MCRegister Src = MI.getOperand(1).getReg().asMCReg();
+      MCRegister SrcSuper = getX86SubSuperRegister(Src, 32);
+      auto It = Known.find(SrcSuper);
+      // Reading %ah and friends does not read the part of the super register
+      // that is known to hold the whole value, so insist on the low bits.
+      if (getX86SubSuperRegister(SrcSuper, ReadBits) == Src &&
+          It != Known.end() && It->second <= ReadBits) {
+
+        if (Dst == SrcSuper) {
+          // The extend writes back the value that is already in the register.
+          LLVM_DEBUG(dbgs() << "Removing redundant zero extend: " << MI);
+          MI.eraseFromParent();
+          continue;
+        }
+
+        // The extend is redundant but the move is not. A 32 bit copy is a
+        // byte shorter and can be eliminated at rename.
+        LLVM_DEBUG(dbgs() << "Turning zero extend into a copy: " << MI);
+        MachineInstrBuilder MIB =
+            BuildMI(MBB, MI, MIMetadata(MI), TII->get(X86::MOV32rr), Dst)
+                .addReg(SrcSuper);
+        if (unsigned OldInstrNum = MI.peekDebugInstrNum()) {
+          unsigned NewInstrNum = MIB->getDebugInstrNum(*MF);
+          MF->makeDebugValueSubstitution({OldInstrNum, 0}, {NewInstrNum, 0}, 0);
+        }
+        MI.eraseFromParent();
+
+        // The copy leaves the destination holding the value the source had,
+        // so it inherits what was known about it.
+        unsigned SrcBits = It->second;
+        Known[Dst] = SrcBits;
+        continue;
+      }
+    }
+
+    // Clear what this instruction overwrites. Two 32 bit registers never
+    // overlap, so a definition can only invalidate the one it is a sub or
+    // super register of.
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isRegMask()) {
+        SmallVector<MCRegister, 4> Clobbered;
+        for (auto &KnownReg : Known)
+          if (MO.clobbersPhysReg(KnownReg.first))
+            Clobbered.push_back(KnownReg.first);
+        for (MCRegister Reg : Clobbered)
+          Known.erase(Reg);
+      } else if (MO.isReg() && MO.isDef()) {
+        Known.erase(getX86SubSuperRegister(MO.getReg().asMCReg(), 32));
+      }
+    }
+
+    if (auto Bits = DefinedZeroExtendedValueBits(MI)) {
+      MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
+      Known[getX86SubSuperRegister(Dst, 32)] = *Bits;
+    }
+  }
 }
 
 void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,

@@ -77,7 +77,7 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    je LBB0_11
 ; CHECK-NEXT:  ## %bb.7: ## %cond_false.i
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movzbl %sil, %ecx
+; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    divb %dl
 ; CHECK-NEXT:    movl %eax, %r15d

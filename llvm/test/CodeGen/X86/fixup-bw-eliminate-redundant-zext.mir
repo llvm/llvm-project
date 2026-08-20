@@ -1,0 +1,157 @@
+# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts -verify-machineinstrs -fixup-bw-eliminate-redundant-zext=0 %s -o - | FileCheck %s --check-prefix=DISABLED
+
+--- |
+  define i32 @same_block(ptr %p) { ret i32 0 }
+  define i32 @across_blocks(ptr %p) { ret i32 0 }
+  define i32 @into_copy(ptr %p) { ret i32 0 }
+  define i32 @clobbered_super_reg(ptr %p) { ret i32 0 }
+  define i32 @high_byte_source(ptr %p) { ret i32 0 }
+  define i32 @word_from_byte(ptr %p) { ret i32 0 }
+  define i32 @byte_from_word(ptr %p) { ret i32 0 }
+...
+
+---
+# The load already zero extends $r12d, so the extend below it is a no-op.
+# CHECK-LABEL: name: same_block
+# CHECK:      $r12d = MOVZX32rm8
+# CHECK-NEXT: CMP32ri renamable $r12d, 13
+#
+# DISABLED-LABEL: name: same_block
+# DISABLED:      $r12d = MOVZX32rm8
+# DISABLED-NEXT: renamable $r12d = MOVZX32rr8 killed renamable $r12b
+name:            same_block
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $r12d = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $r12d = MOVZX32rr8 killed renamable $r12b
+    CMP32ri renamable $r12d, 13, implicit-def $eflags
+    RET64 $r12d
+...
+
+---
+# The analysis is block local, so an extend in a successor is left alone even
+# though the only predecessor zero extends the value.  Removing it would mean
+# making $r9d live in to bb.1, which so far only needed $r9b.
+# CHECK-LABEL: name: across_blocks
+# CHECK:     $r9d = MOVZX32rm8
+# CHECK:   bb.1:
+# CHECK:     liveins: $r9b{{$}}
+# CHECK:     renamable $r9d = MOVZX32rr8 killed renamable $r9b
+name:            across_blocks
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $rdi
+
+    $r9d = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    CMP8ri renamable $r9b, 10, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1:
+    successors: %bb.2
+    liveins: $r9b
+
+    renamable $r9d = MOVZX32rr8 killed renamable $r9b
+    CMP32ri renamable $r9d, 13, implicit-def $eflags
+
+  bb.2:
+    liveins: $r9d
+
+    RET64 $r9d
+...
+
+---
+# When the extend moves the value to a different register the move is still
+# needed, but it can be done 32 bits at a time.
+# CHECK-LABEL: name: into_copy
+# CHECK:      $eax = MOVZX32rm8
+# CHECK-NEXT: $ecx = MOV32rr $eax
+#
+# DISABLED-LABEL: name: into_copy
+# DISABLED:      $eax = MOVZX32rm8
+# DISABLED-NEXT: renamable $ecx = MOVZX32rr8 renamable $al
+name:            into_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $eax = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $ecx = MOVZX32rr8 renamable $al
+    RET64 $eax, $ecx
+...
+
+---
+# The add writes bits that the load had zeroed, so the extend is needed.
+# CHECK-LABEL: name: clobbered_super_reg
+# CHECK: renamable $r12d = MOVZX32rr8 killed renamable $r12b
+name:            clobbered_super_reg
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $r12d = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $r12d = ADD32ri killed renamable $r12d, 65536, implicit-def $eflags
+    renamable $r12d = MOVZX32rr8 killed renamable $r12b
+    RET64 $r12d
+...
+
+---
+# Knowing that $eax is in [0, 0xFF] says that $ah is zero, not that the extend
+# leaves $eax alone, so this one has to stay.
+# CHECK-LABEL: name: high_byte_source
+# CHECK: renamable $eax = MOVZX32rr8 killed renamable $ah
+name:            high_byte_source
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $eax = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $eax = MOVZX32rr8 killed renamable $ah
+    RET64 $eax
+...
+
+---
+# A value in [0, 0xFF] is also in [0, 0xFFFF], so extending it from its low
+# word does nothing either.
+# CHECK-LABEL: name: word_from_byte
+# CHECK:      $eax = MOVZX32rm8
+# CHECK-NEXT: CMP32ri renamable $eax, 13
+#
+# DISABLED-LABEL: name: word_from_byte
+# DISABLED:      $eax = MOVZX32rm8
+# DISABLED-NEXT: renamable $eax = MOVZX32rr16 killed renamable $ax
+name:            word_from_byte
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $eax = MOVZX32rm8 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $eax = MOVZX32rr16 killed renamable $ax
+    CMP32ri renamable $eax, 13, implicit-def $eflags
+    RET64 $eax
+...
+
+---
+# The other way round does not hold: 0x1234 is in [0, 0xFFFF] but extending
+# it from its low byte gives 0x34, so this extend has to stay.
+# CHECK-LABEL: name: byte_from_word
+# CHECK: renamable $eax = MOVZX32rr8 killed renamable $al
+name:            byte_from_word
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $rdi
+
+    $eax = MOVZX32rm16 killed renamable $rdi, 1, $noreg, 0, $noreg
+    renamable $eax = MOVZX32rr8 killed renamable $al
+    RET64 $eax
+...

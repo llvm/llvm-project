@@ -50,7 +50,7 @@ define <4 x i64> @test3(ptr %in) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %eax
-; CHECK-NEXT:    movzbl %al, %ecx
+; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrb %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    andl $1, %eax
