@@ -3015,12 +3015,17 @@ void OmpStructureChecker::CheckOrderedDependClause(
     std::optional<int64_t> orderedValue) {
   auto visitDoacross{[&](const parser::OmpDoacross &doa,
                          const parser::CharBlock &src) {
-    auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
-    if (iterVec) {
-      int64_t numVar = iterVec->v.size();
-      if (orderedValue != numVar) {
-        context_.Say(src,
-            "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+    auto &modifiers{OmpGetModifiers(doa)};
+    auto *depType{OmpGetUniqueModifier<parser::OmpDependenceType>(modifiers)};
+    assert(depType && "Expecting dependence-type");
+    if (depType->v == parser::OmpDependenceType::Value::Sink) {
+      auto &iterVec{std::get<std::optional<parser::OmpIterationVector>>(doa.t)};
+      if (iterVec) {
+        int64_t numVar = iterVec->v.size();
+        if (orderedValue != numVar) {
+          context_.Say(src,
+              "The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause"_err_en_US);
+        }
       }
     }
   }};
