@@ -229,14 +229,6 @@ def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
     symbol related utilities that are either costly or otherwise disallowed
     within an operation (e.g., recreating symbol users per op verified rather
     than per symbol table, or querying symbols usage of siblings).
-
-    Implementations must represent the symbols they reference as `SymbolRefAttr`s
-    nested anywhere within their sub-element tree, i.e. reachable by recursive
-    application of `walkImmediateSubElements`, rather than in some other encoding
-    such as a string. This is what lets the symbol machinery cheaply dismiss
-    instances that cannot reference a symbol: an instance with no `SymbolRefAttr`
-    anywhere in its sub-element tree is treated as referencing no symbols, so
-    symbol-table verification may never invoke its `verifySymbolUses`.
   }];
   let cppNamespace = "::mlir";
 

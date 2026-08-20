@@ -281,10 +281,11 @@ public:
   };
   std::unique_ptr<TransientScopeState> transientState;
 
-  /// Cache recording, per uniqued type and attribute, whether it may
-  /// transitively contain a SymbolRefAttr. Filled lazily by symbol-table
-  /// verification and never invalidated; see SymbolRefContainmentCache.h.
-  SymbolRefContainmentCache symbolRefContainmentCache;
+  /// Cache recording which uniqued types and attributes are provably free of a
+  /// transitive SymbolRefAttr. Filled on demand by symbol-table verification
+  /// and never invalidated; reads `threadingIsEnabled` live to guard its set.
+  /// See SymbolRefContainmentCache.h.
+  SymbolRefContainmentCache symbolRefContainmentCache{threadingIsEnabled};
 
 public:
   MLIRContextImpl(bool threadingIsEnabled)

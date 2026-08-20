@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for SymbolTable::mayContainSymbolRefs, which records per uniqued type
-// or attribute whether it transitively contains a SymbolRefAttr (conservatively
-// true for mutable storage). Symbol-table verification relies on it to prune
-// types and attributes that provably hold no symbol reference. Because a
-// SymbolUserTypeInterface / SymbolUserAttrInterface implementation must spell
-// its references as SymbolRefAttr sub-elements, a false answer is a sound
-// reason to skip an instance even after the interface is attached late.
+// Tests for the per-context symbol-reference containment cache, which records
+// which uniqued types and attributes are provably free of a transitive
+// SymbolRefAttr; everything else, including mutable storage, answers true
+// conservatively. Symbol-table verification relies on it to prune the
+// symbol-using types it would otherwise walk. Because a SymbolUserTypeInterface
+// implementation must spell its references as SymbolRefAttr sub-elements, a
+// false answer is a sound reason to skip such a type even after the interface
+// is attached late.
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +33,7 @@
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 
 #include <atomic>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -39,24 +41,15 @@ using namespace mlir;
 
 namespace {
 
-// Symbol-user models whose verification always fails, attached externally to
-// exercise late interface attachment. One targets a type that structurally
-// holds a SymbolRefAttr (a tensor with a symbol-ref encoding); the other
-// targets f32, which holds none.
-struct FailingTensorSymbolUserModel
+// A symbol-user model whose verification always fails, attached externally to
+// exercise late interface attachment on an arbitrary concrete type.
+template <typename ConcreteType>
+struct FailingSymbolUserModel
     : public SymbolUserTypeInterface::ExternalModel<
-          FailingTensorSymbolUserModel, RankedTensorType> {
+          FailingSymbolUserModel<ConcreteType>, ConcreteType> {
   LogicalResult verifySymbolUses(Type type, Operation *op,
                                  SymbolTableCollection &symbolTable) const {
-    return op->emitError("tensor rejected by its attached symbol-user model");
-  }
-};
-struct FailingF32SymbolUserModel
-    : public SymbolUserTypeInterface::ExternalModel<FailingF32SymbolUserModel,
-                                                    Float32Type> {
-  LogicalResult verifySymbolUses(Type type, Operation *op,
-                                 SymbolTableCollection &symbolTable) const {
-    return op->emitError("f32 rejected by its attached symbol-user model");
+    return op->emitError("rejected by its attached symbol-user model");
   }
 };
 
@@ -83,119 +76,87 @@ protected:
     return test::TestSymbolRefAttr::get(&context, symbolRef());
   }
 
+  // Query the cache for `obj`. The row index names a failed row without
+  // printing `obj`, which a mutable-storage kind with an unset body cannot
+  // survive.
+  template <typename T>
+  void expect(T obj, bool expected) {
+    SCOPED_TRACE("containment row " + std::to_string(++row));
+    EXPECT_EQ(
+        detail::getSymbolRefContainmentCache(&context).mayContainSymbolRefs(
+            obj),
+        expected);
+  }
+
+  unsigned row = 0;
   MLIRContext context;
 };
 
-// A leaf type holding no symbol reference answers false.
-TEST_F(SymbolReferenceContainmentTest, LeafTypeIsClear) {
-  EXPECT_FALSE(
-      SymbolTable::mayContainSymbolRefs(IntegerType::get(&context, 32)));
-}
-
-// A plain attribute holding no symbol reference answers false.
-TEST_F(SymbolReferenceContainmentTest, LeafAttrIsClear) {
-  EXPECT_FALSE(
-      SymbolTable::mayContainSymbolRefs(StringAttr::get(&context, "hi")));
-  EXPECT_FALSE(SymbolTable::mayContainSymbolRefs(
-      TypeAttr::get(IntegerType::get(&context, 32))));
-}
-
-// A SymbolRefAttr itself answers true.
-TEST_F(SymbolReferenceContainmentTest, FlatSymbolRefAttrIsTrue) {
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(symbolRef()));
-}
-
-// A non-flat SymbolRefAttr, which nests further references, answers true.
-TEST_F(SymbolReferenceContainmentTest, NestedSymbolRefAttrIsTrue) {
-  SymbolRefAttr ref =
-      SymbolRefAttr::get(StringAttr::get(&context, "root"),
-                         {FlatSymbolRefAttr::get(&context, "n")});
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(ref));
-}
-
-// A conforming symbol-user type answers true through its SymbolRefAttr
-// parameter (not through the interface, which plays no part in the answer).
-TEST_F(SymbolReferenceContainmentTest, ConformingSymbolUserTypeIsTrue) {
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(symbolUserType()));
-}
-
-// A conforming symbol-user attribute answers true through its SymbolRefAttr
-// parameter.
-TEST_F(SymbolReferenceContainmentTest, ConformingSymbolUserAttrIsTrue) {
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(symbolUserAttr()));
-}
-
-// A type nesting a symbol-ref-bearing type propagates true.
-TEST_F(SymbolReferenceContainmentTest, TypeNestingSymbolRefBearingType) {
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(
-      TupleType::get(&context, {symbolUserType()})));
-}
-
-// A tuple of ordinary types stays false.
-TEST_F(SymbolReferenceContainmentTest, TypeNestingOrdinaryTypesIsClear) {
+// The containment answer across leaves, self-references, conforming user
+// types/attributes, and every nesting path a symbol reference can hide behind.
+TEST_F(SymbolReferenceContainmentTest, ContainmentTruthTable) {
   Type i32 = IntegerType::get(&context, 32);
-  EXPECT_FALSE(
-      SymbolTable::mayContainSymbolRefs(TupleType::get(&context, {i32, i32})));
-}
 
-// A type reaches a SymbolRefAttr two levels deep, through an attribute
-// sub-element (a tensor encoding holding a TypeAttr of a symbol-ref type).
-TEST_F(SymbolReferenceContainmentTest, TypeReachesSymbolRefThroughAttribute) {
-  Attribute encoding = TypeAttr::get(symbolUserType());
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(encoding));
-  RankedTensorType tensor =
-      RankedTensorType::get({2}, IntegerType::get(&context, 32), encoding);
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(tensor));
-}
+  // Leaves hold no reference.
+  expect(i32, false);
+  expect(StringAttr::get(&context, "hi"), false);
+  expect(TypeAttr::get(i32), false);
 
-// A type reaches a plain SymbolRefAttr through an attribute parameter (a tensor
-// encoding).
-TEST_F(SymbolReferenceContainmentTest, TypeWithSymbolRefAttrParameter) {
-  RankedTensorType tensor =
-      RankedTensorType::get({2}, IntegerType::get(&context, 32), symbolRef());
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(tensor));
-}
+  // A SymbolRefAttr, flat or nesting further references, is itself a reference.
+  expect(symbolRef(), true);
+  expect(SymbolRefAttr::get(StringAttr::get(&context, "root"),
+                            {FlatSymbolRefAttr::get(&context, "n")}),
+         true);
 
-// A dictionary attribute containing a plain SymbolRefAttr answers true.
-TEST_F(SymbolReferenceContainmentTest, DictionaryAttrContainingSymbolRef) {
-  NamedAttribute named(StringAttr::get(&context, "callee"), symbolRef());
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(
-      DictionaryAttr::get(&context, {named})));
-}
+  // A conforming symbol-user type/attribute answers true through its
+  // SymbolRefAttr parameter, not through the interface (which plays no part).
+  expect(symbolUserType(), true);
+  expect(symbolUserAttr(), true);
 
-// A dictionary attribute containing a symbol-ref-bearing type inside a TypeAttr
-// answers true; the answer on the dictionary summarizes its whole nested tree.
-TEST_F(SymbolReferenceContainmentTest, DictionaryAttrContainingSymbolRefType) {
-  NamedAttribute named(StringAttr::get(&context, "key"),
-                       TypeAttr::get(symbolUserType()));
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(
-      DictionaryAttr::get(&context, {named})));
-}
+  // Nesting propagates the reference; ordinary nesting stays clear.
+  expect(TupleType::get(&context, {symbolUserType()}), true);
+  expect(TupleType::get(&context, {i32, i32}), false);
 
-// A dictionary attribute with no symbol reference stays false.
-TEST_F(SymbolReferenceContainmentTest, DictionaryAttrIsClear) {
-  NamedAttribute named(StringAttr::get(&context, "key"),
-                       TypeAttr::get(IntegerType::get(&context, 32)));
-  EXPECT_FALSE(SymbolTable::mayContainSymbolRefs(
-      DictionaryAttr::get(&context, {named})));
-}
+  // A type reaches a reference through an attribute sub-element -- a plain
+  // SymbolRefAttr encoding, or a TypeAttr of a symbol-ref-bearing type.
+  expect(RankedTensorType::get({2}, i32, symbolRef()), true);
+  expect(TypeAttr::get(symbolUserType()), true);
+  expect(RankedTensorType::get({2}, i32, TypeAttr::get(symbolUserType())),
+         true);
 
-// A type carrying a mutable component answers true conservatively, since its
-// sub-elements may change after the answer is computed at first query; the
-// fill never reads its contents.
-TEST_F(SymbolReferenceContainmentTest, MutableTypeReportsConservatively) {
-  test::TestRecursiveType recursive =
-      test::TestRecursiveType::get(&context, "rec");
-  EXPECT_TRUE(SymbolTable::mayContainSymbolRefs(recursive));
-}
+  // A dictionary summarizes its whole nested tree, whichever way a reference
+  // hides, and stays clear when none does.
+  expect(DictionaryAttr::get(
+             &context, {NamedAttribute(StringAttr::get(&context, "callee"),
+                                       symbolRef())}),
+         true);
+  expect(DictionaryAttr::get(&context,
+                             {NamedAttribute(StringAttr::get(&context, "key"),
+                                             TypeAttr::get(symbolUserType()))}),
+         true);
+  expect(DictionaryAttr::get(&context,
+                             {NamedAttribute(StringAttr::get(&context, "key"),
+                                             TypeAttr::get(i32))}),
+         false);
 
-// A container of a mutable-storage kind inherits true, even before the mutable
-// body is populated, so no later mutation can turn a cached false stale.
-TEST_F(SymbolReferenceContainmentTest, ContainerOfMutableTypeIsTrue) {
-  test::TestRecursiveType recursive =
-      test::TestRecursiveType::get(&context, "rec2");
-  EXPECT_TRUE(
-      SymbolTable::mayContainSymbolRefs(TupleType::get(&context, {recursive})));
+  // A mutable-storage kind, and any container of one, answers true
+  // conservatively: its sub-elements may change after the query, so its
+  // contents are never read and no later mutation can turn a cached false
+  // stale.
+  expect(test::TestRecursiveType::get(&context, "rec"), true);
+  expect(
+      TupleType::get(&context, {test::TestRecursiveType::get(&context, "c")}),
+      true);
+
+  // A DistinctAttr is keyed by its own always-allocated storage address, not
+  // the attribute uniquer; two instances answer false independently, and a
+  // repeat query is stable across the cold fill and the warm hit.
+  DistinctAttr d1 = DistinctAttr::create(UnitAttr::get(&context));
+  DistinctAttr d2 = DistinctAttr::create(UnitAttr::get(&context));
+  ASSERT_NE(d1, d2);
+  expect(d1, false);
+  expect(d1, false);
+  expect(d2, false);
 }
 
 // Interface membership plays no part in the answer, so late attachment needs no
@@ -207,7 +168,8 @@ TEST_F(SymbolReferenceContainmentTest, LateInterfaceAttachmentStillVerifies) {
       "module { \"foo.op\"() : () -> tensor<4xf32, @sym> }", &context);
   ASSERT_TRUE(module);
 
-  RankedTensorType::attachInterface<FailingTensorSymbolUserModel>(context);
+  RankedTensorType::attachInterface<FailingSymbolUserModel<RankedTensorType>>(
+      context);
   ScopedDiagnosticHandler handler(&context,
                                   [](Diagnostic &) { return success(); });
   EXPECT_TRUE(failed(verify(*module)));
@@ -223,86 +185,68 @@ TEST_F(SymbolReferenceContainmentTest, NonConformingSymbolUserTypeIsSkipped) {
       "module { \"foo.op\"() : () -> f32 }", &context);
   ASSERT_TRUE(module);
 
-  Float32Type::attachInterface<FailingF32SymbolUserModel>(context);
+  Float32Type::attachInterface<FailingSymbolUserModel<Float32Type>>(context);
   ScopedDiagnosticHandler handler(&context,
                                   [](Diagnostic &) { return success(); });
   EXPECT_TRUE(succeeded(verify(*module)));
+}
+
+// The corpus both the ground-truth and the raced context are filled from,
+// spanning the interesting fill paths and sharing sub-elements so concurrent
+// fills overlap on the same interior objects. Built from one helper so the two
+// contexts stay in lock-step by construction.
+std::vector<Attribute> buildAttrs(MLIRContext &ctx) {
+  Type i32 = IntegerType::get(&ctx, 32);
+  FlatSymbolRefAttr sym = FlatSymbolRefAttr::get(&ctx, "sym");
+  return {
+      StringAttr::get(&ctx, "leaf"),
+      sym,
+      test::TestSymbolRefAttr::get(&ctx, sym),
+      TypeAttr::get(test::TestSymbolUserType::get(&ctx, sym)),
+      DictionaryAttr::get(
+          &ctx, {NamedAttribute(StringAttr::get(&ctx, "callee"), sym)}),
+      DictionaryAttr::get(&ctx, {NamedAttribute(StringAttr::get(&ctx, "plain"),
+                                                TypeAttr::get(i32))}),
+  };
+}
+std::vector<Type> buildTypes(MLIRContext &ctx) {
+  Type i32 = IntegerType::get(&ctx, 32);
+  FlatSymbolRefAttr sym = FlatSymbolRefAttr::get(&ctx, "sym");
+  test::TestSymbolUserType user = test::TestSymbolUserType::get(&ctx, sym);
+  return {
+      i32,
+      user,
+      TupleType::get(&ctx, {i32, user}),
+      TupleType::get(&ctx, {i32, i32}),
+      RankedTensorType::get({2}, i32, sym),
+  };
 }
 
 // Concurrency crux: many threads query the same cold, shared objects at once,
 // exactly as parallel symbol-table verification fills the context cache from
 // several isolated-op workers simultaneously. Every thread must agree with the
 // single-threaded ground truth, and the run must be clean under
-// ThreadSanitizer. Built cold (constructed but never queried before the
-// threads start) so the fills genuinely race.
+// ThreadSanitizer. The raced context is built cold (constructed but never
+// queried before the threads start) so the fills genuinely race.
 TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
   ASSERT_TRUE(context.isMultithreadingEnabled());
 
-  // A set of shared objects spanning the interesting fill paths and sharing
-  // sub-elements, so concurrent fills overlap on the same interior objects.
-  Type i32 = IntegerType::get(&context, 32);
-  std::vector<Attribute> attrs = {
-      StringAttr::get(&context, "leaf"),
-      symbolRef(),
-      symbolUserAttr(),
-      TypeAttr::get(symbolUserType()),
-      DictionaryAttr::get(
-          &context,
-          {NamedAttribute(StringAttr::get(&context, "callee"), symbolRef())}),
-      DictionaryAttr::get(&context,
-                          {NamedAttribute(StringAttr::get(&context, "plain"),
-                                          TypeAttr::get(i32))}),
-  };
-  std::vector<Type> types = {
-      i32,
-      symbolUserType(),
-      TupleType::get(&context, {i32, symbolUserType()}),
-      TupleType::get(&context, {i32, i32}),
-      RankedTensorType::get({2}, i32, symbolRef()),
-  };
-
-  // Ground truth computed single-threaded (this also warms nothing new for the
-  // threads, since these very objects are what they race to fill).
+  auto &truthCache = detail::getSymbolRefContainmentCache(&context);
+  std::vector<Attribute> attrs = buildAttrs(context);
+  std::vector<Type> types = buildTypes(context);
   std::vector<bool> attrTruth, typeTruth;
   for (Attribute a : attrs)
-    attrTruth.push_back(SymbolTable::mayContainSymbolRefs(a));
+    attrTruth.push_back(truthCache.mayContainSymbolRefs(a));
   for (Type t : types)
-    typeTruth.push_back(SymbolTable::mayContainSymbolRefs(t));
+    typeTruth.push_back(truthCache.mayContainSymbolRefs(t));
 
-  // Fresh context so the threads hit a cold cache and genuinely race the fills.
   MLIRContext raced;
   raced.loadDialect<test::TestDialect>();
   raced.allowUnregisteredDialects();
   ASSERT_TRUE(raced.isMultithreadingEnabled());
-  auto rebuildAttrs = [&](MLIRContext &ctx) {
-    Type ri32 = IntegerType::get(&ctx, 32);
-    FlatSymbolRefAttr rsym = FlatSymbolRefAttr::get(&ctx, "sym");
-    return std::vector<Attribute>{
-        StringAttr::get(&ctx, "leaf"),
-        rsym,
-        test::TestSymbolRefAttr::get(&ctx, rsym),
-        TypeAttr::get(test::TestSymbolUserType::get(&ctx, rsym)),
-        DictionaryAttr::get(
-            &ctx, {NamedAttribute(StringAttr::get(&ctx, "callee"), rsym)}),
-        DictionaryAttr::get(&ctx,
-                            {NamedAttribute(StringAttr::get(&ctx, "plain"),
-                                            TypeAttr::get(ri32))}),
-    };
-  };
-  auto rebuildTypes = [&](MLIRContext &ctx) {
-    Type ri32 = IntegerType::get(&ctx, 32);
-    FlatSymbolRefAttr rsym = FlatSymbolRefAttr::get(&ctx, "sym");
-    test::TestSymbolUserType user = test::TestSymbolUserType::get(&ctx, rsym);
-    return std::vector<Type>{
-        ri32,
-        user,
-        TupleType::get(&ctx, {ri32, user}),
-        TupleType::get(&ctx, {ri32, ri32}),
-        RankedTensorType::get({2}, ri32, rsym),
-    };
-  };
-  std::vector<Attribute> racedAttrs = rebuildAttrs(raced);
-  std::vector<Type> racedTypes = rebuildTypes(raced);
+  std::vector<Attribute> racedAttrs = buildAttrs(raced);
+  std::vector<Type> racedTypes = buildTypes(raced);
+  auto &racedCache = detail::getSymbolRefContainmentCache(&raced);
 
   const int numThreads = 16;
   std::vector<std::vector<bool>> attrResults(numThreads);
@@ -316,9 +260,9 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
       while (!go.load())
         ;
       for (Attribute a : racedAttrs)
-        attrResults[i].push_back(SymbolTable::mayContainSymbolRefs(a));
+        attrResults[i].push_back(racedCache.mayContainSymbolRefs(a));
       for (Type t : racedTypes)
-        typeResults[i].push_back(SymbolTable::mayContainSymbolRefs(t));
+        typeResults[i].push_back(racedCache.mayContainSymbolRefs(t));
     });
   while (ready.load() < numThreads)
     ;
@@ -332,79 +276,6 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
     EXPECT_EQ(attrResults[i], attrTruth) << "thread " << i;
     EXPECT_EQ(typeResults[i], typeTruth) << "thread " << i;
   }
-}
-
-// Growth preserves every recorded clear fact. The clear-object set starts empty
-// and grows as it fills, so inserting far past its initial capacity forces
-// several rehashes; every live key must survive each grow. Synthetic pointers
-// in a regular stride stand in for the bump-allocated storage addresses the
-// cache keys on; the keys are opaque and never dereferenced. Only clear facts
-// are recorded, so this checks that each survives the rehash and that
-// may-contain facts, which the store never keeps, stay misses.
-TEST_F(SymbolReferenceContainmentTest, SetGrowthPreservesEntries) {
-  detail::SymbolRefContainmentCache cache;
-  const int n = 5000; // many doublings past the minimal set
-  std::vector<Type> clearKeys;
-  std::vector<Type> mayContainKeys;
-  for (int i = 0; i < n; ++i) {
-    auto *p = reinterpret_cast<const void *>(
-        static_cast<uintptr_t>(0x100000 + i * 8));
-    Type key = Type::getFromOpaquePointer(p);
-    if (i % 3 == 0) {
-      // A may-contain fact is never stored: insert returns true but records
-      // nothing, so a later lookup stays a miss and the caller recomputes.
-      EXPECT_TRUE(cache.insert(key, /*value=*/true, /*lock=*/false));
-      mayContainKeys.push_back(key);
-    } else {
-      // A clear fact is recorded and returned unchanged.
-      EXPECT_FALSE(cache.insert(key, /*value=*/false, /*lock=*/false));
-      clearKeys.push_back(key);
-    }
-  }
-  // After all the growth, every clear fact is still found as false.
-  for (Type key : clearKeys) {
-    std::optional<bool> got = cache.lookup(key, /*lock=*/false);
-    ASSERT_TRUE(got.has_value()) << "lost clear entry";
-    EXPECT_FALSE(*got);
-  }
-  // A may-contain fact was never stored, so it stays a miss.
-  for (Type key : mayContainKeys)
-    EXPECT_FALSE(cache.lookup(key, /*lock=*/false).has_value());
-  // A key never inserted is a miss, not a stray cluster hit.
-  Type absent = Type::getFromOpaquePointer(
-      reinterpret_cast<const void *>(static_cast<uintptr_t>(0x100000 + n * 8)));
-  EXPECT_FALSE(cache.lookup(absent, /*lock=*/false).has_value());
-}
-
-// A DistinctAttr is keyed by the address of its own storage, which comes from a
-// separate always-allocating allocator rather than the attribute uniquer; the
-// cache must record and recover that pointer just like a uniqued one.
-TEST_F(SymbolReferenceContainmentTest, DistinctAttrIsHandled) {
-  DistinctAttr d1 = DistinctAttr::create(UnitAttr::get(&context));
-  DistinctAttr d2 = DistinctAttr::create(UnitAttr::get(&context));
-  ASSERT_NE(d1, d2); // always-allocating: distinct instances, distinct pointers
-
-  // Through the public query a DistinctAttr exposes no SymbolRefAttr
-  // sub-element, so it answers false, stably across the cold fill and the warm
-  // cache hit.
-  bool cold = SymbolTable::mayContainSymbolRefs(d1);
-  EXPECT_FALSE(cold);
-  EXPECT_EQ(SymbolTable::mayContainSymbolRefs(d1), cold);
-  EXPECT_FALSE(SymbolTable::mayContainSymbolRefs(d2));
-
-  // A may-contain answer is never recorded: a forced-true insert on a
-  // distinct-allocator pointer returns true but stores nothing, so the warm
-  // lookup stays a miss and the caller recomputes. A clear answer, by contrast,
-  // is recorded and returned false warm, while an uninserted distinct pointer
-  // stays a miss -- the pointer round-trips just like a uniqued one.
-  detail::SymbolRefContainmentCache cache;
-  EXPECT_TRUE(cache.insert(d1, /*value=*/true, /*lock=*/false));
-  EXPECT_FALSE(cache.lookup(d1, /*lock=*/false).has_value());
-  EXPECT_FALSE(cache.insert(d1, /*value=*/false, /*lock=*/false));
-  std::optional<bool> warm = cache.lookup(d1, /*lock=*/false);
-  ASSERT_TRUE(warm.has_value());
-  EXPECT_FALSE(*warm);
-  EXPECT_FALSE(cache.lookup(d2, /*lock=*/false).has_value());
 }
 
 } // namespace

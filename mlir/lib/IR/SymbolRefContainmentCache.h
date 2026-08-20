@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A context-owned store recording which uniqued types and attributes are
-// provably free of a transitive SymbolRefAttr. Symbol-table verification
-// consults it to prune the symbol-use walk.
+// A context-owned cache answering, for a uniqued type or attribute, whether it
+// may transitively contain a SymbolRefAttr. Symbol-table verification consults
+// it to prune its symbol-use walk to the subtrees that can carry a symbol use.
 //
-// The store is filled lazily and never invalidated. Uniqued storage is immortal
-// and immutable for the context's lifetime, so a recorded answer can never go
-// stale, and a pointer can never be recycled to alias another object within one
-// context. Only the "provably reference-free" fact is recorded; a may-contain
-// answer -- including every mutable-storage kind, whose contents the fill never
-// reads -- is left unrecorded and recomputed on each encounter.
+// Uniqued type and attribute storage is immortal, and immutable in everything
+// the cache reads -- mutable-storage kinds are never read or recorded -- so a
+// recorded answer never goes stale, and two live objects can never share an
+// address. One DenseSet of opaque pointers therefore keys both kinds without
+// arguing them disjoint -- the attribute side already pools two allocators, the
+// uniquer and the DistinctAttr allocator, on that same argument.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,106 +23,102 @@
 #define MLIR_LIB_IR_SYMBOLREFCONTAINMENTCACHE_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/RWMutex.h"
+#include "llvm/Support/Threading.h"
 #include <optional>
 
 namespace mlir {
 class MLIRContext;
 namespace detail {
 
-/// Per-context store of the "provably free of a transitive SymbolRefAttr" fact
-/// for uniqued types and attributes. Two sets mirror the context's two
-/// uniquers, so type and attribute opaque pointers never need to be argued
-/// disjoint.
-///
-/// Each set holds only the opaque pointers of objects proven reference-free.
-/// Membership means "clear" (answer false); non-membership means "not yet
-/// proven clear", which the fill treats as unfilled and may-contain both at
-/// once -- it recomputes containment, and a genuine may-contain object is
-/// recomputed cheaply because the walk early-exits at its first SymbolRefAttr.
-/// A may-contain answer is therefore never stored, so a mutable-storage kind is
-/// conservatively may-contain forever with no special handling.
-///
-/// Locking discipline: the sets live entirely behind one SmartRWMutex. A lookup
-/// holds the read lock for its whole probe; an insert -- including any set
-/// growth it triggers -- holds the write lock. Readers therefore never observe
-/// a half-grown set and the plain sets need no per-slot atomics. The `lock`
-/// flag threaded through each operation is the context's runtime multithreading
-/// flag: when it is false the store is touched single-threaded and no lock is
-/// taken, mirroring MLIRContext's ScopedWriterLock.
+/// Per-context cache of the "provably free of a transitive SymbolRefAttr" fact
+/// for uniqued types and attributes, computed on demand, memoizing proven-clear
+/// answers. A false answer is authoritative -- the object references no symbol
+/// -- so a conforming SymbolUserTypeInterface has a vacuous verifySymbolUses
+/// and need never be visited. A true answer is conservative: a mutable-storage
+/// kind, whose sub-elements may change after the query, and anything containing
+/// one, always answers true.
 class SymbolRefContainmentCache {
 public:
-  SymbolRefContainmentCache() = default;
+  /// `isMultithreaded` is the context's runtime multithreading flag, read live
+  /// on every probe to decide whether the set needs its lock; it must outlive
+  /// this cache.
+  explicit SymbolRefContainmentCache(const bool &isMultithreaded)
+      : isMultithreaded(isMultithreaded) {}
   SymbolRefContainmentCache(const SymbolRefContainmentCache &) = delete;
   SymbolRefContainmentCache &
   operator=(const SymbolRefContainmentCache &) = delete;
 
-  /// Return false for `type`/`attr` if it is recorded clear, or nullopt if it
-  /// is not yet proven clear (unfilled, treated as may-contain by the caller).
-  /// A true answer is never recorded, so lookup never returns true.
-  std::optional<bool> lookup(Type type, bool lock) const {
-    return lookupImpl(typeEntries, type.getAsOpaquePointer(), lock);
-  }
-  std::optional<bool> lookup(Attribute attr, bool lock) const {
-    return lookupImpl(attrEntries, attr.getAsOpaquePointer(), lock);
-  }
-
-  /// Record `type`/`attr` as clear when `value` is false and return the answer
-  /// unchanged. A may-contain (`value` true) fact is not stored -- it is
-  /// recomputed cheaply on each encounter -- so insert then returns true
-  /// without touching the set. A racing duplicate clear fill records the same
-  /// membership and is a no-op.
-  bool insert(Type type, bool value, bool lock) {
-    return insertImpl(typeEntries, type.getAsOpaquePointer(), value, lock);
-  }
-  bool insert(Attribute attr, bool value, bool lock) {
-    return insertImpl(attrEntries, attr.getAsOpaquePointer(), value, lock);
-  }
+  bool mayContainSymbolRefs(Type type) { return compute(type); }
+  bool mayContainSymbolRefs(Attribute attr) { return compute(attr); }
 
 private:
-  /// One uniquer's clear-object set. It is not self-synchronizing: the
-  /// enclosing cache serializes all access with its SmartRWMutex, so every
-  /// method here runs under the read lock (lookup) or the write lock (insert
-  /// and the growth it may trigger).
-  struct ClearSet {
-    llvm::DenseSet<const void *> clear;
+  // A type is never itself a SymbolRefAttr; an attribute is one exactly when
+  // isa<SymbolRefAttr> holds (covering FlatSymbolRefAttr).
+  static bool isSelfSymbolRef(Type) { return false; }
+  static bool isSelfSymbolRef(Attribute attr) {
+    return isa<SymbolRefAttr>(attr);
+  }
 
-    std::optional<bool> lookup(const void *key) const {
-      if (clear.count(key))
-        return false;
-      return std::nullopt;
+  /// Return whether `obj` may transitively contain a SymbolRefAttr, recording a
+  /// proven-clear result so it need never recompute. The recursion needs no
+  /// in-progress guard: immutable objects form a DAG (sub-elements are interned
+  /// before their parents), so every cycle passes through a mutable kind, where
+  /// the descent stops above before reading contents. Once one sub-element
+  /// answers may-contain the rest need not be visited: walkImmediateSubElements
+  /// cannot be interrupted, but the callback is a no-op once `mayContain`
+  /// holds.
+  template <typename T>
+  bool compute(T obj) {
+    const void *key = obj.getAsOpaquePointer();
+    if (isKnownClear(key))
+      return false;
+    bool mayContain = isSelfSymbolRef(obj) ||
+                      obj.template hasTrait<StorageUserTrait::IsMutable>();
+    if (!mayContain) {
+      auto walkSub = [&](auto sub) {
+        if (!mayContain && sub)
+          mayContain = compute(sub);
+      };
+      obj.walkImmediateSubElements(walkSub, walkSub);
     }
+    if (!mayContain)
+      markClear(key);
+    return mayContain;
+  }
 
-    bool insert(const void *key, bool value) {
-      // Only the clear fact is durable; a may-contain answer is left out to be
-      // recomputed cheaply on each encounter. A racing duplicate clear fill
-      // records the same membership and is a no-op.
-      if (!value)
-        clear.insert(key);
-      return value;
-    }
-  };
-
-  std::optional<bool> lookupImpl(const ClearSet &set, const void *key,
-                                 bool lock) const {
+  bool isKnownClear(const void *key) const {
     std::optional<llvm::sys::SmartScopedReader<true>> guard;
-    if (lock)
+    if (shouldLock())
       guard.emplace(mutex);
-    return set.lookup(key);
+    return clear.contains(key);
   }
-
-  bool insertImpl(ClearSet &set, const void *key, bool value, bool lock) {
+  void markClear(const void *key) {
     std::optional<llvm::sys::SmartScopedWriter<true>> guard;
-    if (lock)
+    if (shouldLock())
       guard.emplace(mutex);
-    return set.insert(key, value);
+    clear.insert(key);
   }
 
+  /// The set is serialized only while the context runs multithreaded;
+  /// llvm_is_multithreaded() is a compile-time constant folded in here.
+  bool shouldLock() const {
+    return isMultithreaded && llvm::llvm_is_multithreaded();
+  }
+
+  const bool &isMultithreaded;
+  // The set lives behind this lock: a read lock guards the contains probe, a
+  // write lock the insert and any growth it triggers, and neither is ever held
+  // across the recursion.
   mutable llvm::sys::SmartRWMutex<true> mutex;
-  ClearSet typeEntries;
-  ClearSet attrEntries;
+  // Only the proven-clear opaque pointers are recorded; a may-contain object --
+  // including every mutable-storage kind, whose contents are never read -- is
+  // left out and recomputed on each encounter, so no fact that could later go
+  // stale is ever stored.
+  llvm::DenseSet<const void *> clear;
 };
 
 /// Return the given context's symbol-reference containment cache. Defined in
