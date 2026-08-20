@@ -424,6 +424,36 @@ static void emitGPUBarrierSubgroup(OpBuilder &builder, Location loc) {
                          gpu::BarrierScope::Subgroup);
 }
 
+/// Emits a barrier over the lanes of this thread's ThreadY row, for a row that
+/// is narrower than a subgroup. \p rowWidth (blockDim.x) must divide
+/// \p subgroupSize, so the rows tile each subgroup and the row holding lane L
+/// covers the lanes [L - L % rowWidth, L - L % rowWidth + rowWidth). A
+/// subgroup-wide barrier cannot be used here: it would also tie together the
+/// other rows sharing the subgroup, which run different workers.
+static void emitGPUBarrierRow(OpBuilder &builder, Location loc,
+                              int64_t rowWidth, int64_t subgroupSize) {
+  assert(rowWidth > 0 && subgroupSize % rowWidth == 0 &&
+         "row must tile the subgroup");
+  Type i32Ty = builder.getI32Type();
+  int64_t rowsPerSubgroup = subgroupSize / rowWidth;
+
+  // laneBase = (tid.y % rowsPerSubgroup) * rowWidth. Both operands are powers
+  // of two here, since rowWidth divides the subgroup size.
+  Value threadY = gpu::ThreadIdOp::create(builder, loc, builder.getIndexType(),
+                                          gpu::Dimension::y);
+  Value threadY32 = arith::IndexCastOp::create(builder, loc, i32Ty, threadY);
+  Value rowMask =
+      arith::ConstantIntOp::create(builder, loc, i32Ty, rowsPerSubgroup - 1);
+  Value rowIndex = arith::AndIOp::create(builder, loc, threadY32, rowMask);
+  Value width = arith::ConstantIntOp::create(builder, loc, i32Ty, rowWidth);
+  Value laneBase = arith::MulIOp::create(builder, loc, rowIndex, width);
+
+  Value laneBits = arith::ConstantIntOp::create(builder, loc, i32Ty,
+                                                (int64_t{1} << rowWidth) - 1);
+  Value mask = arith::ShLIOp::create(builder, loc, laneBits, laneBase);
+  NVVM::SyncWarpOp::create(builder, loc, mask);
+}
+
 /// Lowers a single `acc.compute_region` to GPU dialect IR.
 class ACCCGToGPULowering {
 public:
@@ -647,6 +677,10 @@ private:
   llvm::DenseMap<gpu::Processor, Value> dimensionMap;
   // True if ThreadY reduction exists, which triggers subgroup alignment
   bool hasThreadYReduction = false;
+  // True if a ThreadX reduction exists, whose shuffles stay inside a row
+  bool hasThreadXReduction = false;
+  // True if an array reduction spans any thread dimension
+  bool hasThreadLevelArrayReduction = false;
   // True if any ThreadX routine call exists in the kernel
   bool hasThreadLevelRoutineCall = false;
   // True when a per-row ThreadY barrier is emitted
@@ -668,6 +702,25 @@ private:
   bool isSingleThreadWorkerLaunch() const {
     return staticBlockDimX == 1 && staticBlockDimZ == 1 &&
            staticBlockDimY > 1 && staticBlockDimY <= options.subgroupSize;
+  }
+
+  /// True when the workers are the only reason this launch would need its rows
+  /// aligned to subgroup boundaries: the thread-level reductions are all worker
+  /// ones, and the launch is (X, N, 1) with 1 < N <= subgroupSize and X
+  /// dividing the subgroup size. Worker reductions combine their per-worker
+  /// partials in the lowest N threads of the block rather than within a row, so
+  /// a row may sit anywhere inside a subgroup; a row that is narrower than a
+  /// subgroup is then synchronized with a lane-masked barrier. The bounds on N
+  /// and ThreadZ come from the per-worker partial buffer, which holds
+  /// subgroupSize entries indexed by ThreadY alone. Thread-level array
+  /// accumulates are left out: they combine through atomics on one shared array
+  /// instead of worker shuffles, and leaving their rows unaligned drops updates
+  /// in some geometries.
+  bool isWorkerOnlyShuffleLaunch() const {
+    return hasThreadYReduction && !hasThreadXReduction &&
+           !hasThreadLevelArrayReduction && staticBlockDimZ == 1 &&
+           staticBlockDimY > 1 && staticBlockDimY <= options.subgroupSize &&
+           options.subgroupSize % staticBlockDimX == 0;
   }
 
   acc::DefaultACCToGPUMappingPolicy defaultPolicy;
@@ -855,15 +908,20 @@ LogicalResult ACCCGToGPULowering::rewrite() {
 
   // Pre-compute if thread-level reductions exist. ThreadY reduction generates
   // shuffles which require subgroup alignment (blockDim.x = subgroupSize),
-  // meaning ThreadX lanes exist even without explicit ThreadX parallelism.
-  computeRegion->walk([&](acc::ReductionAccumulateOp op) -> WalkResult {
+  // meaning ThreadX lanes exist even without explicit ThreadX parallelism. The
+  // ThreadX dimension is tracked too, to tell a launch whose reductions are all
+  // worker ones from one that also shuffles inside a row.
+  computeRegion->walk([&](acc::ReductionAccumulateOp op) {
     for (auto parDim : op.getParDimsAttr().getArray()) {
-      if (parDim.isThreadY()) {
-        hasThreadYReduction = true;
-        return WalkResult::interrupt();
-      }
+      hasThreadXReduction |= parDim.isThreadX();
+      hasThreadYReduction |= parDim.isThreadY();
     }
-    return WalkResult::advance();
+  });
+  computeRegion->walk([&](acc::ReductionAccumulateArrayOp op) {
+    for (auto parDim : op.getParDimsAttr().getArray()) {
+      if (!parDim.isAnyBlock())
+        hasThreadLevelArrayReduction = true;
+    }
   });
 
   // Pre-compute if any thread-level (vector or worker) routine call exists.
@@ -1069,47 +1127,42 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // because:
     // - Subgroup reductions (gpu.all_reduce) require full subgroups
     // - Per-row workgroup barriers require blockDim.x aligned to subgroupSize
-    bool isShuffleEnabled = false;
+    // Tracked apart because only a ThreadX reduction needs its row to start at
+    // a subgroup boundary: it shuffles within the row, so a subgroup that
+    // crosses into the next row would mix rows. A worker reduction combines the
+    // per-worker partials on linearized thread IDs instead, which is
+    // independent of where the rows sit.
+    bool needsThreadXAlign = false;
+    bool needsThreadYAlign = false;
     bool alignThreadXReduction =
         getConstantIntValue(launch.getBlockSizeY()) != 1 ||
         getConstantIntValue(launch.getBlockSizeZ()) != 1;
 
-    launch.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
-      ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
-          mlir::acc::getParDimsAttr(allReduce).getArray();
-      for (auto parDim : parDims) {
-        if (parDim.isThreadY() ||
-            (alignThreadXReduction && parDim.isThreadX())) {
-          // Shuffle are enabled. Need to adjust the ThreadX length.
-          isShuffleEnabled = true;
-          return WalkResult::interrupt();
-        }
+    // A reduction over both dimensions counts as a ThreadX one: it still
+    // shuffles ThreadX lanes within the row.
+    auto classifyAllReduce = [&](gpu::AllReduceOp allReduce) {
+      bool hasThreadX = false;
+      bool hasThreadY = false;
+      for (auto parDim : mlir::acc::getParDimsAttr(allReduce).getArray()) {
+        hasThreadX |= parDim.isThreadX();
+        hasThreadY |= parDim.isThreadY();
       }
-      return WalkResult::advance();
+      if (hasThreadX && alignThreadXReduction)
+        needsThreadXAlign = true;
+      else if (hasThreadY)
+        needsThreadYAlign = true;
+    };
+
+    launch.walk(classifyAllReduce);
+    // Also check if called routines have thread-level reductions.
+    launch.walk([&](func::CallOp callOp) {
+      if (gpu::GPUFuncOp callee =
+              callOp->getParentOfType<ModuleOp>().lookupSymbol<gpu::GPUFuncOp>(
+                  callOp.getCallee()))
+        callee.walk(classifyAllReduce);
     });
-    // Also check if called routines have ThreadY reductions
-    if (!isShuffleEnabled) {
-      launch.walk([&](func::CallOp callOp) -> WalkResult {
-        if (gpu::GPUFuncOp callee =
-                callOp->getParentOfType<ModuleOp>()
-                    .lookupSymbol<gpu::GPUFuncOp>(callOp.getCallee())) {
-          callee.walk([&](gpu::AllReduceOp allReduce) -> WalkResult {
-            ArrayRef<mlir::acc::GPUParallelDimAttr> parDims =
-                mlir::acc::getParDimsAttr(allReduce).getArray();
-            for (auto parDim : parDims) {
-              if (parDim.isThreadY() ||
-                  (alignThreadXReduction && parDim.isThreadX())) {
-                isShuffleEnabled = true;
-                return WalkResult::interrupt();
-              }
-            }
-            return WalkResult::advance();
-          });
-        }
-        return isShuffleEnabled ? WalkResult::interrupt()
-                                : WalkResult::advance();
-      });
-    }
+
+    bool isShuffleEnabled = needsThreadXAlign || needsThreadYAlign;
 
     std::optional<int64_t> constBlockDimX =
         getConstantIntValue(launch.getBlockSizeX());
@@ -1132,6 +1185,17 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     // per-row barrier covers a single thread. Padding would instead fold the
     // workers into ThreadX lanes and serialize the worker parallelism.
     if (isSingleThreadWorkerLaunch())
+      skipAlign = true;
+
+    // When the workers are the only reason to align, keep the launch as it is.
+    // Worker reductions combine their partials in the lowest blockDim.y threads
+    // of the block, which sit in the first subgroup whatever blockDim.x is, so
+    // no row has to start at a subgroup boundary, and the barriers over such a
+    // row are lane-masked. Padding blockDim.x here would instead divide
+    // blockDim.y by the same factor and leave the folded-away workers as
+    // ThreadX lanes redoing each other's work.
+    if (needsThreadYAlign && !needsThreadXAlign && !hasThreadYBarrier &&
+        isWorkerOnlyShuffleLaunch())
       skipAlign = true;
 
     if ((isShuffleEnabled || hasThreadYBarrier) && !skipAlign) {
@@ -1716,6 +1780,15 @@ void ACCCGToGPULowering::createPerRowBarrier(Location loc) {
   // unaligned; a subgroup barrier here would instead synchronize N workers.
   if (isSingleThreadWorkerLaunch())
     return;
+
+  // A worker-only launch keeps its rows unaligned, so a row narrower than a
+  // subgroup covers only part of one. Synchronize exactly that lane range and
+  // leave hasThreadYBarrier alone, so the launch is not padded on account of
+  // this barrier.
+  if (isWorkerOnlyShuffleLaunch() && staticBlockDimX < options.subgroupSize) {
+    emitGPUBarrierRow(rewriter, loc, staticBlockDimX, options.subgroupSize);
+    return;
+  }
 
   hasThreadYBarrier = true;
 

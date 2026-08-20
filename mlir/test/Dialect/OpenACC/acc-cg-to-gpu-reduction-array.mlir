@@ -300,6 +300,64 @@ func.func @thread_y_reduction_single_thread_rows() {
   return
 }
 
+// A worker-only launch with several threads per worker keeps its shape too.
+// Worker partials are combined in the lowest ThreadY threads of the block, so
+// the rows do not have to start at subgroup boundaries.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_narrow_rows
+// CHECK: %[[C8_NARROW:.*]] = arith.constant 8 : index
+// CHECK: %[[C16_NARROW:.*]] = arith.constant 16 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C8_NARROW]], %{{.*}} = %[[C16_NARROW]],
+func.func @thread_y_reduction_narrow_rows() {
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c8 {par_dim = #acc.par_dim<thread_x>}
+  %ty = acc.par_width %c16 {par_dim = #acc.par_dim<thread_y>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %local = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %local <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_y]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// A ThreadX reduction in the same region shuffles within a row, so the rows are
+// aligned again: blockDim.x is padded to a subgroup and blockDim.y divided by
+// the same factor.
+//
+// CHECK-LABEL: func.func @thread_y_reduction_with_thread_x_reduction
+// CHECK: %[[C32_BOTH:.*]] = arith.constant 32 : index
+// CHECK: %[[C4_BOTH:.*]] = arith.constant 4 : index
+// CHECK: gpu.launch
+// CHECK-SAME: threads({{.*}}) in (%{{.*}} = %[[C32_BOTH]], %{{.*}} = %[[C4_BOTH]],
+func.func @thread_y_reduction_with_thread_x_reduction() {
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
+  %tx = acc.par_width %c8 {par_dim = #acc.par_dim<thread_x>}
+  %ty = acc.par_width %c16 {par_dim = #acc.par_dim<thread_y>}
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
+    %c0_i32 = arith.constant 0 : i32
+    %worker = memref.alloca() : memref<i32>
+    %vector = memref.alloca() : memref<i32>
+    acc.reduction_accumulate %c0_i32 to %worker <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_y]>}
+    acc.reduction_accumulate %c0_i32 to %vector <add>
+        : i32 -> memref<i32>
+        {par_dims = #acc<par_dims[block_x, thread_x]>}
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
 // More workers than a subgroup still get aligned: the worker-indexed shared
 // reduction buffer only holds subgroupSize entries.
 //
