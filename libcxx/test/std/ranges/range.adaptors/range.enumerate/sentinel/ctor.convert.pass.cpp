@@ -61,35 +61,6 @@ static_assert(std::convertible_to<
               std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView>>,
               std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView> const>>);
 
-constexpr void test_SFINAE() {
-  int buffer[3] = {1, 2, 3};
-
-  // Underlying non-const to const not convertible.
-  {
-    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto st       = v.end();
-    auto const_st = std::as_const(v).end();
-
-    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
-
-    // We cannot create a non-const sentinel from a const sentinel.
-    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
-
-    // We can create a const sentinel from a non-const sentinel.
-    static_assert(std::is_constructible_v<decltype(const_st), decltype(st)>);
-  }
-  {
-    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto st                                             = v.end();
-    std::ranges::sentinel_t<const decltype(v)> const_st = st;
-
-    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
-
-    // We cannot create a non-const sentinel from a const sentinel.
-    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
-  }
-}
-
 template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr void test() {
   using View                   = MinimalView<Iterator, Sentinel>;
@@ -123,7 +94,32 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  test_SFINAE();
+  int buffer[3] = {1, 2, 3};
+
+  // Underlying non-const to const not convertible.
+  {
+    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
+    auto st       = v.end();
+    auto const_st = std::as_const(v).end();
+
+    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
+
+    // We cannot create a non-const sentinel from a const sentinel.
+    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
+
+    // We can create a const sentinel from a non-const sentinel.
+    static_assert(std::is_constructible_v<decltype(const_st), decltype(st)>);
+  }
+  {
+    std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
+    auto st                                             = v.end();
+    std::ranges::sentinel_t<const decltype(v)> const_st = st;
+
+    static_assert(!std::same_as<decltype(st), decltype(const_st)>);
+
+    // We cannot create a non-const sentinel from a const sentinel.
+    static_assert(!std::is_constructible_v<decltype(st), decltype(const_st)>);
+  }
 
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
