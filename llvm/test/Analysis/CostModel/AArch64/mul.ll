@@ -28,7 +28,7 @@ define void @vi16() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <2 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <4 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e8 = mul <8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e16 = mul <16 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <2 x i16> undef, undef
@@ -42,8 +42,8 @@ define void @vi32() {
 ; CHECK-LABEL: 'vi32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <2 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e8 = mul <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %e16 = mul <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <2 x i32> undef, undef
@@ -55,24 +55,24 @@ define void @vi32() {
 
 define void @vi64() {
 ; CHECK-NOSVE-LABEL: 'vi64'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <4 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:14 SizeLat:14 for: %e2 = mul <2 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: %e4 = mul <4 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:32 Lat:56 SizeLat:56 for: %e8 = mul <8 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:64 Lat:112 SizeLat:112 for: %e16 = mul <16 x i64> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'vi64'
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <2 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <4 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 2 for: %e4 = mul <4 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 4 for: %e8 = mul <8 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 8 for: %e16 = mul <16 x i64> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-HIGH-LABEL: 'vi64'
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <4 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:2 SizeLat:2 for: %e4 = mul <4 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %e8 = mul <8 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:8 Lat:8 SizeLat:8 for: %e16 = mul <16 x i64> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <2 x i64> undef, undef
@@ -84,15 +84,15 @@ define void @vi64() {
 
 define void @vi128() {
 ; CHECK-NOSVE-LABEL: 'vi128'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of 8 for: %e2 = mul <2 x i128> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'vi128'
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 8 for: %e2 = mul <2 x i128> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-HIGH-LABEL: 'vi128'
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:8 Lat:8 SizeLat:8 for: %e2 = mul <2 x i128> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <2 x i128> undef, undef
@@ -101,10 +101,10 @@ define void @vi128() {
 
 define void @xvi8() {
 ; CHECK-NOSVE-LABEL: 'xvi8'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i8> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i8> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i8> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i8> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e2 = mul <vscale x 2 x i8> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e4 = mul <vscale x 4 x i8> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e8 = mul <vscale x 8 x i8> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e16 = mul <vscale x 16 x i8> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'xvi8'
@@ -130,24 +130,24 @@ define void @xvi8() {
 
 define void @nxvi16() {
 ; CHECK-NOSVE-LABEL: 'nxvi16'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i16> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i16> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i16> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i16> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e2 = mul <vscale x 2 x i16> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e4 = mul <vscale x 4 x i16> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e8 = mul <vscale x 8 x i16> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e16 = mul <vscale x 16 x i16> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'nxvi16'
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <vscale x 2 x i16> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <vscale x 4 x i16> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e8 = mul <vscale x 8 x i16> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i16> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 2 for: %e16 = mul <vscale x 16 x i16> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-HIGH-LABEL: 'nxvi16'
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i16> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <vscale x 4 x i16> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 1 for: %e8 = mul <vscale x 8 x i16> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i16> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 2 for: %e16 = mul <vscale x 16 x i16> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <vscale x 2 x i16> undef, undef
@@ -159,24 +159,24 @@ define void @nxvi16() {
 
 define void @nxvi32() {
 ; CHECK-NOSVE-LABEL: 'nxvi32'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i32> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i32> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i32> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i32> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e2 = mul <vscale x 2 x i32> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e4 = mul <vscale x 4 x i32> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e8 = mul <vscale x 8 x i32> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e16 = mul <vscale x 16 x i32> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'nxvi32'
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <vscale x 2 x i32> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <vscale x 4 x i32> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i32> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i32> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 2 for: %e8 = mul <vscale x 8 x i32> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 4 for: %e16 = mul <vscale x 16 x i32> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-HIGH-LABEL: 'nxvi32'
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i32> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of 1 for: %e4 = mul <vscale x 4 x i32> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i32> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i32> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 2 for: %e8 = mul <vscale x 8 x i32> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of 4 for: %e16 = mul <vscale x 16 x i32> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <vscale x 2 x i32> undef, undef
@@ -188,24 +188,24 @@ define void @nxvi32() {
 
 define void @nxvi64() {
 ; CHECK-NOSVE-LABEL: 'nxvi64'
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i64> undef, undef
-; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e2 = mul <vscale x 2 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e4 = mul <vscale x 4 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e8 = mul <vscale x 8 x i64> undef, undef
+; CHECK-NOSVE-NEXT:  Cost Model: Found costs of Invalid for: %e16 = mul <vscale x 16 x i64> undef, undef
 ; CHECK-NOSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-STD-LABEL: 'nxvi64'
 ; CHECK-STD-NEXT:  Cost Model: Found costs of 1 for: %e2 = mul <vscale x 2 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i64> undef, undef
-; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 2 for: %e4 = mul <vscale x 4 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 4 for: %e8 = mul <vscale x 8 x i64> undef, undef
+; CHECK-STD-NEXT:  Cost Model: Found costs of 8 for: %e16 = mul <vscale x 16 x i64> undef, undef
 ; CHECK-STD-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-HIGH-LABEL: 'nxvi64'
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <vscale x 4 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <vscale x 8 x i64> undef, undef
-; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <vscale x 16 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:2 Lat:2 SizeLat:2 for: %e4 = mul <vscale x 4 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:4 Lat:4 SizeLat:4 for: %e8 = mul <vscale x 8 x i64> undef, undef
+; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:8 Lat:8 SizeLat:8 for: %e16 = mul <vscale x 16 x i64> undef, undef
 ; CHECK-HIGH-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <vscale x 2 x i64> undef, undef
@@ -217,7 +217,7 @@ define void @nxvi64() {
 
 define void @nxvi128() {
 ; CHECK-LABEL: 'nxvi128'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:Invalid CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <vscale x 2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %e2 = mul <vscale x 2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %e2 = mul <vscale x 2 x i128> undef, undef

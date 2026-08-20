@@ -183,3 +183,19 @@ template <typename> class j {
 };
 template <> j(); // expected-error {{deduction guide declaration without trailing return type}}
 }
+
+namespace GH213575 {
+struct S {};
+template <typename T> bar C; // expected-error {{unknown type name 'bar'}}
+
+template <typename U> auto foo() {
+  return []<typename T>(
+             T, bool b = requires { C<T>; }) {
+    static_assert(requires { requires C<U>; }); // expected-error {{static assertion failed due to requirement 'requires { requires <<error-expression>>; }'}}
+    return 0;
+  };
+}
+
+auto baz = foo<int>();
+int qux = baz(S{}); // expected-note {{in instantiation of function template specialization 'GH213575::foo()::(lambda)::operator()<GH213575::S>' requested here}}
+}

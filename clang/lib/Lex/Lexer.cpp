@@ -116,7 +116,7 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw__Fract:
   case tok::kw__Sat:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   case tok::kw___auto_type:
   case tok::kw_char16_t:
   case tok::kw_char32_t:
@@ -1603,12 +1603,9 @@ static bool isUnicodeWhitespace(uint32_t Codepoint) {
   return UnicodeWhitespaceChars.contains(Codepoint);
 }
 
-// To mitigate https://github.com/llvm/llvm-project/issues/54732,
-// we allow "Mathematical Notation Characters" in identifiers.
-// This is a proposed profile that extends the XID_Start/XID_continue
-// with mathematical symbols, superscipts and subscripts digits
-// found in some production software.
-// https://www.unicode.org/L2/L2022/22230-math-profile.pdf
+// The mathematical compatibility notation profile extends XID_Start and
+// XID_Continue with mathematical symbols, superscript and subscript digits.
+// https://www.unicode.org/reports/tr31/#Mathematical_Compatibility_Notation
 static bool isMathematicalExtensionID(uint32_t C, const LangOptions &LangOpts,
                                       bool IsStart, bool &IsExtension) {
   static const llvm::sys::UnicodeCharSet MathStartChars(
@@ -1677,8 +1674,10 @@ static bool isAllowedInitiallyIDChar(uint32_t C, const LangOptions &LangOpts,
   return !C99DisallowedInitialIDChars.contains(C);
 }
 
-static void diagnoseExtensionInIdentifier(DiagnosticsEngine &Diags, uint32_t C,
-                                          CharSourceRange Range) {
+static void
+diagnoseMathematicalNotationInIdentifier(DiagnosticsEngine &Diags,
+                                         const LangOptions &LangOpts,
+                                         uint32_t C, CharSourceRange Range) {
 
   static const llvm::sys::UnicodeCharSet MathStartChars(
       MathematicalNotationProfileIDStartRanges);
@@ -1689,7 +1688,11 @@ static void diagnoseExtensionInIdentifier(DiagnosticsEngine &Diags, uint32_t C,
   (void)MathContinueChars;
   assert((MathStartChars.contains(C) || MathContinueChars.contains(C)) &&
          "Unexpected mathematical notation codepoint");
-  Diags.Report(Range.getBegin(), diag::ext_mathematical_notation)
+  unsigned DiagID = LangOpts.CPlusPlus
+                        ? DiagnosticIDs::getCompatDiagId(
+                              LangOpts, diag_compat::mathematical_notation)
+                        : diag::ext_mathematical_notation;
+  Diags.Report(Range.getBegin(), DiagID)
       << EscapeSingleCodepointForDiagnostic(C) << Range;
 }
 
@@ -1861,8 +1864,9 @@ bool Lexer::tryConsumeIdentifierUCN(const char *&CurPtr, unsigned Size,
     // Carry on as if the codepoint was valid for recovery purposes.
   } else if (!isLexingRawMode()) {
     if (IsExtension)
-      diagnoseExtensionInIdentifier(PP->getDiagnostics(), CodePoint,
-                                    makeCharRange(*this, CurPtr, UCNPtr));
+      diagnoseMathematicalNotationInIdentifier(
+          PP->getDiagnostics(), LangOpts, CodePoint,
+          makeCharRange(*this, CurPtr, UCNPtr));
 
     maybeDiagnoseIDCharCompat(PP->getDiagnostics(), CodePoint,
                               makeCharRange(*this, CurPtr, UCNPtr),
@@ -1917,8 +1921,8 @@ bool Lexer::tryConsumeIdentifierUTF8Char(const char *&CurPtr, Token &Result) {
     // valid for recovery purposes.
   } else if (!isLexingRawMode()) {
     if (IsExtension)
-      diagnoseExtensionInIdentifier(
-          PP->getDiagnostics(), CodePoint,
+      diagnoseMathematicalNotationInIdentifier(
+          PP->getDiagnostics(), LangOpts, CodePoint,
           makeCharRange(*this, CharStart, UnicodePtr));
     maybeDiagnoseIDCharCompat(PP->getDiagnostics(), CodePoint,
                               makeCharRange(*this, CharStart, UnicodePtr),
@@ -1942,8 +1946,9 @@ bool Lexer::LexUnicodeIdentifierStart(Token &Result, uint32_t C,
     if (!isLexingRawMode() && !ParsingPreprocessorDirective &&
         !PP->isPreprocessedOutput()) {
       if (IsExtension)
-        diagnoseExtensionInIdentifier(PP->getDiagnostics(), C,
-                                      makeCharRange(*this, BufferPtr, CurPtr));
+        diagnoseMathematicalNotationInIdentifier(
+            PP->getDiagnostics(), LangOpts, C,
+            makeCharRange(*this, BufferPtr, CurPtr));
       maybeDiagnoseIDCharCompat(PP->getDiagnostics(), C,
                                 makeCharRange(*this, BufferPtr, CurPtr),
                                 /*IsFirst=*/true);
@@ -2461,6 +2466,8 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
 
 /// LexAngledStringLiteral - Lex the remainder of an angled string literal,
 /// after having lexed the '<' character.  This is used for #include filenames.
+/// Returns false if failed to lex the angled string literal; so the caller can
+/// lex the '<' normally.
 bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   // Does this string contain the \0 character?
   const char *NulCharacter = nullptr;
@@ -2474,10 +2481,8 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
 
     if (isVerticalWhitespace(C) ||               // Newline.
         (C == 0 && (CurPtr - 1 == BufferEnd))) { // End of file.
-      // If the filename is unterminated, then it must just be a lone <
-      // character.  Return this as such.
-      FormTokenWithChars(Result, AfterLessPos, tok::less);
-      return true;
+      // If the filename is unterminated, let the caller lex the '<' normally.
+      return false;
     }
 
     if (C == 0) {
@@ -3158,6 +3163,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // If we are returning comments as tokens, return this comment as a token.
   if (inKeepCommentMode()) {
     FormTokenWithChars(Result, CurPtr, tok::comment);
+    IsAtPhysicalStartOfLine = Result.isAtPhysicalStartOfLine();
     return true;
   }
 
@@ -4343,9 +4349,10 @@ LexStart:
     break;
   case '<':
     Char = getCharAndSize(CurPtr, SizeTmp);
-    if (ParsingFilename) {
-      return LexAngledStringLiteral(Result, CurPtr);
-    } else if (Char == '<') {
+    if (ParsingFilename && LexAngledStringLiteral(Result, CurPtr))
+      return true;
+
+    if (Char == '<') {
       char After = getCharAndSize(CurPtr+SizeTmp, SizeTmp2);
       if (After == '=') {
         Kind = tok::lesslessequal;
@@ -4388,7 +4395,7 @@ LexStart:
       }
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::lessequal;
-    } else if (LangOpts.Digraphs && Char == ':') {     // '<:' -> '['
+    } else if (LangOpts.Digraphs && Char == ':') { // '<:' -> '['
       if (LangOpts.CPlusPlus11 &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == ':') {
         // C++0x [lex.pptoken]p3:
@@ -4408,7 +4415,7 @@ LexStart:
 
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_square;
-    } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
+    } else if (LangOpts.Digraphs && Char == '%') { // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
     } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
@@ -4690,12 +4697,20 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     MIOpt.ReadToken();
   }
 
-  if (ParsingFilename && DDTok.is(tok::less)) {
-    BufferPtr = BufferStart + DDTok.Offset;
-    LexAngledStringLiteral(Result, BufferPtr + 1);
-    if (Result.isNot(tok::header_name))
+  const char *DDTokPtr = BufferStart + DDTok.Offset;
+  if (ParsingFilename && *DDTokPtr == '<') {
+    Result.startToken();
+    Result.setFlag((clang::Token::TokenFlags)DDTok.Flags);
+    Result.clearFlag(clang::Token::NeedsCleaning);
+    BufferPtr = DDTokPtr;
+    if (!LexAngledStringLiteral(Result, BufferPtr + 1)) {
+      convertDependencyDirectiveToken(DDTok, Result);
       return true;
+    }
+
     // Advance the index of lexed tokens.
+    // FIXME: This will skip too many tokens if the header-name ended in the
+    // middle of a token, such as in '<foo>='.
     while (true) {
       const dependency_directives_scan::Token &NextTok =
           DepDirectives.front().Tokens[NextDepDirectiveTokenIndex];

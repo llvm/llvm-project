@@ -76,7 +76,7 @@ NativeProcessNetBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
   assert(wpid == pid);
   (void)wpid;
   if (!WIFSTOPPED(wstatus)) {
-    LLDB_LOG(log, "Could not sync with inferior process: wstatus={1}",
+    LLDB_LOG(log, "Could not sync with inferior process: wstatus={0}",
              WaitStatus::Decode(wstatus));
     return llvm::createStringError("could not sync with inferior process");
   }
@@ -899,8 +899,10 @@ Status NativeProcessNetBSD::Attach() {
   return Status();
 }
 
-Status NativeProcessNetBSD::ReadMemory(lldb::addr_t addr, void *buf,
-                                       size_t size, size_t &bytes_read) {
+Status NativeProcessNetBSD::ReadMemory(const ProcessAddress &process_addr,
+                                       void *buf, size_t size,
+                                       size_t &bytes_read) {
+  lldb::addr_t addr = process_addr.GetValue();
   unsigned char *dst = static_cast<unsigned char *>(buf);
   struct ptrace_io_desc io;
 

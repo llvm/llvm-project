@@ -3416,7 +3416,8 @@ public:
 
     if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
       return getSema().BuildCXXTypeConstructExpr(
-          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+          TInfo, LParenLoc, PLE->getUserSpecifiedInitExprs(), RParenLoc,
+          ListInitialization);
 
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
@@ -7773,6 +7774,26 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
 }
 
 template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                                    LateParsedAttrTypeLoc TL) {
+  const LateParsedAttrType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->getWrappedType()) {
+    Result = SemaRef.Context.getLateParsedAttrType(
+        InnerTy, OldTy->getLateParsedAttribute());
+  }
+
+  LateParsedAttrTypeLoc newTL = TLB.push<LateParsedAttrTypeLoc>(Result);
+  newTL.setAttrNameLoc(TL.getAttrNameLoc());
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.
@@ -7824,11 +7845,21 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     ContainedTy = ContainedTSI->getType();
   }
 
+  HLSLAttributedResourceType::Attributes Attrs = oldType->getAttrs();
+  if (Attrs.SampleCountExpr) {
+    ExprResult SampleCountResult =
+        getDerived().TransformExpr(Attrs.SampleCountExpr);
+    if (SampleCountResult.isInvalid())
+      return QualType();
+    Attrs.SampleCountExpr = SampleCountResult.get();
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
-      ContainedTy != oldType->getContainedType()) {
-    Result = SemaRef.Context.getHLSLAttributedResourceType(
-        WrappedTy, ContainedTy, oldType->getAttrs());
+      ContainedTy != oldType->getContainedType() ||
+      Attrs.SampleCountExpr != oldType->getSampleCountExpr()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(WrappedTy,
+                                                           ContainedTy, Attrs);
   }
 
   HLSLAttributedResourceTypeLoc NewTL =
@@ -10259,11 +10290,22 @@ TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
 }
 
 template <typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
+StmtResult TreeTransform<Derived>::TransformOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
-      OMPD_ordered, DirName, nullptr, D->getBeginLoc());
+      OMPD_ordered_standalone, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_ordered_blockassoc, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -11075,6 +11117,13 @@ OMPClause *TreeTransform<Derived>::TransformOMPWriteClause(OMPWriteClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPUpdateClause(OMPUpdateClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }
@@ -16317,6 +16366,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     TRC.ConstraintExpr = E.get();
   }
 
+  LSI->BeforeCompoundStatement = false;
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,
@@ -16490,6 +16540,36 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
   // FIXME: we're faking the locations of the commas
   return getDerived().RebuildCXXUnresolvedConstructExpr(
       T, E->getLParenLoc(), Args, E->getRParenLoc(), E->isListInitialization());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
+    DependentTemplateIdExpr *E) {
+
+  NestedNameSpecifierLoc Loc;
+  TemplateName Name = getDerived().TransformTemplateName(
+      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
+      E->getNameLoc());
+  if (Name.isNull())
+    return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+
+  assert(TD && "A dependent template id always refers to a template decl");
+
+  TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+  if (getDerived().TransformTemplateArguments(
+          E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
+    return ExprError();
+
+  CXXScopeSpec SS;
+
+  LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
+  R.addDecl(TD);
+  R.resolveKind();
+  return getDerived().RebuildTemplateIdExpr(
+      SS, /*Template Keyword=*/SourceLocation(), R,
+      /*RequiresADL=*/false, &TransArgs);
 }
 
 template<typename Derived>

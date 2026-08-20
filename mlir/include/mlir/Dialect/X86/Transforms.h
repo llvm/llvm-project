@@ -110,6 +110,11 @@ void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 // Int8).
 void populateVectorContractToAMXDotProductPatterns(RewritePatternSet &patterns);
 
+// Rewrites an additive vector contraction by zeroing the accumulator input
+// and materializing the accumulation as a separate add after the contraction.
+void populateMoveAccumulatorForContractLoopPatterns(
+    RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

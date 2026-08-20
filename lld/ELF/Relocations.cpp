@@ -243,16 +243,15 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 // location.
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
-  Symbol old = sym;
+  uint16_t versionId = sym.versionId;
   Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
-  sym.versionId = old.versionId;
+  sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
-                  std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT | NEEDS_GOT_AUTH, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -724,8 +723,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc(isec, offsetInSec, sym, addend, type, expr,
-                              shard);
+    relrDyn->addRelativeReloc<concurrent>(isec, offsetInSec, sym, addend, type,
+                                          expr, shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
@@ -750,13 +749,16 @@ template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
+  bool isPreemptible = sym.isPreemptible;
+  RelExpr expr = isPreemptible ? R_ADDEND : R_ABS;
+  if (!ctx.target->usesGotPlt) {
+    rel.addReloc(
+        {type, &plt, sym.getPltOffset(ctx), isPreemptible, sym, 0, expr});
+    return;
+  }
   gotPlt.addEntry(sym);
-  if (sym.isPreemptible)
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), true, sym, 0, R_ADDEND});
-  else
-    rel.addReloc(
-        {type, &gotPlt, sym.getGotPltOffset(ctx), false, sym, 0, R_ABS});
+  rel.addReloc(
+      {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -927,9 +929,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
-      // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
-      // needing the GOT if we can't relax everything.
-      if (expr == R_RELAX_GOT_PC)
+      // If the target adjusted the expression to an optimizable form, we may
+      // end up needing the GOT if we can't optimize everything.
+      if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
         ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     }
   }
@@ -956,7 +958,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
+      sym.setFlags(NEEDS_GOT);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -983,8 +985,7 @@ void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
   }
 
   // Use a simple -z notext rule that treats all sections except .eh_frame as
-  // writable. GNU ld does not produce dynamic relocations in .eh_frame (and our
-  // SectionBase::getOffset would incorrectly adjust the offset).
+  // writable. GNU ld does not produce dynamic relocations in .eh_frame.
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
@@ -1242,8 +1243,16 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
     return false;
   // Skip unreferenced non-preemptible ifunc.
-  if (!(flags & (NEEDS_GOT | NEEDS_PLT | HAS_DIRECT_RELOC)))
+  if (!(flags & (NEEDS_GOT | NEEDS_GOT_AUTH | NEEDS_PLT | HAS_DIRECT_RELOC)))
     return true;
+  // We only support one kind of GOT entry, and IPLT entries currently always
+  // use non-AUTH GOT entries.
+  if (flags & NEEDS_GOT_AUTH) {
+    auto diag = Err(ctx);
+    diag << "AUTH GOT entry for non-preemptible ifunc '" << sym.getName()
+         << "' requested, but R_AARCH64_AUTH_IRELATIVE is not supported yet";
+    return true;
+  }
 
   sym.isInIplt = true;
 
@@ -1266,11 +1275,8 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT) {
-      assert(!(flags & NEEDS_GOT_AUTH) &&
-             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
+    if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
-    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
@@ -1292,8 +1298,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT) {
-      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+    if (flags & (NEEDS_GOT | NEEDS_GOT_AUTH)) {
+      if ((flags & NEEDS_GOT) && (flags & NEEDS_GOT_AUTH)) {
         auto diag = Err(ctx);
         diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
              << "' requested, but only one type of GOT entry per symbol is "
@@ -1336,8 +1342,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     GotSection *got = ctx.in.got.get();
 
-    if (flags & NEEDS_TLSDESC) {
-      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+    if (flags & (NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH)) {
+      if ((flags & NEEDS_TLSDESC) && (flags & NEEDS_TLSDESC_AUTH)) {
         Err(ctx)
             << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
             << "' requested, but only one type of TLSDESC entry per symbol is "
@@ -1966,8 +1972,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks.
+          if (pass == 0)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)

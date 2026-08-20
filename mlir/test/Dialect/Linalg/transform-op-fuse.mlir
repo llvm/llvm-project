@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func.func @fuse_unary
 func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -665,5 +665,62 @@ module attributes {transform.with_named_sequence} {
     %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] {apply_cleanup} : 
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
     transform.yield 
+  }
+}
+
+// -----
+
+#id = affine_map<(d0) -> (d0)>
+#floordiv3 = affine_map<(d0) -> (d0 floordiv 3)>
+
+// CHECK-LABEL: func.func @fuse_producer_semi_affine_aligned
+//       CHECK:   scf.for
+//       CHECK:     tensor.extract_slice %{{.*}} [2] [1] : tensor<4xf32> to tensor<2xf32>
+//       CHECK:     linalg.generic
+//       CHECK:     linalg.exp
+func.func @fuse_producer_semi_affine_aligned(%arg0: tensor<12xf32>, %scale: tensor<4xf32>, %init: tensor<12xf32>, %out: tensor<12xf32>) -> tensor<12xf32> {
+  %0 = linalg.generic {indexing_maps = [#id, #floordiv3, #id], iterator_types = ["parallel"]}
+    ins(%arg0, %scale : tensor<12xf32>, tensor<4xf32>) outs(%init : tensor<12xf32>) {
+  ^bb0(%a: f32, %s: f32, %o: f32):
+    %m = arith.addf %a, %s : f32
+    linalg.yield %m : f32
+  } -> tensor<12xf32>
+  %1 = linalg.exp ins(%0 : tensor<12xf32>) outs(%out : tensor<12xf32>) -> tensor<12xf32>
+  return %1 : tensor<12xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.exp"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops = transform.structured.fuse %0 tile_sizes [6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// The semi-affine map tiling check is applied during fusion: a producer with a
+// misaligned `floordiv` map (step 3, tile 4) cannot be fused.
+
+#id = affine_map<(d0) -> (d0)>
+#floordiv3 = affine_map<(d0) -> (d0 floordiv 3)>
+
+func.func @negative_fuse_producer_semi_affine_misaligned(%arg0: tensor<12xf32>, %scale: tensor<4xf32>, %init: tensor<12xf32>, %out: tensor<12xf32>) -> tensor<12xf32> {
+  // expected-error @+1 {{'linalg.generic' op tiling is not supported for the semi-affine indexing map: tile size 4 for dimension d0 must divide or be divisible by the step 3}}
+  %0 = linalg.generic {indexing_maps = [#id, #floordiv3, #id], iterator_types = ["parallel"]}
+    ins(%arg0, %scale : tensor<12xf32>, tensor<4xf32>) outs(%init : tensor<12xf32>) {
+  ^bb0(%a: f32, %s: f32, %o: f32):
+    %m = arith.addf %a, %s : f32
+    linalg.yield %m : f32
+  } -> tensor<12xf32>
+  %1 = linalg.exp ins(%0 : tensor<12xf32>) outs(%out : tensor<12xf32>) -> tensor<12xf32>
+  return %1 : tensor<12xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.exp"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops = transform.structured.fuse %0 tile_sizes [4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
   }
 }

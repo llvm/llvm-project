@@ -134,9 +134,9 @@ bool UnrollLoopsCheck::hasKnownBounds(const Stmt *Statement,
     }
   }
   // If increment is unary and not one of ++ and --, loop bounds are unknown.
-  if (const auto *Op = dyn_cast<UnaryOperator>(Increment))
-    if (!Op->isIncrementDecrementOp())
-      return false;
+  if (const auto *Op = dyn_cast<UnaryOperator>(Increment);
+      Op && !Op->isIncrementDecrementOp())
+    return false;
 
   if (const auto *BinaryOp = dyn_cast<BinaryOperator>(Conditional)) {
     const Expr *LHS = BinaryOp->getLHS();

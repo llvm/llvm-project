@@ -775,6 +775,9 @@ static std::optional<int64_t> getUpperBound(Value iv) {
 static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
                                             unsigned numSymbols,
                                             ArrayRef<Value> operands) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
+    return constExpr.getValue();
+
   // Get the constant lower or upper bounds on the operands.
   SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
@@ -783,9 +786,6 @@ static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
     constLowerBounds.push_back(getLowerBound(operand));
     constUpperBounds.push_back(getUpperBound(operand));
   }
-
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
-    return constExpr.getValue();
 
   return getBoundForAffineExpr(expr, numDims, numSymbols, constLowerBounds,
                                constUpperBounds,
@@ -798,6 +798,9 @@ static std::optional<int64_t> getUpperBound(AffineExpr expr, unsigned numDims,
 static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
                                             unsigned numSymbols,
                                             ArrayRef<Value> operands) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
+    return constExpr.getValue();
+
   // Get the constant lower or upper bounds on the operands.
   SmallVector<std::optional<int64_t>> constLowerBounds, constUpperBounds;
   constLowerBounds.reserve(operands.size());
@@ -807,15 +810,9 @@ static std::optional<int64_t> getLowerBound(AffineExpr expr, unsigned numDims,
     constUpperBounds.push_back(getUpperBound(operand));
   }
 
-  std::optional<int64_t> lowerBound;
-  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
-    lowerBound = constExpr.getValue();
-  } else {
-    lowerBound = getBoundForAffineExpr(expr, numDims, numSymbols,
-                                       constLowerBounds, constUpperBounds,
-                                       /*isUpper=*/false);
-  }
-  return lowerBound;
+  return getBoundForAffineExpr(expr, numDims, numSymbols, constLowerBounds,
+                               constUpperBounds,
+                               /*isUpper=*/false);
 }
 
 /// Simplify `expr` while exploiting information from the values in `operands`.
@@ -1810,7 +1807,7 @@ void SimplifyAffineOp<AffineLoadOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineLoadOp load, AffineMap map,
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffineLoadOp>(load, load.getMemRef(), map,
-                                            mapOperands);
+                                            mapOperands, load.getMaybeAlign());
 }
 template <>
 void SimplifyAffineOp<AffinePrefetchOp>::replaceAffineOp(
@@ -1825,7 +1822,8 @@ void SimplifyAffineOp<AffineStoreOp>::replaceAffineOp(
     PatternRewriter &rewriter, AffineStoreOp store, AffineMap map,
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffineStoreOp>(
-      store, store.getValueToStore(), store.getMemRef(), map, mapOperands);
+      store, store.getValueToStore(), store.getMemRef(), map, mapOperands,
+      store.getMaybeAlign());
 }
 template <>
 void SimplifyAffineOp<AffineVectorLoadOp>::replaceAffineOp(
@@ -1833,7 +1831,7 @@ void SimplifyAffineOp<AffineVectorLoadOp>::replaceAffineOp(
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffineVectorLoadOp>(
       vectorload, vectorload.getVectorType(), vectorload.getMemRef(), map,
-      mapOperands);
+      mapOperands, vectorload.getMaybeAlign());
 }
 template <>
 void SimplifyAffineOp<AffineVectorStoreOp>::replaceAffineOp(
@@ -1841,7 +1839,7 @@ void SimplifyAffineOp<AffineVectorStoreOp>::replaceAffineOp(
     ArrayRef<Value> mapOperands) const {
   rewriter.replaceOpWithNewOp<AffineVectorStoreOp>(
       vectorstore, vectorstore.getValueToStore(), vectorstore.getMemRef(), map,
-      mapOperands);
+      mapOperands, vectorstore.getMaybeAlign());
 }
 
 // Generic version for ops that don't have extra operands.
@@ -2203,18 +2201,20 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
                bodyBuilder);
 }
 
+LogicalResult AffineForOp::verify() {
+  auto *body = getBody();
+  if (body->getNumArguments() == 0 || !getInductionVar().getType().isIndex())
+    return emitOpError("expected body to have an index argument for the "
+                       "induction variable");
+
+  return success();
+}
+
 LogicalResult AffineForOp::verifyRegions() {
   // Step must be a strictly positive integer.
   if (getStepAsInt() <= 0)
     return emitOpError("expected step to be a positive integer, got ")
            << getStepAsInt();
-
-  // Check that the body defines as single block argument for the induction
-  // variable.
-  auto *body = getBody();
-  if (body->getNumArguments() == 0 || !body->getArgument(0).getType().isIndex())
-    return emitOpError("expected body to have a single index argument for the "
-                       "induction variable");
 
   // Verify that the bound operands are valid dimension/symbols.
   /// Lower bound.
@@ -3379,39 +3379,54 @@ void AffineIfOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyDeadElse, AlwaysTrueOrFalseIf>(context);
 }
 
+/// Adds the optional `alignment` attribute to `result`, if one is given.
+static void addAlignmentAttr(OpBuilder &builder, OperationState &result,
+                             StringAttr attrName, llvm::MaybeAlign alignment) {
+  if (alignment)
+    result.addAttribute(attrName,
+                        builder.getI64IntegerAttr(alignment->value()));
+}
+
 //===----------------------------------------------------------------------===//
 // AffineLoadOp
 //===----------------------------------------------------------------------===//
 
 void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
-                         AffineMap map, ValueRange operands) {
+                         AffineMap map, ValueRange operands,
+                         llvm::MaybeAlign alignment) {
   assert(operands.size() == 1 + map.getNumInputs() && "inconsistent operands");
   result.addOperands(operands);
   if (map)
     result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
   auto memrefType = llvm::cast<MemRefType>(operands[0].getType());
   result.types.push_back(memrefType.getElementType());
 }
 
 void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
-                         Value memref, AffineMap map, ValueRange mapOperands) {
+                         Value memref, AffineMap map, ValueRange mapOperands,
+                         llvm::MaybeAlign alignment) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   result.addOperands(memref);
   result.addOperands(mapOperands);
   auto memrefType = llvm::cast<MemRefType>(memref.getType());
   result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
   result.types.push_back(memrefType.getElementType());
 }
 
 void AffineLoadOp::build(OpBuilder &builder, OperationState &result,
-                         Value memref, ValueRange indices) {
+                         Value memref, ValueRange indices,
+                         llvm::MaybeAlign alignment) {
   auto memrefType = llvm::cast<MemRefType>(memref.getType());
   int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
       rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
-  build(builder, result, memref, map, indices);
+  build(builder, result, memref, map, indices, alignment);
 }
 
 ParseResult AffineLoadOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -3525,25 +3540,27 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
 
 void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
                           Value valueToStore, Value memref, AffineMap map,
-                          ValueRange mapOperands) {
+                          ValueRange mapOperands, llvm::MaybeAlign alignment) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   result.addOperands(valueToStore);
   result.addOperands(memref);
   result.addOperands(mapOperands);
   result.getOrAddProperties<Properties>().map = AffineMapAttr::get(map);
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
 }
 
 // Use identity map.
 void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
-                          Value valueToStore, Value memref,
-                          ValueRange indices) {
+                          Value valueToStore, Value memref, ValueRange indices,
+                          llvm::MaybeAlign alignment) {
   auto memrefType = llvm::cast<MemRefType>(memref.getType());
   int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
       rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
-  build(builder, result, valueToStore, memref, map, indices);
+  build(builder, result, valueToStore, memref, map, indices, alignment);
 }
 
 ParseResult AffineStoreOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -4735,34 +4752,40 @@ LogicalResult AffineYieldOp::verify() {
 
 void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
                                VectorType resultType, AffineMap map,
-                               ValueRange operands) {
+                               ValueRange operands,
+                               llvm::MaybeAlign alignment) {
   assert(operands.size() == 1 + map.getNumInputs() && "inconsistent operands");
   result.addOperands(operands);
   if (map)
     result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
   result.types.push_back(resultType);
 }
 
 void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
                                VectorType resultType, Value memref,
-                               AffineMap map, ValueRange mapOperands) {
+                               AffineMap map, ValueRange mapOperands,
+                               llvm::MaybeAlign alignment) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   result.addOperands(memref);
   result.addOperands(mapOperands);
   result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
   result.types.push_back(resultType);
 }
 
 void AffineVectorLoadOp::build(OpBuilder &builder, OperationState &result,
                                VectorType resultType, Value memref,
-                               ValueRange indices) {
+                               ValueRange indices, llvm::MaybeAlign alignment) {
   auto memrefType = llvm::cast<MemRefType>(memref.getType());
   int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
       rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
-  build(builder, result, resultType, memref, map, indices);
+  build(builder, result, resultType, memref, map, indices, alignment);
 }
 
 void AffineVectorLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -4834,25 +4857,29 @@ LogicalResult AffineVectorLoadOp::verify() {
 
 void AffineVectorStoreOp::build(OpBuilder &builder, OperationState &result,
                                 Value valueToStore, Value memref, AffineMap map,
-                                ValueRange mapOperands) {
+                                ValueRange mapOperands,
+                                llvm::MaybeAlign alignment) {
   assert(map.getNumInputs() == mapOperands.size() && "inconsistent index info");
   result.addOperands(valueToStore);
   result.addOperands(memref);
   result.addOperands(mapOperands);
   result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  addAlignmentAttr(builder, result, getAlignmentAttrName(result.name),
+                   alignment);
 }
 
 // Use identity map.
 void AffineVectorStoreOp::build(OpBuilder &builder, OperationState &result,
                                 Value valueToStore, Value memref,
-                                ValueRange indices) {
+                                ValueRange indices,
+                                llvm::MaybeAlign alignment) {
   auto memrefType = llvm::cast<MemRefType>(memref.getType());
   int64_t rank = memrefType.getRank();
   // Create identity map for memrefs with at least one dimension or () -> ()
   // for zero-dimensional memrefs.
   auto map =
       rank ? builder.getMultiDimIdentityMap(rank) : builder.getEmptyAffineMap();
-  build(builder, result, valueToStore, memref, map, indices);
+  build(builder, result, valueToStore, memref, map, indices, alignment);
 }
 void AffineVectorStoreOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {

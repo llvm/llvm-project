@@ -1208,6 +1208,13 @@ bool ASTStructuralEquivalence::isEquivalent(
       return false;
     break;
 
+  case Type::LateParsedAttr:
+    if (!IsStructurallyEquivalent(
+            Context, cast<LateParsedAttrType>(T1)->getWrappedType(),
+            cast<LateParsedAttrType>(T2)->getWrappedType()))
+      return false;
+    break;
+
   case Type::BTFTagAttributed:
     if (!IsStructurallyEquivalent(
             Context, cast<BTFTagAttributedType>(T1)->getWrappedType(),
@@ -1231,9 +1238,18 @@ bool ASTStructuralEquivalence::isEquivalent(
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
-        cast<HLSLAttributedResourceType>(T2)->getAttrs())
-      return false;
+    {
+      const auto *Res1 = cast<HLSLAttributedResourceType>(T1);
+      const auto *Res2 = cast<HLSLAttributedResourceType>(T2);
+      if (!IsStructurallyEquivalent(Context, Res1->getSampleCountExpr(),
+                                    Res2->getSampleCountExpr()))
+        return false;
+      HLSLAttributedResourceType::Attributes Attrs1 = Res1->getAttrs();
+      HLSLAttributedResourceType::Attributes Attrs2 = Res2->getAttrs();
+      Attrs1.SampleCountExpr = Attrs2.SampleCountExpr = nullptr;
+      if (Attrs1 != Attrs2)
+        return false;
+    }
     break;
 
   case Type::HLSLInlineSpirv:
@@ -2290,7 +2306,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
   }
 
-  return true;
+  return IsStructurallyEquivalent(Context, Params1->getRequiresClause(),
+                                  Params2->getRequiresClause());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -2427,10 +2444,12 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendDecl *D1, FriendDecl *D2) {
+  if (D1->isPackExpansion() != D2->isPackExpansion())
+    return false;
+
   if ((D1->getFriendType() && D2->getFriendDecl()) ||
-      (D1->getFriendDecl() && D2->getFriendType())) {
-      return false;
-  }
+      (D1->getFriendDecl() && D2->getFriendType()))
+    return false;
   if (D1->getFriendType() && D2->getFriendType())
     return IsStructurallyEquivalent(Context,
                                     D1->getFriendType()->getType(),
@@ -2439,6 +2458,47 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, D1->getFriendDecl(),
                                     D2->getFriendDecl());
   return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     FriendTemplateDecl *FTD1,
+                                     FriendTemplateDecl *FTD2) {
+  if (FTD1->isPackExpansion() != FTD2->isPackExpansion())
+    return false;
+
+  ArrayRef<TemplateParameterList *> TPL1 = FTD1->getTemplateParameterLists();
+  ArrayRef<TemplateParameterList *> TPL2 = FTD2->getTemplateParameterLists();
+  if (!llvm::equal(
+          TPL1, TPL2,
+          [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
+            return IsStructurallyEquivalent(Context, LHS, RHS);
+          }))
+    return false;
+
+  auto FK1 = FTD1->getFriendKind();
+  auto FK2 = FTD2->getFriendKind();
+  if (FK1 != FK2)
+    return false;
+
+  switch (FK1) {
+  case FriendTemplateDecl::FriendTemplateEntityKind::Type: {
+    const TemplateName TN1 = FTD1->getFriendTemplateName();
+    const TemplateName TN2 = FTD2->getFriendTemplateName();
+    if (TN1.isNull() != TN2.isNull())
+      return false;
+    if (!IsStructurallyEquivalent(Context, FTD1->getFriendType()->getType(),
+                                  FTD2->getFriendType()->getType()))
+      return false;
+    return TN1.isNull() || IsStructurallyEquivalent(Context, TN1, TN2);
+  }
+  case FriendTemplateDecl::FriendTemplateEntityKind::Template:
+    return IsStructurallyEquivalent(Context, FTD1->getFriendTemplateName(),
+                                    FTD2->getFriendTemplateName());
+  case FriendTemplateDecl::FriendTemplateEntityKind::Decl:
+    return IsStructurallyEquivalent(Context, static_cast<FriendDecl *>(FTD1),
+                                    static_cast<FriendDecl *>(FTD2));
+  }
+  llvm_unreachable("unknown friend template kind");
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,

@@ -54,6 +54,19 @@ TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
   return nullptr;
 }
 
+bool TargetMachine::isLargeDataSize(uint64_t Size) const {
+  if (getTargetTriple().getArch() != Triple::x86_64)
+    return false;
+
+  if (!getTargetTriple().isOSBinFormatELF())
+    return getCodeModel() == CodeModel::Large;
+
+  if (getCodeModel() == CodeModel::Medium || getCodeModel() == CodeModel::Large)
+    return Size == 0 || Size > LargeDataThreshold;
+
+  return false;
+}
+
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)
     return false;
@@ -99,14 +112,19 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  // Treat all globals in explicit sections as small, except for the standard
-  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
-  // together small and large sections, resulting in small references to large
-  // data sections. The code model attribute overrides this above.
-  if (GV->hasSection()) {
-    StringRef Name = GV->getSection();
-    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
-           IsPrefix(Name, ".lrodata");
+  // Treat all globals in user-defined sections as small, except for the
+  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
+  // of linking together small and large sections, resulting in small
+  // references to large data sections. The code model attribute overrides this
+  // above.
+  if (GV->hasSection() || GV->hasImplicitSection()) {
+    StringRef SectionName =
+        TargetLoweringObjectFile::getCustomSectionName(GV, *this);
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
+    }
   }
 
   // Respect large data threshold for medium and large code models.
@@ -134,8 +152,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
             .isReadOnlyWithRel())
       return false;
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = GV->getGlobalSize(DL);
-    return Size == 0 || Size > LargeDataThreshold;
+    return isLargeDataSize(GV->getGlobalSize(DL));
   }
 
   return false;
@@ -311,6 +328,25 @@ std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
   if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
     Version.consumeInteger(10, Ret.second);
   return Ret;
+}
+
+StringRef TargetMachine::getTargetABIName(const Module &M) const {
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return MD->getString();
+  return Options.MCOptions.getABIName();
+}
+
+void TargetMachine::verifyOptionsConsistency(const Module &M) const {
+  // The "target-abi" module flag must agree with the -target-abi option.
+  StringRef OptionABI = Options.MCOptions.getABIName();
+  if (!OptionABI.empty()) {
+    if (const auto *MD =
+            cast_or_null<MDString>(M.getModuleFlag("target-abi"))) {
+      if (OptionABI != MD->getString())
+        M.getContext().emitError(
+            "-target-abi option != target-abi module flag");
+    }
+  }
 }
 
 const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,

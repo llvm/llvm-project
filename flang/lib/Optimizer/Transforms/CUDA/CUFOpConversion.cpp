@@ -337,14 +337,18 @@ struct CUFDataTransferOpConversion
     }
 
     auto materializeBoxIfNeeded = [&](mlir::Value val) -> mlir::Value {
-      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(val.getDefiningOp())) {
+      // val can be a block argument and therefore has no defining operation.
+      mlir::Operation *defOp = val.getDefiningOp();
+      if (!defOp)
+        return val;
+      if (mlir::isa<fir::EmboxOp, fir::ReboxOp>(defOp)) {
         // Materialize the box to memory to be able to call the runtime.
         mlir::Value box = builder.createTemporary(loc, val.getType());
         fir::StoreOp::create(builder, loc, val, box);
         return box;
       }
       if (mlir::isa<fir::BaseBoxType>(val.getType()))
-        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(val.getDefiningOp()))
+        if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(defOp))
           return loadOp.getMemref();
       return val;
     };
@@ -479,22 +483,22 @@ public:
       args.push_back(arg);
     }
     mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
+    mlir::Type tokenType = nullptr;
+    SmallVector<Value, 1> tokens;
+    if (op.getStream()) {
+      tokens.push_back(
+          cuf::StreamCastOp::create(rewriter, loc, op.getStream()));
+      tokenType = tokens.front().getType();
+    }
     auto gpuLaunchOp = mlir::gpu::LaunchFuncOp::create(
         rewriter, loc, kernelName,
         mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
         mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
-        dynamicShmemSize, args);
+        dynamicShmemSize, args, tokenType, tokens);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
-    }
-    if (op.getStream()) {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(gpuLaunchOp);
-      mlir::Value stream =
-          cuf::StreamCastOp::create(rewriter, loc, op.getStream());
-      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
     }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
@@ -503,7 +507,7 @@ public:
       gpuLaunchOp->setAttr(cuf::getProcAttrName(),
                            cuf::ProcAttributeAttr::get(
                                op.getContext(), cuf::ProcAttribute::Global));
-    rewriter.replaceOp(op, gpuLaunchOp);
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 

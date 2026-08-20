@@ -722,8 +722,8 @@ void CXXDerivedObjectRegion::printPrettyAsExpr(raw_ostream &os) const {
   superRegion->printPrettyAsExpr(os);
 }
 
-std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
-  std::string VariableName;
+std::string MemRegion::getDescriptiveName(bool UseQuotes,
+                                          bool AllowFallback) const {
   std::string ArrayIndices;
   const MemRegion *R = this;
   SmallString<50> buf;
@@ -734,6 +734,28 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     if (UseQuotes)
       return ("'" + Subject + "'").str();
     return Subject.str();
+  };
+
+  auto FallbackName = [this, AllowFallback]() -> std::string {
+    if (!AllowFallback)
+      return "";
+
+    if (const auto *FR = getAs<FieldRegion>()) {
+      if (StringRef Name = FR->getDecl()->getName(); !Name.empty())
+        return (llvm::Twine("the field '") + Name + "'").str();
+      return "the unnamed field";
+    }
+
+    if (isa<AllocaRegion>(this))
+      return "the memory returned by 'alloca'";
+
+    if (isa<SymbolicRegion>(this) && isa<HeapSpaceRegion>(getRawMemorySpace()))
+      return "the heap area";
+
+    if (isa<StringRegion>(this))
+      return "the string literal";
+
+    return "the region";
   };
 
   // Obtain array indices to add them to the variable name.
@@ -749,15 +771,15 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     else {
       auto SI = ER->getIndex().getAs<nonloc::SymbolVal>();
       if (!SI)
-        return "";
+        return FallbackName();
 
       const MemRegion *OR = SI->getAsSymbol()->getOriginRegion();
       if (!OR)
-        return "";
+        return FallbackName();
 
       std::string Idx = OR->getDescriptiveName(false);
       if (Idx.empty())
-        return "";
+        return FallbackName();
 
       ArrayIndices = (llvm::Twine("[") + Idx + "]" + ArrayIndices).str();
     }
@@ -776,12 +798,12 @@ std::string MemRegion::getDescriptiveName(bool UseQuotes) const {
     if (const auto *FR = R->getAs<FieldRegion>()) {
       std::string Super = FR->getSuperRegion()->getDescriptiveName(false);
       if (Super.empty())
-        return "";
+        return FallbackName();
       return QuoteIfNeeded(Super + "." + FR->getDecl()->getName());
     }
   }
 
-  return VariableName;
+  return FallbackName();
 }
 
 SourceRange MemRegion::sourceRange() const {
@@ -1035,6 +1057,7 @@ static bool isStdStreamVar(const VarDecl *D) {
 
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const StackFrame *SF) {
+  assert(SF);
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();

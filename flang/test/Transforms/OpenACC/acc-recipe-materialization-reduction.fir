@@ -39,7 +39,7 @@ func.func @par_reduction_clause_(%arg0: !fir.ref<f64> {fir.bindc_name = "tmp"}) 
   %cst = arith.constant 1.000000e+00 : f64
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFpar_reduction_clauseEtmp"} : (!fir.ref<f64>, !fir.dscope) -> !fir.ref<f64>
-  %2 = acc.reduction varPtr(%1 : !fir.ref<f64>) recipe(@reduction_add_ref_f64) -> !fir.ref<f64> {name = "tmp"}
+  %2 = acc.reduction varPtr(%1 : !fir.ref<f64>) recipe(@reduction_add_ref_f64) name("tmp") -> !fir.ref<f64>
   acc.parallel reduction(%2 : !fir.ref<f64>) {
     %3 = fir.load %2 : !fir.ref<f64>
     %4 = arith.addf %3, %cst fastmath<contract> : f64

@@ -13,11 +13,15 @@
 #include "Utility/WasmVirtualRegisters.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Symtab.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "llvm/ADT/DenseMap.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -29,6 +33,25 @@ SymbolFileWasm::SymbolFileWasm(ObjectFileSP objfile_sp,
     : SymbolFileDWARF(objfile_sp, dwo_section_list) {}
 
 SymbolFileWasm::~SymbolFileWasm() = default;
+
+/// Index the code symbols that carry no mangled name by their demangled name.
+/// The value is a symbol table index rather than a Symbol pointer because
+/// pointers do not survive symbols being appended to the table.
+static llvm::DenseMap<ConstString, uint32_t>
+BuildDemangledCodeSymbolIndex(Symtab &symtab) {
+  llvm::DenseMap<ConstString, uint32_t> index;
+  for (size_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
+    Symbol *symbol = symtab.SymbolAtIndex(i);
+    if (!symbol || symbol->GetType() != eSymbolTypeCode)
+      continue;
+    Mangled &mangled = symbol->GetMangled();
+    if (mangled.GetMangledName())
+      continue;
+    if (ConstString demangled = mangled.GetDemangledName())
+      index.try_emplace(demangled, static_cast<uint32_t>(i));
+  }
+  return index;
+}
 
 void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   SymbolFileDWARF::AddSymbols(symtab);
@@ -42,6 +65,9 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   // plain C global resolve back to its name.
   ModuleSP module_sp = GetObjectFile()->GetModule();
   SectionList *section_list = module_sp ? module_sp->GetSectionList() : nullptr;
+
+  // Built on demand to recover a mangled name from a declaration-only DIE.
+  std::optional<llvm::DenseMap<ConstString, uint32_t>> demangled_index;
 
   DWARFDebugInfo &debug_info = DebugInfo();
   const size_t num_units = debug_info.GetNumUnits();
@@ -64,11 +90,24 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
             die.GetMangledName(/*substitute_name_allowed=*/false);
         if (!mangled)
           continue;
+
+        // A defining DIE names its symbol by address. A function defined in a
+        // translation unit compiled without debug info has only a declaration
+        // DIE with no address, so match its symbol by the demangled name that
+        // the Wasm name section carries.
         const addr_t file_addr =
             die.GetAttributeValueAsAddress(DW_AT_low_pc, LLDB_INVALID_ADDRESS);
-        if (file_addr == LLDB_INVALID_ADDRESS)
-          continue;
-        Symbol *symbol = symtab.FindSymbolAtFileAddress(file_addr);
+        Symbol *symbol = nullptr;
+        if (file_addr != LLDB_INVALID_ADDRESS) {
+          symbol = symtab.FindSymbolAtFileAddress(file_addr);
+        } else if (ConstString demangled =
+                       Mangled(ConstString(mangled)).GetDemangledName()) {
+          if (!demangled_index)
+            demangled_index = BuildDemangledCodeSymbolIndex(symtab);
+          auto it = demangled_index->find(demangled);
+          if (it != demangled_index->end())
+            symbol = symtab.SymbolAtIndex(it->second);
+        }
         if (symbol && !symbol->GetMangled().GetMangledName())
           symbol->GetMangled().SetMangledName(ConstString(mangled));
         continue;

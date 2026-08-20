@@ -1627,6 +1627,15 @@ enum NodeType {
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// VECTOR_MATCH - this corresponds to the llvm.experimental.vector.match
+  /// intrinsic.
+  /// Operands: Source, Needle, Mask
+  /// Source has the same number of elements as the result and Needle may have
+  /// a different number of elements. The result type matches Mask. The ISD
+  /// node supports result and mask types wider than i1, in these cases the
+  /// high bits conform to getBooleanContents similar to the SETCC operator.
+  VECTOR_MATCH,
+
   /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
   /// Operands: Load pointer, Store pointer, Element size, Lane offset
   /// Output: Mask
@@ -1677,6 +1686,12 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// ISD::ABS_MIN_POISON).
 inline bool isAbsOpcode(unsigned Opcode) {
   return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
+}
+
+/// Whether this is an integer min/max opcode (ISD::(U|S)MIN or ISD::(U|S)MAX).
+inline bool isMinMaxOpcode(unsigned Opcode) {
+  return Opcode == ISD::SMIN || Opcode == ISD::SMAX || Opcode == ISD::UMIN ||
+         Opcode == ISD::UMAX;
 }
 
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
