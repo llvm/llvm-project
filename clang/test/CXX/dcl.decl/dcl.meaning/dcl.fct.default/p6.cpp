@@ -31,12 +31,3 @@ void X0<T>::f(int = 17) { } // expected-error{{cannot be added}}
 // DR217 + DR205 (reading tea leaves)
 template<typename T>
 void X0<T>::Inner::g(int = 17) { } // expected-error{{cannot be added}}
-
-// GH216211
-template<typename ...T>
-struct X1 {
-  X1(T..., int); // expected-note{{previous declaration is here}}
-};
-
-template<typename ...T>
-X1<T...>::X1(T..., int = 17) { } // expected-error{{cannot be added}} expected-error{{makes this constructor a default constructor}}

@@ -663,7 +663,8 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 
         Diag(NewParam->getLocation(),
              diag::err_param_default_argument_member_template_redecl)
-            << WhichKind << NewParam->getDefaultArgRange();
+          << WhichKind
+          << NewParam->getDefaultArgRange();
       }
     }
   }
