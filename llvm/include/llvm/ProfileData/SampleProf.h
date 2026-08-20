@@ -1144,7 +1144,7 @@ public:
                   "T must be a map with StringRef or FunctionId as key and "
                   "uint64_t as value");
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
-    TypeCounts.reserve(Other.size());
+    TypeCounts.reserve(TypeCounts.size() + Other.size());
     bool Overflowed = false;
 
     for (const auto &[Type, Count] : Other) {
@@ -1200,7 +1200,7 @@ public:
                           addTotalSamples(Other.getTotalSamples(), Weight));
     mergeSampleProfErrors(Result,
                           addHeadSamples(Other.getHeadSamples(), Weight));
-    BodySamples.reserve(Other.getBodySamples().size());
+    BodySamples.reserve(BodySamples.size() + Other.getBodySamples().size());
     for (const auto &I : Other.getBodySamples()) {
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
@@ -1213,7 +1213,8 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
-    VirtualCallsiteTypeCounts.reserve(Other.getCallsiteTypeCounts().size());
+    VirtualCallsiteTypeCounts.reserve(VirtualCallsiteTypeCounts.size() +
+                                      Other.getCallsiteTypeCounts().size());
     for (const auto &[Loc, OtherTypeMap] : Other.getCallsiteTypeCounts())
       mergeSampleProfErrors(
           Result, addCallsiteVTableTypeProfAt(Loc, OtherTypeMap, Weight));
