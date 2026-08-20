@@ -30,38 +30,29 @@ using namespace llvm::AMDGPU;
 
 class AMDGPUMFMACoExecRules : public AMDGPUTestBase {};
 
-TEST_F(AMDGPUMFMACoExecRules, Basic) {
+TEST_F(AMDGPUMFMACoExecRules, GFX950) {
   std::unique_ptr<GCNTargetMachine> TM =
       createAMDGPUTargetMachine(Triple("amdgpu-amd-amdhsa"), "gfx950", "");
-  ASSERT_NE(TM, nullptr);
   auto ST =
       std::make_unique<GCNSubtarget>(TM->getTargetTriple(), TM->getTargetCPU(),
                                      TM->getTargetFeatureString(), *TM);
-  ASSERT_NE(ST, nullptr);
 
   const MCInstrInfo *MCII = TM->getMCInstrInfo();
 
-  // Get feature bits for gfx950
-  const FeatureBitset &Features950 = ST->getFeatureBits();
-  FeatureBitset Available950 = AMDGPU_MC::computeAvailableFeatures(Features950);
-
   for (unsigned Op = 0; Op < MCII->getNumOpcodes(); ++Op) {
-    ASSERT_NE(ST->getInstrInfo(), nullptr);
     if (!ST->getInstrInfo()->isMFMAorWMMA(Op))
       continue;
 
+    // Filter out pre-gfx950 MFMA instructions
     FeatureBitset Required = AMDGPU_MC::computeRequiredFeatures(Op);
     if (!Required.test(AMDGPU_MC::Feature_HasGFX950InstsBit))
       continue;
 
-    FeatureBitset Missing = (Available950 & Required) ^ Required;
-    bool AvailableOnGfx950 = Missing.none();
-
     CoExecInfo Info = getMFMACoExecInfo(Op);
-    if (AvailableOnGfx950) {
-      EXPECT_EQ(Info.Slots[0].Mask, CoExecMask::None) << MCII->getName(Op);
-    } else {
-      // Ignore for now/not part of this test
-    }
+    // None of gfx950 MFMAs can co-execute anything in their issue slot and our
+    // fallback for unrecognized MFMA instructions is to allow everything in
+    // every slot, so here we check that we did not encounter the fallback
+    // definition of co-exec rules.
+    EXPECT_EQ(Info.Slots[0].Mask, CoExecMask::None) << MCII->getName(Op);
   }
 }
