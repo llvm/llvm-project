@@ -59,9 +59,10 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     : Strings(Arena) {
   llvm::StringRef PosixSeparator = get_separator(Style::posix);
   llvm::StringRef WindowsSeparator = get_separator(Style::windows);
-  const bool IsWindows = is_absolute(RemoteIndexRoot, Style::windows);
-  const bool IsPosix = is_absolute(RemoteIndexRoot, Style::posix);
+
   if (!RemoteIndexRoot.empty()) {
+    const bool IsWindows = is_absolute(RemoteIndexRoot, Style::windows);
+    const bool IsPosix = is_absolute(RemoteIndexRoot, Style::posix);
     assert(IsPosix || IsWindows);
     this->RemoteIndexRoot = RemoteIndexRoot;
     llvm::StringRef Path(this->RemoteIndexRoot);
@@ -73,6 +74,8 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
   }
 
   if (!LocalIndexRoot.empty()) {
+    const bool IsWindows = is_absolute(LocalIndexRoot, Style::windows);
+    const bool IsPosix = is_absolute(LocalIndexRoot, Style::posix);
     assert(IsPosix || IsWindows);
     this->LocalIndexRoot = convert_to_slash(LocalIndexRoot, Style::windows);
     llvm::StringRef Path(this->LocalIndexRoot);
