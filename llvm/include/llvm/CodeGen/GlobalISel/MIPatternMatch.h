@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/InstrTypes.h"
+#include <type_traits>
 
 namespace llvm {
 namespace MIPatternMatch {
@@ -924,7 +925,17 @@ template <typename SrcTy, unsigned Opcode> struct UnaryOp_match {
     MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 2) {
-        return L.match(MRI, TmpMI->getOperand(1).getReg());
+        Register SrcReg = TmpMI->getOperand(1).getReg();
+        // Unlike generic instructions, a COPY's source may be a physical
+        // register, which is not guaranteed to have a single definition.
+        // Reject looking through it (e.g. to match a constant or another
+        // instruction) unless we are just capturing the bare register.
+        if constexpr (Opcode == TargetOpcode::COPY) {
+          if (SrcReg.isPhysical() &&
+              !std::is_same_v<SrcTy, bind_ty<Register>>)
+            return false;
+        }
+        return L.match(MRI, SrcReg);
       }
     }
     return false;
