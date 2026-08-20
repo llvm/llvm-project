@@ -127,6 +127,8 @@ public:
 
     void AddItem(ObjectSP item) { m_items.push_back(item); }
 
+    bool empty() const { return m_items.empty(); }
+
     void AddIntegerItem(uint64_t value) {
       AddItem(ObjectSP(new Integer(value)));
     }

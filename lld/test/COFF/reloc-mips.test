@@ -1,0 +1,56 @@
+# REQUIRES: mips
+
+# RUN: llvm-mc -filetype=obj -triple=mipsel-windows %s -o %t.obj
+# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x30000 && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-LOW
+# RUN: lld-link %t.obj /out:%t.exe /subsystem:console,4 /entry:_start /base:0x10000000 && llvm-objdump -sS %t.exe | FileCheck %s --check-prefix=CHECK-HIGH
+
+# CHECK-LOW: Contents of section .text:
+# CHECK-LOW:  31000 00000000 00000000 00000000 02c40008  ................
+# CHECK-LOW:  31010 00000000 00000000                    ........
+# CHECK-LOW: Contents of section data_img:
+# CHECK-LOW:  32000 00000000 04200300 01000000 0000      ..... ........
+# CHECK-LOW: Contents of section text_ref:
+# CHECK-LOW:  33000 0300013c 002020ac                    ...<.  .
+
+# CHECK-LOW: Disassembly of section .text:
+# CHECK-LOW: 3100c: 02 c4 00 08  	j	0x31008 <.text+0x8>
+# CHECK-LOW: Disassembly of section text_ref:
+# CHECK-LOW: 33000: 03 00 01 3c  	lui	$1, 0x3
+# CHECK-LOW: 33004: 00 20 20 ac  	sw	$zero, 0x2000($1)
+
+# CHECK-HIGH: Contents of section .text:
+# CHECK-HIGH:  10001000 00000000 00000000 00000000 02040008  ................
+# CHECK-HIGH:  10001010 00000000 00000000                    ........
+# CHECK-HIGH: Contents of section data_img:
+# CHECK-HIGH:  10002000 00000000 04200010 01000000 0000      ..... ........
+# CHECK-HIGH: Contents of section text_ref:
+# CHECK-HIGH:  10003000 0010013c 002020ac                    ...<.  .
+
+# CHECK-HIGH: Disassembly of section .text:
+# CHECK-HIGH: 1000100c: 02 04 00 08  	j	0x1008 <.text+0x8>
+# CHECK-HIGH: Disassembly of section text_ref:
+# CHECK-HIGH: 10003000: 00 10 01 3c  	lui	$1, 0x1000 <.text>
+# CHECK-HIGH: 10003004: 00 20 20 ac  	sw	$zero, 0x2000($1)
+
+.section "data_imgrel","ax"
+i:
+.long 0
+.Lfoo:
+.rva .Lfoo
+.secidx .Ljmp_target
+.secrel32 .Ljmp_target
+
+.section .text
+.globl _start
+_start:
+  nop
+  nop
+.Ljmp_target:
+  nop
+  j .Ljmp_target
+  nop
+
+.section "text_ref","ax"
+  .set noat
+  lui $1, %hi(i)
+	sw $zero, %lo(i)($1)

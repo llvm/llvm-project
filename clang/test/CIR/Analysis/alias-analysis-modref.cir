@@ -1,0 +1,56 @@
+// Use --mlir-disable-threading so that the AA queries are serialized
+// as well as their diagnostic output.
+// RUN: cir-opt %s -pass-pipeline='builtin.module(cir.func(test-cir-alias-analysis-modref))' \
+// RUN:   -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+
+// -----
+
+// A cir.store Mod-s the location it writes to. The alloca itself only has
+// an Alloc effect on its result and therefore NoModRef.
+
+// CHECK-LABEL: Testing : "modref_store"
+// CHECK-DAG: store_op -> x#0: Mod
+// CHECK-DAG: x -> x#0: NoModRef
+
+!s32i = !cir.int<s, 32>
+cir.func @modref_store() {
+  %x = cir.alloca "x" align(4) : !cir.ptr<!s32i> {test.ptr = "x"}
+  %val = cir.const #cir.int<1> : !s32i
+  cir.store %val, %x {test.ptr = "store_op"} : !s32i, !cir.ptr<!s32i>
+  cir.return
+}
+
+// -----
+
+// A cir.load Ref-s the location it reads from.
+
+// CHECK-LABEL: Testing : "modref_load"
+// CHECK-DAG: load_op -> x#0: Ref
+// CHECK-DAG: x -> x#0: NoModRef
+
+!s32i = !cir.int<s, 32>
+cir.func @modref_load() {
+  %x = cir.alloca "x" align(4) init : !cir.ptr<!s32i> {test.ptr = "x"}
+  %val = cir.const #cir.int<42> : !s32i
+  cir.store %val, %x : !s32i, !cir.ptr<!s32i>
+  %0 = cir.load %x : !cir.ptr<!s32i>, !s32i {test.ptr = "load_op"}
+  cir.return
+}
+
+// -----
+
+// A cir.fadd with an `fenv` attribute has Read/Write effects on the
+// non-addressable FloatingPointEnvironment resource and no associated
+// Value. Such effects can never alias a pointer-based location, so the
+// result is NoModRef regardless of the queried location.
+
+// CHECK-LABEL: Testing : "modref_fenv"
+// CHECK-DAG: fadd_op -> x#0: NoModRef
+// CHECK-DAG: x -> x#0: NoModRef
+
+!s32i = !cir.int<s, 32>
+cir.func @modref_fenv(%a: !cir.float, %b: !cir.float) {
+  %x = cir.alloca "x" align(4) : !cir.ptr<!s32i> {test.ptr = "x"}
+  %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<>, test.ptr = "fadd_op"}
+  cir.return
+}

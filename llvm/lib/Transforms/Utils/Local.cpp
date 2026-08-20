@@ -1680,6 +1680,9 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   auto *DIExpr = DVR->getExpression();
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   // If the alloca describes the variable itself, i.e. the expression in the
@@ -2030,35 +2033,36 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                Builder, Offset);
 }
 
-/// Where possible to salvage debug information for \p I do so.
-/// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(&I, DPUsers);
-  salvageDebugInfoForDbgValues(I, DPUsers);
+  SmallVector<DbgVariableRecord *, 1> DbgRecords;
+  findDbgUsers(&I, DbgRecords);
+  salvageDebugInfoForDbgValues(I, DbgRecords);
 }
 
-template <typename T> static void salvageDbgAssignAddress(T *Assign) {
-  Instruction *I = dyn_cast<Instruction>(Assign->getAddress());
-  // Only instructions can be salvaged at the moment.
-  if (!I)
-    return;
-
-  assert(!Assign->getAddressExpression()->getFragmentInfo().has_value() &&
+/// Salvage the address of \p Assign, which the caller has checked is \p I. An
+/// address we cannot salvage stays as it is rather than stopping the caller,
+/// which counts the record as processed either way and goes on to salvage its
+/// variable location.
+static void salvageDbgAssignAddress(Instruction &I, DbgVariableRecord &Assign) {
+  assert(Assign.isDbgAssign() && Assign.getAddress() == &I &&
+         "dbg.assign must use salvaged instruction as its address");
+  assert(!Assign.getAddressExpression()->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
   // The address component of a dbg.assign cannot be variadic.
   uint64_t CurrentLocOps = 0;
   SmallVector<Value *, 4> AdditionalValues;
   SmallVector<uint64_t, 16> Ops;
-  Value *NewV = salvageDebugInfoImpl(*I, CurrentLocOps, Ops, AdditionalValues);
+  Value *NewAddress =
+      salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
 
-  // Check if the salvage failed.
-  if (!NewV)
+  // Keep an address we cannot salvage. If I is deleted, its remaining metadata
+  // use is replaced with poison.
+  if (!NewAddress)
     return;
 
   DIExpression *SalvagedExpr = DIExpression::appendOpsToArg(
-      Assign->getAddressExpression(), Ops, 0, /*StackValue=*/false);
+      Assign.getAddressExpression(), Ops, 0, /*StackValue=*/false);
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
@@ -2066,91 +2070,99 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
 
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
-    Assign->setAddress(NewV);
-    Assign->setAddressExpression(SalvagedExpr);
+    Assign.setAddress(NewAddress);
+    Assign.setAddressExpression(SalvagedExpr);
   } else {
-    Assign->setKillAddress();
+    Assign.setKillAddress();
   }
 }
 
-void llvm::salvageDebugInfoForDbgValues(Instruction &I,
-                                        ArrayRef<DbgVariableRecord *> DPUsers) {
+/// Rewrite \p DVR's variable location in terms of \p I's operands. Return false
+/// and leave the record alone when the instruction cannot be salvaged. Return
+/// true once it can, including when the location ends up killed.
+static bool salvageDbgVariableLocation(Instruction &I, DbgVariableRecord &DVR) {
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
   const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
-  bool Salvaged = false;
 
-  for (auto *DVR : DPUsers) {
+  // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
+  // are implicitly pointing out the value as a DWARF memory location
+  // description.
+  const bool StackValue = !DVR.isAddressOfVariable();
+  auto LocationOps = DVR.location_ops();
+  assert(is_contained(LocationOps, &I) &&
+         "DbgVariableRecord must use salvaged instruction as its location");
+  SmallVector<Value *, 4> AdditionalValues;
+  // 'I' may appear more than once in DVR's location ops, and each use of 'I'
+  // must be updated in the DIExpression and potentially have additional
+  // values added; thus we call salvageDebugInfoImpl for each 'I' instance in
+  // LocationOps.
+  Value *Replacement = nullptr;
+  DIExpression *SalvagedExpr = DVR.getExpression();
+  auto LocIt = find(LocationOps, &I);
+  while (SalvagedExpr && LocIt != LocationOps.end()) {
+    SmallVector<uint64_t, 16> Ops;
+    unsigned LocationIndex = std::distance(LocationOps.begin(), LocIt);
+    uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
+    Replacement = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
+    if (!Replacement)
+      break;
+    SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops,
+                                                LocationIndex, StackValue);
+    LocIt = std::find(++LocIt, LocationOps.end(), &I);
+  }
+  // The failure conditions in salvageDebugInfoImpl do not depend on
+  // CurrentLocOps, so failure can only occur on the first occurrence.
+  if (!Replacement)
+    return false;
+
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+  DVR.replaceVariableLocationOp(&I, Replacement);
+  const bool FitsExpressionLimit =
+      SalvagedExpr->getNumElements() <= MaxExpressionSize;
+  if (AdditionalValues.empty() && FitsExpressionLimit) {
+    DVR.setExpression(SalvagedExpr);
+  } else if (!DVR.isAddressOfVariable() && FitsExpressionLimit &&
+             DVR.getNumVariableLocationOps() + AdditionalValues.size() <=
+                 MaxDebugArgs) {
+    DVR.addVariableLocationOps(AdditionalValues, SalvagedExpr);
+  } else {
+    // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
+    // currently only valid for stack value expressions.
+    // Also do not salvage if the resulting DIArgList would contain an
+    // unreasonably large number of values.
+    DVR.setKillLocation();
+  }
+  LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
+  return true;
+}
+
+void llvm::salvageDebugInfoForDbgValues(
+    Instruction &I, ArrayRef<DbgVariableRecord *> DbgRecords) {
+  bool ProcessedAnyUse = false;
+
+  for (auto *DVR : DbgRecords) {
+    // replaceVariableLocationOp also updates a matching dbg.assign address, so
+    // salvage the address before changing the variable location.
     if (DVR->isDbgAssign()) {
       if (DVR->getAddress() == &I) {
-        salvageDbgAssignAddress(DVR);
-        Salvaged = true;
+        salvageDbgAssignAddress(I, *DVR);
+        ProcessedAnyUse = true;
       }
       if (DVR->getValue() != &I)
         continue;
     }
-
-    // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
-    // are implicitly pointing out the value as a DWARF memory location
-    // description.
-    bool StackValue =
-        DVR->getType() != DbgVariableRecord::LocationType::Declare;
-    auto DVRLocation = DVR->location_ops();
-    assert(
-        is_contained(DVRLocation, &I) &&
-        "DbgVariableIntrinsic must use salvaged instruction as its location");
-    SmallVector<Value *, 4> AdditionalValues;
-    // 'I' may appear more than once in DVR's location ops, and each use of 'I'
-    // must be updated in the DIExpression and potentially have additional
-    // values added; thus we call salvageDebugInfoImpl for each 'I' instance in
-    // DVRLocation.
-    Value *Op0 = nullptr;
-    DIExpression *SalvagedExpr = DVR->getExpression();
-    auto LocItr = find(DVRLocation, &I);
-    while (SalvagedExpr && LocItr != DVRLocation.end()) {
-      SmallVector<uint64_t, 16> Ops;
-      unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);
-      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
-      if (!Op0)
-        break;
-      SalvagedExpr =
-          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
-      LocItr = std::find(++LocItr, DVRLocation.end(), &I);
-    }
-    // salvageDebugInfoImpl should fail on examining the first element of
-    // DbgUsers, or none of them.
-    if (!Op0)
+    if (!salvageDbgVariableLocation(I, *DVR))
       break;
-
-    SalvagedExpr = SalvagedExpr->foldConstantMath();
-    DVR->replaceVariableLocationOp(&I, Op0);
-    bool IsValidSalvageExpr =
-        SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (AdditionalValues.empty() && IsValidSalvageExpr) {
-      DVR->setExpression(SalvagedExpr);
-    } else if (DVR->getType() != DbgVariableRecord::LocationType::Declare &&
-               IsValidSalvageExpr &&
-               DVR->getNumVariableLocationOps() + AdditionalValues.size() <=
-                   MaxDebugArgs) {
-      DVR->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-    } else {
-      // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions.
-      // Also do not salvage if the resulting DIArgList would contain an
-      // unreasonably large number of values.
-      DVR->setKillLocation();
-    }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << DVR << '\n');
-    Salvaged = true;
+    ProcessedAnyUse = true;
   }
 
-  if (Salvaged)
+  if (ProcessedAnyUse)
     return;
 
-  for (auto *DVR : DPUsers)
+  for (auto *DVR : DbgRecords)
     DVR->setKillLocation();
 }
 
@@ -2683,7 +2695,7 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
 }
 
 static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
-                            DomTreeUpdater *DTU = nullptr) {
+                            DomTreeUpdater *DTU, bool FoldInstsToUnreachable) {
   SmallVector<BasicBlock*, 128> Worklist;
   BasicBlock *BB = &F.front();
   Worklist.push_back(BB);
@@ -2692,177 +2704,185 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
   do {
     BB = Worklist.pop_back_val();
 
-    // Do a quick scan of the basic block, turning any obviously unreachable
+    // Do a scan of the basic block, turning any obviously unreachable
     // instructions into LLVM unreachable insts.  The instruction combining pass
     // canonicalizes unreachable insts into stores to null or undef.
-    for (Instruction &I : *BB) {
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        Value *Callee = CI->getCalledOperand();
-        // Handle intrinsic calls.
-        if (Function *F = dyn_cast<Function>(Callee)) {
-          auto IntrinsicID = F->getIntrinsicID();
-          // Assumptions that are known to be false are equivalent to
-          // unreachable. Also, if the condition is undefined, then we make the
-          // choice most beneficial to the optimizer, and choose that to also be
-          // unreachable.
-          if (IntrinsicID == Intrinsic::assume) {
-            if (match(CI->getArgOperand(0), m_CombineOr(m_Zero(), m_Undef()))) {
-              // Don't insert a call to llvm.trap right before the unreachable.
-              changeToUnreachable(CI, false, DTU);
-              Changed = true;
-              break;
-            }
-          } else if (IntrinsicID == Intrinsic::experimental_guard) {
-            // A call to the guard intrinsic bails out of the current
-            // compilation unit if the predicate passed to it is false. If the
-            // predicate is a constant false, then we know the guard will bail
-            // out of the current compile unconditionally, so all code following
-            // it is dead.
-            //
-            // Note: unlike in llvm.assume, it is not "obviously profitable" for
-            // guards to treat `undef` as `false` since a guard on `undef` can
-            // still be useful for widening.
-            if (match(CI->getArgOperand(0), m_Zero()))
-              if (!isa<UnreachableInst>(CI->getNextNode())) {
-                changeToUnreachable(CI->getNextNode(), false, DTU);
+    // Note that it traverses the whole instruction list, so it may incur
+    // significant performance overhead.
+    if (FoldInstsToUnreachable) {
+      for (Instruction &I : *BB) {
+        if (auto *CI = dyn_cast<CallInst>(&I)) {
+          Value *Callee = CI->getCalledOperand();
+          // Handle intrinsic calls.
+          if (Function *F = dyn_cast<Function>(Callee)) {
+            auto IntrinsicID = F->getIntrinsicID();
+            // Assumptions that are known to be false are equivalent to
+            // unreachable. Also, if the condition is undefined, then we make
+            // the choice most beneficial to the optimizer, and choose that to
+            // also be unreachable.
+            if (IntrinsicID == Intrinsic::assume) {
+              if (match(CI->getArgOperand(0),
+                        m_CombineOr(m_Zero(), m_Undef()))) {
+                // Don't insert a call to llvm.trap right before the
+                // unreachable.
+                changeToUnreachable(CI, false, DTU);
                 Changed = true;
                 break;
               }
+            } else if (IntrinsicID == Intrinsic::experimental_guard) {
+              // A call to the guard intrinsic bails out of the current
+              // compilation unit if the predicate passed to it is false. If the
+              // predicate is a constant false, then we know the guard will bail
+              // out of the current compile unconditionally, so all code
+              // following it is dead.
+              //
+              // Note: unlike in llvm.assume, it is not "obviously profitable"
+              // for guards to treat `undef` as `false` since a guard on `undef`
+              // can still be useful for widening.
+              if (match(CI->getArgOperand(0), m_Zero()))
+                if (!isa<UnreachableInst>(CI->getNextNode())) {
+                  changeToUnreachable(CI->getNextNode(), false, DTU);
+                  Changed = true;
+                  break;
+                }
+            }
+          } else if ((isa<ConstantPointerNull>(Callee) &&
+                      !NullPointerIsDefined(CI->getFunction(),
+                                            cast<PointerType>(Callee->getType())
+                                                ->getAddressSpace())) ||
+                     isa<UndefValue>(Callee)) {
+            changeToUnreachable(CI, false, DTU);
+            Changed = true;
+            break;
           }
-        } else if ((isa<ConstantPointerNull>(Callee) &&
-                    !NullPointerIsDefined(CI->getFunction(),
-                                          cast<PointerType>(Callee->getType())
-                                              ->getAddressSpace())) ||
-                   isa<UndefValue>(Callee)) {
-          changeToUnreachable(CI, false, DTU);
-          Changed = true;
-          break;
+          if (CI->doesNotReturn() && !CI->isMustTailCall()) {
+            // If we found a call to a no-return function, insert an unreachable
+            // instruction after it.  Make sure there isn't *already* one there
+            // though.
+            if (!isa<UnreachableInst>(CI->getNextNode())) {
+              // Don't insert a call to llvm.trap right before the unreachable.
+              changeToUnreachable(CI->getNextNode(), false, DTU);
+              Changed = true;
+            }
+            break;
+          }
+        } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+          // Store to undef and store to null are undefined and used to signal
+          // that they should be changed to unreachable by passes that can't
+          // modify the CFG.
+
+          // Don't touch volatile stores.
+          if (SI->isVolatile())
+            continue;
+
+          Value *Ptr = SI->getOperand(1);
+
+          if (isa<UndefValue>(Ptr) ||
+              (isa<ConstantPointerNull>(Ptr) &&
+               !NullPointerIsDefined(SI->getFunction(),
+                                     SI->getPointerAddressSpace()))) {
+            changeToUnreachable(SI, false, DTU);
+            Changed = true;
+            break;
+          }
         }
-        if (CI->doesNotReturn() && !CI->isMustTailCall()) {
-          // If we found a call to a no-return function, insert an unreachable
-          // instruction after it.  Make sure there isn't *already* one there
-          // though.
-          if (!isa<UnreachableInst>(CI->getNextNode())) {
-            // Don't insert a call to llvm.trap right before the unreachable.
-            changeToUnreachable(CI->getNextNode(), false, DTU);
+      }
+
+      Instruction *Terminator = BB->getTerminator();
+      if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
+        // Turn invokes that call 'nounwind' functions into ordinary calls.
+        Value *Callee = II->getCalledOperand();
+        if ((isa<ConstantPointerNull>(Callee) &&
+             !NullPointerIsDefined(BB->getParent())) ||
+            isa<UndefValue>(Callee)) {
+          changeToUnreachable(II, false, DTU);
+          Changed = true;
+        } else {
+          if (II->doesNotReturn() &&
+              !isa<UnreachableInst>(II->getNormalDest()->front())) {
+            // If we found an invoke of a no-return function,
+            // create a new empty basic block with an `unreachable` terminator,
+            // and set it as the normal destination for the invoke,
+            // unless that is already the case.
+            // Note that the original normal destination could have other uses.
+            BasicBlock *OrigNormalDest = II->getNormalDest();
+            OrigNormalDest->removePredecessor(II->getParent());
+            LLVMContext &Ctx = II->getContext();
+            BasicBlock *UnreachableNormalDest = BasicBlock::Create(
+                Ctx, OrigNormalDest->getName() + ".unreachable",
+                II->getFunction(), OrigNormalDest);
+            Reachable.resize(II->getFunction()->getMaxBlockNumber());
+            auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
+            UI->setDebugLoc(DebugLoc::getTemporary());
+            II->setNormalDest(UnreachableNormalDest);
+            if (DTU)
+              DTU->applyUpdates(
+                  {{DominatorTree::Delete, BB, OrigNormalDest},
+                   {DominatorTree::Insert, BB, UnreachableNormalDest}});
             Changed = true;
           }
-          break;
+          if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
+            if (II->use_empty() && !II->mayHaveSideEffects()) {
+              // jump to the normal destination branch.
+              BasicBlock *NormalDestBB = II->getNormalDest();
+              BasicBlock *UnwindDestBB = II->getUnwindDest();
+              UncondBrInst::Create(NormalDestBB, II->getIterator());
+              UnwindDestBB->removePredecessor(II->getParent());
+              II->eraseFromParent();
+              if (DTU)
+                DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
+            } else
+              changeToCall(II, DTU);
+            Changed = true;
+          }
         }
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        // Store to undef and store to null are undefined and used to signal
-        // that they should be changed to unreachable by passes that can't
-        // modify the CFG.
+      } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
+        // Remove catchpads which cannot be reached.
+        struct CatchPadDenseMapInfo {
+          static unsigned getHashValue(CatchPadInst *CatchPad) {
+            return static_cast<unsigned>(hash_combine_range(
+                CatchPad->value_op_begin(), CatchPad->value_op_end()));
+          }
 
-        // Don't touch volatile stores.
-        if (SI->isVolatile()) continue;
+          static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
+            return LHS->isIdenticalTo(RHS);
+          }
+        };
 
-        Value *Ptr = SI->getOperand(1);
-
-        if (isa<UndefValue>(Ptr) ||
-            (isa<ConstantPointerNull>(Ptr) &&
-             !NullPointerIsDefined(SI->getFunction(),
-                                   SI->getPointerAddressSpace()))) {
-          changeToUnreachable(SI, false, DTU);
-          Changed = true;
-          break;
-        }
-      }
-    }
-
-    Instruction *Terminator = BB->getTerminator();
-    if (auto *II = dyn_cast<InvokeInst>(Terminator)) {
-      // Turn invokes that call 'nounwind' functions into ordinary calls.
-      Value *Callee = II->getCalledOperand();
-      if ((isa<ConstantPointerNull>(Callee) &&
-           !NullPointerIsDefined(BB->getParent())) ||
-          isa<UndefValue>(Callee)) {
-        changeToUnreachable(II, false, DTU);
-        Changed = true;
-      } else {
-        if (II->doesNotReturn() &&
-            !isa<UnreachableInst>(II->getNormalDest()->front())) {
-          // If we found an invoke of a no-return function,
-          // create a new empty basic block with an `unreachable` terminator,
-          // and set it as the normal destination for the invoke,
-          // unless that is already the case.
-          // Note that the original normal destination could have other uses.
-          BasicBlock *OrigNormalDest = II->getNormalDest();
-          OrigNormalDest->removePredecessor(II->getParent());
-          LLVMContext &Ctx = II->getContext();
-          BasicBlock *UnreachableNormalDest = BasicBlock::Create(
-              Ctx, OrigNormalDest->getName() + ".unreachable",
-              II->getFunction(), OrigNormalDest);
-          Reachable.resize(II->getFunction()->getMaxBlockNumber());
-          auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
-          UI->setDebugLoc(DebugLoc::getTemporary());
-          II->setNormalDest(UnreachableNormalDest);
+        SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
+        // Set of unique CatchPads.
+        SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
+                      CatchPadDenseMapInfo,
+                      detail::DenseSetPair<CatchPadInst *>>
+            HandlerSet;
+        detail::DenseSetEmpty Empty;
+        for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
+                                               E = CatchSwitch->handler_end();
+             I != E; ++I) {
+          BasicBlock *HandlerBB = *I;
           if (DTU)
-            DTU->applyUpdates(
-                {{DominatorTree::Delete, BB, OrigNormalDest},
-                 {DominatorTree::Insert, BB, UnreachableNormalDest}});
-          Changed = true;
-        }
-        if (II->doesNotThrow() && canSimplifyInvokeNoUnwind(&F)) {
-          if (II->use_empty() && !II->mayHaveSideEffects()) {
-            // jump to the normal destination branch.
-            BasicBlock *NormalDestBB = II->getNormalDest();
-            BasicBlock *UnwindDestBB = II->getUnwindDest();
-            UncondBrInst::Create(NormalDestBB, II->getIterator());
-            UnwindDestBB->removePredecessor(II->getParent());
-            II->eraseFromParent();
+            ++NumPerSuccessorCases[HandlerBB];
+          auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
+          if (!HandlerSet.insert({CatchPad, Empty}).second) {
             if (DTU)
-              DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}});
-          } else
-            changeToCall(II, DTU);
-          Changed = true;
+              --NumPerSuccessorCases[HandlerBB];
+            CatchSwitch->removeHandler(I);
+            --I;
+            --E;
+            Changed = true;
+          }
+        }
+        if (DTU) {
+          std::vector<DominatorTree::UpdateType> Updates;
+          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+            if (I.second == 0)
+              Updates.push_back({DominatorTree::Delete, BB, I.first});
+          DTU->applyUpdates(Updates);
         }
       }
-    } else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Terminator)) {
-      // Remove catchpads which cannot be reached.
-      struct CatchPadDenseMapInfo {
-        static unsigned getHashValue(CatchPadInst *CatchPad) {
-          return static_cast<unsigned>(hash_combine_range(
-              CatchPad->value_op_begin(), CatchPad->value_op_end()));
-        }
 
-        static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          return LHS->isIdenticalTo(RHS);
-        }
-      };
-
-      SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
-      // Set of unique CatchPads.
-      SmallDenseMap<CatchPadInst *, detail::DenseSetEmpty, 4,
-                    CatchPadDenseMapInfo, detail::DenseSetPair<CatchPadInst *>>
-          HandlerSet;
-      detail::DenseSetEmpty Empty;
-      for (CatchSwitchInst::handler_iterator I = CatchSwitch->handler_begin(),
-                                             E = CatchSwitch->handler_end();
-           I != E; ++I) {
-        BasicBlock *HandlerBB = *I;
-        if (DTU)
-          ++NumPerSuccessorCases[HandlerBB];
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
-        if (!HandlerSet.insert({CatchPad, Empty}).second) {
-          if (DTU)
-            --NumPerSuccessorCases[HandlerBB];
-          CatchSwitch->removeHandler(I);
-          --I;
-          --E;
-          Changed = true;
-        }
-      }
-      if (DTU) {
-        std::vector<DominatorTree::UpdateType> Updates;
-        for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
-          if (I.second == 0)
-            Updates.push_back({DominatorTree::Delete, BB, I.first});
-        DTU->applyUpdates(Updates);
-      }
+      Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
     }
-
-    Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
     for (BasicBlock *Successor : successors(BB)) {
       if (!Reachable[Successor->getNumber()]) {
         Worklist.push_back(Successor);
@@ -2912,9 +2932,10 @@ Instruction *llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
 /// if they are in a dead cycle.  Return true if a change was made, false
 /// otherwise.
 bool llvm::removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU,
-                                   MemorySSAUpdater *MSSAU) {
+                                   MemorySSAUpdater *MSSAU,
+                                   bool FoldInstsToUnreachable) {
   SmallVector<bool, 16> Reachable(F.getMaxBlockNumber());
-  bool Changed = markAliveBlocks(F, Reachable, DTU);
+  bool Changed = markAliveBlocks(F, Reachable, DTU, FoldInstsToUnreachable);
 
   // Are there any blocks left to actually delete?
   SmallSetVector<BasicBlock *, 8> BlocksToRemove;
@@ -3334,12 +3355,7 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
   // Lib calls can be materialized by some passes, and won't be
   // marked as 'gc-leaf-function.' All available Libcalls are
   // GC-leaf.
-  LibFunc LF;
-  if (TLI.getLibFunc(*Call, LF)) {
-    return TLI.has(LF);
-  }
-
-  return false;
+  return TLI.has(TLI.getLibFunc(*Call));
 }
 
 void llvm::copyNonnullMetadata(const LoadInst &OldLI, MDNode *N,
@@ -3898,9 +3914,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
 void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
     CallInst *CI, const TargetLibraryInfo *TLI) {
   Function *F = CI->getCalledFunction();
-  LibFunc Func;
   if (F && !F->hasLocalLinkage() && F->hasName() &&
-      TLI->getLibFunc(F->getName(), Func) && TLI->hasOptimizedCodeGen(Func) &&
+      TLI->hasOptimizedCodeGen(TLI->getLibFunc(F->getName())) &&
       !F->doesNotAccessMemory())
     CI->addFnAttr(Attribute::NoBuiltin);
 }
@@ -3953,6 +3968,11 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
       // gcroot is a special case, since it requires a constant argument which
       // isn't also required to be a simple ConstantInt.
       if (CB.getIntrinsicID() == Intrinsic::gcroot)
+        return false;
+
+      // threadlocal_address is a special case as it requires its only
+      // argument to be a thread local global.
+      if (CB.getIntrinsicID() == Intrinsic::threadlocal_address)
         return false;
 
       // Some intrinsic operands are required to be immediates.

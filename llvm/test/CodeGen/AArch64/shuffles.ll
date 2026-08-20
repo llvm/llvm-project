@@ -743,16 +743,10 @@ define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
 }
 
 define <4 x i32> @extract_shuffle(<8 x i16> %j, <4 x i16> %k) {
-; CHECK-SD-LABEL: extract_shuffle:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll2 v0.4s, v0.8h, #3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_shuffle:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #3
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_shuffle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #3
+; CHECK-NEXT:    ret
 ;
 ; CHECKBE-LABEL: extract_shuffle:
 ; CHECKBE:       // %bb.0:

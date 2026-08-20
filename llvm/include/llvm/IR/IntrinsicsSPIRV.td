@@ -124,7 +124,6 @@ let TargetPrefix = "spv" in {
 def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
   def int_spv_smoothstep : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
-  def int_spv_step : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [LLVMMatchType<0>, llvm_anyfloat_ty], [IntrNoMem]>;
   def int_spv_fdot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
@@ -236,25 +235,25 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_resource_sample
       : DefaultAttrsIntrinsic<
             [llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
-            [IntrReadMem]>;
+            [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_sample_clamp
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
                                llvm_any_ty, llvm_float_ty],
-                              [IntrReadMem]>;
+                              [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_samplebias
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
                                llvm_float_ty, llvm_any_ty],
-                              [IntrReadMem]>;
+                              [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_samplebias_clamp
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty,
                                llvm_float_ty, llvm_any_ty, llvm_float_ty],
-                              [IntrReadMem]>;
+                              [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_samplegrad
       : DefaultAttrsIntrinsic<[llvm_any_ty],
@@ -302,12 +301,12 @@ def int_spv_rsqrt : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty]
   def int_spv_resource_calculate_lod
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty],
-                              [IntrReadMem]>;
+                              [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_calculate_lod_unclamped
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_any_ty, llvm_any_ty, llvm_any_ty],
-                              [IntrReadMem]>;
+                              [IntrReadMem, IntrConvergent]>;
 
   def int_spv_resource_gather
       : DefaultAttrsIntrinsic<[llvm_any_ty],

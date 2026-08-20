@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// The JSON file list parser is used to communicate input to InstallAPI.
-///
+//
+// The JSON file list parser is used to communicate input to InstallAPI.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_INSTALLAPI_FILELIST_H

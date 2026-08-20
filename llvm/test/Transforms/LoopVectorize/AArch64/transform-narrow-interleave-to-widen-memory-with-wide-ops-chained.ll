@@ -658,8 +658,8 @@ define void @narrow_with_select_and_invariant_cond(ptr noalias %dst, ptr noalias
 ; VF2-NEXT:    [[C1:%.*]] = icmp sgt i64 [[C3_P]], 0
 ; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> poison, i1 [[C0]], i32 0
-; VF2-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> [[TMP0]], i1 [[C1]], i32 1
+; VF2-NEXT:    [[TMP0:%.*]] = insertelement <2 x i1> poison, i1 [[C0]], i64 0
+; VF2-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> [[TMP0]], i1 [[C1]], i64 1
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

@@ -1,0 +1,65 @@
+// Use --mlir-disable-threading so that the AA queries are serialized
+// as well as their diagnostic output.
+// RUN: cir-opt %s -pass-pipeline='builtin.module(cir.func(test-cir-alias-analysis))' \
+// RUN:   -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
+
+// -----
+
+// Two distinct cir.alloca ops in the same function cannot alias.
+
+// CHECK-LABEL: Testing : "distinct_allocas"
+// CHECK-DAG: x#0 <-> y#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.func @distinct_allocas() {
+  %x = cir.alloca "x" align(4) : !cir.ptr<!s32i> {test.ptr = "x"}
+  %y = cir.alloca "y" align(4) : !cir.ptr<!s32i> {test.ptr = "y"}
+  cir.return
+}
+
+// -----
+
+// Three distinct allocas are mutually non-aliasing.
+
+// CHECK-LABEL: Testing : "three_distinct_allocas"
+// CHECK-DAG: a#0 <-> b#0: NoAlias
+// CHECK-DAG: a#0 <-> c#0: NoAlias
+// CHECK-DAG: b#0 <-> c#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.func @three_distinct_allocas() {
+  %a = cir.alloca "a" align(4) : !cir.ptr<!s32i> {test.ptr = "a"}
+  %b = cir.alloca "b" align(4) : !cir.ptr<!s32i> {test.ptr = "b"}
+  %c = cir.alloca "c" align(4) : !cir.ptr<!s32i> {test.ptr = "c"}
+  cir.return
+}
+
+// -----
+
+// Function arguments have unknown provenance — they may alias each other.
+// test.ptr goes on the cir.func op; args are addressed as func.region0#N.
+
+// CHECK-LABEL: Testing : "ptr_args_may_alias"
+// CHECK-DAG: func.region0#0 <-> func.region0#1: MayAlias
+
+!s32i = !cir.int<s, 32>
+cir.func @ptr_args_may_alias(%p: !cir.ptr<!s32i>, %q: !cir.ptr<!s32i>)
+    attributes {test.ptr = "func"} {
+  cir.return
+}
+
+// -----
+
+// A local alloca cannot alias a pointer argument: the alloca is a fresh
+// allocation that did not exist before the call, so no pre-existing pointer
+// can refer to it.
+
+// CHECK-LABEL: Testing : "arg_and_alloca_no_alias"
+// CHECK-DAG: local#0 <-> func.region0#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+cir.func @arg_and_alloca_no_alias(%p: !cir.ptr<!s32i>)
+    attributes {test.ptr = "func"} {
+  %local = cir.alloca "local" align(4) : !cir.ptr<!s32i> {test.ptr = "local"}
+  cir.return
+}

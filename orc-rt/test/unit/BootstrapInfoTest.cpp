@@ -127,3 +127,11 @@ TEST(BootstrapInfoTest, MutableSymbolsAndValues) {
   EXPECT_EQ(BI.symbols().size(), 1U);
   EXPECT_EQ(BI.values().size(), 1U);
 }
+
+TEST(BootstrapInfoTest, CreateDefaultContainsSubtargetFeatures) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  auto BI = cantFail(BootstrapInfo::CreateDefault(S));
+  ASSERT_TRUE(BI.values().count("orc-rt.Executor.SubtargetFeatures"));
+  EXPECT_EQ(BI.values().at("orc-rt.Executor.SubtargetFeatures"),
+            S.processInfo().targetCPUFeatures());
+}

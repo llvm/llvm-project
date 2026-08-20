@@ -771,7 +771,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/Traits.inc"
+#include "clang/Basic/BuiltinTraits.inc"
   }
 }
 
@@ -1148,6 +1148,20 @@ void JSONNodeDumper::VisitExplicitInstantiationDecl(
 void JSONNodeDumper::VisitFriendDecl(const FriendDecl *FD) {
   if (const TypeSourceInfo *T = FD->getFriendType())
     JOS.attribute("type", createQualType(T->getType()));
+  attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
+}
+
+void JSONNodeDumper::VisitFriendTemplateDecl(const FriendTemplateDecl *FD) {
+  if (FD->getFriendKind() !=
+      FriendTemplateDecl::FriendTemplateEntityKind::Template) {
+    VisitFriendDecl(FD);
+    return;
+  }
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  FD->getFriendTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", Str);
   attributeOnlyIfTrue("isPackExpansion", FD->isPackExpansion());
 }
 
