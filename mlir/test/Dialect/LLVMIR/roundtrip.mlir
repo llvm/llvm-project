@@ -1272,17 +1272,6 @@ llvm.func @generic_function_metadata() attributes {
   ]
 }
 
-// CHECK-LABEL: llvm.func @generic_profile_metadata
-// CHECK-SAME: function_metadata
-// CHECK-SAME: #llvm.func_metadata<"prof", <#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>
-llvm.func @generic_profile_metadata() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>
-  ]
-} {
-  llvm.return
-}
-
 // CHECK-LABEL: llvm.func @repeated_function_metadata
 // CHECK-SAME: function_metadata
 // CHECK-SAME: #llvm.func_metadata<"type", <#llvm.md_const<0 : i64>, #llvm.md_string<"typeid0">>>

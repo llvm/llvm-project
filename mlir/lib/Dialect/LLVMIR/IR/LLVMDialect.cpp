@@ -3325,22 +3325,6 @@ LogicalResult LLVMFuncOp::verify() {
   if (failed(verifyComdat(*this, getComdat())))
     return failure();
 
-  unsigned numProfileMetadata = 0;
-  if (ArrayAttr functionMetadata = getFunctionMetadataAttr()) {
-    for (auto entry : functionMetadata.getAsRange<FunctionMetadataAttr>()) {
-      if (entry.getMetadataName().getValue() == "prof")
-        ++numProfileMetadata;
-    }
-  }
-  if (numProfileMetadata > 1)
-    return emitOpError("expects at most one 'prof' function_metadata entry");
-  if (numProfileMetadata && isExternal())
-    return emitOpError("function declarations cannot have 'prof' metadata");
-  if (numProfileMetadata && getFunctionEntryCountAttr()) {
-    return emitOpError("cannot have both a 'prof' function_metadata entry and "
-                       "the 'function_entry_count' attribute");
-  }
-
   if (isExternal()) {
     if (getLinkage() != LLVM::Linkage::External &&
         getLinkage() != LLVM::Linkage::ExternWeak)

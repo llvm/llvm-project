@@ -1871,41 +1871,13 @@ llvm.func @empty_function_metadata_name() attributes {function_metadata = [#llvm
 
 // -----
 
-// expected-error@+1{{reserved function_metadata entry 'dbg' must use a dedicated LLVM dialect representation}}
+// expected-error@+1{{reserved function_metadata entry 'dbg' is not supported by the generic carrier}}
 llvm.func @reserved_dbg_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"dbg", #llvm.md_node<#llvm.md_string<"x">>>]}
 
 // -----
 
-// expected-error@below{{function declarations cannot have 'prof' metadata}}
-llvm.func @profile_metadata_declaration() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>
-  ]
-}
-
-// -----
-
-// expected-error@below{{expects at most one 'prof' function_metadata entry}}
-llvm.func @repeated_profile_metadata() attributes {
-  function_metadata = [
-    #llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass-0">>>,
-    #llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass-1">>>
-  ]
-} {
-  llvm.return
-}
-
-// -----
-
-// expected-error@below{{cannot have both a 'prof' function_metadata entry and the 'function_entry_count' attribute}}
-llvm.func @conflicting_profile_metadata() attributes {
-  function_entry_count = #llvm.function_entry_count<entry_count = 1>,
-  function_metadata = [
-    #llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>
-  ]
-} {
-  llvm.return
-}
+// expected-error@+1{{reserved function_metadata entry 'prof' is not supported by the generic carrier}}
+llvm.func @reserved_prof_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>]}
 
 // -----
 
