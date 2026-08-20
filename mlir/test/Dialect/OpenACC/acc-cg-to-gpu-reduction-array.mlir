@@ -312,15 +312,14 @@ func.func @thread_y_reduction_narrow_rows() {
   %c1 = arith.constant 1 : index
   %c8 = arith.constant 8 : index
   %c16 = arith.constant 16 : index
-  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
-  %tx = acc.par_width %c8 {par_dim = #acc.par_dim<thread_x>}
-  %ty = acc.par_width %c16 {par_dim = #acc.par_dim<thread_y>}
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c8 par_dim(#acc.par_dim<thread_x>)
+  %ty = acc.par_width %c16 par_dim(#acc.par_dim<thread_y>)
   acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
     %c0_i32 = arith.constant 0 : i32
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
-        : i32 -> memref<i32>
-        {par_dims = #acc<par_dims[block_x, thread_y]>}
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -338,19 +337,17 @@ func.func @thread_y_reduction_with_thread_x_reduction() {
   %c1 = arith.constant 1 : index
   %c8 = arith.constant 8 : index
   %c16 = arith.constant 16 : index
-  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
-  %tx = acc.par_width %c8 {par_dim = #acc.par_dim<thread_x>}
-  %ty = acc.par_width %c16 {par_dim = #acc.par_dim<thread_y>}
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c8 par_dim(#acc.par_dim<thread_x>)
+  %ty = acc.par_width %c16 par_dim(#acc.par_dim<thread_y>)
   acc.compute_region launch(%kbx = %bx, %ktx = %tx, %kty = %ty) {
     %c0_i32 = arith.constant 0 : i32
     %worker = memref.alloca() : memref<i32>
     %vector = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %worker <add>
-        : i32 -> memref<i32>
-        {par_dims = #acc<par_dims[block_x, thread_y]>}
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
     acc.reduction_accumulate %c0_i32 to %vector <add>
-        : i32 -> memref<i32>
-        {par_dims = #acc<par_dims[block_x, thread_x]>}
+        par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -367,14 +364,13 @@ func.func @thread_y_reduction_with_thread_x_reduction() {
 func.func @thread_y_reduction_more_workers_than_subgroup() {
   %c1 = arith.constant 1 : index
   %c64 = arith.constant 64 : index
-  %bx = acc.par_width %c1 {par_dim = #acc.par_dim<block_x>}
-  %ty = acc.par_width %c64 {par_dim = #acc.par_dim<thread_y>}
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %ty = acc.par_width %c64 par_dim(#acc.par_dim<thread_y>)
   acc.compute_region launch(%kbx = %bx, %kty = %ty) {
     %c0_i32 = arith.constant 0 : i32
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
-        : i32 -> memref<i32>
-        {par_dims = #acc<par_dims[block_x, thread_y]>}
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
