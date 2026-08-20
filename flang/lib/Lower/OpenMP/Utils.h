@@ -137,6 +137,8 @@ void generateMemberPlacementIndices(
 bool isMemberOrParentAllocatableOrPointer(
     const Object &object, Fortran::semantics::SemanticsContext &semaCtx);
 
+bool isWholeArraySection(const Object &object);
+
 mlir::Value createParentSymAndGenIntermediateMaps(
     mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,

@@ -74,6 +74,48 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
+bool isWholeArraySection(const Object &object) {
+  if (!object.sym() || !object.ref())
+    return false;
+
+  std::optional<evaluate::DataRef> dataRef =
+      evaluate::ExtractDataRef(*object.ref());
+  if (!dataRef)
+    return false;
+
+  const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef)
+    return false;
+
+  const semantics::ArraySpec *shape = object.sym()->GetUltimate().GetShape();
+  if (!shape || shape->size() != arrayRef->subscript().size())
+    return false;
+
+  auto matchesDeclaredBound = [](const auto *sectionBound,
+                                 const auto &declaredBound) {
+    if (!sectionBound)
+      return true;
+    const auto &explicitDeclaredBound = declaredBound.GetExplicit();
+    if (!explicitDeclaredBound)
+      return false;
+    std::optional<std::int64_t> sectionValue = evaluate::ToInt64(*sectionBound);
+    std::optional<std::int64_t> declaredValue =
+        evaluate::ToInt64(*explicitDeclaredBound);
+    return sectionValue && declaredValue && sectionValue == declaredValue;
+  };
+
+  for (auto [subscript, declaredDimension] :
+       llvm::zip_equal(arrayRef->subscript(), *shape)) {
+    const auto *triplet = std::get_if<evaluate::Triplet>(&subscript.u);
+    if (!triplet || evaluate::ToInt64(triplet->GetStride()) != 1 ||
+        !matchesDeclaredBound(triplet->GetLower(),
+                              declaredDimension.lbound()) ||
+        !matchesDeclaredBound(triplet->GetUpper(), declaredDimension.ubound()))
+      return false;
+  }
+  return true;
+}
+
 bool requiresImplicitDefaultDeclareMapper(
     const semantics::DerivedTypeSpec &typeSpec) {
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;

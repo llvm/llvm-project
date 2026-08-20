@@ -32,6 +32,10 @@
 ! TASK: %[[RANK_TWO_TASK_VALUE:.*]] = fir.load %[[RANK_TWO_TASK_ELEMENT]]
 ! TASK: arith.addi %[[RANK_TWO_TASK_VALUE]]
 
+! TASK-LABEL: func.func @_QPtask_explicit_full_section
+! TASK: omp.taskgroup task_reduction(byref @add_reduction_byref_box_4xi32
+! TASK: omp.task in_reduction(byref @add_reduction_byref_box_4xi32
+
 ! TASK-DEFAULT-LABEL: func.func @_QPtask_default_firstprivate_full_section
 ! TASK-DEFAULT: omp.task in_reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[FIRSTPRIVATE_ARG:arg[0-9]+]] : !fir.ref<!fir.box<!fir.array<4xi32>>>)
 ! TASK-DEFAULT: %[[FIRSTPRIVATE_DECL:.*]]:2 = hlfir.declare %[[FIRSTPRIVATE_ARG]]
@@ -82,6 +86,12 @@
 ! TASKLOOP: %[[UDR_VALUE:.*]] = fir.load %[[UDR_ELEMENT]]
 ! TASKLOOP: arith.addi %[[UDR_VALUE]]
 
+! TASKLOOP-LABEL: func.func @_QPtaskloop_explicit_full_section
+! TASKLOOP: omp.taskloop.context {{.*}}reduction(byref @add_reduction_byref_box_4xi32
+
+! TASKLOOP-LABEL: func.func @_QPtaskloop_rank_two_explicit_full_section
+! TASKLOOP: omp.taskloop.context {{.*}}reduction(byref @add_reduction_byref_box_4x4xi32
+
 !--- task.f90
 subroutine task_full_section(a)
   integer :: a(-2:1)
@@ -97,6 +107,15 @@ subroutine task_rank_two_full_section(a)
   !$omp taskgroup task_reduction(+: a(:, :))
   !$omp task in_reduction(+: a(:, :))
   a(:, :) = a(:, :) + 1
+  !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+subroutine task_explicit_full_section(a)
+  integer :: a(-2:1)
+  !$omp taskgroup task_reduction(+: a(-2:1))
+  !$omp task in_reduction(+: a(-2:1))
+  a(-2:1) = a(-2:1) + 1
   !$omp end task
   !$omp end taskgroup
 end subroutine
@@ -145,4 +164,28 @@ subroutine taskloop_udr_full_section(a)
   do i = 1, 1
     a(:) = a(:) + i
   end do
+end subroutine
+
+subroutine taskloop_explicit_full_section(a)
+  integer :: a(-2:1), i
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop reduction(+: a(-2:1))
+  do i = 1, 1
+    a(-2:1) = a(-2:1) + i
+  end do
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+subroutine taskloop_rank_two_explicit_full_section(a)
+  integer :: a(-2:1, -1:2), i
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp taskloop reduction(+: a(-2:1, -1:2))
+  do i = 1, 1
+    a(-2:1, -1:2) = a(-2:1, -1:2) + i
+  end do
+  !$omp end single
+  !$omp end parallel
 end subroutine
