@@ -6929,10 +6929,6 @@ void ScaledContractOp::regionBuilder(
       if (dataWidth < outWidth)
         return arith::ScalingExtFOp::create(b, outType, data, scale,
                                             /*fastmath=*/nullptr);
-      if (dataWidth > outWidth)
-        return arith::ScalingTruncFOp::create(b, outType, data, scale,
-                                              /*roundingmode=*/nullptr,
-                                              /*fastmath=*/nullptr);
     }
     Value dataAtOutType = helper.buildTypeFn(castSignedness, outType, data);
     Value scaleAtOutType = helper.buildTypeFn(castSignedness, outType, scale);
@@ -6989,7 +6985,25 @@ LogicalResult ScaledContractOp::verify() {
 
   // Validate inputs and contraction semantics.
   SmallVector<AffineMap, 5> maps = getIndexingMapsArray();
+  if (maps.size() != 5 || getNumOperands() != 5)
+    return emitOpError("expected 5 indexing maps and operands");
+
   SmallVector<Type, 5> types = llvm::to_vector(getOperandTypes());
+  Type outputElementType = getElementTypeOrSelf(types[4]);
+  auto outputFloatType = dyn_cast<FloatType>(outputElementType);
+  if (!outputFloatType)
+    return emitOpError("expected output element type to be floating-point");
+
+  for (Type inputType : ArrayRef<Type>(types).take_front(4)) {
+    Type inputElementType = getElementTypeOrSelf(inputType);
+    if (!inputElementType.isIntOrFloat())
+      return emitOpError(
+          "expected input element types to be integer or floating-point");
+    if (inputElementType.getIntOrFloatBitWidth() > outputFloatType.getWidth())
+      return emitOpError("expected input element type bitwidth to be no "
+                         "greater than output element type bitwidth");
+  }
+
   for (auto &&[affineMap, operandType, isInput] :
        llvm::zip(SmallVector<AffineMap>{maps[0], maps[2], maps[4]},
                  SmallVector<Type>{types[0], types[2], types[4]},
@@ -7006,8 +7020,8 @@ LogicalResult ScaledContractOp::verify() {
     return failure(); // NB: Validation helper emits relevant error.
 
   // Validate scales and scaling semantics.
-  auto checkScaleAffineMapAndType = [&](AffineMap affineMap, Type operandType,
-                                        bool isInput) -> LogicalResult {
+  auto checkScaleAffineMapAndType = [&](AffineMap affineMap,
+                                        Type operandType) -> LogicalResult {
     // If scale's map is not a projected permutation, then it must follow
     // specific scaling scheme semantics.
     if (!affineMap.isProjectedPermutation()) {
@@ -7023,7 +7037,7 @@ LogicalResult ScaledContractOp::verify() {
       for (auto expr : affineMap.getResults()) {
         AffineDimExpr dim = nullptr;
         if (isa<AffineDimExpr>(expr)) {
-          // Scaling over whole dimesion.
+          // Scaling over whole dimension.
           dim = dyn_cast<AffineDimExpr>(expr);
         } else if (auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr)) {
           // Scaling over a part of the dimension.
@@ -7073,8 +7087,7 @@ LogicalResult ScaledContractOp::verify() {
   for (auto &&[affineMap, operandType] :
        llvm::zip(SmallVector<AffineMap>{maps[1], maps[3]},
                  SmallVector<Type>{types[1], types[3]})) {
-    if (failed(checkScaleAffineMapAndType(affineMap, operandType,
-                                          /*isInput=*/true)))
+    if (failed(checkScaleAffineMapAndType(affineMap, operandType)))
       return failure(); // NB: Validation helper emits relevant error.
   }
 

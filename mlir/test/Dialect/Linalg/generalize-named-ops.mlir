@@ -1327,34 +1327,6 @@ func.func @generalize_scaled_contract_upcast_data(
 
 // -----
 
-func.func @generalize_scaled_contract_downcast_data(
-    %A: tensor<8x16xf32>, %sA: tensor<8xf8E8M0FNU>,
-    %B: tensor<4x16xf32>, %sB: tensor<4xf8E8M0FNU>,
-    %C: tensor<8x4xf16>) -> tensor<8x4xf16> {
-  %D = linalg.scaled_contract
-      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
-                       affine_map<(m, n, k) -> (m)>,
-                       affine_map<(m, n, k) -> (n, k)>,
-                       affine_map<(m, n, k) -> (n)>,
-                       affine_map<(m, n, k) -> (m, n)>]
-      ins(%A, %sA, %B, %sB
-        : tensor<8x16xf32>, tensor<8xf8E8M0FNU>,
-          tensor<4x16xf32>, tensor<4xf8E8M0FNU>)
-      outs(%C : tensor<8x4xf16>) -> tensor<8x4xf16>
-  return %D : tensor<8x4xf16>
-}
-
-// CHECK-LABEL: func @generalize_scaled_contract_downcast_data
-//      CHECK:  linalg.generic
-//      CHECK: ^{{.*}}(%[[A_ARG:.+]]: f32, %[[SA_ARG:.+]]: f8E8M0FNU, %[[B_ARG:.+]]: f32, %[[SB_ARG:.+]]: f8E8M0FNU, %[[C_ARG:.+]]: f16)
-//      CHECK:   %[[SLHS:.+]] = arith.scaling_truncf %[[A_ARG]], %[[SA_ARG]] : f32, f8E8M0FNU to f16
-//      CHECK:   %[[SRHS:.+]] = arith.scaling_truncf %[[B_ARG]], %[[SB_ARG]] : f32, f8E8M0FNU to f16
-//      CHECK:   %[[PROD:.+]] = arith.mulf %[[SLHS]], %[[SRHS]] : f16
-//      CHECK:   %[[ACC:.+]] = arith.addf %[[C_ARG]], %[[PROD]] : f16
-//      CHECK:   linalg.yield %[[ACC]] : f16
-
-// -----
-
 func.func @generalize_scaled_contract_same_data_acc_width(
     %A: tensor<8x16xf32>, %sA: tensor<8xf8E8M0FNU>,
     %B: tensor<4x16xf32>, %sB: tensor<4xf8E8M0FNU>,

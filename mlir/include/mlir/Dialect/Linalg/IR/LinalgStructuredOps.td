@@ -1233,6 +1233,10 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
     for the inputs `A` and `B` described by the scales' affine maps.
     The data types of the inputs are chosen independently from the scales.
 
+    The output element type must be floating-point. Input element types must be
+    integer or floating-point, with bitwidth no greater than the output element
+    type's bitwidth.
+
     The semantics of contracting inputs `A` and `B` with scales `scale_A` and
     `scale_B` on top of `C` to produce output `D` is given by:
 
@@ -1282,8 +1286,7 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
         outs(%C: tensor<200x128xf32>) -> tensor<200x128xf32>
     ```
 
-    Numeric casting is performed on the inputs and scales, promoting/truncating
-    them to the same data type as the accumulator/output.
+    Numeric casting promotes inputs and scales to the accumulator/output type.
 
     TODO: Allow control over the combining/accumulating op and possibly the
           multiplication op.
