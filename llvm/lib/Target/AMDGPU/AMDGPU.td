@@ -1631,7 +1631,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
    FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad,
-   FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
    FeatureMsadInsts, FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
@@ -1846,6 +1846,7 @@ def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
      FeatureDsSrc2Insts,
      FeatureExtendedImageInsts,
      FeatureGDS,
+     FeatureCubeInsts,
      FeaturePopsExitingWaveID])>;
 
 def FeatureISAVersion9_Generic : FeatureSet<
@@ -1854,7 +1855,8 @@ def FeatureISAVersion9_Generic : FeatureSet<
 
 def FeatureISAVersion9_0_MI_Common : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Common.Features,
-    [FeatureFmaMixInsts,
+    [FeatureCubeInsts,
+     FeatureFmaMixInsts,
      FeatureDLInsts,
      FeatureDot1Insts,
      FeatureDot2Insts,
@@ -3122,7 +3124,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
   FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
   FeatureWMMA256bInsts, FeatureXF32Insts,
-  FeatureWavefrontSize32, FeatureWavefrontSize64
+  FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
+  FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32
   ];
 }
 

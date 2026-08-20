@@ -28,13 +28,13 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSemUnlinkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcSemUnlinkTest, UnlinkNonExistent) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_missing_unlink");
+  const char name[] = "/llvmlibc_sem_missing_unlink";
 
   EXPECT_THAT(LIBC_NAMESPACE::sem_unlink(name), Fails(ENOENT));
 }
 
 TEST_F(LlvmLibcSemUnlinkTest, UnlinkRemovesName) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_unlink_name");
+  const char name[] = "/llvmlibc_sem_unlink_name";
 
   LIBC_NAMESPACE::sem_unlink(name);
   LIBC_NAMESPACE::libc_errno = 0;
@@ -48,7 +48,6 @@ TEST_F(LlvmLibcSemUnlinkTest, UnlinkRemovesName) {
   // reports ENOENT.
   EXPECT_EQ(LIBC_NAMESPACE::sem_open(name, 0), SEM_FAILED);
   ASSERT_ERRNO_EQ(ENOENT);
-  LIBC_NAMESPACE::libc_errno = 0;
 
   EXPECT_THAT(LIBC_NAMESPACE::sem_unlink(name), Fails(ENOENT));
 

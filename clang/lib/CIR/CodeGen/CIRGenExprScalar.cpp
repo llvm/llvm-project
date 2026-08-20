@@ -901,6 +901,7 @@ public:
       return builder.getConstInt(loc, cgf.convertType(e->getType()),
                                  (uint64_t)e->getBoolValue());
     }
+    assert(e->getType()->isIntegerType() && "not a scalar type trait");
     return builder.getConstInt(loc, e->getAPValue().getInt());
   }
   mlir::Value
@@ -1948,6 +1949,95 @@ static bool isIntegerVectorBinOp(mlir::Type ty) {
   return vecTy && mlir::isa<cir::IntType>(vecTy.getElementType());
 }
 
+// Construct a cir.fmuladd op to represent a fused mul-add of `mulOp` and
+// `addend`. Use negMul and negAdd to negate the first operand of the mul or
+// the addend respectively. This allows fmuladd to represent a*b-c, or c-a*b.
+// Patterns in LLVM should catch the negated forms and translate them to
+// efficient operations.
+static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
+                                mlir::Value addend, CIRGenBuilderTy &builder,
+                                bool negMul, bool negAdd) {
+  mlir::Location loc = builder.getFusedLoc({mulOp.getLoc(), addLoc});
+  mlir::Value mulOp0 = mulOp.getLhs();
+  mlir::Value mulOp1 = mulOp.getRhs();
+  if (negMul)
+    mulOp0 = builder.createFNeg(loc, mulOp0);
+  if (negAdd)
+    addend = builder.createFNeg(loc, addend);
+
+  // Carry the mul's fenv attribute so a constrained fmul yields a constrained
+  // fmuladd; the builder is under the add's FP options, not the mul's.
+  mlir::Value fmuladd =
+      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
+                             addend, mulOp.getFenvAttr());
+  mulOp.erase();
+  return fmuladd;
+}
+
+// Check whether it would be legal to emit a cir.fmuladd op to represent op
+// and if so, build it.
+//
+// Checks that (a) the operation is fusable, and (b) -ffp-contract=on.
+// Does NOT check the type of the operation - it's assumed that this function
+// will be called from contexts where it's known that the type is contractable.
+static mlir::Value tryEmitFMulAdd(mlir::Location loc, const BinOpInfo &op,
+                                  CIRGenBuilderTy &builder,
+                                  bool isSub = false) {
+  assert((op.opcode == BO_Add || op.opcode == BO_AddAssign ||
+          op.opcode == BO_Sub || op.opcode == BO_SubAssign) &&
+         "Only fadd/fsub can be the root of an fmuladd.");
+
+  // Check whether this op is fusable, i.e. -ffp-contract=on. -ffp-contract=fast
+  // needs fast-math flags on the fmul/fadd, which CIR does not model yet, so it
+  // fuses nowhere for now.
+  assert(!cir::MissingFeatures::fastMathFlags());
+  if (!op.fpFeatures.allowFPContractWithinStatement())
+    return nullptr;
+
+  mlir::Value lhs = op.lhs;
+  mlir::Value rhs = op.rhs;
+
+  // Peek through fneg to look for fmul. Make sure the fneg has no other users,
+  // and that it is the only use of its operand.
+  bool negLHS = false;
+  if (auto lhsNeg = lhs.getDefiningOp<cir::FNegOp>()) {
+    if (lhsNeg.getResult().use_empty() && lhsNeg.getInput().hasOneUse()) {
+      lhs = lhsNeg.getInput();
+      negLHS = true;
+    }
+  }
+
+  bool negRHS = false;
+  if (auto rhsNeg = rhs.getDefiningOp<cir::FNegOp>()) {
+    if (rhsNeg.getResult().use_empty() && rhsNeg.getInput().hasOneUse()) {
+      rhs = rhsNeg.getInput();
+      negRHS = true;
+    }
+  }
+
+  // We have a potentially fusable op. Look for a mul on one of the operands.
+  // Also make sure that the mul result isn't used directly. In that case,
+  // there's no point creating a muladd operation.
+  if (auto lhsMul = lhs.getDefiningOp<cir::FMulOp>()) {
+    if (lhsMul.getResult().use_empty() || negLHS) {
+      // If we looked through fneg, erase it.
+      if (negLHS)
+        op.lhs.getDefiningOp<cir::FNegOp>().erase();
+      return buildFMulAdd(loc, lhsMul, op.rhs, builder, negLHS, isSub);
+    }
+  }
+  if (auto rhsMul = rhs.getDefiningOp<cir::FMulOp>()) {
+    if (rhsMul.getResult().use_empty() || negRHS) {
+      // If we looked through fneg, erase it.
+      if (negRHS)
+        op.rhs.getDefiningOp<cir::FNegOp>().erase();
+      return buildFMulAdd(loc, rhsMul, op.lhs, builder, isSub ^ negRHS, false);
+    }
+  }
+
+  return nullptr;
+}
+
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (!isIntegerVectorBinOp(ops.lhs.getType()) &&
@@ -2047,6 +2137,9 @@ mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
 
   if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    // Try to form an fmuladd.
+    if (mlir::Value fmuladd = tryEmitFMulAdd(loc, ops, builder))
+      return fmuladd;
     return builder.createFAdd(loc, ops.lhs, ops.rhs);
   }
 
@@ -2095,6 +2188,10 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
 
     if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+      // Try to form an fmuladd.
+      if (mlir::Value fmuladd =
+              tryEmitFMulAdd(loc, ops, builder, /*isSub=*/true))
+        return fmuladd;
       return builder.createFSub(loc, ops.lhs, ops.rhs);
     }
 

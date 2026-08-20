@@ -1193,7 +1193,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::experimental_cttz_elts: {
     EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
+    if (getTLI()->isOperationCustom(ISD::CTTZ_ELTS, ArgVT)) {
       // This will consist of a SVE brkb and a cntp instruction. These
       // typically have the same latency and half the throughput as a vector
       // add instruction.
@@ -6818,10 +6818,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (Ratio == 2 && !IsUSDot) {
     MVT InVT = InputLT.second.getScalarType();
 
-    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
+    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2). A pure widening add with a
+    // ratio of 2 can use [SU]ADALP instead.
     if (IsSupported(ST->hasSVE2() || ST->hasSME(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
-      return Cost * 2;
+      return (BinOp || IsSub) ? Cost * 2 : Cost;
 
     // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)

@@ -119,6 +119,7 @@ FunctionPass *llvm::createNVPTXMarkKernelPtrsGlobalPass() {
 
 PreservedAnalyses
 NVPTXMarkKernelPtrsGlobalPass::run(Function &F, FunctionAnalysisManager &) {
-  return markKernelPtrsGlobal(F) ? PreservedAnalyses::none()
-                                 : PreservedAnalyses::all();
+  if (!markKernelPtrsGlobal(F))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

@@ -446,77 +446,40 @@
 ! CHECK:           acc.terminator
 ! CHECK:         }
 
-! CHECK-LABEL:   acc.reduction.recipe @reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
+! CHECK-LABEL:   acc.reduction.recipe @reduction_add_ref_10x20xi32 : !fir.ref<!fir.array<10x20xi32>> reduction_operator <add> init {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>):
 ! CHECK:           %[[ALLOCA_0:.*]] = fir.alloca !fir.array<10x20xi32> {acc.var_name = #acc.var_name<"<acc.varname.placeholder>">, bindc_name = "acc.reduction.init"}
 ! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : i32
-! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 9 : index
-! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 19 : index
-! CHECK:           %[[CONSTANT_6:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_7:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_8:.*]] = arith.constant true
-! CHECK:           %[[CONSTANT_9:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_10:.*]] = arith.constant 20 : index
-! CHECK:           %[[CONSTANT_11:.*]] = arith.constant true
-! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_7]], %[[CONSTANT_10]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[CONSTANT_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_13:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_14:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_15:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_16:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_17:.*]] = arith.constant 20 : index
-! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_0]] (%[[CONSTANT_13]]:%[[CONSTANT_14]]:%[[CONSTANT_1]], %[[CONSTANT_16]]:%[[CONSTANT_17]]:%[[CONSTANT_1]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
-! CHECK:           %[[CONSTANT_18:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_19:.*]] = arith.constant 20 : index
-! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_18]], %[[CONSTANT_19]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[CONSTANT_20:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_20]] to %[[CONSTANT_19]] step %[[CONSTANT_20]] unordered {
-! CHECK:             fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_20]] to %[[CONSTANT_18]] step %[[CONSTANT_20]] unordered {
-! CHECK:               %[[DESIGNATE_1:.*]] = hlfir.designate %[[ALLOCA_0]] (%[[VAL_2]], %[[VAL_1]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_1]] temporary_lhs : i32, !fir.ref<i32>
+! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 20 : index
+! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]], %[[CONSTANT_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_1]], %[[CONSTANT_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 10 : index
+! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 20 : index
+! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[CONSTANT_3]], %[[CONSTANT_4]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_1:.*]] = %[[CONSTANT_5]] to %[[CONSTANT_4]] step %[[CONSTANT_5]] unordered {
+! CHECK:             fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_5]] to %[[CONSTANT_3]] step %[[CONSTANT_5]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[ALLOCA_0]] (%[[VAL_2]], %[[VAL_1]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:               hlfir.assign %[[CONSTANT_0]] to %[[DESIGNATE_0]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:             }
 ! CHECK:           }
-! CHECK:           %[[CONSTANT_21:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_22:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_23:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_24:.*]] = arith.constant 20 : index
-! CHECK:           %[[CONSTANT_25:.*]] = arith.constant 0 : index
-! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[CONSTANT_2]], %[[CONSTANT_22]], %[[CONSTANT_4]], %[[CONSTANT_24]] : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:           %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[ALLOCA_0]](%[[SHAPE_SHIFT_0]]) %[[CONSTANT_25]], %[[CONSTANT_25]] : (!fir.ref<!fir.array<10x20xi32>>, !fir.shapeshift<2>, index, index) -> !fir.ref<i32>
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ARRAY_COOR_0]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<10x20xi32>>
-! CHECK:           acc.yield %[[CONVERT_0]] : !fir.ref<!fir.array<10x20xi32>>
+! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.array<10x20xi32>>
 
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xi32>>, %[[VAL_1:.*]]: !fir.ref<!fir.array<10x20xi32>>):
-! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 9 : index
-! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 19 : index
-! CHECK:           %[[CONSTANT_5:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_6:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_7:.*]] = arith.constant true
-! CHECK:           %[[CONSTANT_8:.*]] = arith.constant 0 : index
-! CHECK:           %[[CONSTANT_9:.*]] = arith.constant 20 : index
-! CHECK:           %[[CONSTANT_10:.*]] = arith.constant true
-! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_6]], %[[CONSTANT_9]] : (index, index) -> !fir.shape<2>
-! CHECK:           %[[CONSTANT_11:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_13:.*]] = arith.constant 10 : index
-! CHECK:           %[[CONSTANT_14:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_15:.*]] = arith.constant 1 : index
-! CHECK:           %[[CONSTANT_16:.*]] = arith.constant 20 : index
-! CHECK:           %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[CONSTANT_12]]:%[[CONSTANT_13]]:%[[CONSTANT_0]], %[[CONSTANT_15]]:%[[CONSTANT_16]]:%[[CONSTANT_0]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
-! CHECK:           %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[CONSTANT_12]]:%[[CONSTANT_13]]:%[[CONSTANT_0]], %[[CONSTANT_15]]:%[[CONSTANT_16]]:%[[CONSTANT_0]])  shape %[[SHAPE_0]] : (!fir.ref<!fir.array<10x20xi32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.ref<!fir.array<10x20xi32>>
-! CHECK:           %[[CONSTANT_17:.*]] = arith.constant 1 : index
-! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_17]] to %[[CONSTANT_9]] step %[[CONSTANT_17]] unordered {
-! CHECK:             fir.do_loop %[[VAL_3:.*]] = %[[CONSTANT_17]] to %[[CONSTANT_6]] step %[[CONSTANT_17]] unordered {
-! CHECK:               %[[DESIGNATE_2:.*]] = hlfir.designate %[[DESIGNATE_0]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:               %[[DESIGNATE_3:.*]] = hlfir.designate %[[DESIGNATE_1]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
-! CHECK:               acc.reduction_combine %[[DESIGNATE_2]] into %[[DESIGNATE_3]] <add> : !fir.ref<i32>
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 10 : index
+! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 20 : index
+! CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]], %[[CONSTANT_1]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
+! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 20 : index
+! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_2]], %[[CONSTANT_3]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_2:.*]] = %[[CONSTANT_4]] to %[[CONSTANT_1]] step %[[CONSTANT_4]] unordered {
+! CHECK:             fir.do_loop %[[VAL_3:.*]] = %[[CONSTANT_4]] to %[[CONSTANT_0]] step %[[CONSTANT_4]] unordered {
+! CHECK:               %[[DESIGNATE_0:.*]] = hlfir.designate %[[VAL_1]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:               %[[DESIGNATE_1:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_3]], %[[VAL_2]])  : (!fir.ref<!fir.array<10x20xi32>>, index, index) -> !fir.ref<i32>
+! CHECK:               acc.reduction_combine %[[DESIGNATE_0]] into %[[DESIGNATE_1]] <add> : !fir.ref<i32>
 ! CHECK:             }
 ! CHECK:           }
 ! CHECK:           acc.yield %[[VAL_0]] : !fir.ref<!fir.array<10x20xi32>>
@@ -1723,19 +1686,32 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_static_slice_2d(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<10x20xi32>> {fir.bindc_name = "a"})
-! CHECK: %[[C10:.*]] = arith.constant 10 : index
-! CHECK: %[[C20:.*]] = arith.constant 20 : index
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK: %[[LB:.*]] = arith.constant 0 : index
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
-! CHECK: %[[UB9:.*]] = arith.constant 9 : index
-! CHECK: %[[STRIDE1:.*]] = arith.constant 10 : index
-! CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB9]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[UB19:.*]] = arith.constant 19 : index
-! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB19]] : index) extent(%[[C20]] : index)
-! stride(%[[STRIDE1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) bounds(%[[BOUND0]], %[[BOUND1]]) recipe(@reduction_add_section_lb0.ub9xlb0.ub19_ref_10x20xi32) ->
-! !fir.ref<!fir.array<10x20xi32>> {name = "a(:10,:20)"}
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) recipe(@reduction_add_ref_10x20xi32) -> !fir.ref<!fir.array<10x20xi32>> {name = "a"}
+! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<10x20xi32>>)
+
+subroutine acc_reduction_add_static_colon(a)
+  integer :: a(10)
+  !$acc parallel reduction(+:a(:))
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_static_colon(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"})
+! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10xi32>>) recipe(@reduction_add_ref_10xi32) -> !fir.ref<!fir.array<10xi32>> {name = "a"}
+! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<10xi32>>)
+
+subroutine acc_reduction_add_static_colon_2d(a)
+  integer :: a(10,20)
+  !$acc parallel reduction(+:a(:,:))
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_static_colon_2d(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<10x20xi32>> {fir.bindc_name = "a"})
+! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[DECLARG0]]#0 : !fir.ref<!fir.array<10x20xi32>>) recipe(@reduction_add_ref_10x20xi32) -> !fir.ref<!fir.array<10x20xi32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED]] : !fir.ref<!fir.array<10x20xi32>>)
 
 subroutine acc_reduction_add_dynamic_extent_add(a)
@@ -1749,6 +1725,18 @@ end subroutine
 ! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@reduction_add_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
 ! CHECK: acc.parallel reduction(%[[RED:.*]] : !fir.box<!fir.array<?xi32>>)
+
+subroutine acc_reduction_add_dynamic_extent_colon(a)
+  integer :: a(:)
+  !$acc parallel reduction(+:a(:))
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_dynamic_extent_colon(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"})
+! CHECK: %[[DECLARG0:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK: %[[RED:.*]] = acc.reduction var(%{{.*}} : !fir.box<!fir.array<?xi32>>) recipe(@reduction_add_box_Uxi32) -> !fir.box<!fir.array<?xi32>> {name = "a"}
+! CHECK: acc.parallel reduction(%[[RED]] : !fir.box<!fir.array<?xi32>>)
 
 subroutine acc_reduction_add_assumed_shape_max(a)
   real :: a(:)

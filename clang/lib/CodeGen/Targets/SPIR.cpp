@@ -465,7 +465,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 // LLVM currently assumes a null pointer has the bit pattern 0, but some GPU

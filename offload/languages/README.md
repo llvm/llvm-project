@@ -13,7 +13,8 @@ code calls them, but they are for compiler-generated code rather than for users
 to call directly.
 
 The rest of the runtime is internal. This includes device lookup, queues,
-registered programs, registered kernels, and error conversion.
+registered programs, registered kernels, error conversion, and per-thread
+last-error storage.
 
 Some source files are shared by CUDA and HIP. CMake compiles those files once
 with `LANGUAGE=cuda` and once with `LANGUAGE=hip`. The language-name includes
