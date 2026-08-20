@@ -140,7 +140,7 @@ template <class,
           class _Compare,
           class _RandomAccessIterator,
           __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __sort4(_RandomAccessIterator __x1,
         _RandomAccessIterator __x2,
         _RandomAccessIterator __x3,
@@ -157,7 +157,7 @@ template <class _AlgPolicy,
           class _Compare,
           class _RandomAccessIterator,
           __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __sort4(_RandomAccessIterator __x1,
         _RandomAccessIterator __x2,
         _RandomAccessIterator __x3,
@@ -182,7 +182,7 @@ template <class _AlgPolicy,
           class _Compare,
           class _RandomAccessIterator,
           __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __sort5(_RandomAccessIterator __x1,
         _RandomAccessIterator __x2,
         _RandomAccessIterator __x3,
@@ -201,7 +201,7 @@ template <class _AlgPolicy,
           class _Compare,
           class _RandomAccessIterator,
           __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __sort5(_RandomAccessIterator __x1,
         _RandomAccessIterator __x2,
         _RandomAccessIterator __x3,

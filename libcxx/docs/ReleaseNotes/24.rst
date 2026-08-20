@@ -51,6 +51,10 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``std::nth_element`` now uses sorting networks for ranges with at most 5 elements, which makes it significantly
+  faster on small ranges. In particular, when the size of the range is known at compile time (as in a median-of-5
+  filter), the algorithm now compiles down to a branchless sorting network.
+
 Deprecations and Removals
 -------------------------
 

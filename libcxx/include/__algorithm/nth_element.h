@@ -17,6 +17,7 @@
 #include <__config>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,6 +28,220 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+// Selects the median of 5 elements and partitions the other 4 around it, so the nth_element
+// postconditions hold for nth == first + 2. Uses 6 comparisons, which is optimal
+// (Knuth, TAOCP 5.3.3).
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
+  _RandomAccessIterator __x5 = __first + difference_type(4);
+
+  // Sort pairs (__x1, __x2) and (__x3, __x4).
+  if (__comp(*__x2, *__x1))
+    _Ops::iter_swap(__x1, __x2);
+  if (__comp(*__x4, *__x3))
+    _Ops::iter_swap(__x3, __x4);
+
+  // Order those pairs by their larger element: *__x1 <= *__x2 <= *__x4 and *__x3 <= *__x4.
+  // *__x4 has at least 3 elements <= it, so it cannot be the median.
+  if (__comp(*__x4, *__x2)) {
+    _Ops::iter_swap(__x1, __x3);
+    _Ops::iter_swap(__x2, __x4);
+  }
+
+  // Insert __x5 beside __x3.
+  if (__comp(*__x5, *__x3))
+    _Ops::iter_swap(__x3, __x5);
+
+  // Order pairs (__x1, __x2) and (__x3, __x5) by their larger element:
+  // *__x1 <= *__x2 <= *__x5 and *__x3 <= *__x5.
+  if (__comp(*__x5, *__x2)) {
+    _Ops::iter_swap(__x1, __x3);
+    _Ops::iter_swap(__x2, __x5);
+  }
+
+  // The median is the larger of __x2 and __x3.
+  if (__comp(*__x3, *__x2))
+    _Ops::iter_swap(__x2, __x3);
+}
+
+// Branchless 7-comparator selection network. One extra comparison vs the adaptive algorithm
+// above, but no control flow, which is faster for cheap arithmetic types.
+template <class,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element_median5(_RandomAccessIterator __first, _Compare __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
+  _RandomAccessIterator __x5 = __first + difference_type(4);
+
+  std::__cond_swap<_Compare>(__x1, __x2, __comp);
+  std::__cond_swap<_Compare>(__x3, __x4, __comp);
+  std::__cond_swap<_Compare>(__x1, __x3, __comp);
+  std::__cond_swap<_Compare>(__x2, __x4, __comp);
+  std::__cond_swap<_Compare>(__x2, __x3, __comp);
+  std::__cond_swap<_Compare>(__x2, __x5, __comp);
+  std::__cond_swap<_Compare>(__x3, __x5, __comp);
+}
+
+// nth_element on 4 elements. 3 comparisons for the min or max, 4 for the two inner
+// positions (Knuth V_2(4)). A full sort would need 5.
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element4(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+  _RandomAccessIterator __x4 = __first + difference_type(3);
+
+  if (__comp(*__x2, *__x1))
+    _Ops::iter_swap(__x1, __x2);
+  if (__comp(*__x4, *__x3))
+    _Ops::iter_swap(__x3, __x4);
+
+  const difference_type __k = __nth - __first;
+  if (__k == 0) {
+    if (__comp(*__x3, *__x1))
+      _Ops::iter_swap(__x1, __x3);
+    return;
+  }
+  if (__k == 3) {
+    if (__comp(*__x4, *__x2))
+      _Ops::iter_swap(__x2, __x4);
+    return;
+  }
+
+  if (__k == 1) {
+    // Order pairs by their smaller element so the min is at __x1.
+    if (__comp(*__x3, *__x1)) {
+      _Ops::iter_swap(__x1, __x3);
+      _Ops::iter_swap(__x2, __x4);
+    }
+  } else {
+    // Order pairs by their larger element so the max is at __x4.
+    if (__comp(*__x4, *__x2)) {
+      _Ops::iter_swap(__x1, __x3);
+      _Ops::iter_swap(__x2, __x4);
+    }
+  }
+  // 2nd smallest at __x2 (__k == 1), or 2nd largest at __x3 (__k == 2).
+  if (__comp(*__x3, *__x2))
+    _Ops::iter_swap(__x2, __x3);
+}
+
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element4(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  std::__sort4<_AlgPolicy, _Compare>(
+      __first, __first + difference_type(1), __first + difference_type(2), __first + difference_type(3), __comp);
+}
+
+// nth_element on 3 elements. Min or max takes 2 comparisons; the middle element is a
+// median-of-3, which is exactly a 3-sort.
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<!__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element3(_RandomAccessIterator __first, _RandomAccessIterator __nth, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+
+  _RandomAccessIterator __x1 = __first;
+  _RandomAccessIterator __x2 = __first + difference_type(1);
+  _RandomAccessIterator __x3 = __first + difference_type(2);
+
+  const difference_type __k = __nth - __first;
+  if (__k == 0) {
+    if (__comp(*__x2, *__x1))
+      _Ops::iter_swap(__x1, __x2);
+    if (__comp(*__x3, *__x1))
+      _Ops::iter_swap(__x1, __x3);
+    return;
+  }
+  if (__k == 2) {
+    if (__comp(*__x2, *__x1))
+      _Ops::iter_swap(__x1, __x2);
+    if (__comp(*__x3, *__x2))
+      _Ops::iter_swap(__x2, __x3);
+    return;
+  }
+  std::__sort3<_AlgPolicy, _Compare>(__x1, __x2, __x3, __comp);
+}
+
+template <class _AlgPolicy,
+          class _Compare,
+          class _RandomAccessIterator,
+          __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+__nth_element3(_RandomAccessIterator __first, _RandomAccessIterator, _Compare __comp) {
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  std::__sort3<_AlgPolicy, _Compare>(__first, __first + difference_type(1), __first + difference_type(2), __comp);
+}
+
+// Handles ranges of at most 5 elements. Returns false if the range was too large to be handled.
+template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_small(
+    _RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp) {
+  using _Ops = _IterOps<_AlgPolicy>;
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  switch (__last - __first) {
+  case 0:
+  case 1:
+    return true;
+  case 2:
+    if (__comp(*--__last, *__first))
+      _Ops::iter_swap(__first, __last);
+    return true;
+  case 3:
+    std::__nth_element3<_AlgPolicy, _Compare>(__first, __nth, __comp);
+    return true;
+  case 4:
+    std::__nth_element4<_AlgPolicy, _Compare>(__first, __nth, __comp);
+    return true;
+  case 5:
+    if (__nth == __first + difference_type(2)) {
+      std::__nth_element_median5<_AlgPolicy, _Compare>(__first, __comp);
+      return true;
+    }
+    std::__sort5<_AlgPolicy, _Compare>(
+        __first,
+        __first + difference_type(1),
+        __first + difference_type(2),
+        __first + difference_type(3),
+        --__last,
+        __comp);
+    return true;
+  }
+  return false;
+}
 
 template <class _Compare, class _RandomAccessIterator>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_find_guard(
@@ -55,21 +270,9 @@ __nth_element(
   while (true) {
     if (__nth == __last)
       return;
+    if (std::__nth_element_small<_AlgPolicy, _Compare>(__first, __nth, __last, __comp))
+      return;
     difference_type __len = __last - __first;
-    switch (__len) {
-    case 0:
-    case 1:
-      return;
-    case 2:
-      if (__comp(*--__last, *__first))
-        _Ops::iter_swap(__first, __last);
-      return;
-    case 3: {
-      _RandomAccessIterator __m = __first;
-      std::__sort3<_AlgPolicy, _Compare>(__first, ++__m, --__last, __comp);
-      return;
-    }
-    }
     if (__len <= __limit) {
       std::__selection_sort<_AlgPolicy, _Compare>(__first, __last, __comp);
       return;
@@ -234,7 +437,15 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_im
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
+  // When the size of the range is known at compile time (e.g. in a median-of-5 filter), this
+  // dispatch constant-folds to the appropriate small-range algorithm. Otherwise, the check
+  // disappears entirely and we fall through to the general algorithm, which handles small ranges
+  // itself.
+  bool __small_constant_size =
+      __builtin_constant_p(__last - __first) &&
+      std::__nth_element_small<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
+  if (!__small_constant_size)
+    std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __nth);
   if (__nth != __last) {
