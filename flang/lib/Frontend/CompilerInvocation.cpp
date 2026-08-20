@@ -610,6 +610,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     }
   }
 
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
+
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);
 }

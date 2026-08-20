@@ -67,6 +67,7 @@ add_llvm_target(NVPTXCodeGen
   NVPTXDesc
   NVPTXInfo
   ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

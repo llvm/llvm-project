@@ -813,33 +813,92 @@ end
 ! NO-REWRITE: %[[RES:.*]] = arith.addf %[[XV]], %[[AB]]
 ! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
 
-subroutine guard_mixed_kind(x,a,b,c,d,e,f)
+! The kind conversion remains around the reassociated expression.
+! Default:   ((a*b + c*d) + e*f)
+! Rewritten: (e*f + (a*b + c*d))
+subroutine eligible_whole_real_kind_conversion(x,a,b,c,d,e,f)
   real(8) :: x
   real(4) :: a,b,c,d,e,f
   x = a*b + c*d + e*f
 end
 
-! NO-REWRITE-LABEL: func.func @_QPguard_mixed_kind
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEc"}
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEd"}
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEe"}
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEf"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_mixed_kindEx"}
-! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
-! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
+! SPLIT-LABEL: func.func @_QPeligible_whole_real_kind_conversion
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[AB]], %[[CD]]
+! SPLIT: %[[SUM:.*]] = arith.addf %[[EF]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = fir.convert %[[SUM]] : (f32) -> f64
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_whole_real_kind_conversion
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
+! DEFAULT: %[[HEAD:.*]] = arith.addf %[[AB]], %[[CD]]
+! DEFAULT: %[[EV:.*]] = fir.load
+! DEFAULT: %[[FV:.*]] = fir.load
+! DEFAULT: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
+! DEFAULT: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[EF]]
+! DEFAULT: %[[RES:.*]] = fir.convert %[[SUM]] : (f32) -> f64
+! DEFAULT: hlfir.assign %[[RES]]
+
+! Default:   ((a + b) + c)
+! Rewritten: (c + (a + b))
+subroutine eligible_whole_complex_kind_conversion(x,a,b,c)
+  complex(8) :: x
+  complex(4) :: a,b,c
+  x = a + b + c
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_whole_complex_kind_conversion
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[HEAD:.*]] = fir.addc %[[AV]], %[[BV]]
+! SPLIT: %[[SUM:.*]] = fir.addc %[[CV]], %[[HEAD]]
+! SPLIT: %[[RES:.*]] = fir.convert %[[SUM]] : (complex<f32>) -> complex<f64>
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_whole_complex_kind_conversion
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[HEAD:.*]] = fir.addc %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[SUM:.*]] = fir.addc %[[HEAD]], %[[CV]]
+! DEFAULT: %[[RES:.*]] = fir.convert %[[SUM]] : (complex<f32>) -> complex<f64>
+! DEFAULT: hlfir.assign %[[RES]]
+
+! A conversion embedded in the additive tree is not yet eligible.
+subroutine guard_embedded_kind_conversion(x,a,b,c,d,e,f)
+  real(8) :: x,a,b,c,d
+  real(4) :: e,f
+  x = a*b + c*d + real(e*f,8)
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_embedded_kind_conversion
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
 ! NO-REWRITE: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
-! NO-REWRITE: %[[CV:.*]] = fir.load %[[C]]#0
-! NO-REWRITE: %[[DV:.*]] = fir.load %[[D]]#0
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[DV:.*]] = fir.load
 ! NO-REWRITE: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
-! NO-REWRITE: %[[ABCD:.*]] = arith.addf %[[AB]], %[[CD]]
-! NO-REWRITE: %[[EV:.*]] = fir.load %[[E]]#0
-! NO-REWRITE: %[[FV:.*]] = fir.load %[[F]]#0
-! NO-REWRITE: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]]
-! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[ABCD]], %[[EF]]
-! NO-REWRITE: %[[RES:.*]] = fir.convert %[[SUM]]
-! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[AB]], %[[CD]]
+! NO-REWRITE: %[[EV:.*]] = fir.load
+! NO-REWRITE: %[[FV:.*]] = fir.load
+! NO-REWRITE: %[[EF:.*]] = arith.mulf %[[EV]], %[[FV]] {{.*}} : f32
+! NO-REWRITE: %[[CONVERT:.*]] = fir.convert %[[EF]] : (f32) -> f64
+! NO-REWRITE: %[[SUM:.*]] = arith.addf %[[HEAD]], %[[CONVERT]]
+! NO-REWRITE: hlfir.assign %[[SUM]]
 
 module split_sum_guard_mod
   real(8), volatile :: use_volatile_x
