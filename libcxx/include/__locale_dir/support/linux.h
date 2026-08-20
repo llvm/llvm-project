@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <wchar.h>
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <cstdio>
@@ -21,6 +20,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
+#include <wchar.h>
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar>
 #  include <wctype.h>
