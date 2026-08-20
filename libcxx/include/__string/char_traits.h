@@ -20,6 +20,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__functional/hash.h>
 #include <__functional/identity.h>
+#include <__fwd/mbstate_t.h>
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
@@ -27,7 +28,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <iosfwd>
-#include <wchar.h>
 
 #if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar> // for wmemcpy
