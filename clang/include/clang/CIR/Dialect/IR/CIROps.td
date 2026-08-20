@@ -1057,8 +1057,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```
-    cir.for cond {
-      cir.condition(%val) // Branches to `step` region or exits.
+    cir.for : cond {
+      cir.condition(%val) // Branches to `body` region or exits.
     } body {
       cir.yield
     } step {
@@ -2316,11 +2316,17 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
 
     ```
     cir.while {
-      cir.break
-    ^bb2:
-      cir.yield
+      cir.condition(%cond)
     } do {
-      cir.condition %cond : cir.bool
+      cir.yield
+    }
+
+    cir.while {
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.yield
     }
     ```
   }];
@@ -2388,7 +2394,7 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
     ^bb2:
       cir.yield
     } while {
-      cir.condition %cond : cir.bool
+      cir.condition(%cond)
     }
     ```
   }];
@@ -2419,13 +2425,23 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     Example:
 
     ```
-    cir.for cond {
+    cir.for : cond {
       cir.condition(%val)
     } body {
       cir.break
     ^bb2:
       cir.yield
     } step {
+      cir.yield
+    }
+
+    cir.for : cond {
+      cir.condition(%val)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
       cir.yield
     }
     ```

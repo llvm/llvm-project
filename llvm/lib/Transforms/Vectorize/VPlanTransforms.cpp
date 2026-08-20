@@ -334,22 +334,23 @@ static bool sinkScalarOperands(VPlan &Plan) {
   SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
   auto InsertIfValidSinkCandidate = [ScalarVFOnly, &WorkList](
                                         VPBasicBlock *SinkTo, VPValue *Op) {
-    auto *Candidate =
-        dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe());
-    if (!Candidate)
-      return;
-
-    // We only know how to sink VPReplicateRecipes and VPScalarIVStepsRecipes
-    // for now.
-    if (!isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(Candidate))
+    auto *Candidate = dyn_cast<VPSingleDefRecipe>(Op);
+    if (!isa_and_nonnull<VPReplicateRecipe, VPScalarIVStepsRecipe,
+                         VPInstruction>(Candidate))
       return;
 
     if (Candidate->getParent() == SinkTo ||
+        all_of(Candidate->operands(),
+               [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); }) ||
         vputils::cannotHoistOrSinkRecipe(*Candidate, /*Sinking=*/true))
       return;
 
-    if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
-      if (!ScalarVFOnly && RepR->isSingleScalar())
+    if (!ScalarVFOnly && !vputils::doesGeneratePerAllLanes(Candidate))
+      return;
+
+    // Only single-scalar VPInstructions can be sunk.
+    if (auto *VPI = dyn_cast<VPInstruction>(Candidate))
+      if (!vputils::isSingleScalar(VPI))
         return;
 
     WorkList.insert({SinkTo, Candidate});
@@ -3209,12 +3210,22 @@ static bool handleUncountableExitsWithSideEffects(
 }
 
 bool VPlanTransforms::handleUncountableEarlyExits(
-    VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
-    VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+    VPlan &Plan, Loop *TheLoop, PredicatedScalarEvolution &PSE,
     DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style) {
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
+
+  auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
+  auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+
+  // Dereferenceability is checked separately for uncountable exit loops with
+  // stores, as only the loads contributing to the exit condition need to
+  // be checked.
+  if (Style == UncountableExitStyle::ReadOnly &&
+      !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
+    return false;
+
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
   for (auto [EarlyExitingVPBB, ExitBlock] :

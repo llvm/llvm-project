@@ -834,15 +834,14 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 /// Returns true if the predecessor terminators of the given block can have
 /// their operands updated by appending values of the given types: each must
 /// implement BranchOpInterface and be willing to forward every one of the
-/// types to the block.
+/// types to the block (`areTypesCompatible(T, T)`).
 static bool ableToUpdatePredOperands(Block *block, ArrayRef<Type> types) {
   for (auto it = block->pred_begin(), e = block->pred_end(); it != e; ++it) {
     auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
     if (!branch)
       return false;
-    unsigned succIndex = it.getSuccessorIndex();
     for (Type type : types)
-      if (!branch.mayForwardTypeToSuccessor(succIndex, type))
+      if (!branch.areTypesCompatible(type, type))
         return false;
   }
   return true;

@@ -7367,23 +7367,19 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
 
   // We need a GEP.
-  MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  Register Base, Offset;
+  if (!mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Offset))))
     return std::nullopt;
 
   // If this is used more than once, let's not bother folding.
   // TODO: Check if they are memory ops. If they are, then we can still fold
   // without having to recompute anything.
-  if (!MRI.hasOneNonDBGUse(Gep->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(Root.getReg()))
     return std::nullopt;
 
   // Base is the GEP's LHS, offset is its RHS.
-  return {{[=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(1).getReg());
-           },
-           [=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(2).getReg());
-           },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(Offset); },
            [=](MachineInstrBuilder &MIB) {
              // Need to add both immediates here to make sure that they are both
              // added to the instruction.

@@ -3547,7 +3547,37 @@ void populateIRCore(nb::module_ &m) {
             Loads all dialects available in the registry into the context.
 
             This eagerly loads all dialects that have been registered, making them
-            immediately available for use.)");
+            immediately available for use.)")
+      .def(
+          "begin_transient_scope",
+          [](PyMlirContext &self) {
+            if (mlirContextIsInTransientScope(self.get()))
+              throw nb::value_error("Context is already in a transient scope");
+            mlirContextBeginTransientScope(self.get());
+          },
+          R"(
+            Begins a transient scope on the context, freezing the base layer.
+
+            All subsequently allocated types, attributes, and unregistered operations
+            are treated as transient and will be deallocated with end_transient_scope().
+            Raises a ValueError if the context is already in a transient scope.)")
+      .def(
+          "end_transient_scope",
+          [](PyMlirContext &self) { mlirContextEndTransientScope(self.get()); },
+          R"(
+            Ends the transient scope and resets the context to the base state.
+
+            Prunes all transient types, attributes, affine expressions, distinct
+            attributes, and unregistered operations added during the transient scope.
+
+            Note: Any Python objects referencing transient IR entities become invalid
+            after this call and must not be accessed.)")
+      .def_prop_ro(
+          "is_in_transient_scope",
+          [](PyMlirContext &self) -> bool {
+            return mlirContextIsInTransientScope(self.get());
+          },
+          "Returns whether the context is currently in a transient scope.");
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor
