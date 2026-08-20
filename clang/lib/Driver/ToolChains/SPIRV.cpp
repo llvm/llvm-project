@@ -161,6 +161,19 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
+
+  // clang-sycl-linker needs the device target triple and architecture to
+  // finalize a device image. Emit the values derived from --target/-march=
+  // before the linker inputs, so that -triple=/-arch= passed through
+  // -Xlinker/-Wl take priority.
+  if (Args.hasArg(options::OPT_sycl_link)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("-triple=" + ToolChain.getTripleString()));
+    StringRef Arch = Args.getLastArgValue(options::OPT_march_EQ);
+    if (!Arch.empty())
+      CmdArgs.push_back(Args.MakeArgString("-arch=" + Arch));
+  }
+
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");
@@ -184,23 +197,6 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Use of --sycl-link will call the clang-sycl-linker instead of
     // the default linker (spirv-link).
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
-
-    // clang-sycl-linker needs the device target triple and architecture to
-    // finalize a device image.
-    bool HasTriple = false, HasArch = false;
-    for (const Arg *A :
-         Args.filtered(options::OPT_Xlinker, options::OPT_Wl_COMMA,
-                       options::OPT_Zlinker_input))
-      for (StringRef Val : A->getValues()) {
-        HasTriple |= Val.starts_with("-triple") || Val.starts_with("--triple");
-        HasArch |= Val.starts_with("-arch") || Val.starts_with("--arch");
-      }
-    if (!HasTriple)
-      CmdArgs.push_back(
-          Args.MakeArgString("-triple=" + ToolChain.getTripleString()));
-    StringRef Arch = Args.getLastArgValue(options::OPT_march_EQ);
-    if (!HasArch && !Arch.empty())
-      CmdArgs.push_back(Args.MakeArgString("-arch=" + Arch));
     if (Args.hasArg(options::OPT_v))
       CmdArgs.push_back("-v");
   } else if (!llvm::sys::fs::can_execute(Linker) &&

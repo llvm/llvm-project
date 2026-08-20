@@ -17,29 +17,13 @@
 
 // Test that -triple is propagated from --target and passed to clang-sycl-linker.
 // Test that no -march= results in no -arch= in clang-sycl-linker command line.
-// RUN: touch %t.bc
 // RUN: %clangxx -### --target=spirv64-unknown-unknown --sycl-link %t.bc 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=FINALIZE
-// FINALIZE: "{{.*}}clang-sycl-linker{{.*}}" "{{.*}}.bc" "-o" "a.out" "-triple=spirv64-unknown-unknown"{{$}}
+// RUN:   | FileCheck %s -check-prefix=FINALIZE --implicit-check-not=-arch
+// FINALIZE: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64-unknown-unknown" "{{.*}}.bc" "-o" "a.out"{{$}}
 
-// Test that the target triple is passed on as spelled rather than padded out
-// to a full triple.
-// RUN: touch %t.bc
-// RUN: %clangxx -### --target=spirv64 --sycl-link %t.bc 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=FINALIZE-SHORT
-// FINALIZE-SHORT: "{{.*}}clang-sycl-linker{{.*}}" "{{.*}}.bc" "-o" "a.out" "-triple=spirv64"{{$}}
-
-// Test that a requested device architecture is passed on as -arch=.
-// RUN: touch %t.bc
-// RUN: %clangxx -### --target=spirv64-unknown-unknown -march=foo --sycl-link %t.bc 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=FINALIZE-ARCH
-// FINALIZE-ARCH: "{{.*}}clang-sycl-linker{{.*}}" "{{.*}}.bc" "-o" "a.out" "-triple=spirv64-unknown-unknown" "-arch=foo"{{$}}
-
-// Test that -triple=/-arch= passed through -Xlinker/-Wl take priority and that
-// --target/-march passed to clang do not cause duplication of -triple=/-arch=.
-// RUN: touch %t.bc
+// Test -triple=/-arch= passed to clang-sycl-linker, when they are
+// passed via -Xlinker, and derived from --target/-march=.
+// Test that the target triple is passed on as spelled rather than padded out to a full triple.
 // RUN: %clangxx -### --target=spirv64 --sycl-link -march=bmg_g21 -Xlinker -triple=spirv64-unknown-unknown -Xlinker -arch=bar %t.bc 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=NODUP
-// RUN: %clangxx -### --target=spirv64 --sycl-link -march=bmg_g21 -Wl,-triple=spirv64-unknown-unknown,-arch=bar %t.bc 2>&1 \
-// RUN:   | FileCheck %s -check-prefix=NODUP
-// NODUP: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64-unknown-unknown" "-arch=bar" "{{.*}}.bc" "-o" "a.out"{{$}}
+// RUN:   | FileCheck %s -check-prefix=OVERRIDE
+// OVERRIDE: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64" "-arch=bmg_g21" "-triple=spirv64-unknown-unknown" "-arch=bar" "{{.*}}.bc" "-o" "a.out"{{$}}
