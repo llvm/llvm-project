@@ -21,7 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
-#include <optional>
+#include <variant>
 
 namespace llvm {
 class CallInst;
@@ -403,8 +403,7 @@ public:
   };
 
 private:
-  std::optional<ResourceBinding> Binding;
-  uint32_t HeapResourceID = -1U;
+  std::variant<ResourceBinding, uint32_t> BindingOrHeapID;
   TargetExtType *HandleTy;
   StringRef Name;
   GlobalVariable *Symbol = nullptr;
@@ -417,17 +416,19 @@ public:
   ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
                TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{ResourceBinding{0, Space, LowerBound, Size}},
+      : BindingOrHeapID{ResourceBinding{0, Space, LowerBound, Size}},
         HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
 
   ResourceInfo(uint32_t HeapResourceID, TargetExtType *HandleTy)
-      : Binding{std::nullopt}, HeapResourceID(HeapResourceID),
-        HandleTy(HandleTy), Name(""), Symbol(nullptr) {}
+      : BindingOrHeapID{HeapResourceID}, HandleTy(HandleTy), Name(""),
+        Symbol(nullptr) {}
 
-  bool hasBinding() const { return Binding.has_value(); }
+  bool hasBinding() const {
+    return std::holds_alternative<ResourceBinding>(BindingOrHeapID);
+  }
   void setBindingID(unsigned ID) {
     assert(hasBinding() && "Resource does not have a binding");
-    Binding->BindingID = ID;
+    std::get<ResourceBinding>(BindingOrHeapID).BindingID = ID;
   }
 
   bool hasCounter() const {
@@ -436,10 +437,17 @@ public:
 
   const ResourceBinding &getBinding() const {
     assert(hasBinding() && "Resource does not have a binding");
-    return Binding.value();
+    return std::get<ResourceBinding>(BindingOrHeapID);
   }
 
-  uint32_t getSize() const { return Binding ? Binding->Size : 1; }
+  uint32_t getSize() const {
+    return hasBinding() ? std::get<ResourceBinding>(BindingOrHeapID).Size : 1;
+  }
+
+  uint32_t getHeapID() const {
+    assert(!hasBinding() && "Resource does not have a heap ID");
+    return std::get<uint32_t>(BindingOrHeapID);
+  }
 
   TargetExtType *getHandleTy() const { return HandleTy; }
   StringRef getName() const { return Name; }
@@ -452,13 +460,12 @@ public:
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol, Name, HeapResourceID) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name,
-                    RHS.HeapResourceID);
+    return std::tie(BindingOrHeapID, HandleTy, Symbol, Name) ==
+           std::tie(RHS.BindingOrHeapID, RHS.HandleTy, RHS.Symbol, RHS.Name);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {
-    return Binding < RHS.Binding;
+    return BindingOrHeapID < RHS.BindingOrHeapID;
   }
 
   LLVM_ABI void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
