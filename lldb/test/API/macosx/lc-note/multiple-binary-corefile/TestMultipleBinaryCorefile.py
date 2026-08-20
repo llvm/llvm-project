@@ -199,6 +199,31 @@ class TestMultipleBinaryCorefile(TestBase):
     @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
     @skipIfRemote
     @requireDarwin
+    def test_corefile_binaries_serial_search(self):
+        """The corefile's binaries are searched for in parallel by default.
+        Searching for them one at a time has to give the same answer, in the
+        same order, since load_corefile_and_test indexes into the module
+        list."""
+        self.initial_setup()
+
+        self.runCmd("settings set target.parallel-module-load false")
+        self.addTearDownHook(
+            lambda: self.runCmd("settings clear target.parallel-module-load")
+        )
+
+        # Register the binaries in lldb's global module cache, as
+        # test_corefile_binaries_preloaded does, so the corefile's images can
+        # be found without a symbol server.
+        target = self.dbg.CreateTarget(self.aout_exe, "", "", False, lldb.SBError())
+        self.dbg.DeleteTarget(target)
+        target = self.dbg.CreateTarget(self.libtwo_exe, "", "", False, lldb.SBError())
+        self.dbg.DeleteTarget(target)
+
+        self.load_corefile_and_test()
+
+    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
+    @skipIfRemote
+    @requireDarwin
     def test_corefile_binaries_preloaded(self):
         self.initial_setup()
 

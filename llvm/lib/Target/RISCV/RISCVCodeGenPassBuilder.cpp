@@ -11,6 +11,7 @@
 
 #include "RISCV.h"
 #include "RISCVAsmPrinter.h"
+#include "RISCVGatherScatterLowering.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -33,9 +34,12 @@ using namespace llvm;
 
 namespace {
 
-class RISCVCodeGenPassBuilder
-    : public CodeGenPassBuilder<RISCVCodeGenPassBuilder, RISCVTargetMachine> {
-  using Base = CodeGenPassBuilder<RISCVCodeGenPassBuilder, RISCVTargetMachine>;
+class RISCVCodeGenPassBuilder : public CodeGenPassBuilder {
+  using Base = CodeGenPassBuilder;
+
+  RISCVTargetMachine &getTM() const {
+    return static_cast<RISCVTargetMachine &>(TM);
+  }
 
 public:
   explicit RISCVCodeGenPassBuilder(RISCVTargetMachine &TM,
@@ -49,30 +53,30 @@ public:
     // uses the base class default (disabled).
   }
 
-  void addIRPasses(PassManagerWrapper &PMW) const;
-  void addCodeGenPrepare(PassManagerWrapper &PMW) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
-  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
-  void addPreRegAlloc(PassManagerWrapper &PMW) const;
-  void addPostRegAlloc(PassManagerWrapper &PMW) const;
-  void addPreSched2(PassManagerWrapper &PMW) const;
-  void addPreEmitPass(PassManagerWrapper &PMW) const;
-  void addPreEmitPass2(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
+  void addIRPasses(PassManagerWrapper &PMW) override;
+  void addCodeGenPrepare(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
+  void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
+  void addPreRegAlloc(PassManagerWrapper &PMW) override;
+  void addPostRegAlloc(PassManagerWrapper &PMW) override;
+  void addPreSched2(PassManagerWrapper &PMW) override;
+  void addPreEmitPass(PassManagerWrapper &PMW) override;
+  void addPreEmitPass2(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
-void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
-  addFunctionPass(RISCVZacasABIFixPass(&TM), PMW);
+  addFunctionPass(RISCVZacasABIFixPass(&getTM()), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addFunctionPass(LoopDataPrefetchPass(), PMW);
 
-    // TODO: RISCVGatherScatterLoweringPass
+    addFunctionPass(RISCVGatherScatterLoweringPass(&getTM()), PMW);
     addFunctionPass(InterleavedAccessPass(TM), PMW);
-    addFunctionPass(RISCVCodeGenPreparePass(&TM), PMW);
+    addFunctionPass(RISCVCodeGenPreparePass(&getTM()), PMW);
   }
 
   Base::addIRPasses(PMW);
@@ -83,19 +87,19 @@ void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   // yet replicated here.
 }
 
-void RISCVCodeGenPassBuilder::addCodeGenPrepare(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addCodeGenPrepare(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addFunctionPass(TypePromotionPass(TM), PMW);
   Base::addCodeGenPrepare(PMW);
 }
 
-Error RISCVCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
-  addMachineFunctionPass(RISCVISelDAGToDAGPass(TM, getOptLevel()), PMW);
+Error RISCVCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RISCVISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
   return Error::success();
 }
 
 void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
-    PassManagerWrapper &PMW) const {
+    PassManagerWrapper &PMW) {
   // It's beneficial to reduce the VL to enable more
   // Machine SSA optimizations.
   if (getOptLevel() != CodeGenOptLevel::None) {
@@ -119,7 +123,7 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
   }
 }
 
-void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   // TODO: RISCVPreRAExpandPseudoPass
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO: RISCVMergeBaseOffsetOptPass
@@ -135,13 +139,13 @@ void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
   // TODO: RISCVVMV0EliminationPass
 }
 
-void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO: RISCVRedundantCopyEliminationPass
   }
 }
 
-void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
   // TODO: RISCVPostRAExpandPseudoPass
 
   addMachineFunctionPass(MachineKCFIPass(), PMW);
@@ -150,7 +154,7 @@ void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   }
 }
 
-void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // TODO: It would potentially be better to schedule copy propagation after
   // expanding pseudos (in addPreEmitPass2). However, performing copy
   // propagation after the machine outliner (which runs after addPreEmitPass)
@@ -168,7 +172,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   // TODO: RISCVMakeCompressibleOptPass
 }
 
-void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO: RISCVMoveMergePass
     // TODO: RISCVPushPopOptimizationPass
@@ -193,16 +197,15 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // TODO: CFIInstrInserterPass
 }
 
-void RISCVCodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
   addModulePass(RISCVAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
-void RISCVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   addMachineFunctionPass(RISCVAsmPrinterPass(), PMW);
 }
 
-void RISCVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+void RISCVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(RISCVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
@@ -217,16 +220,6 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
     if (Level != OptimizationLevel::O0)
       LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
-
-  // TODO: Move this into the base CodeGenPassBuilder once all targets that
-  // currently implement it have a ported asm-printer pass.
-  if (PIC) {
-    PIC->addClassToPassName(RISCVAsmPrinterBeginPass::name(),
-                            "riscv-asm-printer-begin");
-    PIC->addClassToPassName(RISCVAsmPrinterPass::name(), "riscv-asm-printer");
-    PIC->addClassToPassName(RISCVAsmPrinterEndPass::name(),
-                            "riscv-asm-printer-end");
-  }
 }
 
 Error RISCVTargetMachine::buildCodeGenPipeline(

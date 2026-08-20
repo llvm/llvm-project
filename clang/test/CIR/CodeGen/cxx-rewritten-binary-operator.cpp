@@ -24,9 +24,9 @@ void cxx_rewritten_binary_operator_scalar_expr() {
 // CIR: %[[NEQ:.*]] = cir.not %[[EQ]] : !cir.bool
 // CIR: cir.store{{.*}} %[[NEQ]], %[[NEQ_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.HasOpEq, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca %struct.HasOpEq, i64 1, align 1
-// LLVM: %[[NEQ_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.HasOpEq, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca %struct.HasOpEq, align 1
+// LLVM: %[[NEQ_ADDR:.*]] = alloca i8, align 1
 // LLVM: %[[EQ:.*]] = call {{.*}} i1 @_ZNK7HasOpEqeqERKS_(ptr {{.*}} %[[A_ADDR]], ptr {{.*}} %[[B_ADDR]])
 // LLVM: %[[NEQ_I1:.*]] = xor i1 %[[EQ]], true
 // LLVM: %[[NEQ:.*]] = zext i1 %[[NEQ_I1]] to i8
@@ -66,10 +66,10 @@ void cxx_rewritten_binary_operator_complex_expr() {
 
 // The difference between LLVM and OGCG is due to missing ABI lowering.
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.ComplexItem, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca %struct.ComplexItem, i64 1, align 1
-// LLVM: %[[R_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
-// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipComplexResult, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.ComplexItem, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca %struct.ComplexItem, align 1
+// LLVM: %[[R_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipComplexResult, align 1
 // LLVM: %[[OP_RESULT:.*]] = call %struct.SpaceshipComplexResult @_ZNK11ComplexItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
 // LLVM: store %struct.SpaceshipComplexResult %[[OP_RESULT]], ptr %[[TMP_ADDR]], align 1
 // LLVM: %[[RESULT:.*]] = call noundef { i32, i32 } @_ZNK22SpaceshipComplexResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
@@ -122,10 +122,10 @@ void cxx_rewritten_binary_operator_aggr_expr() {
 
 // The difference between LLVM and OGCG is due to missing ABI lowering.
 
-// LLVM: %[[A_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
-// LLVM: %[[B_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
-// LLVM: %[[R_ADDR:.*]] = alloca %struct.Result, i64 1, align 4
-// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipResult, i64 1, align 1
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.Item, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca %struct.Item, align 1
+// LLVM: %[[R_ADDR:.*]] = alloca %struct.Result, align 4
+// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipResult, align 1
 // LLVM: %[[OP_RESULT:.*]] = call %struct.SpaceshipResult @_ZNK4ItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
 // LLVM: store %struct.SpaceshipResult %[[OP_RESULT]], ptr %[[TMP_ADDR]], align 1
 // LLVM: %[[RESULT:.*]] = call %struct.Result @_ZNK15SpaceshipResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)

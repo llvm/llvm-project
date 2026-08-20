@@ -123,17 +123,6 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   SmallVector<InputSection *> sections;
   DenseMap<const InputSection *, unsigned> sectionToIdx;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
-  auto isThunk = [](ArrayRef<Defined *> symbols) {
-    return llvm::any_of(symbols, [](Defined *sym) {
-      return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
-    });
-  };
-  auto addSectionForName = [&](StringRef name, unsigned idx) {
-    auto rootName = lld::utils::getRootSymbol(name);
-    rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-    if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
-      rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
-  };
   auto addSection = [&](InputSection *isec) {
     if (!isec || isec->data.empty() || !isec->data.data())
       return;
@@ -146,26 +135,28 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
       return;
     unsigned idx = sections.size();
+    if (!sectionToIdx.try_emplace(isec, idx).second)
+      return;
     sections.emplace_back(isec);
-    sectionToIdx.try_emplace(isec, idx);
-    for (auto *sym : isec->symbols)
-      addSectionForName(sym->getName(), idx);
+    for (auto *sym : isec->symbols) {
+      auto rootName = lld::utils::getRootSymbol(sym->getName());
+      rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
+      if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
+        rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
+    }
   };
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
       if (sec->name == section_names::ehFrame &&
           sec->segname == segment_names::text)
         continue;
-      for (auto &subsec : sec->subsections)
+      for (auto &subsec : sec->subsections) {
         addSection(subsec.isec);
+        if (subsec.isec && subsec.isec->canonical() != subsec.isec)
+          addSection(subsec.isec->canonical());
+      }
     }
   }
-  // ICF safe thunks are linker-created after the input-file section graph is
-  // built, so they do not appear in file->sections. Include them through the
-  // same path as input-file sections so only live BP candidates are added.
-  for (auto *isec : inputSections)
-    if (isThunk(isec->symbols))
-      addSection(isec);
 
   // A temporal profile naming an ICF thunk describes execution of both the
   // thunk and the shared body it branches to. Add the body to each name that
@@ -173,7 +164,9 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   for (auto &[symbol, sectionIdxs] : rootSymbolToSectionIdxs) {
     for (unsigned idx : sectionIdxs) {
       InputSection *isec = sections[idx];
-      if (!isThunk(isec->symbols))
+      if (!llvm::any_of(isec->symbols, [](Defined *sym) {
+            return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
+          }))
         continue;
       auto *bodySym = cast<Defined>(target->getThunkBranchTarget(isec));
       auto bodyIdx = sectionToIdx.find(bodySym->isec());

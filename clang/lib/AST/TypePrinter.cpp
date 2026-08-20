@@ -1181,9 +1181,6 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_X86RegCall:
       OS << " __attribute__((regcall))";
       break;
-    case CC_SpirFunction:
-      // Do nothing. These CCs are not available as attributes.
-      break;
     case CC_Swift:
       OS << " __attribute__((swiftcall))";
       break;
@@ -2025,7 +2022,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     llvm_unreachable("BTFTypeTag attribute handled separately");
 
   case attr::HLSLResourceClass:
-  case attr::HLSLROV:
+  case attr::HLSLIsROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:

@@ -1168,7 +1168,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
   QualType AttributedResTy = QualType();
   SmallVector<const Attr *> Attrs = {
       HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
-      IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
+      IsROV ? HLSLIsROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
       RD != ResourceDimension::Unknown
           ? HLSLResourceDimensionAttr::CreateImplicit(Ctx, RD)

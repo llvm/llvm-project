@@ -352,6 +352,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
+  if (T.getArch() == llvm::Triple::aarch64 && !T.isOSWindows())
+    return true;
+
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
       !T.isOSDarwin() && !T.isOSCygMing()) {
     switch (CallingConv) {
@@ -382,12 +385,30 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
-  if (T.isBPF()) {
-    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+
+  switch (T.getArch()) {
+  default:
+    llvm_unreachable("LLVMABI lowering requested for an unsupported target");
+
+  case llvm::Triple::aarch64: {
+    StringRef ABI = getTarget().getABI();
+    llvm::abi::AArch64ABIKind Kind = llvm::abi::AArch64ABIKind::AAPCS;
+    if (ABI == "darwinpcs")
+      Kind = llvm::abi::AArch64ABIKind::DarwinPCS;
+    else if (T.isOSWindows())
+      Kind = llvm::abi::AArch64ABIKind::Win64;
+    else if (ABI == "aapcs-soft")
+      Kind = llvm::abi::AArch64ABIKind::AAPCSSoft;
+    TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Kind);
     return *TheLLVMABITargetInfo;
   }
 
-  if (T.getArch() == llvm::Triple::x86_64) {
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+    return *TheLLVMABITargetInfo;
+
+  case llvm::Triple::x86_64: {
     StringRef ABI = getTarget().getABI();
     llvm::abi::X86AVXABILevel AVXLevel =
         ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
@@ -414,8 +435,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         TB, AVXLevel, Has64BitPointers, CompatInfo);
     return *TheLLVMABITargetInfo;
   }
-
-  llvm_unreachable("LLVMABI lowering requested for an unsupported target");
+  }
 }
 
 static void checkDataLayoutConsistency(const TargetInfo &Target,
@@ -1166,6 +1186,12 @@ void CodeGenModule::Release() {
     if (llvm::Function *CudaCtorFunction = CUDARuntime->finalizeModule())
       AddGlobalCtor(CudaCtorFunction);
   }
+  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
+    if (llvm::Function *SYCLCtorFunction = embedSYCLDeviceBinary())
+      // A static initializer may launch a kernel, so the device binary has to
+      // be registered before any of them run, hence a priority.
+      AddGlobalCtor(SYCLCtorFunction, /*Priority=*/101);
+  }
   if (OpenMPRuntime) {
     OpenMPRuntime->createOffloadEntriesAndInfoMetadata();
     OpenMPRuntime->clear();
@@ -1411,12 +1437,8 @@ void CodeGenModule::Release() {
     else if (flt == &llvm::APFloat::IEEEsingle())
       Format = llvm::LongDoubleFormat::IEEEsingle;
 
-    if (Format) {
-      getModule().addModuleFlag(
-          llvm::Module::Error, "long-double-type",
-          llvm::MDString::get(VMContext,
-                              llvm::getLongDoubleFormatName(*Format)));
-    }
+    if (Format)
+      getModule().setLongDoubleFormat(*Format);
   }
 
   if (getTriple().isOSzOS()) {
@@ -3400,6 +3422,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    getTarget().getTargetOpts().Features);
       }
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
+    } else if (getTarget().getTriple().isSPIRV() &&
+               getTarget().getTriple().getVendor() == llvm::Triple::AMD) {
+      // The AMDGCN-flavored SPIR-V target unions every GPU's features so it can
+      // report all builtins as supported, but that union is meaningless in the
+      // emitted IR.
     } else {
       Features = getTarget().getTargetOpts().Features;
     }
@@ -7323,8 +7350,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
                                StringLength);
 
   if (auto *C = Entry.second)
-    return ConstantAddress(
-        C, C->getValueType(), CharUnits::fromQuantity(C->getAlignment()));
+    return ConstantAddress(C, C->getValueType(),
+                           CharUnits::fromQuantity(C->getAlign().valueOrOne()));
 
   const ASTContext &Context = getContext();
   const llvm::Triple &Triple = getTriple();
@@ -7613,7 +7640,7 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   if (!LangOpts.WritableStrings) {
     Entry = &ConstantStringMap[C];
     if (auto GV = *Entry) {
-      if (uint64_t(Alignment.getQuantity()) > GV->getAlignment())
+      if (Alignment.getAsAlign() > GV->getAlign().valueOrOne())
         GV->setAlignment(Alignment.getAsAlign());
       return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                              GV->getValueType(), Alignment);
@@ -7680,7 +7707,7 @@ ConstantAddress CodeGenModule::GetAddrOfConstantCString(const std::string &Str,
   if (!LangOpts.WritableStrings) {
     Entry = &ConstantStringMap[C];
     if (auto GV = *Entry) {
-      if (uint64_t(Alignment.getQuantity()) > GV->getAlignment())
+      if (Alignment.getAsAlign() > GV->getAlign().valueOrOne())
         GV->setAlignment(Alignment.getAsAlign());
       return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                              GV->getValueType(), Alignment);

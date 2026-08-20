@@ -8,11 +8,11 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericDylibManagerSPS.h"
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/NativeDylibManagerSPSCI.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -35,16 +35,16 @@ TEST(EPCGenericDylibManagerTest, CreateFromExecutionSession) {
   ExecutorAddr InstanceAddr(1), OpenAddr(2), ResolveAddr(3);
 
   StringMap<ExecutorAddr> BootstrapSyms;
-  BootstrapSyms[rt::NativeDylibManagerInstanceName] = InstanceAddr;
-  BootstrapSyms[rt::NativeDylibManagerLoadWrapperName] = OpenAddr;
-  BootstrapSyms[rt::NativeDylibManagerLookupWrapperName] = ResolveAddr;
+  BootstrapSyms[rt::sps_ci::NativeDylibManagerInstanceName] = InstanceAddr;
+  BootstrapSyms[rt::sps_ci::DylibMgrOpen::Name] = OpenAddr;
+  BootstrapSyms[rt::sps_ci::DylibMgrResolve::Name] = ResolveAddr;
 
   auto SSP = std::make_shared<SymbolStringPool>();
   auto EPC =
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericDylibManager::Create(ES);
+  auto Result = sps::createEPCGenericDylibManager(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());

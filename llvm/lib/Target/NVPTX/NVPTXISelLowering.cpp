@@ -560,11 +560,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::FMINIMUM:
     case ISD::FMAXIMUMNUM:
     case ISD::FMINIMUMNUM:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70;
+      IsOpSupported &= STI.hasFeature(NVPTX::SM80);
       break;
     case ISD::FEXP2:
     case ISD::FTANH:
-      IsOpSupported &= STI.hasFeature(NVPTX::SM75) && STI.getPTXVersion() >= 70;
+      IsOpSupported &=
+          STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoF16Action);
@@ -587,7 +588,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     case ISD::SMIN:
     case ISD::UMIN:
     case ISD::UMAX:
-      IsOpSupported = STI.hasFeature(NVPTX::SM90) && STI.getPTXVersion() >= 80;
+      IsOpSupported =
+          STI.hasFeature(NVPTX::SM90) && STI.hasFeature(NVPTX::PTX80);
       break;
     }
     setOperationAction(Op, VT, IsOpSupported ? Action : NoI16x2Action);
@@ -618,7 +620,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f16, Expand);
 
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
-  if (STI.hasFeature(NVPTX::SM30) && STI.getPTXVersion() > 31)
+  if (STI.hasFeature(NVPTX::SM30))
     setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
 
   setFP16OperationAction(ISD::SETCC, MVT::f16, Legal, Promote);
@@ -861,7 +863,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::ADDE, MVT::i32, Legal);
   setOperationAction(ISD::SUBC, MVT::i32, Legal);
   setOperationAction(ISD::SUBE, MVT::i32, Legal);
-  if (STI.getPTXVersion() >= 43) {
+  if (STI.hasFeature(NVPTX::PTX43)) {
     setOperationAction(ISD::ADDC, MVT::i64, Legal);
     setOperationAction(ISD::ADDE, MVT::i64, Legal);
     setOperationAction(ISD::SUBC, MVT::i64, Legal);
@@ -954,7 +956,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
   const bool IsFP16FP16x2NegAvailable = STI.hasFeature(NVPTX::SM53) &&
-                                        STI.getPTXVersion() >= 60 &&
+                                        STI.hasFeature(NVPTX::PTX60) &&
                                         STI.allowFP16Math();
   for (const auto &VT : {MVT::f16, MVT::v2f16})
     setOperationAction(ISD::FNEG, VT,
@@ -979,10 +981,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
 
-  if (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 71) {
+  if (!STI.hasFeature(NVPTX::SM80) || !STI.hasFeature(NVPTX::PTX71)) {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
   }
-  if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
+  if (!STI.hasFeature(NVPTX::SM90)) {
     for (MVT VT : {MVT::bf16, MVT::f32, MVT::f64}) {
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -996,7 +998,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // sm_80 only has conversions between f32 and bf16. Custom lower all other
   // bf16 conversions.
-  if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
+  if (!STI.hasFeature(NVPTX::SM90)) {
     for (MVT VT : {MVT::i1, MVT::i16, MVT::i32, MVT::i64}) {
       setOperationAction(
           {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
@@ -1048,7 +1050,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // - f16/f16x2 (sm_75+, PTX 7.0+)
   // - bf16/bf16x2 (sm_90+, PTX 7.8+)
   // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
-  if (STI.hasFeature(NVPTX::SM75) && STI.getPTXVersion() >= 70)
+  if (STI.hasFeature(NVPTX::SM75) && STI.hasFeature(NVPTX::PTX70))
     setOperationAction(ISD::FTANH, MVT::f32, Legal);
   setOperationAction(ISD::FTANH, MVT::v2f32, Expand);
 
@@ -1064,7 +1066,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
-  if (STI.getPTXVersion() >= 65) {
+  if (STI.hasFeature(NVPTX::PTX65)) {
     setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
     setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
   } else {
@@ -1088,8 +1090,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       AddPromotedToType(Op, MVT::bf16, MVT::f32);
     setOperationAction(Op, MVT::v2f32, Expand);
   }
-  bool SupportsF32MinMaxNaN =
-      STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70;
+  bool SupportsF32MinMaxNaN = STI.hasFeature(NVPTX::SM80);
   for (const auto &Op : {ISD::FMINIMUM, ISD::FMAXIMUM}) {
     setOperationAction(Op, MVT::f32, SupportsF32MinMaxNaN ? Legal : Expand);
     setFP16OperationAction(Op, MVT::f16, Legal, Expand);
@@ -1279,7 +1280,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
   if (CLI.IsVarArg &&
-      (STI.getPTXVersion() < 60 || !STI.hasFeature(NVPTX::SM30)))
+      (!STI.hasFeature(NVPTX::PTX60) || !STI.hasFeature(NVPTX::SM30)))
     report_fatal_error(
         "Support for variadic functions (unsized array parameter) introduced "
         "in PTX ISA version 6.0 and requires target sm_30.");
@@ -1682,7 +1683,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                      SelectionDAG &DAG) const {
 
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1723,7 +1724,7 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op.getNode());
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1745,7 +1746,7 @@ SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,
 SDValue NVPTXTargetLowering::LowerSTACKSAVE(SDValue Op,
                                             SelectionDAG &DAG) const {
   SDLoc DL(Op.getNode());
-  if (STI.getPTXVersion() < 73 || !STI.hasFeature(NVPTX::SM52)) {
+  if (!STI.hasFeature(NVPTX::PTX73) || !STI.hasFeature(NVPTX::SM52)) {
     const Function &Fn = DAG.getMachineFunction().getFunction();
 
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
@@ -1902,7 +1903,7 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   // Whether we can use 3-input min/max when expanding the reduction.
   const bool CanUseMinMax3 =
       EltTy == MVT::f32 && STI.hasFeature(NVPTX::SM100) &&
-      STI.getPTXVersion() >= 88 &&
+      STI.hasFeature(NVPTX::PTX88) &&
       (Opcode == ISD::VECREDUCE_FMAX || Opcode == ISD::VECREDUCE_FMIN ||
        Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM);
 
@@ -2358,7 +2359,7 @@ SDValue NVPTXTargetLowering::PromoteBinOpIfF32FTZ(SDValue Op,
 
 SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
                                             SelectionDAG &DAG) const {
-  assert(!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78);
+  assert(!STI.hasFeature(NVPTX::SM90));
 
   if (Op.getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
@@ -2374,7 +2375,7 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
 
 SDValue NVPTXTargetLowering::LowerFP_TO_INT(SDValue Op,
                                             SelectionDAG &DAG) const {
-  assert(!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78);
+  assert(!STI.hasFeature(NVPTX::SM90));
 
   if (Op.getOperand(0).getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
@@ -2394,24 +2395,22 @@ SDValue NVPTXTargetLowering::LowerFP_ROUND(SDValue Op,
   EVT WideVT = Wide.getValueType();
   if (NarrowVT.getScalarType() == MVT::bf16) {
     const TargetLowering *TLI = STI.getTargetLowering();
-    if (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 70) {
+    if (!STI.hasFeature(NVPTX::SM80)) {
       return TLI->expandFP_ROUND(Op.getNode(), DAG);
     }
-    if (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78) {
-      // This combination was the first to support f32 -> bf16.
-      if (STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 70) {
-        if (WideVT.getScalarType() == MVT::f32) {
-          return Op;
-        }
-        if (WideVT.getScalarType() == MVT::f64) {
-          SDLoc Loc(Op);
-          // Round-inexact-to-odd f64 to f32, then do the final rounding using
-          // the hardware f32 -> bf16 instruction.
-          SDValue rod = TLI->expandRoundInexactToOdd(
-              WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
-              DAG);
-          return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
-        }
+    if (!STI.hasFeature(NVPTX::SM90)) {
+      // sm_80 was the first architecture to support f32 -> bf16.
+      if (WideVT.getScalarType() == MVT::f32) {
+        return Op;
+      }
+      if (WideVT.getScalarType() == MVT::f64) {
+        SDLoc Loc(Op);
+        // Round-inexact-to-odd f64 to f32, then do the final rounding using
+        // the hardware f32 -> bf16 instruction.
+        SDValue rod = TLI->expandRoundInexactToOdd(
+            WideVT.changeElementType(*DAG.getContext(), MVT::f32), Wide, Loc,
+            DAG);
+        return DAG.getFPExtendOrRound(rod, Loc, NarrowVT);
       }
       return TLI->expandFP_ROUND(Op.getNode(), DAG);
     }
@@ -2428,15 +2427,14 @@ SDValue NVPTXTargetLowering::LowerFP_EXTEND(SDValue Op,
   EVT WideVT = Op.getValueType();
   if (NarrowVT.getScalarType() == MVT::bf16) {
     if (WideVT.getScalarType() == MVT::f32 &&
-        (!STI.hasFeature(NVPTX::SM80) || STI.getPTXVersion() < 71)) {
+        (!STI.hasFeature(NVPTX::SM80) || !STI.hasFeature(NVPTX::PTX71))) {
       SDLoc Loc(Op);
       return DAG.getNode(ISD::BF16_TO_FP, Loc, WideVT, Narrow);
     }
-    if (WideVT.getScalarType() == MVT::f64 &&
-        (!STI.hasFeature(NVPTX::SM90) || STI.getPTXVersion() < 78)) {
+    if (WideVT.getScalarType() == MVT::f64 && !STI.hasFeature(NVPTX::SM90)) {
       EVT F32 = NarrowVT.changeElementType(*DAG.getContext(), MVT::f32);
       SDLoc Loc(Op);
-      if (STI.hasFeature(NVPTX::SM80) && STI.getPTXVersion() >= 71) {
+      if (STI.hasFeature(NVPTX::SM80) && STI.hasFeature(NVPTX::PTX71)) {
         Op = DAG.getNode(ISD::FP_EXTEND, Loc, F32, Narrow);
       } else {
         Op = DAG.getNode(ISD::BF16_TO_FP, Loc, F32, Narrow);
@@ -5548,6 +5546,16 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(4);
+    Infos.push_back(Info);
+    return;
   }
 }
 
@@ -6268,7 +6276,7 @@ static SDValue PerformFMinMaxCombine(SDNode *N,
 
   // 3-input min/max requires PTX 8.8+ and SM_100+, and only supports f32s
   EVT VT = N->getValueType(0);
-  if (VT != MVT::f32 || STI.getPTXVersion() < 88 ||
+  if (VT != MVT::f32 || !STI.hasFeature(NVPTX::PTX88) ||
       !STI.hasFeature(NVPTX::SM100))
     return SDValue();
 
@@ -7505,11 +7513,10 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
     }
 
     if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
-        STI.hasFeature(NVPTX::SM70) && STI.getPTXVersion() >= 63)
+        STI.hasFeature(NVPTX::SM70) && STI.hasFeature(NVPTX::PTX63))
       return AtomicExpansionKind::None;
 
-    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90) &&
-        STI.getPTXVersion() >= 78)
+    if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
       return AtomicExpansionKind::None;
 
     if (Ty->isDoubleTy() && STI.hasAtomAddF64())

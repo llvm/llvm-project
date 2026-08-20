@@ -316,7 +316,7 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.getType()->isAnyComplexType())
     return true;
 
-  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
+  if (const Expr *Base = Ptr.getRootExpr())
     return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
   return false;
 }
@@ -575,7 +575,7 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                    uint32_t Offset) {
-  uint32_t MinOffset = Ptr.getDeclDesc()->getMetadataSize();
+  uint32_t MinOffset = Ptr.block()->getMetadataSize();
   uint32_t PtrOffset = Ptr.getByteOffset();
 
   // We subtract Offset from PtrOffset. The result must be at least
@@ -1076,10 +1076,6 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  // Invalid decls have been diagnosed before.
-  if (DiagDecl->isInvalidDecl())
-    return false;
-
   // If this function is not constexpr because it is an inherited
   // non-constexpr constructor, diagnose that directly.
   const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
@@ -1122,8 +1118,8 @@ static bool diagnoseCallableDecl(InterpState &S, CodePtr OpPC,
         << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
 
     const FunctionDecl *Definition;
-    const Stmt *Body = DiagDecl->getBody(Definition);
-    if (Body && Definition)
+    bool HasBody = DiagDecl->hasBody(Definition);
+    if (HasBody && Definition)
       S.Note(Definition->getLocation(), diag::note_declared_at);
     else
       S.Note(DiagDecl->getLocation(), diag::note_declared_at);
@@ -1146,7 +1142,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
 
   const FunctionDecl *DiagDecl = F->getDecl();
   const FunctionDecl *Definition = nullptr;
-  DiagDecl->getBody(Definition);
+  DiagDecl->hasBody(Definition);
 
   if (!Definition && S.checkingPotentialConstantExpression() &&
       DiagDecl->isConstexpr()) {
@@ -1441,7 +1437,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
 
-    Source = Ptr.getDeclDesc()->asExpr();
+    Source = Ptr.getRootExpr();
     BlockToDelete = Ptr.block();
 
     // Check that new[]/delete[] or new/delete were used, not a mixture.
@@ -1796,9 +1792,9 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
     return false;
 
   const FunctionDecl *Definition = nullptr;
-  const Stmt *Body = FD->getBody(Definition);
+  bool HasBody = FD->hasBody(Definition);
 
-  if (Definition && Body &&
+  if (Definition && HasBody &&
       (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
                                      Definition->hasAttr<MSConstexprAttr>())))
     return true;
@@ -1853,7 +1849,7 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 
 static void compileFunction(InterpState &S, const Function *Func) {
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->getBody(Definition))
+  if (!Func->getDecl()->hasBody(Definition))
     return;
   if (!Definition)
     return;
@@ -2250,15 +2246,16 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     if (R.valid()) {
       Result = Iter.atField(*R.Offset);
       break;
-    } else if (R.Ambiguous) {
+    }
+    if (R.Ambiguous) {
       Ambiguous = true;
       break;
     }
 
-    // This moves us DOWN the type hierarchy.
-    Iter = Iter.getBase();
     if (Iter.isRoot() || !Iter.isBaseClass())
       break;
+    // This moves us DOWN the type hierarchy.
+    Iter = Iter.getBase();
   }
 
   if (Ambiguous)
@@ -2860,8 +2857,8 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
 
   unsigned LHSOffset = LHS.isOnePastEnd() ? LHS.getNumElems() : LHS.getIndex();
   unsigned RHSOffset = RHS.isOnePastEnd() ? RHS.getNumElems() : RHS.getIndex();
-  const auto *LHSLit = cast<StringLiteral>(LHS.getDeclDesc()->asExpr());
-  const auto *RHSLit = cast<StringLiteral>(RHS.getDeclDesc()->asExpr());
+  const auto *LHSLit = cast<StringLiteral>(LHS.getRootExpr());
+  const auto *RHSLit = cast<StringLiteral>(RHS.getRootExpr());
 
   StringRef LHSStr(LHSLit->getBytes());
   unsigned LHSLength = LHSStr.size();

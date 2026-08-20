@@ -2416,6 +2416,7 @@ cc_library(
         "//lldb:Utility",
         "//llvm:BinaryFormat",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

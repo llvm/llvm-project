@@ -409,6 +409,30 @@ func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %co
 
 // -----
 
+// CHECK-LABEL: func.func @test_parallel_if_atomic_capture_write(
+// CHECK-SAME: %[[X:.*]]: memref<i32>, %[[V:.*]]: memref<i32>, %[[EXPR:.*]]: i32
+func.func @test_parallel_if_atomic_capture_write(%x: memref<i32>, %v: memref<i32>, %expr: i32, %cond: i1) {
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK:     acc.atomic.capture {
+  // CHECK:       acc.atomic.read %[[V]] = %[[X]]
+  // CHECK:       acc.atomic.write %[[X]] = %[[EXPR]]
+  // CHECK:   } else {
+  // CHECK-NOT: acc.atomic
+  // CHECK:     memref.copy %[[X]], %[[V]]
+  // CHECK:     memref.store %[[EXPR]], %[[X]][]
+  acc.parallel if(%cond) {
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+      acc.atomic.write %x = %expr : memref<i32>, i32
+    }
+    acc.yield
+  }
+  return
+}
+
+// -----
+
 // A data entry op (acc.present) shared by an enclosing acc.data and a nested
 // acc.kernels that has an if clause. Lowering the kernels' if clause must not
 // erase or rewrite the present op that acc.data still uses (otherwise acc.data

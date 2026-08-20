@@ -711,6 +711,14 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32,
                                         MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
+    // Type promotion for v2i8 and v2i16 types have a heavy cost when
+    // vectorising. Account for this cost to avoid vectorising unprofitable
+    // examples when vectorising loops with low trip counts.
+    bool IsSigned =
+        ICA.getID() == Intrinsic::smin || ICA.getID() == Intrinsic::smax;
+    EVT VT = TLI->getValueType(DL, RetTy, /*AllowUnknown=*/true);
+    if (VT == MVT::v2i8 || VT == MVT::v2i16 || VT == MVT::v4i8)
+      return LT.first * (IsSigned ? 5 : 3);
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
@@ -1185,7 +1193,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::experimental_cttz_elts: {
     EVT ArgVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    if (!getTLI()->shouldExpandCttzElements(ArgVT)) {
+    if (getTLI()->isOperationCustom(ISD::CTTZ_ELTS, ArgVT)) {
       // This will consist of a SVE brkb and a cntp instruction. These
       // typically have the same latency and half the throughput as a vector
       // add instruction.
@@ -5157,12 +5165,26 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
+    // TODO: revisit these costs as it's not accurate enough for non-uniform
+    // constant.
+    return LT.first;
   case ISD::SRL:
   case ISD::SRA:
-  case ISD::SHL:
-    // These nodes are marked as 'custom' for combining purposes only.
-    // We know that they are legal. See LowerAdd in ISelLowering.
+  case ISD::SHL: {
+    // Immediate vector shifts require uniform shift amounts. Non-uniform
+    // constants therefore use variable shifts and require materializing the
+    // shift vector. Account for a shift and materialization per legalized
+    // vector, together with shared setup.
+    // This cost is for (ldr, shl) + adrp
+    // TODO: These costs are based on CodeSize only, consider other CostKinds.
+    if (Op2Info.isConstant() && !Op2Info.isUniform() &&
+        LT.second.isFixedLengthVector())
+      return 2 * LT.first + 1;
+
+    // Marked 'custom' for combining purposes; a uniform shift amount still
+    // lowers to a single legal instruction.
     return LT.first;
+  }
 
   case ISD::FNEG:
     // Scalar fmul(fneg) or fneg(fmul) can be converted to fnmul
@@ -6796,10 +6818,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (Ratio == 2 && !IsUSDot) {
     MVT InVT = InputLT.second.getScalarType();
 
-    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
+    // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2). A pure widening add with a
+    // ratio of 2 can use [SU]ADALP instead.
     if (IsSupported(ST->hasSVE2() || ST->hasSME(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
-      return Cost * 2;
+      return (BinOp || IsSub) ? Cost * 2 : Cost;
 
     // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
@@ -7213,15 +7236,9 @@ static bool containsDecreasingPointers(Loop *TheLoop,
   return false;
 }
 
-bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+bool AArch64TTIImpl::preferFixedOverScalableIfEqualCost() const {
   if (SVEPreferFixedOverScalableIfEqualCost.getNumOccurrences())
     return SVEPreferFixedOverScalableIfEqualCost;
-  // For cases like post-LTO vectorization, when we eventually know the trip
-  // count, epilogue with fixed-width vectorization can be deleted if the trip
-  // count is less than the epilogue iterations. That's why we prefer
-  // fixed-width vectorization in epilogue in case of equal costs.
-  if (IsEpilogue)
-    return true;
   return ST->useFixedOverScalableIfEqualCost();
 }
 

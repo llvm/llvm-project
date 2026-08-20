@@ -4565,6 +4565,17 @@ struct FormatStyle {
   ///   * `constexpr`
   ///   * `volatile`
   ///   * `restrict`
+  ///   * `typedef`
+  ///   * `consteval`
+  ///   * `constinit`
+  ///   * `thread_local`
+  ///   * `extern`
+  ///   * `mutable`
+  ///   * `signed`
+  ///   * `unsigned`
+  ///   * `long`
+  ///   * `short`
+  ///   * `explicit`
   ///   * `type`
   ///
   /// \note
@@ -4574,6 +4585,9 @@ struct FormatStyle {
   /// Items to the left of `type` will be placed to the left of the type and
   /// aligned in the order supplied. Items to the right of `type` will be
   /// placed to the right of the type and aligned in the order supplied.
+  /// If only one of `signed` and `unsigned` is specified, both are placed at
+  /// that position. The same applies to `long` and `short`. Specifying both
+  /// members of a pair allows them to be placed independently.
   ///
   /// \code{.yaml}
   ///   QualifierOrder: [inline, static, type, const, volatile]

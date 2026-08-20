@@ -49,12 +49,13 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Temp = 2,
-    K_Decl = 3,
-    K_Elem = 5,
-    K_RVO = 6,
-    K_InitList = 7,
-    K_DIE = 8,
+    K_Base = 2,
+    K_Temp = 3,
+    K_Decl = 4,
+    K_Elem = 6,
+    K_RVO = 7,
+    K_InitList = 8,
+    K_DIE = 9,
   };
 
   static InitLink This() { return InitLink{K_This}; }
@@ -63,6 +64,11 @@ public:
   static InitLink DIE() { return InitLink{K_DIE}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Base(unsigned Offset) {
+    InitLink IL{K_Base};
     IL.Offset = Offset;
     return IL;
   }

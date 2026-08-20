@@ -5,7 +5,7 @@ Test lldb-dap evaluate request
 import re
 from typing import Optional, Union
 
-from lldbsuite.test.decorators import skipIfWasm, skipIfWindows
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.session_helpers import ExpectEval, FrameContext

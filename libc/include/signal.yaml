@@ -23,7 +23,12 @@ macros:
 types:
   - type_name: pid_t
   - type_name: sig_atomic_t
+  - type_name: sig_t
+    standards:
+      - bsd
   - type_name: sighandler_t
+    standards:
+      - gnu
   - type_name: siginfo_t
   - type_name: sigset_t
   - type_name: stack_t

@@ -2551,6 +2551,8 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `optnone`
 :   This function attribute indicates that most optimization passes will skip
     this function, with the exception of interprocedural optimization passes.
+    Interprocedural passes may still analyze this function, transform its body,
+    and refine its attributes, but they will not rewrite its signature.
     Code generation defaults to the "fast" instruction selector.
     This attribute cannot be used together with the `alwaysinline`
     attribute; this attribute is also incompatible
@@ -4216,11 +4218,11 @@ monotonic modification order with other operations that are not marked
 ### Elementwise Atomic Operations
 
 Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
-and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
-must then be a fixed vector type whose total bit width is a power of two and
-whose element type is supported by the corresponding scalar atomic instruction.
-The {ref}`ordering <ordering>` of an `elementwise` instruction may not be
-`seq_cst`.
+{ref}`atomic load <i_load>`, and {ref}`atomic store <i_store>`, may be marked
+`elementwise`. The access type must then be a fixed vector type whose total bit
+width is a power of two and whose element type is supported by the corresponding
+scalar atomic instruction. The {ref}`ordering <ordering>` of an `elementwise`
+instruction may not be `seq_cst`.
 
 An `elementwise` atomic instruction behaves as if it were expanded into one
 scalar version of that instruction for each vector element. Each resulting
@@ -8088,18 +8090,15 @@ main loop. Each node has a single operand containing the name string:
 
 Additionally, enabling predication implicitly enables vectorization.
 
-#### '`llvm.loop.vectorize.scalable.enable`' Metadata
+#### '`llvm.loop.vectorize.scalable.enable`' and '`llvm.loop.vectorize.scalable.disable`' Metadata
 
 This metadata selectively enables or disables scalable vectorization for the
 loop, and only has any effect if vectorization for the loop is already enabled.
-The first operand is the string `llvm.loop.vectorize.scalable.enable`
-and the second operand is a bit. If the bit operand value is 1 scalable
-vectorization is enabled, whereas a value of 0 reverts to the default fixed
-width vectorization:
+Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.scalable.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.scalable.enable"}
+!1 = !{!"llvm.loop.vectorize.scalable.disable"}
 ```
 
 #### '`llvm.loop.vectorize.width`' Metadata
@@ -9443,6 +9442,24 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Target ABI Module Flags Metadata
+
+This module flag names the target ABI that the module was compiled
+for. The value is an `MDString`. The set of valid values and
+interpretation target-specific.
+
+For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
+`"lp64d"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"lp64d"}
+```
+while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"aapcs"}
+```
+
 ### Long Double Type Module Flags Metadata
 
 Describe the floating-point format used by libm for `long double`. The
@@ -9524,6 +9541,14 @@ flags metadata, using the following key-value pairs:
 ```
 
 ### Other Module Flags
+
+`executable-stack`
+:   A non-zero value indicates the module contains code requiring an executable
+    stack, such as a trampoline built in stack memory and jumped to. On ELF
+    targets a non-zero value emits `.note.GNU-stack` with `SHF_EXECINSTR` set,
+    telling the linker to mark the binary's stack executable. The flag must use
+    the `max` merge behavior, so that a module requiring an executable stack
+    still gets one after linking with modules that do not.
 
 `require-logical-pointer`
 :   This flag indicates this module must only use logical pointer intrinsics
@@ -11991,7 +12016,7 @@ store i32 3, ptr %ptr                           ; yields void
 
 ```
 store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.group !<empty_node>]        ; yields void
-store atomic [volatile] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
+store atomic [volatile] [elementwise] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
 !<nontemp_node> = !{ i32 1 }
 !<empty_node> = !{}
 ```
@@ -12009,16 +12034,25 @@ operand. If the `store` is marked as `volatile`, then the optimizer is not
 allowed to modify the number or order of execution of this `store` with other
 {ref}`volatile operations <volatile>`.  Only values of {ref}`first class <t_firstclass>` types of known size (i.e., not containing an {ref}`opaque structural type <t_opaque>`) can be stored.
 
-If the `store` is marked as `atomic`, it takes an extra {ref}`ordering <ordering>` and optional `syncscope("<target-scope>")` argument. The
-`acquire` and `acq_rel` orderings aren't valid on `store` instructions.
-Atomic loads produce {ref}`defined <memmodel>` results when they may see
-multiple atomic stores. The type of the pointee must be an integer, pointer,
-floating-point, or vector type whose bit width is a power of two greater than
-or equal to eight. `align` must be
-explicitly specified on atomic stores. Note: if the alignment is not greater or
-equal to the size of the `<value>` type, the atomic operation is likely to
-require a lock and have poor performance. `!nontemporal` does not have any
-defined semantics for atomic stores.
+If the `store` is marked as `atomic`, it takes an extra
+{ref}`ordering <ordering>`, an optional `syncscope("<target-scope>")`, and an
+optional {ref}`elementwise <elementwise-atomics>` argument. The `acquire` and
+`acq_rel` orderings are not valid on `store` instructions. Atomic loads produce
+{ref}`defined <memmodel>` results when they may see multiple atomic stores. The
+type of the pointee must be an integer, pointer, floating-point, or vector type
+whose bit width is a power of two greater than or equal to eight.
+
+If the `store` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`. The stored type must
+be a fixed vector type whose total bit width is a power of two and whose
+element type is supported by scalar atomic stores.
+
+`align` must be explicitly specified on atomic stores, and is otherwise
+optional on non-atomic stores. Note: if the alignment is not greater than or
+equal to the size of the `<value>` type, or the element type for an
+`elementwise` store, the atomic operation is likely to require a lock and have
+poor performance. `!nontemporal` does not have any defined semantics for
+atomic stores.
 
 The optional constant `align` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
@@ -21504,7 +21538,7 @@ type and first argument.
 
   - FP8 formats: `"Float8E5M2"`, `"Float8E5M2FNUZ"`, `"Float8E4M3"`,
     `"Float8E4M3FN"`, `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`,
-    `"Float8E8M0FNU"`
+    `"Float8E8M0FNU"`, `"Float8E5M3FNU"`
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
@@ -21557,6 +21591,11 @@ integer whose bit width equals the format's bit width (`i8` for FP8, `i6` for FP
   - When `saturation` is `false` and the target format does not support infinity (e.g., formats
     with "FN" suffix), the intrinsic returns a poison value.
   - When `saturation` is `true`, the value is clamped to the maximum/minimum representable finite value.
+- **Negative values in unsigned formats**: Formats without a sign bit (for example
+  `"Float8E5M3FNU"`) cannot represent negative values. `-0.0` converts to zero. Any other negative
+  input is clamped to the minimum representable finite value when `saturation` is `true`, and
+  returns a poison value otherwise. A negative NaN still converts to the NaN encoding when the
+  format supports NaN.
 
 For FP6/FP4 interpretations, producers are expected to use `saturation` = `true`; using `saturation` = `false` and generating NaN/Inf/overflowing values results in a poison value.
 
@@ -21602,7 +21641,7 @@ overloaded on both its return type and first argument.
 
   - FP8 formats: `"Float8E5M2"`, `"Float8E5M2FNUZ"`, `"Float8E4M3"`,
     `"Float8E4M3FN"`, `"Float8E4M3FNUZ"`, `"Float8E4M3B11FNUZ"`, `"Float8E3M4"`,
-    `"Float8E8M0FNU"`
+    `"Float8E8M0FNU"`, `"Float8E5M3FNU"`
   - FP6 formats: `"Float6E3M2FN"`, `"Float6E2M3FN"`
   - FP4 formats: `"Float4E2M1FN"`
 
@@ -21664,10 +21703,9 @@ These intrinsics make it possible to excise one parameter, marked with
 the {ref}`nest <nest>` attribute, from a function. The result is a
 callable function pointer lacking the nest parameter - the caller does
 not need to provide a value for it. Instead, the value to use is stored
-in advance in a "trampoline", a block of memory usually allocated on the
-stack, which also contains code to splice the nest value into the
-argument list. This is used to implement the GCC nested function address
-extension.
+in advance in a "trampoline", a block of memory which also contains code
+to splice the nest value into the argument list. This is used to
+implement the GCC nested function address extension.
 
 For example, if the function is `i32 f(ptr nest %c, i32 %x, i32 %y)`
 then the resulting function pointer has signature `i32 (i32, i32)`.
@@ -21706,6 +21744,13 @@ intrinsic. Note that the size and the alignment are target-specific -
 LLVM currently provides no portable way of determining them, so a
 front-end that generates this intrinsic needs to have some
 target-specific knowledge.
+
+The block may be allocated anywhere - the stack, the heap, a global, or a
+runtime-managed pool - as long as it is writable when
+`llvm.init.trampoline` executes and the address returned by
+{ref}`llvm.adjust.trampoline <int_at>` is executable when called. Those two
+addresses need not be equal, so a W^X implementation may map the block
+twice, once writable and once executable.
 
 The `func` argument must be a constant (potentially bitcasted) pointer to a
 function declaration or definition, since the calling convention may affect the

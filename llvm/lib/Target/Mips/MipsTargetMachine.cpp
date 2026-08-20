@@ -304,7 +304,7 @@ void MipsPassConfig::addPreEmitPass() {
 }
 
 bool MipsPassConfig::addIRTranslator() {
-  addPass(new IRTranslator(getOptLevel()));
+  addPass(new IRTranslatorLegacy(getOptLevel()));
   return false;
 }
 
@@ -313,7 +313,7 @@ void MipsPassConfig::addPreLegalizeMachineIR() {
 }
 
 bool MipsPassConfig::addLegalizeMachineIR() {
-  addPass(new Legalizer());
+  addPass(new LegalizerLegacy());
   return false;
 }
 

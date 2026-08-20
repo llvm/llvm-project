@@ -1679,6 +1679,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   if (Opts.SaveTempsFilePrefix == OutputFile)
     GenerateArg(Consumer, OPT_save_temps_EQ, "obj");
 
+  if (!Opts.SaveDynDbgTempsFilePrefix.empty())
+    GenerateArg(Consumer, OPT_save_dynamic_debugging_temps);
+
   StringRef MemProfileBasename("memprof.profraw");
   if (!Opts.MemoryProfileOutput.empty()) {
     if (Opts.MemoryProfileOutput == MemProfileBasename) {
@@ -2012,6 +2015,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         llvm::StringSwitch<std::string>(A->getValue())
             .Case("obj", OutputFile)
             .Default(llvm::sys::path::filename(OutputFile).str());
+
+  if (Args.getLastArg(OPT_save_dynamic_debugging_temps))
+    Opts.SaveDynDbgTempsFilePrefix = OutputFile;
 
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
@@ -2726,7 +2732,8 @@ unsigned clang::getOptimizationLevel(const ArgList &Args, InputKind IK,
     if (A->getOption().matches(options::OPT_O0))
       return 0;
 
-    if (A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_Ofast) ||
+        A->getOption().matches(options::OPT_O4))
       return 3;
 
     assert(A->getOption().matches(options::OPT_O));
@@ -3179,7 +3186,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+  if (Args.hasArg(OPT_emit_cir))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR

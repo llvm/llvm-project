@@ -21,16 +21,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d(ptr addrspace(7) %d, 
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_7];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_8];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_9];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_8];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_9];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1, %rd4;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rd4;
@@ -44,16 +44,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d(ptr addrspace(7) %d, 
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_8];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_9];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_8];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_param_9];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rd2;
@@ -76,16 +76,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1(ptr addrspace(7) 
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_7];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_8];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_9];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_8];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_9];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint.cta_group::1 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1, %rd4;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.cta_group::1 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint.cta_group::1 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rd4;
@@ -99,16 +99,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1(ptr addrspace(7) 
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_8];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_9];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_8];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg1_param_9];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint.cta_group::1 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.cta_group::1 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint.cta_group::1 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rd2;
@@ -131,16 +131,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2(ptr addrspace(7) 
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_0];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_1];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_2];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_3];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_4];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_5];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_6];
-; CHECK-PTX64-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_7];
-; CHECK-PTX64-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_8];
-; CHECK-PTX64-NEXT:    ld.param.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_9];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_0];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_2];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_3];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_4];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_5];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_6];
+; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_7];
+; CHECK-PTX64-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_8];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_9];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint.cta_group::2 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1, %rd4;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.cta_group::2 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rs1;
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint.cta_group::2 [%rd1], [%rd3, {%r1, %r2, %r3, %r4, %r5}], [%rd2], %rd4;
@@ -154,16 +154,16 @@ define void @test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2(ptr addrspace(7) 
 ; CHECK-PTX-SHARED32-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-SHARED32-EMPTY:
 ; CHECK-PTX-SHARED32-NEXT:  // %bb.0:
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_0];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_1];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_2];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_3];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_4];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_5];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_6];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_8];
-; CHECK-PTX-SHARED32-NEXT:    ld.param.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_9];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_0];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_2];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r3, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_3];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_4];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_5];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r6, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_6];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r7, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_7];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b16 %rs1, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_8];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [test_cp_async_bulk_tensor_g2s_tile_gather4_2d_cg2_param_9];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint.cta_group::2 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.multicast::cluster.cta_group::2 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile::gather4.mbarrier::complete_tx::bytes.L2::cache_hint.cta_group::2 [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rd2;

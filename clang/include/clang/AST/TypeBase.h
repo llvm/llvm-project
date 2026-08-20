@@ -1635,6 +1635,9 @@ public:
   /// Strip Objective-C "__kindof" types from the given type.
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
+  /// Strip nullability attributes from the given type.
+  QualType stripNullability(const ASTContext &ctx) const;
+
   /// Remove all qualifiers including _Atomic.
   ///
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
@@ -7435,6 +7438,9 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
       : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
                        DeducedAsTypeOrCanon),
         Template(Template) {
+
+    assert(!Template.isNull());
+
     auto Dep = toTypeDependence(Template.getDependence());
     // A deduced AutoType only syntactically depends on its template name.
     if (DK == DeducedKind::Deduced)
