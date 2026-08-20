@@ -286,3 +286,244 @@ define <16 x i64> @test_divv_16i64(<16 x i64> %a, <16 x i64> %b) nounwind {
   %res = udiv <16 x i64> %a, %b
   ret <16 x i64> %res
 }
+
+define <3 x i64> @test_divv_3i64(<3 x i64> %a, <3 x i64> %b) nounwind {
+; FASTMULLQ-LABEL: test_divv_3i64:
+; FASTMULLQ:       # %bb.0:
+; FASTMULLQ-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; FASTMULLQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; FASTMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm2
+; FASTMULLQ-NEXT:    vbroadcastsd {{.*#+}} zmm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FASTMULLQ-NEXT:    vdivpd {rd-sae}, %zmm2, %zmm3, %zmm2
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm3
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm3, %zmm3
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm3, %xmm4
+; FASTMULLQ-NEXT:    vpsubq %xmm4, %xmm0, %xmm4
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm2, %zmm5, %zmm2
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; FASTMULLQ-NEXT:    vpaddq %xmm2, %xmm3, %xmm3
+; FASTMULLQ-NEXT:    vpmullq %xmm1, %xmm2, %xmm2
+; FASTMULLQ-NEXT:    vpsubq %xmm2, %xmm4, %xmm2
+; FASTMULLQ-NEXT:    vpcmpnltuq %xmm1, %xmm2, %k0
+; FASTMULLQ-NEXT:    vpmovm2q %k0, %xmm2
+; FASTMULLQ-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
+; FASTMULLQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; FASTMULLQ-NEXT:    vmovq %xmm0, %rax
+; FASTMULLQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; FASTMULLQ-NEXT:    vmovq %xmm0, %rcx
+; FASTMULLQ-NEXT:    xorl %edx, %edx
+; FASTMULLQ-NEXT:    divq %rcx
+; FASTMULLQ-NEXT:    vmovq %rax, %xmm0
+; FASTMULLQ-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; FASTMULLQ-NEXT:    retq
+;
+; SLOWMULLQ-LABEL: test_divv_3i64:
+; SLOWMULLQ:       # %bb.0:
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm0, %rax
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; SLOWMULLQ-NEXT:    xorl %edx, %edx
+; SLOWMULLQ-NEXT:    divq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rax, %xmm2
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rax
+; SLOWMULLQ-NEXT:    vmovq %xmm1, %rcx
+; SLOWMULLQ-NEXT:    xorl %edx, %edx
+; SLOWMULLQ-NEXT:    divq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rax, %xmm3
+; SLOWMULLQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; SLOWMULLQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rax
+; SLOWMULLQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rcx
+; SLOWMULLQ-NEXT:    xorl %edx, %edx
+; SLOWMULLQ-NEXT:    divq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rax, %xmm0
+; SLOWMULLQ-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; SLOWMULLQ-NEXT:    retq
+  %res = udiv <3 x i64> %a, %b
+  ret <3 x i64> %res
+}
+
+define <3 x i64> @test_sremv_3i64(<3 x i64> %a, <3 x i64> %b) nounwind {
+; FASTMULLQ-LABEL: test_sremv_3i64:
+; FASTMULLQ:       # %bb.0:
+; FASTMULLQ-NEXT:    vpabsq %xmm1, %xmm2
+; FASTMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm2, %zmm3
+; FASTMULLQ-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FASTMULLQ-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; FASTMULLQ-NEXT:    vpabsq %xmm0, %xmm4
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm5
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
+; FASTMULLQ-NEXT:    vpmullq %xmm2, %xmm5, %xmm5
+; FASTMULLQ-NEXT:    vpsubq %xmm5, %xmm4, %xmm4
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm3
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; FASTMULLQ-NEXT:    vpmullq %xmm2, %xmm3, %xmm3
+; FASTMULLQ-NEXT:    vpsubq %xmm3, %xmm4, %xmm3
+; FASTMULLQ-NEXT:    vpcmpnltuq %xmm2, %xmm3, %k1
+; FASTMULLQ-NEXT:    vpsubq %xmm2, %xmm3, %xmm3 {%k1}
+; FASTMULLQ-NEXT:    vpmovq2m %xmm0, %k1
+; FASTMULLQ-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; FASTMULLQ-NEXT:    vpsubq %xmm3, %xmm2, %xmm3 {%k1}
+; FASTMULLQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; FASTMULLQ-NEXT:    vmovq %xmm0, %rax
+; FASTMULLQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; FASTMULLQ-NEXT:    vmovq %xmm0, %rcx
+; FASTMULLQ-NEXT:    cqto
+; FASTMULLQ-NEXT:    idivq %rcx
+; FASTMULLQ-NEXT:    vmovq %rdx, %xmm0
+; FASTMULLQ-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
+; FASTMULLQ-NEXT:    retq
+;
+; SLOWMULLQ-LABEL: test_sremv_3i64:
+; SLOWMULLQ:       # %bb.0:
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm0, %rax
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm1, %rcx
+; SLOWMULLQ-NEXT:    cqto
+; SLOWMULLQ-NEXT:    idivq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rdx, %xmm2
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rax
+; SLOWMULLQ-NEXT:    vmovq %xmm1, %rcx
+; SLOWMULLQ-NEXT:    cqto
+; SLOWMULLQ-NEXT:    idivq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rdx, %xmm3
+; SLOWMULLQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
+; SLOWMULLQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rax
+; SLOWMULLQ-NEXT:    vextracti128 $1, %ymm1, %xmm0
+; SLOWMULLQ-NEXT:    vmovq %xmm0, %rcx
+; SLOWMULLQ-NEXT:    cqto
+; SLOWMULLQ-NEXT:    idivq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rdx, %xmm0
+; SLOWMULLQ-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; SLOWMULLQ-NEXT:    retq
+  %res = srem <3 x i64> %a, %b
+  ret <3 x i64> %res
+}
+
+define <6 x i64> @test_divv_6i64(<6 x i64> %a, <6 x i64> %b) nounwind {
+; FASTMULLQ-LABEL: test_divv_6i64:
+; FASTMULLQ:       # %bb.0:
+; FASTMULLQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm2
+; FASTMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm2, %zmm3
+; FASTMULLQ-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FASTMULLQ-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; FASTMULLQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm5
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm5, %zmm6
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm6, %zmm6
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm6, %zmm6
+; FASTMULLQ-NEXT:    vpmullq %xmm2, %xmm6, %xmm7
+; FASTMULLQ-NEXT:    vpsubq %xmm7, %xmm5, %xmm5
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm5, %zmm7
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm7, %zmm3
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; FASTMULLQ-NEXT:    vpaddq %xmm3, %xmm6, %xmm6
+; FASTMULLQ-NEXT:    vpmullq %xmm2, %xmm3, %xmm3
+; FASTMULLQ-NEXT:    vpsubq %xmm3, %xmm5, %xmm3
+; FASTMULLQ-NEXT:    vpcmpnltuq %xmm2, %xmm3, %k0
+; FASTMULLQ-NEXT:    vpmovm2q %k0, %xmm2
+; FASTMULLQ-NEXT:    vpsubq %xmm2, %xmm6, %xmm2
+; FASTMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm3
+; FASTMULLQ-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm4, %zmm4
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm4, %zmm4
+; FASTMULLQ-NEXT:    vpmullq %ymm1, %ymm4, %ymm5
+; FASTMULLQ-NEXT:    vpsubq %ymm5, %ymm0, %ymm0
+; FASTMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm5
+; FASTMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm3
+; FASTMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; FASTMULLQ-NEXT:    vpaddq %ymm3, %ymm4, %ymm4
+; FASTMULLQ-NEXT:    vpmullq %ymm1, %ymm3, %ymm3
+; FASTMULLQ-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; FASTMULLQ-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k0
+; FASTMULLQ-NEXT:    vpmovm2q %k0, %ymm0
+; FASTMULLQ-NEXT:    vpsubq %ymm0, %ymm4, %ymm0
+; FASTMULLQ-NEXT:    vinserti32x4 $2, %xmm2, %zmm0, %zmm0
+; FASTMULLQ-NEXT:    retq
+;
+; SLOWMULLQ-LABEL: test_divv_6i64:
+; SLOWMULLQ:       # %bb.0:
+; SLOWMULLQ-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm2, %rax
+; SLOWMULLQ-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
+; SLOWMULLQ-NEXT:    vpextrq $1, %xmm3, %rcx
+; SLOWMULLQ-NEXT:    xorl %edx, %edx
+; SLOWMULLQ-NEXT:    divq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rax, %xmm4
+; SLOWMULLQ-NEXT:    vmovq %xmm2, %rax
+; SLOWMULLQ-NEXT:    vmovq %xmm3, %rcx
+; SLOWMULLQ-NEXT:    xorl %edx, %edx
+; SLOWMULLQ-NEXT:    divq %rcx
+; SLOWMULLQ-NEXT:    vmovq %rax, %xmm2
+; SLOWMULLQ-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; SLOWMULLQ-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm3
+; SLOWMULLQ-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; SLOWMULLQ-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; SLOWMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; SLOWMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm4, %zmm4
+; SLOWMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm4, %zmm4
+; SLOWMULLQ-NEXT:    vpmullq %ymm1, %ymm4, %ymm5
+; SLOWMULLQ-NEXT:    vpsubq %ymm5, %ymm0, %ymm0
+; SLOWMULLQ-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm5
+; SLOWMULLQ-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm3
+; SLOWMULLQ-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; SLOWMULLQ-NEXT:    vpaddq %ymm3, %ymm4, %ymm4
+; SLOWMULLQ-NEXT:    vpmullq %ymm1, %ymm3, %ymm3
+; SLOWMULLQ-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; SLOWMULLQ-NEXT:    vpcmpnltuq %ymm1, %ymm0, %k0
+; SLOWMULLQ-NEXT:    vpmovm2q %k0, %ymm0
+; SLOWMULLQ-NEXT:    vpsubq %ymm0, %ymm4, %ymm0
+; SLOWMULLQ-NEXT:    vinserti32x4 $2, %xmm2, %zmm0, %zmm0
+; SLOWMULLQ-NEXT:    retq
+  %res = udiv <6 x i64> %a, %b
+  ret <6 x i64> %res
+}
+
+define <9 x i64> @test_divv_9i64(<9 x i64> %a, <9 x i64> %b) nounwind {
+; CHECK-LABEL: test_divv_9i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovq %r8, %xmm0
+; CHECK-NEXT:    vmovq %rcx, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-NEXT:    vmovq %rdx, %xmm1
+; CHECK-NEXT:    vmovq %rsi, %xmm2
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; CHECK-NEXT:    vmovq %r9, %xmm1
+; CHECK-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    vinserti128 $1, {{[0-9]+}}(%rsp), %ymm1, %ymm1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    vmovdqu64 {{[0-9]+}}(%rsp), %zmm1
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm2
+; CHECK-NEXT:    vcvtuqq2pd {ru-sae}, %zmm1, %zmm3
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm2, %zmm2
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm2, %zmm2
+; CHECK-NEXT:    vpmullq %zmm1, %zmm2, %zmm4
+; CHECK-NEXT:    vpsubq %zmm4, %zmm0, %zmm0
+; CHECK-NEXT:    vcvtuqq2pd {rd-sae}, %zmm0, %zmm4
+; CHECK-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm4, %zmm3
+; CHECK-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
+; CHECK-NEXT:    vpmullq %zmm1, %zmm3, %zmm4
+; CHECK-NEXT:    vpsubq %zmm4, %zmm0, %zmm0
+; CHECK-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    vpmovm2q %k0, %zmm0
+; CHECK-NEXT:    vpaddq %zmm3, %zmm2, %zmm1
+; CHECK-NEXT:    vpsubq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rax, 64(%rdi)
+; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdi)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %res = udiv <9 x i64> %a, %b
+  ret <9 x i64> %res
+}
