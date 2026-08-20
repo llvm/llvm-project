@@ -13,12 +13,18 @@
 // represents data and scales in a single block-scaled tensor as expected by the
 // TOSA specification.
 //
-// This file implements the pass for materializing the planar format:
+// This file implements two complementary passes for converting between these
+// formats:
 // - tosa-materialize-planar-block-scaled exposes the data and scale components
-//   of composite block-scaled tensors as separate SSA values by inserting
+// of
+//   composite block-scaled tensors as separate SSA values by inserting
 //   tosa.decompose_block_scaled and tosa.compose_block_scaled operations.
 //   This provides a planar interface for subsequent lowering to backends such
 //   as linalg that expect separate data and scale tensors.
+// - tosa-remove-planar-block-scaled removes tosa.decompose_block_scaled and
+//   tosa.compose_block_scaled operations to convert from the planar format to
+//   the composite format. This is useful when legalizing operations to the TOSA
+//   dialect.
 //
 // Known Limitations:
 // - Multiple functions and function calls are not currently supported.
@@ -34,11 +40,14 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace tosa {
 #define GEN_PASS_DEF_TOSAMATERIALIZEPLANARBLOCKSCALEDPASS
+#define GEN_PASS_DEF_TOSAREMOVEPLANARBLOCKSCALEDPASS
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 
 namespace {
@@ -162,6 +171,179 @@ public:
     return success();
   }
 };
+
+struct RemoveDecomposeComposeBlockScaled
+    : public OpRewritePattern<ComposeBlockScaledOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComposeBlockScaledOp op,
+                                PatternRewriter &rewriter) const override {
+    auto decompose = op.getData().getDefiningOp<DecomposeBlockScaledOp>();
+    if (!decompose || op.getData() != decompose.getData() ||
+        op.getScale() != decompose.getScale() ||
+        op.getType() != decompose.getInput().getType())
+      return failure();
+
+    const auto blockScaledType =
+        cast<BlockScaledType>(cast<TensorType>(op.getType()).getElementType());
+    if (op.getBlockShape() != blockScaledType.getBlockShape())
+      return failure();
+
+    rewriter.replaceOp(op, decompose.getInput());
+    return success();
+  }
+};
+
+struct PlanarComponentPair {
+  Value data;
+  Value scale;
+};
+
+LogicalResult checkFunctionArguments(ComposeBlockScaledOp compose) {
+  auto function = compose->getParentOfType<func::FuncOp>();
+  if (!function)
+    return compose.emitOpError("must be inside a function");
+
+  for (Value operand : compose.getOperands()) {
+    auto argument = dyn_cast<BlockArgument>(operand);
+    if (!argument || argument.getOwner() != &function.getBody().front())
+      return compose.emitOpError(
+          "requires data and scale operands to be function entry arguments");
+  }
+  return success();
+}
+
+LogicalResult checkFunctionReturns(DecomposeBlockScaledOp decompose) {
+  auto function = decompose->getParentOfType<func::FuncOp>();
+  if (!function)
+    return decompose.emitOpError("must be inside a function");
+
+  for (Value result : decompose.getResults()) {
+    if (result.use_empty())
+      return decompose.emitOpError(
+          "requires both data and scale results to be returned");
+    for (Operation *user : result.getUsers()) {
+      auto returnOp = dyn_cast<func::ReturnOp>(user);
+      if (!returnOp || returnOp->getParentOp() != function)
+        return decompose.emitOpError(
+            "requires data and scale results to be used only by returns of "
+            "the enclosing function");
+    }
+  }
+  return success();
+}
+
+// This analysis is expected to be run after decompose_block_scaled ->
+// compose_block_scaled sequences have been folded. Therefore, it's expected
+// compose_block_scaled operations exist only at function argument boundaries.
+FailureOr<SmallVector<PlanarComponentPair>>
+getPlanarArgumentComponentPairs(ModuleOp module) {
+  SmallVector<PlanarComponentPair> planarComponentPairs;
+  WalkResult result =
+      module.walk([&planarComponentPairs](ComposeBlockScaledOp op) {
+        if (failed(checkFunctionArguments(op)))
+          return WalkResult::interrupt();
+        planarComponentPairs.push_back({op.getData(), op.getScale()});
+        return WalkResult::advance();
+      });
+
+  if (result.wasInterrupted())
+    return failure();
+
+  return planarComponentPairs;
+}
+
+// This analysis is expected to be run after decompose_block_scaled ->
+// compose_block_scaled sequences have been folded. Therefore, it's expected
+// decompose_block_scaled operations exist only at function result boundaries.
+FailureOr<SmallVector<PlanarComponentPair>>
+getPlanarResultComponentPairs(ModuleOp module) {
+  SmallVector<PlanarComponentPair> planarComponentPairs;
+  WalkResult result =
+      module.walk([&planarComponentPairs](DecomposeBlockScaledOp op) {
+        if (failed(checkFunctionReturns(op)))
+          return WalkResult::interrupt();
+        planarComponentPairs.push_back({op->getResult(0), op.getResult(1)});
+        return WalkResult::advance();
+      });
+
+  if (result.wasInterrupted())
+    return failure();
+
+  return planarComponentPairs;
+}
+
+LogicalResult rewriteFunctionArguments(
+    func::FuncOp func,
+    const SmallVector<PlanarComponentPair> &planarArgumentPairs) {
+  for (const auto &pair : planarArgumentPairs) {
+    const auto dataArgument = cast<BlockArgument>(pair.data);
+    const auto scaleArgument = cast<BlockArgument>(pair.scale);
+    if (!dataArgument.hasOneUse() || !scaleArgument.hasOneUse())
+      return func.emitOpError(
+          "requires planar arguments to be used by a single compose");
+
+    auto compose = dyn_cast<ComposeBlockScaledOp>(*dataArgument.user_begin());
+    if (!compose || compose.getData() != dataArgument ||
+        compose.getScale() != scaleArgument)
+      return func.emitOpError("requires a matching boundary compose");
+
+    const unsigned argumentIndex = dataArgument.getArgNumber();
+    if (failed(func.insertArgument(argumentIndex, compose.getType(), {},
+                                   compose.getLoc())))
+      return failure();
+    compose.getResult().replaceAllUsesWith(func.getArgument(argumentIndex));
+    compose.erase();
+
+    llvm::BitVector argumentsToErase(func.getNumArguments());
+    argumentsToErase.set(dataArgument.getArgNumber());
+    argumentsToErase.set(scaleArgument.getArgNumber());
+    if (failed(func.eraseArguments(argumentsToErase)))
+      return failure();
+  }
+
+  return success();
+}
+
+LogicalResult rewriteFunctionResult(
+    func::FuncOp func,
+    const SmallVector<PlanarComponentPair> &planarResultPairs) {
+  if (planarResultPairs.empty())
+    return success();
+
+  auto returns = func.getBody().getOps<func::ReturnOp>();
+  if (!llvm::hasSingleElement(returns))
+    return func.emitOpError(
+        "requires a single function return when rewriting planar results");
+  auto returnOp = *returns.begin();
+
+  for (const PlanarComponentPair &pair : planarResultPairs) {
+    auto decompose = pair.data.getDefiningOp<DecomposeBlockScaledOp>();
+    if (!decompose || decompose.getData() != pair.data ||
+        decompose.getScale() != pair.scale)
+      return func.emitOpError("requires a matching boundary decompose");
+    if (!pair.data.hasOneUse() || !pair.scale.hasOneUse() ||
+        pair.data.use_begin()->getOwner() != returnOp.getOperation() ||
+        pair.scale.use_begin()->getOwner() != returnOp.getOperation())
+      return returnOp.emitOpError(
+          "requires each planar result pair to be returned exactly once");
+
+    const unsigned dataIndex = pair.data.use_begin()->getOperandNumber();
+    const unsigned scaleIndex = pair.scale.use_begin()->getOperandNumber();
+    Value packed = decompose.getInput();
+
+    // Insert the newly formed packed result at the index of the data tensor
+    if (failed(func.insertResult(dataIndex, packed.getType(), {})) ||
+        failed(func.eraseResult(dataIndex + 1)) ||
+        failed(func.eraseResult(scaleIndex)))
+      return failure();
+
+    returnOp->setOperand(dataIndex, packed);
+    returnOp->eraseOperand(scaleIndex);
+    decompose.erase();
+  }
+  return success();
+}
 } // namespace
 
 class TosaMaterializePlanarBlockScaledPass
@@ -257,6 +439,57 @@ public:
     patterns.add<ConvertTosaOpToPlanarAPI>(converter, context);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
+class TosaRemovePlanarBlockScaledPass
+    : public impl::TosaRemovePlanarBlockScaledPassBase<
+          TosaRemovePlanarBlockScaledPass> {
+public:
+  using Base::Base;
+
+  void runOnOperation() override {
+    ModuleOp module = getOperation();
+
+    // Fold decompose_block_scaled -> compose_block_scaled sequences
+    RewritePatternSet patterns(&getContext());
+    patterns.add<RemoveDecomposeComposeBlockScaled>(&getContext());
+    GreedyRewriteConfig config;
+    if (failed(applyPatternsGreedily(module, std::move(patterns), config)))
+      return signalPassFailure();
+
+    if (convertFunctionBoundaries) {
+      FailureOr<SmallVector<PlanarComponentPair>> maybeArgumentPairs =
+          getPlanarArgumentComponentPairs(getOperation());
+      if (failed(maybeArgumentPairs))
+        return signalPassFailure();
+      for (const auto &pair : *maybeArgumentPairs) {
+        auto function = cast<func::FuncOp>(
+            cast<BlockArgument>(pair.data).getOwner()->getParentOp());
+        if (failed(rewriteFunctionArguments(function, {pair})))
+          return signalPassFailure();
+      }
+      FailureOr<SmallVector<PlanarComponentPair>> maybeResultPairs =
+          getPlanarResultComponentPairs(module);
+      if (failed(maybeResultPairs))
+        return signalPassFailure();
+
+      for (const auto &pair : *maybeResultPairs) {
+        auto function =
+            pair.data.getDefiningOp()->getParentOfType<func::FuncOp>();
+        if (failed(rewriteFunctionResult(function, {pair})))
+          return signalPassFailure();
+      }
+    }
+
+    // Check all compose_block_scaled and decompose_block_scaled operations have
+    // been removed
+    ConversionTarget target(getContext());
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
+    target.addIllegalOp<ComposeBlockScaledOp, DecomposeBlockScaledOp>();
+    if (failed(applyFullConversion(getOperation(), target,
+                                   RewritePatternSet(&getContext()))))
       signalPassFailure();
   }
 };

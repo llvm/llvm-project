@@ -275,6 +275,23 @@ def TosaMaterializePlanarBlockScaledPass
   ];
 }
 
+def TosaRemovePlanarBlockScaledPass
+    : Pass<"tosa-remove-planar-block-scaled", "mlir::ModuleOp"> {
+  let summary = "Remove planar block-scaled bridge operations";
+  let description = [{
+    Removes tosa.decompose_block_scaled and tosa.compose_block_scaled operations,
+    converting from a planar interface to a packed interface whereby data and
+    scale information are exposed by a single tosa.block_scaled composite type.
+    This provides a TOSA specification compatible interface.
+  }];
+
+  let options = [
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           "false", "Replace data and scale tensor function arguments and results "
+                    "with block-scaled tensors.">
+  ];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
