@@ -330,6 +330,21 @@ std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
   return Ret;
 }
 
+StringRef TargetMachine::getTargetABIName(const Module &M) const {
+  StringRef OptionABI = Options.MCOptions.getABIName();
+  const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi"));
+  if (!MD)
+    return OptionABI;
+
+  StringRef ModuleABI = MD->getString();
+  if (!OptionABI.empty() && OptionABI != ModuleABI) {
+    M.getContext().emitError("-target-abi option != target-abi module flag");
+    return "";
+  }
+
+  return ModuleABI;
+}
+
 const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,
                                                          StringRef FS) {
   if (CPU.empty() && FS.empty())

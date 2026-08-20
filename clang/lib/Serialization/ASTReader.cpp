@@ -9870,29 +9870,6 @@ void ASTReader::ReadLateParsedTemplates(
   LateParsedTemplates.clear();
 }
 
-void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
-  if (!Lambda->getLambdaContextDecl())
-    return;
-
-  auto LambdaInfo =
-      std::make_pair(Lambda->getLambdaContextDecl()->getCanonicalDecl(),
-                     Lambda->getLambdaIndexInContext());
-
-  // Handle the import and then include case for lambdas.
-  if (auto Iter = LambdaDeclarationsForMerging.find(LambdaInfo);
-      Iter != LambdaDeclarationsForMerging.end() &&
-      Iter->second->isFromASTFile() && Lambda->getFirstDecl() == Lambda) {
-    CXXRecordDecl *Previous =
-        cast<CXXRecordDecl>(Iter->second)->getMostRecentDecl();
-    Lambda->setPreviousDecl(Previous);
-    return;
-  }
-
-  // Keep track of this lambda so it can be merged with another lambda that
-  // is loaded later.
-  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
-}
-
 void ASTReader::LoadSelector(Selector Sel) {
   // It would be complicated to avoid reading the methods anyway. So don't.
   ReadMethodPool(Sel);

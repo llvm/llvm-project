@@ -957,6 +957,31 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
+void OmpStructureChecker::CheckDirectiveInPureProcedure(
+    parser::CharBlock source, llvm::omp::Directive id) {
+  const Scope &scope{context_.FindScope(source)};
+  if (!FindPureProcedureContaining(scope)) {
+    return;
+  }
+  unsigned version{context_.langOptions().OpenMPVersion};
+  // A directive's "pure" property is version-specific: pureSince is the
+  // OpenMP version at which the directive gained that property.
+  unsigned pureSince{llvm::omp::getDirectivePureSince(id)};
+  if (version >= pureSince) {
+    return;
+  }
+  if (pureSince != 0x7FFFFFFF) {
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), ThisVersion(version),
+        TryVersion(pureSince));
+  } else {
+    context_.Say(source,
+        "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
+        parser::omp::GetUpperName(id, version));
+  }
+}
+
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
 OmpStructureChecker::FindMutuallyExclusiveClauses(
     llvm::omp::ClauseSet exclusive,
@@ -1305,6 +1330,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
 
   // Verify clauses
   common::visit(
@@ -1361,6 +1387,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
       llvm::iterator_range(std::list<parser::OmpClause>{}));
 
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
   EnterDirectiveNest(DeclarativeNest);
 }
 

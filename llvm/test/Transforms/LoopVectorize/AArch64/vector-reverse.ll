@@ -153,8 +153,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP11]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -190,7 +189,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP19]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP28]], align 2
 ; CHECK-NEXT:    store <vscale x 8 x i16> [[REVERSE]], ptr [[TMP29]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -209,17 +208,17 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[N_MOD_VF10:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[N_VEC11:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF10]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = sub i64 [[N]], [[N_VEC11]]
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <8 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i64 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT18:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <8 x i32> [ [[TMP26]], %[[VEC_EPILOG_PH]] ], [ [[TMP33:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i32> [ [[TMP26]], %[[VEC_EPILOG_PH]] ], [ [[PARTIAL_REDUCE15:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX12]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <8 x i16> poison, i16 [[TMP34]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT14]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP27:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT15]] to <8 x i32>
-; CHECK-NEXT:    [[TMP33]] = add <8 x i32> [[VEC_PHI13]], [[TMP27]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE15]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v8i32(<4 x i32> [[VEC_PHI12]], <8 x i32> [[TMP27]])
 ; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i16, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i16, ptr [[TMP36]], i64 -7
 ; CHECK-NEXT:    [[REVERSE16:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLAT15]], <8 x i16> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -228,7 +227,7 @@ define i32 @reverse_store_with_partial_reduction(ptr noalias %dst, ptr noalias %
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT18]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[TMP39]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP37:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP33]])
+; CHECK-NEXT:    [[TMP33:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE15]])
 ; CHECK-NEXT:    [[CMP_N19:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[CMP_N19]], [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -258,5 +257,5 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{!"llvm.loop.vectorize.width", i32 8}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.scalable.disable"}
 !4 = !{!"llvm.loop.vectorize.enable"}

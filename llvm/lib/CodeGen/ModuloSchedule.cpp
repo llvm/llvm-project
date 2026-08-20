@@ -2747,8 +2747,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
     // most.
     Register InitVal, LoopVal;
     getPhiRegs(MI, MI.getParent(), InitVal, LoopVal);
-    if (!Register(LoopVal).isVirtual() ||
-        MRI.getVRegDef(LoopVal)->getParent() != BB) {
+    if (!Register(LoopVal).isVirtual() || MRI.getDefBlock(LoopVal) != BB) {
       LLVM_DEBUG(
           dbgs() << "Can not apply MVE expander: A phi source value coming "
                     "from the loop is not defined in the loop.\n");

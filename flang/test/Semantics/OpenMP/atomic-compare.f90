@@ -9,6 +9,7 @@
 
   real a, b, c
   logical :: r, s
+  logical :: lx, le, ld, lo
   a = 1.0
   b = 2.0
   c = 3.0
@@ -56,6 +57,17 @@
   !$omp atomic compare
   r = b .eq. a
   if (r) b = c
+  !$omp end atomic
+
+  ! Compare-capture with a LOGICAL atom using .eqv. inside a parallel region.
+  ! Regression: the host-associated atom (from the update) must be recognized
+  ! as the same variable as the captured one, even though OpenMP resolves them
+  ! through different (but ultimately identical) symbols.
+  !$omp atomic compare capture
+  lo = lx
+  if (lx .eqv. le) then
+    lx = ld
+  end if
   !$omp end atomic
 
   ! Check for error conditions:

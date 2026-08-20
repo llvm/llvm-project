@@ -531,6 +531,15 @@ VFSelectionContext::getSmallestAndWidestTypes() const {
           MaxWidth, DL.getTypeSizeInBits(T->getScalarType()).getFixedValue());
     }
   }
+
+  // If the loop has no loads/stores or reductions (e.g. a search loop with an
+  // early exit), MinWidth is never updated and is left at its sentinel value.
+  // Fall back to MaxWidth to keep the SmallestType <= WidestType invariant, so
+  // callers such as the max-bandwidth VF computation don't divide by the
+  // sentinel and collapse the VF to zero.
+  if (MinWidth == -1U)
+    MinWidth = MaxWidth;
+
   return {MinWidth, MaxWidth};
 }
 
@@ -701,7 +710,7 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   InstructionCost CostB = B.Cost;
 
   // When there is a hint to always prefer scalable vectors, honour that hint.
-  if (Hints.isScalableVectorizationAlwaysPreferred())
+  if (Config.getHints().isScalableVectorizationAlwaysPreferred())
     if (A.Width.isScalable() && CostA.isValid() && !B.Width.isScalable() &&
         !B.Width.isScalar())
       return true;

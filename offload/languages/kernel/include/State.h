@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 #define CHECK_FATAL(ResultExpr, ...)                                           \
   do {                                                                         \
@@ -29,6 +30,12 @@
     }                                                                          \
   } while (false)
 
+#define FATAL_UNIMPLEMENTED(...)                                               \
+  do {                                                                         \
+    llvm::errs() << __VA_ARGS__ << '\n';                                       \
+    abort();                                                                   \
+  } while (false)
+
 namespace llvm {
 namespace offload {
 
@@ -40,7 +47,7 @@ using KernelIDTy = const void *;
 /// Per-thread state used by the language runtime entry points.
 ///
 /// Tracks the current thread's default device, optional per-thread queue,
-/// and pending kernel launch configuration.
+/// last-error code, and pending kernel launch configuration.
 struct ThreadStateTy {
   ~ThreadStateTy();
 
@@ -59,6 +66,12 @@ struct ThreadStateTy {
   /// \returns the selected device, or nullptr if \p DeviceNo is invalid.
   static ol_device_handle_t setDefaultDevice(int DeviceNo);
 
+  /// Return the last language-runtime error code for this thread.
+  static uint32_t getLastError();
+
+  /// Set the last language-runtime error code for this thread.
+  static uint32_t setLastError(uint32_t Error);
+
   /// Return the pending kernel launch configuration for this thread.
   static CallConfigurationTy &getCallConfiguration();
 
@@ -71,6 +84,7 @@ private:
   void createDefaultQueue(ol_device_handle_t Device);
 
   int DefaultDevice = 0;
+  uint32_t LastError = 0;
   ol_queue_handle_t DefaultQueue = nullptr;
 
   CallConfigurationTy CC = {};
@@ -89,6 +103,9 @@ struct StateTy {
 
   /// Return the host device discovered during runtime initialization.
   static ol_device_handle_t getHostDevice();
+
+  /// Return the shared context that owns the discovered non-host devices.
+  static ol_context_handle_t getContext();
 
   /// Return the number of non-host devices available to kernel languages.
   static int getDeviceCount();
@@ -143,6 +160,7 @@ private:
   llvm::DenseMap<KernelIDTy, ol_symbol_handle_t> KernelMap;
   llvm::SmallVector<ol_device_handle_t, 8> Devices;
 
+  ol_context_handle_t Context = nullptr;
   ol_queue_handle_t DefaultQueue = nullptr;
   ol_device_handle_t HostDevice = nullptr;
 

@@ -2023,6 +2023,12 @@ Verifier::visitModuleFlag(const MDNode *Op,
             "invalid float-abi metadata value", Op);
   }
 
+  if (ID->getString() == "target-abi") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "target-abi metadata requires a non-empty string argument", Op);
+  }
+
   if (ID->getString() == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -4657,6 +4663,19 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
+
+    if (SI.isElementwise()) {
+      Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise store cannot be sequentially consistent.", &SI);
+
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise store operand must have fixed vector type!",
+            &SI, ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4665,6 +4684,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
+    Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }

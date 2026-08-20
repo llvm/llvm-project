@@ -2,8 +2,8 @@
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-linux-musl   | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if aarch64-registered-target %{ llc < %s -mtriple=aarch64-unknown-none         | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
 ; RUN: %if aarch64-registered-target %{ not llc -mtriple=arm64-apple-macosx -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-none-eabi                | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
-; RUN: %if arm-registered-target     %{ llc < %s -mtriple=arm-unknown-linux-gnueabi    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-USELD %}
+; RUN: %if arm-registered-target     %{ not llc -mtriple=arm-none-eabi             -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s %}
+; RUN: %if arm-registered-target     %{ not llc -mtriple=arm-unknown-linux-gnueabi -filetype=null %s 2>&1 | FileCheck --check-prefix=ERR %s %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc-unknown-linux-gnu    | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-gnu  | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}
 ; RUN: %if powerpc-registered-target %{ llc < %s -mtriple=powerpc64-unknown-linux-musl | FileCheck %s --check-prefixes=CHECK-ALL,CHECK-F128  %}

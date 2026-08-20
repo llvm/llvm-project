@@ -936,17 +936,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
-
-  if (ST.hasWaitXcnt()) {
-    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
-    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
-    // insertion logic, which assumes multi-group mode by default.
-    unsigned RegEncoding =
-        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
-        .addImm(1)
-        .addImm(RegEncoding);
-  }
 }
 
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
@@ -1135,7 +1124,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
       return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
-    MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+    unsigned DwarfReg = MCRI->getDwarfRegNum(Reg, false);
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
   };
@@ -2546,7 +2535,7 @@ MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorRegisterMask(
       nullptr, MCRI.getDwarfRegNum(Reg, false),
@@ -2626,7 +2615,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfVGPR != -1);
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
       nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),

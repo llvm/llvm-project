@@ -4437,8 +4437,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_elementwise_degrees:
-  case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
   case Builtin::BI__builtin_hlsl_elementwise_frac:
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
@@ -4464,18 +4462,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().BoolTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_lerp: {
-    if (SemaRef.checkArgCount(TheCall, 3))
-      return true;
-    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatOrHalfRepresentation))
-      return true;
-    if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
-      return true;
-    if (SemaRef.BuiltinElementwiseTernaryMath(TheCall))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_mad: {
