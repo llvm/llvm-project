@@ -16248,8 +16248,8 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
 
   bool DefinitionVisible = false;
   if (SkipBody &&
-      (isRedefinitionAllowedFor(Definition, DefinitionVisible) ||
-       isFromSameSingleIncludeHeader(Definition, FD->getLocation())) &&
+      isRedefinitionAllowedFor(Definition, FD->getLocation(),
+                               DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        !Definition->getTemplateParameterLists().empty())) {
@@ -18726,10 +18726,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
                 bool HiddenDefVisible = false;
-                if (SkipBody &&
-                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-                     getLangOpts().C23 ||
-                     isFromSameSingleIncludeHeader(Def, NameLoc))) {
+                if (SkipBody && (isRedefinitionAllowedFor(Def, NameLoc, &Hidden,
+                                                          HiddenDefVisible) ||
+                                 getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -21428,8 +21427,9 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
 }
 
-bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
-                                    bool &Visible) {
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D,
+                                    SourceLocation NewDefinitionLoc,
+                                    NamedDecl **Suggested, bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
   // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
   // for declaratins which is attached to named modules.
@@ -21439,6 +21439,8 @@ bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
       D->isInNamedModule())
     return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units.
-  return D->isInAnotherModuleUnit() || !Visible;
+  // D is defined in the global module of other module units or D is defined in
+  // the same header in a different module.
+  return D->isInAnotherModuleUnit() || !Visible ||
+         isFromSameSingleIncludeHeader(D, NewDefinitionLoc);
 }

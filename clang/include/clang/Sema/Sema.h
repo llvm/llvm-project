@@ -15683,11 +15683,12 @@ public:
   /// Determine if \p D has a definition which allows we redefine it in current
   /// TU. \p Suggested is the definition that should be made visible to expose
   /// the definition.
-  bool isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
-                                bool &Visible);
-  bool isRedefinitionAllowedFor(const NamedDecl *D, bool &Visible) {
+  bool isRedefinitionAllowedFor(NamedDecl *D, SourceLocation NewDefinitionLoc,
+                                NamedDecl **Suggested, bool &Visible);
+  bool isRedefinitionAllowedFor(const NamedDecl *D, SourceLocation NewLoc,
+                                bool &Visible) {
     NamedDecl *Hidden;
-    return isRedefinitionAllowedFor(const_cast<NamedDecl *>(D), &Hidden,
+    return isRedefinitionAllowedFor(const_cast<NamedDecl *>(D), NewLoc, &Hidden,
                                     Visible);
   }
 

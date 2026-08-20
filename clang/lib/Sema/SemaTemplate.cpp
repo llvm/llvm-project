@@ -2169,8 +2169,7 @@ DeclResult Sema::CheckClassTemplate(
         NamedDecl *Hidden = nullptr;
         bool HiddenDefVisible = false;
         if (SkipBody &&
-            (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-             isFromSameSingleIncludeHeader(Def, NameLoc))) {
+            isRedefinitionAllowedFor(Def, NameLoc, &Hidden, HiddenDefVisible)) {
           SkipBody->ShouldSkip = true;
           SkipBody->Previous = Def;
           if (!HiddenDefVisible && Hidden) {
@@ -9080,8 +9079,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     NamedDecl *Hidden = nullptr;
     bool HiddenDefVisible = false;
     if (Def && SkipBody &&
-        (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-         isFromSameSingleIncludeHeader(Def, TemplateNameLoc))) {
+        isRedefinitionAllowedFor(Def, TemplateNameLoc, &Hidden,
+                                 HiddenDefVisible)) {
       SkipBody->ShouldSkip = true;
       SkipBody->Previous = Def;
       if (!HiddenDefVisible && Hidden)
