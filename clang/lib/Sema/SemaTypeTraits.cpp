@@ -27,9 +27,6 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
-#include <memory>
 
 using namespace clang;
 
