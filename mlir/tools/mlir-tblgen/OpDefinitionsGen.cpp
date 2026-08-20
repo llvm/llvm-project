@@ -373,7 +373,7 @@ public:
 
   // Get the code snippet for getting the named attribute range.
   StringRef getAttrRange() const {
-    return emitForOp ? "(*this)->getAttrs()" : "odsAttrs";
+    return emitForOp ? "(*this)->getRawDictionaryAttrs()" : "odsAttrs";
   }
 
   // Get the prefix code for emitting an error.
@@ -2356,11 +2356,10 @@ void OpEmitter::genNamedOperandSetters() {
     // MutableOperandRangeRange that provides a range over all of the
     // sub-ranges.
     if (operand.isVariadicOfVariadic()) {
-      body << "  return "
-              "mutableRange.split(*(*this)->getAttrDictionary().getNamed("
-           << op.getGetterName(
-                  operand.constraint.getVariadicOfVariadicSegmentSizeAttr())
-           << "AttrName()));\n";
+      StringRef segmentAttr =
+          operand.constraint.getVariadicOfVariadicSegmentSizeAttr();
+      body << "  return mutableRange.split({" << op.getGetterName(segmentAttr)
+           << "AttrName(), " << op.getGetterName(segmentAttr) << "Attr()});\n";
     } else {
       // Otherwise, we use the full range directly.
       body << "  return mutableRange;\n";
