@@ -676,13 +676,25 @@ public:
     FunctionCallee RegFuncC =
         M.getOrInsertFunction("__sycl_register_lib", RegFuncTy);
 
+    FunctionType *AtExitTy =
+        FunctionType::get(Type::getInt32Ty(C), PtrTy, /*isVarArg=*/false);
+    FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+
+    Function *UnregFunc = createUnregisterFunction(Start, Size);
+
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
     Builder.CreateCall(RegFuncC, {Start, Size});
+
+    // Unregister with 'atexit'. The handler is installed after
+    // __sycl_register_lib has brought the runtime's own exit-time cleanup into
+    // the atexit chain, so it is ordered ahead of that cleanup.
+    Builder.CreateCall(AtExit, UnregFunc);
     Builder.CreateRetVoid();
 
     return Func;
   }
 
+private:
   Function *createUnregisterFunction(Constant *Start, Constant *Size) {
     FunctionType *FuncTy =
         FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
@@ -705,7 +717,6 @@ public:
     return Func;
   }
 
-private:
   Module &M;
   LLVMContext &C;
   SYCLJITOptions Options;
@@ -753,20 +764,18 @@ Error offloading::wrapHIPBinary(Module &M, ArrayRef<char> Image,
   return Error::success();
 }
 
-Error llvm::offloading::wrapSYCLBinaries(
-    llvm::Module &M, ArrayRef<char> Buffer, SYCLJITOptions Options,
-    bool IsFinalizedImage,
-    std::pair<Function *, Function *> *RegistrationFuncs) {
+Error llvm::offloading::wrapSYCLBinaries(llvm::Module &M, ArrayRef<char> Buffer,
+                                         SYCLJITOptions Options,
+                                         bool IsFinalizedImage,
+                                         Function **RegistrationFunc) {
   SYCLWrapper W(M, Options, IsFinalizedImage);
   auto [Start, Size] = W.embedBinary(Buffer);
   Function *RegisterFunc = W.createRegisterFatbinFunction(Start, Size);
-  Function *UnregisterFunc = W.createUnregisterFunction(Start, Size);
-  if (RegistrationFuncs) {
-    *RegistrationFuncs = {RegisterFunc, UnregisterFunc};
+  if (RegistrationFunc) {
+    *RegistrationFunc = RegisterFunc;
     return Error::success();
   }
 
-  appendToGlobalCtors(M, RegisterFunc, /*Priority*/ 1);
-  appendToGlobalDtors(M, UnregisterFunc, /*Priority*/ 1);
+  appendToGlobalCtors(M, RegisterFunc, /*Priority=*/101);
   return Error::success();
 }

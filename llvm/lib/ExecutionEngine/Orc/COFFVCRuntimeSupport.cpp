@@ -12,7 +12,6 @@
 #include "llvm/ExecutionEngine/Orc/CallProxiesSPS.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
@@ -115,15 +114,14 @@ Error COFFVCRuntimeBootstrapper::initializeStaticVCRuntime(JITDylib &JD) {
   ExecutorAddr jit_scrt_initialize, jit_scrt_dllmain_before_initialize_c,
       jit_scrt_initialize_type_info,
       jit_scrt_initialize_default_local_stdio_options;
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder(&JD),
-          {{ES.intern("__scrt_initialize_crt"), &jit_scrt_initialize},
-           {ES.intern("__scrt_dllmain_before_initialize_c"),
-            &jit_scrt_dllmain_before_initialize_c},
-           {ES.intern("?__scrt_initialize_type_info@@YAXXZ"),
-            &jit_scrt_initialize_type_info},
-           {ES.intern("__scrt_initialize_default_local_stdio_options"),
-            &jit_scrt_initialize_default_local_stdio_options}}))
+  if (auto Err = lookupAndApply(
+          JD, {recordAddr("__scrt_initialize_crt", &jit_scrt_initialize),
+               recordAddr("__scrt_dllmain_before_initialize_c",
+                          &jit_scrt_dllmain_before_initialize_c),
+               recordAddr("?__scrt_initialize_type_info@@YAXXZ",
+                          &jit_scrt_initialize_type_info),
+               recordAddr("__scrt_initialize_default_local_stdio_options",
+                          &jit_scrt_initialize_default_local_stdio_options)}))
     return Err;
 
   CallInt32VoidProxy CallInt32Void;

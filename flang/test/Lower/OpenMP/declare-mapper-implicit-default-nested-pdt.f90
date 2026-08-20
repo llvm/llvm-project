@@ -26,7 +26,7 @@ end module
 
 ! CHECK-DAG: omp.declare_mapper @{{.*}}newdata_omp_default_mapper
 ! CHECK-DAG: map_clauses(tofrom)
-! CHECK-DAG: {name = "v%value"}
+! CHECK-DAG: name("v%value")
 ! CHECK-DAG: omp.declare_mapper @{{.*}}newvec_omp_default_mapper
 ! CHECK-DAG: mapper(@{{.*}}newdata_omp_default_mapper)
 
