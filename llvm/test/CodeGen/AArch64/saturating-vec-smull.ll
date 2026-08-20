@@ -27,10 +27,10 @@ define <2 x i16> @saturating_2xi16(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <2 x i16> %a to <2 x i32>
   %bs = sext <2 x i16> %b to <2 x i32>
-  %m = mul <2 x i32> %bs, %as
+  %m = mul nsw <2 x i32> %bs, %as
   %sh = ashr <2 x i32> %m, splat (i32 15)
-  %ma = tail call <2 x i32> @llvm.smin.v4i32(<2 x i32> %sh, <2 x i32> splat (i32 32767))
-  %t = trunc <2 x i32> %ma to <2 x i16>
+  %ma = tail call <2 x i32> @llvm.smin.v2i32(<2 x i32> %sh, <2 x i32> splat (i32 32767))
+  %t = trunc nsw <2 x i32> %ma to <2 x i16>
   ret <2 x i16> %t
 }
 
@@ -50,10 +50,10 @@ define <4 x i16> @saturating_4xi16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <4 x i16> %a to <4 x i32>
   %bs = sext <4 x i16> %b to <4 x i32>
-  %m = mul <4 x i32> %bs, %as
+  %m = mul nsw <4 x i32> %bs, %as
   %sh = ashr <4 x i32> %m, splat (i32 15)
   %ma = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %sh, <4 x i32> splat (i32 32767))
-  %t = trunc <4 x i32> %ma to <4 x i16>
+  %t = trunc nsw <4 x i32> %ma to <4 x i16>
   ret <4 x i16> %t
 }
 
@@ -76,10 +76,10 @@ define <8 x i16> @saturating_8xi16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <8 x i16> %a to <8 x i32>
   %bs = sext <8 x i16> %b to <8 x i32>
-  %m = mul <8 x i32> %bs, %as
+  %m = mul nsw <8 x i32> %bs, %as
   %sh = ashr <8 x i32> %m, splat (i32 15)
   %ma = tail call <8 x i32> @llvm.smin.v8i32(<8 x i32> %sh, <8 x i32> splat (i32 32767))
-  %t = trunc <8 x i32> %ma to <8 x i16>
+  %t = trunc nsw <8 x i32> %ma to <8 x i16>
   ret <8 x i16> %t
 }
 
@@ -101,10 +101,10 @@ define <2 x i32> @saturating_2xi32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <2 x i32> %a to <2 x i64>
   %bs = sext <2 x i32> %b to <2 x i64>
-  %m = mul <2 x i64> %bs, %as
+  %m = mul nsw <2 x i64> %bs, %as
   %sh = ashr <2 x i64> %m, splat (i64 31)
-  %ma = tail call <2 x i64> @llvm.smin.v8i64(<2 x i64> %sh, <2 x i64> splat (i64 2147483647))
-  %t = trunc <2 x i64> %ma to <2 x i32>
+  %ma = tail call <2 x i64> @llvm.smin.v2i64(<2 x i64> %sh, <2 x i64> splat (i64 2147483647))
+  %t = trunc nsw <2 x i64> %ma to <2 x i32>
   ret <2 x i32> %t
 }
 
@@ -130,10 +130,10 @@ define <4 x i32> @saturating_4xi32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <4 x i32> %a to <4 x i64>
   %bs = sext <4 x i32> %b to <4 x i64>
-  %m = mul <4 x i64> %bs, %as
+  %m = mul nsw <4 x i64> %bs, %as
   %sh = ashr <4 x i64> %m, splat (i64 31)
   %ma = tail call <4 x i64> @llvm.smin.v4i64(<4 x i64> %sh, <4 x i64> splat (i64 2147483647))
-  %t = trunc <4 x i64> %ma to <4 x i32>
+  %t = trunc nsw <4 x i64> %ma to <4 x i32>
   ret <4 x i32> %t
 }
 
@@ -169,10 +169,10 @@ define <8 x i32> @saturating_8xi32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <8 x i32> %a to <8 x i64>
   %bs = sext <8 x i32> %b to <8 x i64>
-  %m = mul <8 x i64> %bs, %as
+  %m = mul nsw <8 x i64> %bs, %as
   %sh = ashr <8 x i64> %m, splat (i64 31)
   %ma = tail call <8 x i64> @llvm.smin.v8i64(<8 x i64> %sh, <8 x i64> splat (i64 2147483647))
-  %t = trunc <8 x i64> %ma to <8 x i32>
+  %t = trunc nsw <8 x i64> %ma to <8 x i32>
   ret <8 x i32> %t
 }
 
@@ -194,9 +194,9 @@ define <2 x i64> @saturating_2xi32_2xi64(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <2 x i32> %a to <2 x i64>
   %bs = sext <2 x i32> %b to <2 x i64>
-  %m = mul <2 x i64> %bs, %as
+  %m = mul nsw <2 x i64> %bs, %as
   %sh = ashr <2 x i64> %m, splat (i64 31)
-  %ma = tail call <2 x i64> @llvm.smin.v8i64(<2 x i64> %sh, <2 x i64> splat (i64 2147483647))
+  %ma = tail call <2 x i64> @llvm.smin.v2i64(<2 x i64> %sh, <2 x i64> splat (i64 2147483647))
   ret <2 x i64> %ma
 }
 
@@ -253,10 +253,10 @@ define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <6 x i16> %a to <6 x i32>
   %bs = sext <6 x i16> %b to <6 x i32>
-  %m = mul <6 x i32> %bs, %as
+  %m = mul nsw <6 x i32> %bs, %as
   %sh = ashr <6 x i32> %m, splat (i32 15)
   %ma = tail call <6 x i32> @llvm.smin.v6i32(<6 x i32> %sh, <6 x i32> splat (i32 32767))
-  %t = trunc <6 x i32> %ma to <6 x i16>
+  %t = trunc nsw <6 x i32> %ma to <6 x i16>
   ret <6 x i16> %t
 }
 
@@ -271,10 +271,10 @@ define <4 x i16> @unsupported_saturation_value_v4i16(<4 x i16> %a, <4 x i16> %b)
 ; CHECK-NEXT:    ret
   %as = sext <4 x i16> %a to <4 x i32>
   %bs = sext <4 x i16> %b to <4 x i32>
-  %m = mul <4 x i32> %bs, %as
+  %m = mul nsw <4 x i32> %bs, %as
   %sh = ashr <4 x i32> %m, splat (i32 15)
   %ma = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %sh, <4 x i32> splat (i32 42))
-  %t = trunc <4 x i32> %ma to <4 x i16>
+  %t = trunc nsw <4 x i32> %ma to <4 x i16>
   ret <4 x i16> %t
 }
 
@@ -289,7 +289,7 @@ define <4 x i16> @unsupported_shift_value_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    ret
   %as = sext <4 x i16> %a to <4 x i32>
   %bs = sext <4 x i16> %b to <4 x i32>
-  %m = mul <4 x i32> %bs, %as
+  %m = mul nsw <4 x i32> %bs, %as
   %sh = ashr <4 x i32> %m, splat (i32 3)
   %ma = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %sh, <4 x i32> splat (i32 32767))
   %t = trunc <4 x i32> %ma to <4 x i16>
@@ -307,10 +307,10 @@ define <2 x i16> @extend_to_illegal_type(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    ret
   %as = sext <2 x i16> %a to <2 x i48>
   %bs = sext <2 x i16> %b to <2 x i48>
-  %m = mul <2 x i48> %bs, %as
+  %m = mul nsw <2 x i48> %bs, %as
   %sh = ashr <2 x i48> %m, splat (i48 15)
-  %ma = tail call <2 x i48> @llvm.smin.v4i32(<2 x i48> %sh, <2 x i48> splat (i48 32767))
-  %t = trunc <2 x i48> %ma to <2 x i16>
+  %ma = tail call <2 x i48> @llvm.smin.v2i48(<2 x i48> %sh, <2 x i48> splat (i48 32767))
+  %t = trunc nsw <2 x i48> %ma to <2 x i16>
   ret <2 x i16> %t
 }
 
@@ -365,9 +365,9 @@ define <1 x i16> @saturating_1xi16(<1 x i16> %a, <1 x i16> %b) {
 ; CHECK-GI-NEXT:    ret
   %as = sext <1 x i16> %a to <1 x i32>
   %bs = sext <1 x i16> %b to <1 x i32>
-  %m = mul <1 x i32> %bs, %as
+  %m = mul nsw <1 x i32> %bs, %as
   %sh = ashr <1 x i32> %m, splat (i32 15)
   %ma = tail call <1 x i32> @llvm.smin.v1i32(<1 x i32> %sh, <1 x i32> splat (i32 32767))
-  %t = trunc <1 x i32> %ma to <1 x i16>
+  %t = trunc nsw <1 x i32> %ma to <1 x i16>
   ret <1 x i16> %t
 }

@@ -782,14 +782,14 @@ struct NarrowedChainState {
   unsigned NarrowBW = 0;
   APInt NarrowMask = APInt(1, 0);
 
-  /// The mask for the absorbed narrow ops, widened and shifted to apply
-  /// after the shift; all-ones if nothing was absorbed.
-  APInt getMask(unsigned WideBW) const {
+  /// The mask for the absorbed narrow ops in the leaf type, applied before
+  /// widening and shifting; all-ones if nothing was absorbed.
+  APInt getMask(unsigned LeafBW) const {
     if (NarrowBW == 0)
-      return APInt::getAllOnes(WideBW);
+      return APInt::getAllOnes(LeafBW);
     return (NarrowMask & (APInt::getAllOnes(NarrowBW) << NarrowShift))
-               .zext(WideBW)
-           << Shift;
+        .lshr(NarrowShift)
+        .trunc(LeafBW);
   }
 };
 
@@ -858,8 +858,7 @@ collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
                                            ChainInsts);
         }
         Value *X;
-        if (BO->getOpcode() == Instruction::And &&
-            match(BO, m_c_And(m_Value(X), m_APInt(Amt)))) {
+        if (match(BO, m_c_And(m_Value(X), m_APInt(Amt)))) {
           ChainInsts.push_back(BO);
           if (S.NarrowBW == 0) {
             S.NarrowBW = BW;
@@ -872,7 +871,8 @@ collectNarrowedLeavesImpl(Value *V, unsigned RdxOpcode, unsigned WideBW,
       }
     }
   }
-  Leaves.emplace_back(V, S.Shift + S.NarrowShift, S.getMask(WideBW));
+  Leaves.emplace_back(V, S.Shift + S.NarrowShift,
+                      S.getMask(V->getType()->getScalarSizeInBits()));
 }
 
 void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,

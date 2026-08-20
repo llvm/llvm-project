@@ -177,8 +177,8 @@ void GPUToSPIRVPass::runOnOperation() {
         auto entryBlock = newFuncOp.addEntryBlock();
         builder.setInsertionPointToEnd(entryBlock);
         func::ReturnOp::create(builder, funcOp.getLoc());
-        newFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                           builder.getUnitAttr());
+        newFuncOp->setDiscardableAttr(gpu::GPUDialect::getKernelFuncAttrName(),
+                                      builder.getUnitAttr());
         funcOp.erase();
       });
     }

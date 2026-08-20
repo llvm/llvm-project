@@ -679,8 +679,11 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
                          OldSM =
                              cast<CXXMethodDecl>(Old)->getSpecialMemberKind();
     if (NewSM != OldSM) {
-      ParmVarDecl *NewParam = New->getParamDecl(New->getMinRequiredArguments());
-      assert(NewParam->hasDefaultArg());
+      auto It = llvm::find_if(New->parameters(), [](const ParmVarDecl *P) {
+        return P->hasDefaultArg();
+      });
+      assert(It != New->param_end());
+      ParmVarDecl *NewParam = *It;
       Diag(NewParam->getLocation(), diag::err_default_arg_makes_ctor_special)
           << NewParam->getDefaultArgRange() << NewSM;
       Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -11613,7 +11616,7 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
     R = Context.getFunctionType(ConvType, {}, Proto->getExtProtoInfo());
 
   // C++0x explicit conversion operators.
-  if (DS.hasExplicitSpecifier() && !getLangOpts().CPlusPlus20)
+  if (DS.hasExplicitSpecifier())
     Diag(DS.getExplicitSpecLoc(),
          getLangOpts().CPlusPlus11
              ? diag::warn_cxx98_compat_explicit_conversion_functions

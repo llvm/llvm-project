@@ -248,7 +248,7 @@ void FoldingSetBase::reserve(unsigned EltCount, const FoldingSetInfo &Info) {
   // This will give us somewhere between EltCount / 2 and
   // EltCount buckets.  This puts us in the load factor
   // range of 1.0 - 2.0.
-  if (EltCount < capacity())
+  if (EltCount <= capacity())
     return;
   GrowBucketCount(llvm::bit_floor(EltCount), Info);
 }

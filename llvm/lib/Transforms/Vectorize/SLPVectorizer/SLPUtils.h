@@ -338,9 +338,10 @@ bool isOnceUsedSeed(const Instruction *I);
 Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable);
 
 /// Narrow reduction leaf: the value, the shift applied after widening and
-/// the mask applied after the shift, clearing the bits the absorbed narrow
-/// shls shift out and applying the absorbed narrow and-masks. All-ones mask
-/// means nothing was absorbed and no and is needed.
+/// the mask applied in the narrow type before widening, clearing the bits
+/// the absorbed narrow shls shift out and applying the absorbed narrow
+/// and-masks. All-ones mask means nothing was absorbed and no 'and' is
+/// needed.
 struct NarrowedLeafInfo {
   NarrowedLeafInfo(Value *V, unsigned Shift, APInt Mask)
       : V(V), Shift(Shift), Mask(std::move(Mask)) {}
@@ -354,7 +355,7 @@ struct NarrowedLeafInfo {
 /// \p V. zext is looked through directly, same-kind binops per operand,
 /// shl of a zext - only if no bits are shifted out in the current type,
 /// shls in narrower types fold into the shift and ands with a constant into
-/// the mask applied after widening. Also collects the looked-through
+/// the mask applied in the narrow type. Also collects the looked-through
 /// instructions into \p ChainInsts.
 void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
                            unsigned MaxDepth,

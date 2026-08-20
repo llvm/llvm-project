@@ -56,9 +56,9 @@ enum {
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
   NEEDS_GOT_AUTH = 1 << 9,
-  NEEDS_GOT_NONAUTH = 1 << 10,
+  // 1 << 10 unused
   NEEDS_TLSDESC_AUTH = 1 << 11,
-  NEEDS_TLSDESC_NONAUTH = 1 << 12,
+  // 1 << 12 unused
 };
 
 // The base class for real symbol classes.
@@ -352,7 +352,8 @@ public:
   bool needsDynReloc() const {
     return flags.load(std::memory_order_relaxed) &
            (NEEDS_COPY | NEEDS_GOT | NEEDS_PLT | NEEDS_TLSDESC | NEEDS_TLSGD |
-            NEEDS_GOT_DTPREL | NEEDS_TLSIE);
+            NEEDS_GOT_DTPREL | NEEDS_TLSIE | NEEDS_GOT_AUTH |
+            NEEDS_TLSDESC_AUTH);
   }
   void allocateAux(Ctx &ctx) {
     assert(auxIdx == 0);
