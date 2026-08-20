@@ -602,6 +602,68 @@ func.func @vector_constant_mask() -> vector<16x16xi1> {
 
 // -----
 
+// A tile that falls entirely outside the mask in one dimension is empty, but
+// the other dimensions still compute a non-zero size, which `constant_mask`
+// rejects ("expected all mask dim sizes to be zeros, as a result of
+// conjunction with zero mask dim"). Such a tile must be emitted as an
+// all-zeros mask. This is independent of any rank mismatch - here the target
+// shape ({8, 8}) already matches the op's rank.
+
+func.func @vector_constant_mask_empty_tile() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [4, 10] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// The [8, 0] and [8, 8] tiles lie past the mask in dim 0. Before this was
+// handled they were emitted as `constant_mask [0, 8]` / `[0, 2]`, which fails
+// the op's verifier outright, so this whole function used to fail to unroll.
+
+// CHECK-LABEL: func @vector_constant_mask_empty_tile
+//   CHECK-DAG:   arith.constant dense<false> : vector<16x16xi1>
+//   CHECK-DAG:   arith.constant dense<false> : vector<8x8xi1>
+//       CHECK:   vector.constant_mask [4, 8] : vector<8x8xi1>
+//       CHECK:   vector.constant_mask [4, 2] : vector<8x8xi1>
+//   CHECK-NOT:   vector.constant_mask [0,
+
+// -----
+
+// The native/target unroll shape for vector.create_mask/vector.constant_mask
+// used by this test pass is fixed at rank 2 ({8, 8}), independent of the rank
+// of the op being unrolled. When the op's own rank is higher (rank 3 below),
+// the target shape is padded with leading unit dimensions so that it is
+// rank-aligned with the op, as `UnrollElementwisePattern` does. See #217175.
+
+func.func @vector_create_mask_rank_mismatch(%size1: index) -> vector<2x8x8xi1> {
+  %c8 = arith.constant 8 : index
+  %0 = vector.create_mask %c8, %size1, %c8 : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask_rank_mismatch
+//       CHECK:   vector.create_mask {{.*}} : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   vector.create_mask {{.*}} : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+
+// -----
+
+func.func @vector_constant_mask_rank_mismatch() -> vector<2x8x8xi1> {
+  %0 = vector.constant_mask [1, 4, 8] : vector<2x8x8xi1>
+  return %0 : vector<2x8x8xi1>
+}
+
+// The [1, 0, 0] tile is past the mask in dim 0, so it is an all-zeros mask.
+
+// CHECK-LABEL: func @vector_constant_mask_rank_mismatch
+//   CHECK-DAG:   arith.constant dense<false> : vector<2x8x8xi1>
+//   CHECK-DAG:   arith.constant dense<false> : vector<1x8x8xi1>
+//       CHECK:   vector.constant_mask [1, 4, 8] : vector<1x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [0, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//       CHECK:   vector.insert_strided_slice {{.*}} offsets = [1, 0, 0], strides = [1, 1, 1] : vector<1x8x8xi1> into vector<2x8x8xi1>
+//   CHECK-NOT:   vector.constant_mask [0,
+
+// -----
+
 func.func @shape_cast_1D(%v: vector<16xf32>) -> vector<2x2x4xf32> {
   %0 = vector.shape_cast %v : vector<16xf32> to vector<2x2x4xf32>
   return %0 : vector<2x2x4xf32>
