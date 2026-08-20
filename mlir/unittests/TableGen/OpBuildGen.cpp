@@ -16,7 +16,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "llvm/Support/Compiler.h"
 #include "gmock/gmock.h"
+#include <array>
 #include <vector>
 
 namespace mlir {
@@ -331,14 +333,120 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   replacedAttrs[0].setValue(replacement);
   verifyOp(op7, {}, {}, replacedAttrs);
 
-  // Check that the old-style builder where all the attributes go in the same
-  // place works.
+  // Check that the old-style builder partitions the attributes and populates
+  // properties before Operation::create.
+  OperationState state(loc, test::TableGenBuildOp7::getOperationName());
+  test::TableGenBuildOp7::build(builder, state, TypeRange{}, ValueRange{},
+                                attrs);
+  ASSERT_TRUE(state.getRawProperties());
+  EXPECT_EQ(state.attributes.getAttrs().size(), 1u);
+  EXPECT_EQ(state.attributes.getAttrs()[0], attrs[1]);
+  EXPECT_EQ(
+      state.getOrAddProperties<test::TableGenBuildOp7::Properties>().getAttr0(),
+      attrs[0].getValue());
+
+  auto op7FromState = cast<test::TableGenBuildOp7>(builder.create(state));
+  verifyOp(op7FromState, {}, {}, attrs);
+
+  // Check that the legacy create forwarder remains compatible.
   auto op7b = test::TableGenBuildOp7::create(builder, loc, TypeRange{},
                                              ValueRange{}, attrs);
   // Note: this goes before verifyOp() because verifyOp() calls erase(), causing
   // use-after-free.
   ASSERT_EQ(op7b.getProperties().getAttr0(), attrs[0].getValue());
   verifyOp(op7b, {}, {}, attrs);
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsLegacyMixedProperties) {
+  SmallVector<NamedAttribute> mixedAttrs{
+      builder.getNamedAttr("attr0", builder.getBoolAttr(true)),
+      builder.getNamedAttr("nativeProp", builder.getI64IntegerAttr(42)),
+      builder.getNamedAttr("operand_segment_sizes",
+                           builder.getDenseI32ArrayAttr({1, 1})),
+      builder.getNamedAttr("result_segment_sizes",
+                           builder.getDenseI32ArrayAttr({1, 0})),
+      builder.getNamedAttr("unknown", builder.getStringAttr("discardable"))};
+  OperationState state(loc, test::TableGenBuildOp8::getOperationName());
+
+  test::TableGenBuildOp8::build(builder, state, ValueRange{*cstI32, *cstF32},
+                                mixedAttrs);
+
+  ASSERT_TRUE(state.getRawProperties());
+  ASSERT_EQ(state.attributes.getAttrs().size(), 1u);
+  EXPECT_EQ(state.attributes.getAttrs()[0], mixedAttrs.back());
+  ASSERT_EQ(state.types.size(), 1u);
+  EXPECT_EQ(state.types[0], i32Ty);
+  const auto &properties =
+      state.getOrAddProperties<test::TableGenBuildOp8::Properties>();
+  EXPECT_TRUE(properties.attr0.getValue());
+  EXPECT_EQ(properties.defaultAttr.getInt(), 7);
+  EXPECT_EQ(properties.nativeProp, 42);
+  EXPECT_EQ(properties.operandSegmentSizes, (std::array<int32_t, 2>{1, 1}));
+  EXPECT_EQ(properties.resultSegmentSizes, (std::array<int32_t, 2>{1, 0}));
+
+  auto op = cast<test::TableGenBuildOp8>(builder.create(state));
+  EXPECT_EQ(op->getDiscardableAttrDictionary().size(), 1u);
+  EXPECT_EQ(op.getNativeProp(), 42);
+  EXPECT_EQ(op.getDefaultAttr(), 7u);
+  EXPECT_EQ(op->getResult(0).getType(), i32Ty);
+  EXPECT_TRUE(succeeded(op.verify()));
+  op.erase();
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsLegacyDefaultsWithoutAttributes) {
+  OperationState state(loc, test::TableGenBuildOp8::getOperationName());
+  test::TableGenBuildOp8::build(builder, state, TypeRange{i32Ty},
+                                ValueRange{*cstI32, *cstF32},
+                                ArrayRef<NamedAttribute>{});
+
+  ASSERT_TRUE(state.getRawProperties());
+  const auto &properties =
+      state.getOrAddProperties<test::TableGenBuildOp8::Properties>();
+  EXPECT_EQ(properties.defaultAttr.getInt(), 7);
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsLegacySameOperandAndResultType) {
+  SmallVector<NamedAttribute> mixedAttrs{
+      builder.getNamedAttr("attr0", builder.getBoolAttr(true)),
+      builder.getNamedAttr("unknown", builder.getUnitAttr())};
+  auto op = test::TableGenBuildOp9::create(builder, loc, ValueRange{*cstI32},
+                                           mixedAttrs);
+  EXPECT_EQ(op.getResult().getType(), i32Ty);
+  EXPECT_TRUE(op.getAttr0());
+  EXPECT_EQ(op->getDiscardableAttrDictionary().size(), 1u);
+  EXPECT_TRUE(succeeded(op.verify()));
+  op.erase();
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsLegacyFirstAttrDerivedResultType) {
+  SmallVector<NamedAttribute> mixedAttrs{
+      builder.getNamedAttr("type", TypeAttr::get(f32Ty)),
+      builder.getNamedAttr("unknown", builder.getUnitAttr())};
+  auto op = test::TableGenBuildOp10::create(builder, loc, ValueRange{*cstI32},
+                                            mixedAttrs);
+  EXPECT_EQ(op.getResult().getType(), f32Ty);
+  EXPECT_EQ(op.getType(), f32Ty);
+  EXPECT_EQ(op->getDiscardableAttrDictionary().size(), 1u);
+  EXPECT_TRUE(succeeded(op.verify()));
+  op.erase();
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsEmptyPropertiesKeepMixedAttributes) {
+  OperationState state(loc, test::TableGenBuildOp0::getOperationName());
+  test::TableGenBuildOp0::build(builder, state, TypeRange{i32Ty},
+                                ValueRange{*cstI32}, attrs);
+  EXPECT_FALSE(state.getRawProperties());
+  EXPECT_EQ(state.attributes.getAttrs(), attrs);
+}
+
+TEST_F(OpBuildGenTest, BuildMethodsInvalidLegacyPropertyConversion) {
+  SmallVector<NamedAttribute> badAttrs{
+      builder.getNamedAttr("attr0", builder.getStringAttr("not-a-bool"))};
+  OperationState state(loc, test::TableGenBuildOp7::getOperationName());
+  EXPECT_DEATH_IF_SUPPORTED(
+      test::TableGenBuildOp7::build(builder, state, TypeRange{}, ValueRange{},
+                                    badAttrs),
+      "Invalid attribute.*attr0");
 }
 
 } // namespace mlir
