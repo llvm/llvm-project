@@ -562,12 +562,14 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
 
   // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
+    llvm::AliasScopeDomainNode domainNode(aliasDomain);
     StringAttr description = nullptr;
-    StringRef name = llvm::AliasScopeDomainNode(aliasDomain).getName();
+    StringRef name = domainNode.getName();
     if (!name.empty())
       description = builder.getStringAttr(name);
     Attribute idAttr = getIdAttr(aliasDomain);
-    return builder.getAttr<AliasScopeDomainAttr>(idAttr, description);
+    return builder.getAttr<AliasScopeDomainAttr>(
+        idAttr, domainNode.hasDisjointScopes(), description);
   };
 
   // Collect the alias scopes and domains to translate them.

@@ -2289,8 +2289,8 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
     llvm::SmallVector<llvm::Metadata *, 3> operands;
     // Placeholder for potential self-reference.
     operands.push_back(dummy.get());
-    operands.push_back(
-        llvm::ConstantAsMetadata::get(llvm::ConstantInt::getFalse(ctx)));
+    operands.push_back(llvm::ConstantAsMetadata::get(llvm::ConstantInt::getBool(
+        ctx, aliasScopeAttr.getDomain().getDisjointScopes())));
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);

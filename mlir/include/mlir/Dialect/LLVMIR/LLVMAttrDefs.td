@@ -1098,12 +1098,15 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
     "Attribute":$id,
+    DefaultValuedParameter<"bool", "false">:$disjointScopes,
     OptionalParameter<"StringAttr">:$description
   );
 
   let builders = [
-    AttrBuilder<(ins CArg<"StringAttr", "{}">:$description), [{
-      return $_get($_ctxt, DistinctAttr::create(UnitAttr::get($_ctxt)), description);
+    AttrBuilder<(ins CArg<"StringAttr", "{}">:$description,
+                     CArg<"bool", "false">:$disjointScopes), [{
+      return $_get($_ctxt, DistinctAttr::create(UnitAttr::get($_ctxt)),
+                   disjointScopes, description);
     }]>
   ];
 
@@ -1111,6 +1114,18 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
   let description = [{
     Defines a domain that may be associated with an alias scope.
+
+    If `disjointScopes` is set, the scopes of this domain are disjoint: an
+    operation listing some of them in its `alias_scopes` is implicitly in the
+    `noalias_scopes` of every other scope of this domain, so those complements
+    need not be spelled out.
+
+    Example:
+    ```mlir
+    #domain = #llvm.alias_scope_domain<id = distinct[0]<>, disjointScopes = true>
+    #scope1 = #llvm.alias_scope<id = distinct[1]<>, domain = #domain>
+    #scope2 = #llvm.alias_scope<id = distinct[2]<>, domain = #domain>
+    ```
 
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
