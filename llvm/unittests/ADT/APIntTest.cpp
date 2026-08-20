@@ -2920,6 +2920,15 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, Max), One);
       EXPECT_EQ(SGreatestCommonDivisor(Max, Max), One);
 
+      // Test some corner cases near the minimum signed value.
+      APInt SMin = APInt::getSignedMinValue(Bits);
+      EXPECT_EQ(SGreatestCommonDivisor(Zero, SMin), SMin);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusOne, SMin), One);
+      EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, SMin), Two);
+      EXPECT_EQ(SGreatestCommonDivisor(One, SMin), MinusOne);
+      EXPECT_EQ(SGreatestCommonDivisor(Two, SMin), MinusTwo);
+      EXPECT_EQ(SGreatestCommonDivisor(SMin, SMin), SMin);
+
       APInt MaxOver2 = Max.udiv(Two);
       EXPECT_EQ(GreatestCommonDivisor(MaxOver2, Max), One);
       // Max - 1 == Max / 2 * 2, because Max is odd.
