@@ -453,7 +453,6 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
     }
   }
 
-  Relocation::Arch = TheTriple.getArch();
   auto BCOrErr = BinaryContext::createBinaryContext(
       TheTriple, std::make_shared<orc::SymbolStringPool>(), File->getFileName(),
       Features.get(), IsPIC,
@@ -537,7 +536,7 @@ static void createRISCVIFuncResolverFunctions(BinaryContext &BC) {
 
   for (const BinarySection &Section : BC.allocatableSections()) {
     for (const Relocation &Rel : Section.dynamicRelocations()) {
-      if (!Rel.isIRelative() || !Rel.Addend ||
+      if (!BC.getRelocationHandler().isIRelative(Rel.Type) || !Rel.Addend ||
           BC.getBinaryFunctionAtAddress(Rel.Addend))
         continue;
 
@@ -1455,7 +1454,8 @@ void RewriteInstance::discoverFileObjects() {
                                                    /*CheckPastEnd*/ false,
                                                    /*UseMaxSize*/ true);
         if (BF) {
-          assert(Rel.isRelative() && "Expected relative relocation for island");
+          assert(BC->getRelocationHandler().isRelative(Rel.Type) &&
+                 "Expected relative relocation for island");
           BC->logBOLTErrorsAndQuitOnFatal(
               BF->markIslandDynamicRelocationAtAddress(RelAddress));
         }
@@ -1551,7 +1551,7 @@ Error RewriteInstance::discoverRtInitAddress() {
   }
 
   if (const Relocation *Reloc = InitArraySection->getDynamicRelocationAt(0)) {
-    if (Reloc->isRelative()) {
+    if (BC->getRelocationHandler().isRelative(Reloc->Type)) {
       BC->StartFunctionAddress = Reloc->Addend;
     } else {
       MCSymbol *Sym = Reloc->Symbol;
@@ -1649,7 +1649,7 @@ Error RewriteInstance::updateRtInitReloc() {
 
   if (std::optional<Relocation> Reloc =
           InitArraySection->takeDynamicRelocationAt(0)) {
-    if (Reloc->isRelative()) {
+    if (BC->getRelocationHandler().isRelative(Reloc->Type)) {
       if (Reloc->Addend != BC->StartFunctionAddress)
         return createStringError(std::errc::not_supported,
                                  "inconsistent .init_array dynamic relocation");
@@ -1669,9 +1669,10 @@ Error RewriteInstance::updateRtInitReloc() {
       if (BF->getAddress() + Reloc->Addend != BC->StartFunctionAddress)
         return createStringError(std::errc::not_supported,
                                  "inconsistent .init_array dynamic relocation");
-      InitArraySection->addDynamicRelocation(Relocation{
-          /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-          /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+      InitArraySection->addDynamicRelocation(
+          Relocation{/*Offset*/ 0, /*Symbol*/ nullptr,
+                     /*Type*/ BC->getRelocationHandler().getAbs64(),
+                     /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
     }
   }
   // Update the static relocation by adding a pending relocation which will get
@@ -1679,9 +1680,10 @@ Error RewriteInstance::updateRtInitReloc() {
   // flushPendingRelocations will calculate the value to patch as
   // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
   // desired value.
-  InitArraySection->addPendingRelocation(Relocation{
-      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+  InitArraySection->addPendingRelocation(
+      Relocation{/*Offset*/ 0, /*Symbol*/ nullptr,
+                 /*Type*/ BC->getRelocationHandler().getAbs64(),
+                 /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
   BC->outs()
       << "BOLT-INFO: runtime library initialization was hooked via .init_array "
          "entry, set to 0x"
@@ -1725,9 +1727,10 @@ Error RewriteInstance::updateRtFiniReloc() {
   // flushPendingRelocations will calculate the value to patch as
   // "Symbol + Addend". Since we don't have a symbol, just set the addend to the
   // desired value.
-  FiniArraySection->addPendingRelocation(Relocation{
-      /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-      /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
+  FiniArraySection->addPendingRelocation(
+      Relocation{/*Offset*/ 0, /*Symbol*/ nullptr,
+                 /*Type*/ BC->getRelocationHandler().getAbs64(),
+                 /*Addend*/ RT->getRuntimeFiniAddress(), /*Value*/ 0});
   BC->outs() << "BOLT-INFO: runtime library finalization was hooked via "
                 ".fini_array entry, set to 0x"
              << Twine::utohexstr(RT->getRuntimeFiniAddress()) << "\n";
@@ -1915,7 +1918,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (!Rel->Addend || !Rel->isIRelative())
+    if (!Rel->Addend || !BC->getRelocationHandler().isIRelative(Rel->Type))
       return;
 
     // IFUNC trampoline without symbol
@@ -1945,7 +1948,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   // symbols can alias that resolver, and R_RISCV_CALL_PLT relocations may use
   // any of their names. Register every such name for the same IPLT entry so
   // getPLTBinaryDataByName() can resolve those call sites.
-  if (BC->isRISCV() && Rel->isIRelative()) {
+  if (BC->isRISCV() && BC->getRelocationHandler().isIRelative(Rel->Type)) {
     auto ResolverSyms = FileSymRefs.equal_range(Rel->Addend);
     for (const SymbolRef &AliasSymbol : llvm::make_second_range(
              llvm::make_range(ResolverSyms.first, ResolverSyms.second))) {
@@ -2422,12 +2425,12 @@ void RewriteInstance::relocateEHFrameSection() {
       llvm_unreachable("unsupported DWARF encoding type");
     case dwarf::DW_EH_PE_sdata4:
     case dwarf::DW_EH_PE_udata4:
-      RelType = Relocation::getPC32();
+      RelType = BC->getRelocationHandler().getPC32();
       Offset -= 4;
       break;
     case dwarf::DW_EH_PE_sdata8:
     case dwarf::DW_EH_PE_udata8:
-      RelType = Relocation::getPC64();
+      RelType = BC->getRelocationHandler().getPC64();
       Offset -= 8;
       break;
     }
@@ -2830,7 +2833,7 @@ bool RewriteInstance::analyzeRelocation(
     const RelocationRef &Rel, uint32_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
     uint64_t &ExtractedValue) const {
-  if (!Relocation::isSupported(RType))
+  if (!BC->getRelocationHandler().isSupported(RType))
     return false;
 
   auto IsWeakReference = [](const SymbolRef &Symbol) {
@@ -2844,16 +2847,17 @@ bool RewriteInstance::analyzeRelocation(
   const bool IsAArch64 = BC->isAArch64();
   const bool IsRISCV = BC->isRISCV();
 
-  const size_t RelSize = Relocation::getSizeForType(RType);
+  const size_t RelSize = BC->getRelocationHandler().getSizeForType(RType);
 
   ErrorOr<uint64_t> Value =
       BC->getUnsignedValueAtAddress(Rel.getOffset(), RelSize);
   assert(Value && "failed to extract relocated value");
 
-  ExtractedValue = Relocation::extractValue(RType, *Value, Rel.getOffset());
+  ExtractedValue =
+      BC->getRelocationHandler().extractValue(RType, *Value, Rel.getOffset());
   Addend = getRelocationAddend(InputFile, Rel);
 
-  const bool IsPCRelative = Relocation::isPCRelative(RType);
+  const bool IsPCRelative = BC->getRelocationHandler().isPCRelative(RType);
   const uint64_t PCRelOffset = IsPCRelative && !IsAArch64 ? Rel.getOffset() : 0;
   bool SkipVerification = false;
   auto SymbolIter = Rel.getSymbol();
@@ -2914,7 +2918,8 @@ bool RewriteInstance::analyzeRelocation(
   // causing the extracted value mismatch. Similar cases can happen for TLS.
   // Pass the relocation information as is to the disassembler and let it decide
   // how to use it for the operand symbolization.
-  if (Relocation::isGOT(RType) || Relocation::isTLS(RType)) {
+  if (BC->getRelocationHandler().isGOT(RType) ||
+      BC->getRelocationHandler().isTLS(RType)) {
     SkipVerification = true;
   } else if (!SymbolAddress) {
     assert(!IsSectionRelocation);
@@ -3048,7 +3053,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
 
   for (const RelocationRef &Rel : Section.relocations()) {
     const uint32_t RType = Relocation::getType(Rel);
-    if (Relocation::isNone(RType))
+    if (BC->getRelocationHandler().isNone(RType))
       continue;
 
     StringRef SymbolName = "<none>";
@@ -3084,7 +3089,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     // Check if this relocation targets an address within a function. This
     // happens with indirect goto.
     const uint64_t ReferencedAddress = SymbolAddress + Addend;
-    if (Relocation::isRelative(RType)) {
+    if (BC->getRelocationHandler().isRelative(RType)) {
       if (SymbolAddress != 0) {
         BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
                       "relocation type\n";
@@ -3106,7 +3111,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
            << ":\n";
   });
 
-  const uint32_t RType = Relocation::getRelative();
+  const uint32_t RType = BC->getRelocationHandler().getRelative();
   const uint8_t PSize = BC->AsmInfo->getCodePointerSize();
   const uint64_t MaxDelta = ((CHAR_BIT * DynamicRelrEntrySize) - 1) * PSize;
 
@@ -3244,7 +3249,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   SmallString<16> TypeName;
   Rel.getTypeName(TypeName);
   uint32_t RType = Relocation::getType(Rel);
-  if (Relocation::skipRelocationType(RType))
+  if (BC->getRelocationHandler().skipRelocationType(RType))
     return;
 
   // Adjust the relocation type as the linker might have skewed it.
@@ -3254,14 +3259,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     RType &= ~ELF::R_X86_64_converted_reloc_bit;
   }
 
-  if (Relocation::isTLS(RType)) {
+  if (BC->getRelocationHandler().isTLS(RType)) {
     // No special handling required for TLS relocations on X86.
     if (IsX86)
       return;
 
     // The non-got related TLS relocations on AArch64 and RISC-V also could be
     // skipped.
-    if (!Relocation::isGOT(RType))
+    if (!BC->getRelocationHandler().isGOT(RType))
       return;
   }
 
@@ -3289,7 +3294,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
-      Relocation::isPCRelative(RType)) {
+      BC->getRelocationHandler().isPCRelative(RType)) {
     BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
     if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
                BD->nameStartsWith("_ZTCN"))) { // construction vtable
@@ -3374,7 +3379,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (IsX86 && Relocation::isPCRelative(RType)) {
+  if (IsX86 && BC->getRelocationHandler().isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -3407,7 +3412,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-  if ((BC->isAArch64() || BC->isRISCV()) && Relocation::isGOT(RType))
+  if ((BC->isAArch64() || BC->isRISCV()) &&
+      BC->getRelocationHandler().isGOT(RType))
     ForceRelocation = true;
 
   if (!ReferencedSection && !ForceRelocation) {
@@ -3453,7 +3459,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   // Workaround for a member function pointer de-virtualization bug. We check
   // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
-  if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
+  if (IsToCode && ContainingBF &&
+      !BC->getRelocationHandler().isPCRelative(RType) &&
       (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
     if (const BinaryFunction *RogueBF =
             BC->getBinaryFunctionAtAddress(Address + 1)) {
@@ -3461,7 +3468,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       // It's a linear search, but it should rarely happen.
       auto CheckReloc = [&](const Relocation &Rel) {
         return Rel.Symbol == RogueBF->getSymbol() &&
-               !Relocation::isPCRelative(Rel.Type);
+               !BC->getRelocationHandler().isPCRelative(Rel.Type);
       };
       bool Found = llvm::any_of(
           llvm::make_second_range(ContainingBF->Relocations), CheckReloc);
@@ -3493,7 +3500,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (Relocation::isInstructionReference(RType)) {
+      if (BC->getRelocationHandler().isInstructionReference(RType)) {
         // Instruction labels are created while disassembling so we just leave
         // the symbol empty for now. Since the extracted value is typically
         // unrelated to the referenced symbol (e.g., %pcrel_lo in RISC-V
@@ -6321,7 +6328,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         SectionAddress = SectionInputAddress;
 
       for (const Relocation &Rel : Section.dynamicRelocations()) {
-        const bool IsRelative = Rel.isRelative();
+        const bool IsRelative = BC->getRelocationHandler().isRelative(Rel.Type);
         if (PatchRelative != IsRelative || Rel.isRELR())
           continue;
 
@@ -6378,7 +6385,8 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
       return;
 
     typename ELFObjectFile<ELFT>::Elf_Rela RelA;
-    RelA.setSymbolAndType(0, Relocation::getNone(), EF.isMips64EL());
+    RelA.setSymbolAndType(0, BC->getRelocationHandler().getNone(),
+                          EF.isMips64EL());
     RelA.r_offset = 0;
     RelA.r_addend = 0;
     while (Offset < EndOffset)
