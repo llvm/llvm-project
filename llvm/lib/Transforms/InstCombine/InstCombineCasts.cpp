@@ -1615,7 +1615,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
                   " to avoid zero extend: "
                << Zext << '\n');
-    Value *Res = EvaluateInDifferentType(Src, DestTy, false);
+    Value *Res = EvaluateInDifferentType(Src, DestTy, Zext.hasNonNeg());
     assert(Res->getType() == DestTy);
 
     // Preserve debug values referring to Src if the zext is its last use.

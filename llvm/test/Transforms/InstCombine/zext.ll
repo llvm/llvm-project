@@ -1080,3 +1080,32 @@ define <2 x i8> @zext_or_trunc_nuw_vec(<2 x i8> %x, <2 x i4> %y) {
   %zext = zext <2 x i4> %or to <2 x i8>
   ret <2 x i8> %zext
 }
+
+define i64 @zext_nneg_eval_signed_constant(ptr %p) {
+; CHECK-LABEL: @zext_nneg_eval_signed_constant(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[Z:%.*]] = zext nneg i8 [[X]] to i64
+; CHECK-NEXT:    [[A:%.*]] = add nsw i64 [[Z]], -94
+; CHECK-NEXT:    ret i64 [[A]]
+;
+  %x = load i8, ptr %p, align 1, !range !{i8 96, i8 -128}
+  %z = zext nneg i8 %x to i32
+  %a = add nsw i32 %z, -94
+  %r = zext nneg i32 %a to i64
+  ret i64 %r
+}
+
+define i64 @zext_eval_signed_constant_no_nneg(ptr %p) {
+; CHECK-LABEL: @zext_eval_signed_constant_no_nneg(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, !range [[RNG2]]
+; CHECK-NEXT:    [[NARROW:%.*]] = add nuw i8 [[X]], 34
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[NARROW]], 63
+; CHECK-NEXT:    [[R:%.*]] = zext nneg i8 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %x = load i8, ptr %p, align 1, !range !{i8 96, i8 -128}
+  %z = zext nneg i8 %x to i32
+  %a = add nsw i32 %z, -94
+  %r = zext i32 %a to i64
+  ret i64 %r
+}
