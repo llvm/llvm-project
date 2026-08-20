@@ -5186,7 +5186,7 @@ void OmpStructureChecker::CheckDoacross(
     return;
   }
   assert(depType.v == parser::OmpDependenceType::Value::Sink &&
-      "Unexpected depenedence-type");
+      "Unexpected dependence-type");
   if (!iterVec) {
     context_.Say(OmpGetModifierSource(modifiers, &depType),
         "Iteration vector must be specified with SINK dependence type"_err_en_US);
