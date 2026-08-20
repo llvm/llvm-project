@@ -18,6 +18,9 @@ int foo() {
   // not important.
   asm volatile(
       ".globl place_break_here\n"
+#ifdef _WIN32
+      ".def place_break_here; .scl 2; .type 32; .endef;\n"
+#endif
       "place_break_here:\n"
       // The test will repeatedly add and remove a breakpoint here.
       "nop");
