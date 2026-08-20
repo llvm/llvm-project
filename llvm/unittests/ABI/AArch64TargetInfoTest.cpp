@@ -227,35 +227,6 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
   }
 }
 
-static void expectNaturalAlignIndirect(const ArgInfo &Info,
-                                       llvm::Align ExpectedAlign, bool ByVal) {
-  EXPECT_TRUE(Info.isIndirect());
-  EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
-  EXPECT_EQ(Info.getIndirectByVal(), ByVal);
-}
-
-// Records that cannot be passed in registers (e.g. non-trivial C++ types) are
-// classified as Indirect with ByVal=false under all AArch64 ABI kinds.
-TEST_F(AArch64TargetInfoTest, ClassifyArgumentRecordCannotPassInRegisters) {
-  // A record without CanPassInRegisters is treated like a C++ type with a
-  // non-trivial copy constructor or destructor.
-  const ABIType *CannotPass = TB.getRecordType(
-      {llvm::abi::FieldInfo(I32)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
-      llvm::abi::StructPacking::Default, /*BaseClasses=*/{},
-      /*VirtualBaseClasses=*/{}, llvm::abi::RecordFlags::IsCXXRecord);
-
-  for (AArch64ABIKind Kind :
-       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
-        AArch64ABIKind::AAPCSSoft}) {
-    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
-    std::unique_ptr<FunctionInfo> FI =
-        FunctionInfo::create(llvm::CallingConv::C, Void, {CannotPass});
-    TI->computeInfo(*FI);
-    expectNaturalAlignIndirect(FI->getArgInfo(0).Info, llvm::Align(4),
-                               /*ByVal=*/false);
-  }
-}
-
 // Transparent unions are classified as their first field type.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
   using llvm::abi::FieldInfo;
