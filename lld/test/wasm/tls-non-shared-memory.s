@@ -70,14 +70,14 @@ tls1:
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           65536
+# CHECK-NEXT:           Value:           65540
 # GOT.data.internal.tls1
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           65536
+# CHECK-NEXT:           Value:           65540
 # CHECK-NEXT:   - Type:            EXPORT
 
 #      CHECK:  - Type:            DATA
@@ -88,14 +88,14 @@ tls1:
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           65536
-# CHECK-NEXT:        Content:         2B000000
+# CHECK-NEXT:        Content:         2A000000
 # .tdata
 # CHECK-NEXT:      - SectionOffset:   19
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
 # CHECK-NEXT:          Value:           65540
-# CHECK-NEXT:        Content:         2A000000
+# CHECK-NEXT:        Content:         2B000000
 # CHECK-NEXT:  - Type:            CUSTOM
 
 # The constant value here which we add to `__tls_base` should not be absolute
@@ -146,7 +146,7 @@ tls1:
 # PIC-NEXT:        Offset:
 # PIC-NEXT:          Opcode:          GLOBAL_GET
 # PIC-NEXT:          Index:           {{\d*}}
-# PIC-NEXT:        Content:         2B0000002A000000
+# PIC-NEXT:        Content:         2A0000002B000000
 # PIC-NEXT:  - Type:            CUSTOM
 
 # Unless we have extended-const, in which case the merging is not needed.
@@ -160,7 +160,7 @@ tls1:
 # EXT-CONST-NEXT:        Offset:
 # EXT-CONST-NEXT:          Opcode:          GLOBAL_GET
 # EXT-CONST-NEXT:          Index:           1
-# EXT-CONST-NEXT:        Content:         2B000000
+# EXT-CONST-NEXT:        Content:         2A000000
 # EXT-CONST-NEXT:      - SectionOffset:   18
 # EXT-CONST-NEXT:        InitFlags:       0
 # EXT-CONST-NEXT:        Offset:
@@ -168,4 +168,4 @@ tls1:
 # This instruction sequence decodes to:
 # (global.get[0x23] 0x1 i32.const[0x41] 0x04 i32.add[0x6A] end[0x0b])
 # EXT-CONST-NEXT:          Body:            230141046A0B
-# EXT-CONST-NEXT:        Content:         2A000000
+# EXT-CONST-NEXT:        Content:         2B000000
