@@ -13,6 +13,7 @@
 #include "OffloadAPI.h"
 #include "State.h"
 #include "Stream.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace offload {
@@ -61,55 +62,70 @@ static inline StreamTy *toInternalStream(Stream_t Stream) {
   return reinterpret_cast<StreamTy *>(Stream);
 }
 
+static inline ol_result_t
+syncAndDestroyEvents(llvm::SmallVectorImpl<ol_event_handle_t> &Events) {
+  ol_result_t FirstError = OL_SUCCESS;
+  for (ol_event_handle_t Event : Events) {
+    if (!Event)
+      continue;
+
+    ol_result_t SyncResult = olSyncEvent(Event);
+    if (FirstError == OL_SUCCESS && SyncResult != OL_SUCCESS)
+      FirstError = SyncResult;
+
+    ol_result_t DestroyResult = olDestroyEvent(Event);
+    if (FirstError == OL_SUCCESS && DestroyResult != OL_SUCCESS)
+      FirstError = DestroyResult;
+  }
+  Events.clear();
+  return FirstError;
+}
+
 /// Wait for blocking streams before executing if we are legacy default stream.
-static inline ol_result_t waitOnBlockingStreams() {
-  ol_device_handle_t Device = ThreadState::getDefaultDevice();
-  if (!RuntimeState::hasLegacyDefaultStream(Device) ||
-      RuntimeState::getBlockingStreams(Device).empty())
+static inline ol_result_t waitOnBlockingStreams(StateTy &State,
+                                                ThreadStateTy &ThreadState) {
+  ol_device_handle_t Device = ThreadState.getDefaultDevice();
+  SmallPtrSet<StreamTy *, 8> BlockingStreams = State.getBlockingStreams(Device);
+  if (!State.hasLegacyDefaultStream(Device) || BlockingStreams.empty())
     return OL_SUCCESS;
-  StreamTy *DefaultStream = ThreadState::getDefaultStream();
-  llvm::SmallVector<ol_event_handle_t, 8> Events;
-  for (StreamTy *BlockingStream : RuntimeState::getBlockingStreams(Device)) {
+
+  StreamTy *DefaultStream = ThreadState.getDefaultStream();
+  SmallVector<ol_event_handle_t, 8> Events;
+  for (StreamTy *BlockingStream : BlockingStreams) {
     ol_event_handle_t Event = nullptr;
     ol_result_t Result =
         olCreateEvent(BlockingStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
-    if (Result != OL_SUCCESS)
+    if (Result != OL_SUCCESS) {
+      syncAndDestroyEvents(Events);
       return Result;
+    }
     Events.push_back(Event);
   }
 
-  return olWaitEvents(DefaultStream->Queue, Events.data(), Events.size());
+  return DefaultStream->waitOnAndTrackDependencyEvents(Events);
 }
 
 /// Wait for the legacy default stream to complete before launching a kernel on
 /// a blocking stream.
-static inline ol_result_t waitOnLegacyDefaultStream(StreamTy *SourceStream,
+static inline ol_result_t waitOnLegacyDefaultStream(StateTy &State,
+                                                    ThreadStateTy &ThreadState,
+                                                    StreamTy *SourceStream,
                                                     ol_device_handle_t Device) {
-  if (!RuntimeState::hasLegacyDefaultStream(Device))
+  if (!State.hasLegacyDefaultStream(Device))
     return OL_SUCCESS;
 
-  StreamTy *DefaultStream = ThreadState::getDefaultStream();
-  assert(DefaultStream->Kind == llvm::offload::QueueKind::LegacyDefault &&
+  StreamTy *DefaultStream = ThreadState.getDefaultStream();
+  assert(DefaultStream->Kind == QueueKind::LegacyDefault &&
          "Default stream is not a legacy default stream");
 
   ol_event_handle_t Event = nullptr;
+  SmallVector<ol_event_handle_t, 8> Events;
   ol_result_t Result =
       olCreateEvent(DefaultStream->Queue, OL_EVENT_FLAGS_NONE, &Event);
   if (Result != OL_SUCCESS)
     return Result;
-  return olWaitEvents(SourceStream->Queue, &Event, 1);
-}
-
-/// Convert a Stream_t to an ol_queue_handle_t.
-static inline Error_t getQueueFromStream(Stream_t Stream,
-                                         ol_queue_handle_t *Queue) {
-  if (!Stream)
-    return ErrorInvalidValue;
-
-  // TODO: add proper DEBUG/assert guarded checks
-  StreamTy *InternalStream = toInternalStream(Stream);
-  *Queue = InternalStream->Queue;
-  return Success;
+  Events.push_back(Event);
+  return SourceStream->waitOnAndTrackDependencyEvents(Events);
 }
 
 } // namespace offload
