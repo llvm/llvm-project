@@ -165,19 +165,27 @@ TEST(USMFunctions, ZeroByteAllocation) {
 
 TEST(USMFunctions, InvalidAlignment) {
   constexpr size_t NumBytes = 128;
-  constexpr size_t BadAlignment = 3;
 
   mock::MockWrapper Mock;
   queue Q;
   device Dev = Q.get_device();
   context Ctx = Q.get_context();
+  ol_device_handle_t OLDev = detail::getSyclObjImpl(Dev)->getOLHandle();
 
-  EXPECT_CALL(Mock.get(), olMemAllocAligned(_, _, _, _, _)).Times(0);
+  constexpr size_t NonPowerOf2Alignment = 3;
+  EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_DEVICE,
+                                            NumBytes, NonPowerOf2Alignment, _))
+      .Times(1)
+      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
+          OL_ERRC_INVALID_ARGUMENT)));
+  EXPECT_EQ(aligned_alloc_device(NonPowerOf2Alignment, NumBytes, Dev, Ctx),
+            nullptr);
 
-  try {
-    aligned_alloc_device(BadAlignment, NumBytes, Dev, Ctx);
-    FAIL() << "Expected sycl::exception to be thrown";
-  } catch (const exception &e) {
-    EXPECT_EQ(e.code(), make_error_code(errc::invalid));
-  }
+  constexpr size_t ZeroAlignment = 0;
+  EXPECT_CALL(Mock.get(), olMemAllocAligned(OLDev, OL_ALLOC_TYPE_DEVICE,
+                                            NumBytes, ZeroAlignment, _))
+      .Times(1)
+      .WillOnce(Return(mock::getMockLiboffload().makeEmptyStrError(
+          OL_ERRC_INVALID_ARGUMENT)));
+  EXPECT_EQ(aligned_alloc_device(ZeroAlignment, NumBytes, Dev, Ctx), nullptr);
 }
