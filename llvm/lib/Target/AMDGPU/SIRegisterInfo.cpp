@@ -3377,7 +3377,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       // S_MOV_B32 even into a VGPR.
       auto MaterializeCarryOutOffset = [&](MachineInstrBuilder &Add) {
         Register ConstOffsetReg =
-            isWave32 ? Add.getReg(1) : getSubReg(Add.getReg(1), AMDGPU::sub0);
+            isWave32 ? Add.getReg(1)
+                     : Register(getSubReg(Add.getReg(1), AMDGPU::sub0));
         BuildMI(*MBB, *Add, DL, TII->get(AMDGPU::S_MOV_B32), ConstOffsetReg)
             .addImm(Offset);
         return ConstOffsetReg;
