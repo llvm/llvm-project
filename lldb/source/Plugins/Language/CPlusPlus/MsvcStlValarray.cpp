@@ -100,8 +100,7 @@ private:
 
 bool formatters::IsMsvcStlValarray(ValueObject &valobj) {
   if (auto valobj_sp = valobj.GetNonSyntheticValue())
-    return valobj_sp->GetChildMemberWithName("_Myptr") != nullptr &&
-           valobj_sp->GetChildMemberWithName("_Mysize") != nullptr;
+    return valobj_sp->GetChildMemberWithName("_Myptr") != nullptr;
   return false;
 }
 
