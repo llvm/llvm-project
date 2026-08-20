@@ -1120,14 +1120,16 @@ public:
     // The list of available load sizes (in bytes), sorted in decreasing order.
     SmallVector<unsigned, 8> LoadSizes;
 
-    // For memcmp expansion when the memcmp result is only compared equal or
-    // not-equal to 0, allow up to this number of load pairs per block. As an
-    // example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
+    // For memcmp expansion, allow up to this number of load pairs per block.
+    // As an example, this may allow 'memcmp(a, b, 3) == 0' in a single block:
     //   a0 = load2bytes &a[0]
     //   b0 = load2bytes &b[0]
     //   a2 = load1byte  &a[2]
     //   b2 = load1byte  &b[2]
     //   r  = cmp eq (a0 ^ b0 | a2 ^ b2), 0
+    // Equality comparisons combine the differences with xor/or. Ordering
+    // comparisons pack the loads in memory order into a wider integer before
+    // comparing, without exceeding the target's preferred load width.
     unsigned NumLoadsPerBlock = 1;
 
     // Set to true to allow overlapping loads. For example, 7-byte compares can
