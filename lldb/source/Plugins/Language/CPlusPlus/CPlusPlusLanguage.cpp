@@ -1897,6 +1897,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "MSVC STL/libstdc++ std::filesystem::path summary provider",
                 "^std::filesystem::(__cxx11::)?path$", stl_summary_flags, true);
 
+  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
+                "MSVC STL/libstdc++ std::source_location summary provider",
+                "std::source_location", stl_summary_flags);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 
@@ -2056,10 +2060,6 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, GenericValarraySummaryProvider,
                 "MSVC STL std::valarray summary provider",
                 "^std::valarray<.+>(( )?&)?$", stl_summary_flags, true);
-
-  AddCXXSummary(cpp_category_sp, GenericSourceLocationSummaryProvider,
-                "MSVC STL/libstdc++ std::source_location summary provider",
-                "std::source_location", stl_summary_flags);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

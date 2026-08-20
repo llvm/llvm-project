@@ -3,6 +3,7 @@ Test std::source_location summary.
 """
 
 import lldb
+import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -59,15 +60,15 @@ class StdSourceLocationTestCase(TestBase):
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
-        frame = self.frame()
-        loc_main = frame.FindVariable("loc_main")
-        self.assertTrue(loc_main.GetError().Success())
-        self.assertRegex(loc_main.summary, r"main\.cpp\":6:\d+.*main")
-
-        loc_foo = frame.FindVariable("loc_foo")
-        self.assertTrue(loc_foo.GetError().Success())
-        self.assertRegex(loc_foo.summary, r"main\.cpp\":3:\d+.*foo")
-
-        loc_empty = frame.FindVariable("loc_empty")
-        self.assertTrue(loc_empty.GetError().Success())
-        self.assertTrue(not loc_empty.summary)
+        self.expect_var_path(
+            "loc_main",
+            summary=re.compile(r'main\.cpp":6:\d+.*main'),
+            children=[],
+        )
+        self.expect_var_path(
+            "loc_foo",
+            summary=re.compile(r'main\.cpp":3:\d+.*foo'),
+            children=[],
+        )
+        loc_empty = self.expect_var_path("loc_empty", children=[])
+        self.assertIsNone(loc_empty.summary)
