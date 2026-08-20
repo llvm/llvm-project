@@ -6,7 +6,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; exit edge and threads leave divergently.
 define amdgpu_kernel void @divergent_cycle_exit_phi(i32 %n) {
 ; CHECK-LABEL: UniformityInfo for function 'divergent_cycle_exit_phi':
-; CHECK-NOT: DIVERGENT:   %acc
+; CHECK: DIVERGENT:   %acc
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   br label %loop
@@ -53,7 +53,7 @@ exit:
 ; leaves both cycles at once.
 define amdgpu_kernel void @nested_cycle_exit_phi() {
 ; CHECK-LABEL: UniformityInfo for function 'nested_cycle_exit_phi':
-; CHECK-NOT: DIVERGENT:   %acc
+; CHECK: DIVERGENT:   %acc
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   br label %outer.header
