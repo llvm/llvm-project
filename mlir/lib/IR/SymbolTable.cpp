@@ -550,69 +550,112 @@ bool SymbolTable::mayContainSymbolRefs(Attribute attr) {
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
-/// Verify the symbol uses held by the types owned by `op`: its operand, result,
-/// and block-argument types, and any types nested within its attributes.
-/// `walker` carries the SymbolUserTypeInterface check as a type-walk callback,
-/// anchored at the operation currently being verified, and its visited memo
-/// makes each uniqued type, which may recur across many positions and
-/// operations, verified against the enclosing symbol table at most once.
-/// Verification fails fast on the first invalid symbol use.
-static LogicalResult
-verifyOpTypeSymbolUses(Operation *op, AttrTypeWalker &walker, bool lock,
-                       detail::SymbolRefContainmentCache &cache,
-                       NamedAttrList &inherentAttrs) {
-  // Skip a root that provably holds no SymbolRefAttr before entering the walker
-  // at all: the cheap containment probe spares the walker's out-of-line descent
-  // and keeps its per-scope visited memo confined to subtrees that can actually
-  // carry a symbol use, rather than growing it by every distinct clean root.
-  // The walker's callbacks prune interior subtrees on the same fact.
-  auto verify = [&](Type type) {
-    if (!computeMayContainSymbolRefs(type, lock, cache))
+namespace {
+/// Verifies the symbol uses carried by the types an operation owns -- its
+/// operand, result, and block-argument types, and the types nested within its
+/// attributes -- against the enclosing symbol table, failing fast on the first
+/// invalid use. One instance serves a whole verification scope and is invoked
+/// once per operation, holding the per-scope state each verification would
+/// otherwise re-derive: the context's containment cache and multithreading
+/// flag, a NamedAttrList reused as the scratch buffer for properties-held
+/// attributes, and a single AttrTypeWalker whose visited memo walks each
+/// uniqued type or attribute -- which may recur across many positions and
+/// operations -- at most once per scope.
+class OpTypeSymbolUseVerifier {
+public:
+  OpTypeSymbolUseVerifier(MLIRContext *ctx, SymbolTableCollection &symbolTable)
+      : lock(ctx->isMultithreadingEnabled()),
+        cache(detail::getSymbolRefContainmentCache(ctx)) {
+    typeWalker.addWalk([this, &symbolTable](Type type) -> WalkResult {
+      // Prune subtrees that provably hold no SymbolRefAttr: a conforming
+      // SymbolUserTypeInterface spells its references as SymbolRefAttr
+      // sub-elements, so such a type has a vacuous verifySymbolUses.
+      if (!computeMayContainSymbolRefs(type, lock, cache))
+        return WalkResult::skip();
+      if (auto user = dyn_cast<SymbolUserTypeInterface>(type))
+        if (failed(user.verifySymbolUses(anchor, symbolTable)))
+          return WalkResult::interrupt();
       return WalkResult::advance();
-    return walker.walk<WalkOrder::PreOrder>(type);
-  };
-  auto verifyAttr = [&](Attribute attr) {
-    if (!attr || !computeMayContainSymbolRefs(attr, lock, cache))
+    });
+    typeWalker.addWalk([this](Attribute attr) -> WalkResult {
+      // Prune reference-free attribute subtrees so the walk descends only where
+      // a SymbolRefAttr, and thus a symbol-using type, may live.
+      if (!computeMayContainSymbolRefs(attr, lock, cache))
+        return WalkResult::skip();
       return WalkResult::advance();
-    return walker.walk<WalkOrder::PreOrder>(attr);
-  };
-
-  for (Type type : op->getOperandTypes())
-    if (verify(type).wasInterrupted())
-      return failure();
-  for (Type type : op->getResultTypes())
-    if (verify(type).wasInterrupted())
-      return failure();
-  for (Region &region : op->getRegions())
-    for (Block &block : region)
-      for (BlockArgument argument : block.getArguments())
-        if (verify(argument.getType()).wasInterrupted())
-          return failure();
-
-  // Verify types nested within the operation's attributes, routed through the
-  // same walker (and thus the same visited memo) as the type positions above.
-  // Read the raw stored attribute dictionary rather than getAttrDictionary():
-  // the latter allocates and uniques a fresh DictionaryAttr for every operation
-  // that keeps its inherent attributes in properties. The raw dictionary
-  // already covers inherent attributes for operations that do not use
-  // properties, and the discardable attributes otherwise; the properties-held
-  // inherent attributes are appended into a scope-reused NamedAttrList via
-  // populateInherentAttrs and walked separately -- the same coverage
-  // getAttrDictionary() provides, since it calls the same
-  // populateInherentAttrs. The list is cleared before each population so its
-  // heap buffer is reused across operations without accumulating their
-  // attributes.
-  if (verifyAttr(op->getRawDictionaryAttrs()).wasInterrupted())
-    return failure();
-  if (op->getPropertiesStorageSize()) {
-    inherentAttrs.clear();
-    op->getName().populateInherentAttrs(op, inherentAttrs);
-    for (const NamedAttribute &namedAttr : inherentAttrs)
-      if (verifyAttr(namedAttr.getValue()).wasInterrupted())
-        return failure();
+    });
   }
-  return success();
-}
+
+  /// Verify the symbol uses carried by `op`'s types, anchoring each
+  /// SymbolUserTypeInterface check at `op`.
+  LogicalResult verify(Operation *op) {
+    anchor = op;
+    // Skip a root that provably holds no SymbolRefAttr before entering the
+    // walker at all: the cheap containment probe spares the walker's
+    // out-of-line descent and keeps its visited memo confined to subtrees that
+    // can actually carry a symbol use, rather than growing it by every distinct
+    // clean root. The walker's callbacks prune interior subtrees on the same
+    // fact.
+    auto verifyType = [&](Type type) {
+      if (!computeMayContainSymbolRefs(type, lock, cache))
+        return WalkResult::advance();
+      return typeWalker.walk<WalkOrder::PreOrder>(type);
+    };
+    auto verifyAttr = [&](Attribute attr) {
+      if (!attr || !computeMayContainSymbolRefs(attr, lock, cache))
+        return WalkResult::advance();
+      return typeWalker.walk<WalkOrder::PreOrder>(attr);
+    };
+
+    for (Type type : op->getOperandTypes())
+      if (verifyType(type).wasInterrupted())
+        return failure();
+    for (Type type : op->getResultTypes())
+      if (verifyType(type).wasInterrupted())
+        return failure();
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        for (BlockArgument argument : block.getArguments())
+          if (verifyType(argument.getType()).wasInterrupted())
+            return failure();
+
+    return success(!forEachAttributeRoot(op, verifyAttr).wasInterrupted());
+  }
+
+private:
+  /// Invoke `root` on each attribute subtree an operation can carry a nested
+  /// type within: its raw stored attribute dictionary as one root, then each
+  /// properties-held inherent attribute, stopping early once `root` interrupts.
+  /// This covers exactly what getAttrDictionary() would walk without allocating
+  /// and uniquing a fresh DictionaryAttr per operation -- the raw dictionary
+  /// already holds the inherent attributes of operations that keep none in
+  /// properties and the discardable attributes otherwise, and
+  /// populateInherentAttrs supplies the properties-held remainder into the
+  /// scope-reused list, cleared before each population so its buffer serves
+  /// every operation without accumulating attributes across them.
+  WalkResult forEachAttributeRoot(Operation *op,
+                                  function_ref<WalkResult(Attribute)> root) {
+    if (root(op->getRawDictionaryAttrs()).wasInterrupted())
+      return WalkResult::interrupt();
+    if (op->getPropertiesStorageSize()) {
+      inherentAttrs.clear();
+      op->getName().populateInherentAttrs(op, inherentAttrs);
+      for (const NamedAttribute &namedAttr : inherentAttrs)
+        if (root(namedAttr.getValue()).wasInterrupted())
+          return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  }
+
+  bool lock;
+  detail::SymbolRefContainmentCache &cache;
+  AttrTypeWalker typeWalker;
+  NamedAttrList inherentAttrs;
+  // The operation currently being verified; the type-walk anchors each
+  // SymbolUserTypeInterface check here.
+  Operation *anchor = nullptr;
+};
+} // namespace
 
 LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
@@ -642,53 +685,15 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
     }
   }
 
-  // Verify any nested symbol user operations.
+  // Verify any nested symbol user operations. walkSymbolTable does not descend
+  // into nested symbol tables, so every operation visited here shares one
+  // nearest symbol table; a uniqued attribute or type therefore resolves its
+  // symbol uses identically no matter which operation anchors the lookup, so
+  // each need be verified only once across the whole scope. The type verifier's
+  // walk memo and this attribute set both hold that once-per-scope state.
   SymbolTableCollection symbolTable;
-  // walkSymbolTable does not descend into nested symbol tables, so every
-  // operation visited here shares the same nearest symbol table. A uniqued
-  // attribute or type therefore resolves its symbol uses identically
-  // regardless of which operation anchors the lookup, so each is verified at
-  // most once across the whole scope.
   SetVector<Attribute> verifiedAttrs;
-
-  // Resolve the containment cache, the context's multithreading flag, and (via
-  // the hoisted NamedAttrList) the properties-attribute scratch buffer once for
-  // the whole scope, then thread them through every containment probe and the
-  // fill recursion, rather than re-deriving them per type occurrence.
-  MLIRContext *ctx = op->getContext();
-  bool cacheLock = ctx->isMultithreadingEnabled();
-  detail::SymbolRefContainmentCache &cache =
-      detail::getSymbolRefContainmentCache(ctx);
-  NamedAttrList inherentAttrs;
-
-  // A single walker, shared across the whole scope, checks the symbol uses of
-  // every SymbolUserTypeInterface type. Its visited memo records each uniqued
-  // type and attribute once, so a subtree recurring across operand, result,
-  // block-argument, and attribute positions and across operations is walked
-  // only at its first occurrence, whose operation supplies the lookup anchor;
-  // a re-encounter returns from the memo without re-descending. Because a first
-  // occurrence descends the whole subtree pre-order and verification fails
-  // fast, skipping the re-descent verifies nothing new.
-  Operation *typeSymbolUseAnchor = nullptr;
-  AttrTypeWalker typeWalker;
-  typeWalker.addWalk([&](Type type) -> WalkResult {
-    // Prune subtrees that provably hold no SymbolRefAttr: a conforming
-    // SymbolUserTypeInterface spells its references as SymbolRefAttr
-    // sub-elements, so such a type has a vacuous verifySymbolUses.
-    if (!computeMayContainSymbolRefs(type, cacheLock, cache))
-      return WalkResult::skip();
-    if (auto user = dyn_cast<SymbolUserTypeInterface>(type))
-      if (failed(user.verifySymbolUses(typeSymbolUseAnchor, symbolTable)))
-        return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
-  typeWalker.addWalk([&](Attribute attr) -> WalkResult {
-    // Prune reference-free attribute subtrees so the walk descends only where a
-    // SymbolRefAttr, and thus a symbol-using type, may live.
-    if (!computeMayContainSymbolRefs(attr, cacheLock, cache))
-      return WalkResult::skip();
-    return WalkResult::advance();
-  });
+  OpTypeSymbolUseVerifier typeVerifier(op->getContext(), symbolTable);
 
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
@@ -702,9 +707,7 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
           return WalkResult::interrupt();
       }
     }
-    typeSymbolUseAnchor = op;
-    if (failed(verifyOpTypeSymbolUses(op, typeWalker, cacheLock, cache,
-                                      inherentAttrs)))
+    if (failed(typeVerifier.verify(op)))
       return WalkResult::interrupt();
     return WalkResult::advance();
   };
