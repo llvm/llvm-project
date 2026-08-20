@@ -33,4 +33,5 @@ add_llvm_target_unittest(AMDGPUTests
   LiveRegUnits.cpp
   PALMetadata.cpp
   UniformityAnalysisTest.cpp
+  MFMACoExecRules.cpp
   )
