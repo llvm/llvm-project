@@ -2224,6 +2224,13 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
   return Expr<T>{std::move(x)};
 }
 
+template <typename T> bool IsComplexUnity(const typename T::Scalar &z) {
+  static_assert(T::category == TypeCategory::Complex);
+  using Part = typename T::Part::Scalar;
+  auto one{Part::FromInteger(value::Integer<8>{1}).value};
+  return z.AIMAG().IsZero() && z.REAL().Compare(one) == Relation::Equal;
+}
+
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
@@ -2244,6 +2251,11 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
+      if constexpr (T::category == TypeCategory::Complex) {
+        if (IsComplexUnity<T>(folded->second)) {
+          return Expr<T>{Constant<T>{folded->first}};
+        }
+      }
       if (folded->first.IsZero()) {
         if (folded->second.IsZero()) {
           context.Warn(common::UsageWarning::FoldingException,
@@ -2258,6 +2270,13 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
         context.Warn(common::UsageWarning::FoldingFailure,
             "Power for %s cannot be folded on host"_warn_en_US,
             T{}.AsFortran());
+      }
+    }
+  }
+  if constexpr (T::category == TypeCategory::Complex) {
+    if (auto exp{GetScalarConstantValue<T>(x.right())}) {
+      if (IsComplexUnity<T>(*exp)) {
+        return Fold(context, std::move(x.left()));
       }
     }
   }
