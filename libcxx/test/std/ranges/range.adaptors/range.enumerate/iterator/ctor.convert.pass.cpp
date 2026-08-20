@@ -38,33 +38,6 @@ using ConstIterIncompatibleView =
 static_assert(!std::is_convertible_v<std::ranges::iterator_t<ConstIterIncompatibleView>,
                                      std::ranges::iterator_t<const ConstIterIncompatibleView>>);
 
-constexpr void test_SFINAE() {
-  int buffer[3] = {1, 2, 3};
-  {
-    // Underlying non-const to const not convertible.
-    std::ranges::enumerate_view v(ConstIterIncompatibleView{buffer});
-    auto iter1 = v.begin();
-    auto iter2 = std::as_const(v).begin();
-
-    static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
-
-    static_assert(!std::is_constructible_v<decltype(iter1), decltype(iter2)>);
-    static_assert(!std::is_constructible_v<decltype(iter2), decltype(iter1)>);
-  }
-  {
-    std::ranges::enumerate_view v(NonSimpleCommon{buffer});
-    auto iter1 = v.begin();
-
-    std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
-    assert(iter1 == iter2);
-
-    static_assert(!std::same_as<decltype(iter1), decltype(iter2)>);
-
-    // We cannot create a non-const iterator from a const iterator.
-    static_assert(!std::is_constructible_v<decltype(iter1), decltype(iter2)>);
-  }
-}
-
 template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr void test() {
   using View                   = MinimalView<Iterator, Sentinel>;
@@ -97,7 +70,30 @@ constexpr void test() {
 }
 
 constexpr bool test() {
-  test_SFINAE();
+  int buffer[3] = {1, 2, 3};
+  {
+    // Underlying non-const to const not convertible.
+    std::ranges::enumerate_view v(ConstIterIncompatibleView{buffer});
+    auto it             = v.begin();
+    auto const_it = std::as_const(v).begin();
+
+    static_assert(!std::same_as<decltype(it), decltype(const_it)>);
+
+    static_assert(!std::is_constructible_v<decltype(it), decltype(const_it)>);
+    static_assert(!std::is_constructible_v<decltype(const_it), decltype(it)>);
+  }
+  {
+    std::ranges::enumerate_view v(NonSimpleCommon{buffer});
+    auto it = v.begin();
+
+    std::ranges::iterator_t<const decltype(v)> const_it = it;
+    assert(it == const_it);
+
+    static_assert(!std::same_as<decltype(it), decltype(const_it)>);
+
+    // We cannot create a non-const iterator from a const iterator.
+    static_assert(!std::is_constructible_v<decltype(it), decltype(const_it)>);
+  }
 
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
