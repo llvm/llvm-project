@@ -756,7 +756,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: distribute_load_slice_attr
   gpu.func @distribute_load_slice_attr() {
-    %2 = memref.alloca() {alignment = 1024} : memref<4096xf32>
+    %2 = memref.alloca() alignment = 1024 : memref<4096xf32>
     %offset =  arith.constant dense<0> : vector<256xindex>
     %mask = arith.constant dense<1> : vector<256xi1>
 

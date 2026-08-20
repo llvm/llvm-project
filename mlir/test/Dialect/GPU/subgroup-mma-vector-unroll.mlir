@@ -57,7 +57,7 @@ func.func @gathered_matmul(%lhs: memref<32x32xf32>, %rhs: memref<32x32xf32>, %ou
   %cst_0 = arith.constant 0.000000e+00 : f32
   %cst_1 = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
   %cst_2 = arith.constant dense<1> : vector<4x4xindex>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<32x32xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<32x32xf32>
   %3 = gpu.thread_id x
   %4 = gpu.thread_id y
   %5 = affine.apply affine_map<()[s0] -> (s0 * 16)>()[%4]

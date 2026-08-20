@@ -81,6 +81,11 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
   return Changed;
 }
 
+} // end anonymous namespace
+
+namespace llvm {
+namespace AMDGPU {
+
 /// Helper class that determines the relationship between incoming values of a
 /// phi in the control flow graph to determine where an incoming value can
 /// simply be taken as a scalar lane mask as-is, and where it needs to be
@@ -368,7 +373,8 @@ private:
   }
 };
 
-} // End anonymous namespace.
+} // namespace AMDGPU
+} // namespace llvm
 
 Register llvm::AMDGPU::createLaneMaskReg(
     MachineRegisterInfo *MRI, MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
@@ -449,9 +455,91 @@ AMDGPU::PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
   TII = ST->getInstrInfo();
 }
 
+void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
+    Register DstReg, MachineBasicBlock &MBB,
+    SmallVectorImpl<Incoming> &Incomings, MachineIDFSSAUpdater &SSAUpdater,
+    LoopFinder &LF, PhiIncomingAnalysis &PIA) {
+  LF.initialize(MBB);
+
+  // Sort the incomings such that incoming values that dominate other incoming
+  // values are sorted earlier. This allows us to do some amount of on-the-fly
+  // constant folding.
+  // Incoming with smaller DFSNumIn goes first, DFSNumIn is 0 for entry block.
+  llvm::sort(Incomings, [this](Incoming LHS, Incoming RHS) {
+    return DT->getNode(LHS.Block)->getDFSNumIn() <
+           DT->getNode(RHS.Block)->getDFSNumIn();
+  });
+
+  // Values in a loop that are observed outside the loop receive a simple but
+  // conservatively correct treatment.
+  SmallVector<MachineBasicBlock *, 4> DomBlocks = {&MBB};
+  for (MachineInstr &Use : MRI->use_instructions(DstReg))
+    DomBlocks.push_back(Use.getParent());
+
+  MachineBasicBlock *PostDomBound = PDT->findNearestCommonDominator(DomBlocks);
+
+  // FIXME: This fails to find irreducible cycles. If we have a def (other
+  // than a constant) in a pair of blocks that end up looping back to each
+  // other, it will be mishandle. Due to structurization this shouldn't occur
+  // in practice.
+  unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
+
+  SSAUpdater.addUseBlock(&MBB);
+
+  if (FoundLoopLevel) {
+    LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
+                      Incomings);
+
+    for (auto &Incoming : Incomings) {
+      SSAUpdater.addUseBlock(Incoming.Block);
+      Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+      SSAUpdater.addAvailableValue(Incoming.Block, Incoming.UpdatedReg);
+    }
+
+    SSAUpdater.calculate();
+
+    for (auto &Incoming : Incomings) {
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      buildMergeLaneMasks(
+          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
+          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+    }
+  } else {
+    // The value is not observed from outside a loop. Use a more accurate
+    // lowering.
+    PIA.analyze(MBB, Incomings);
+
+    for (MachineBasicBlock *PredMBB : PIA.predecessors())
+      SSAUpdater.addAvailableValue(
+          PredMBB, insertUndefLaneMask(PredMBB, MRI, LaneMaskRegAttrs));
+
+    for (auto &Incoming : Incomings) {
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      if (PIA.isSource(IMBB)) {
+        constrainAsLaneMask(Incoming);
+        SSAUpdater.addAvailableValue(&IMBB, Incoming.Reg);
+      } else {
+        SSAUpdater.addUseBlock(&IMBB);
+        Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+        SSAUpdater.addAvailableValue(&IMBB, Incoming.UpdatedReg);
+      }
+    }
+
+    SSAUpdater.calculate();
+
+    for (auto &Incoming : Incomings) {
+      if (!Incoming.UpdatedReg.isValid())
+        continue;
+
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      buildMergeLaneMasks(
+          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
+          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+    }
+  }
+}
+
 bool AMDGPU::PhiLoweringHelper::lowerPhis() {
-  LoopFinder LF(*DT, *PDT);
-  PhiIncomingAnalysis PIA(*PDT, TII);
   SmallVector<MachineInstr *, 4> Vreg1Phis;
   SmallVector<Incoming, 4> Incomings;
 
@@ -459,15 +547,12 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
+  LoopFinder LF(*DT, *PDT);
+  PhiIncomingAnalysis PIA(*PDT, TII);
+
   DT->updateDFSNumbers();
-  MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
-    if (&MBB != PrevMBB) {
-      LF.initialize(MBB);
-      PrevMBB = &MBB;
-    }
-
     LLVM_DEBUG(dbgs() << "Lower PHI: " << *MI);
 
     Register DstReg = MI->getOperand(0).getReg();
@@ -476,88 +561,12 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 
     collectIncomingValuesFromPhi(MI, Incomings);
 
-    // Sort the incomings such that incoming values that dominate other incoming
-    // values are sorted earlier. This allows us to do some amount of on-the-fly
-    // constant folding.
-    // Incoming with smaller DFSNumIn goes first, DFSNumIn is 0 for entry block.
-    llvm::sort(Incomings, [this](Incoming LHS, Incoming RHS) {
-      return DT->getNode(LHS.Block)->getDFSNumIn() <
-             DT->getNode(RHS.Block)->getDFSNumIn();
-    });
-
 #ifndef NDEBUG
     PhiRegisters.insert(DstReg);
 #endif
 
-    // Phis in a loop that are observed outside the loop receive a simple but
-    // conservatively correct treatment.
-    std::vector<MachineBasicBlock *> DomBlocks = {&MBB};
-    for (MachineInstr &Use : MRI->use_instructions(DstReg))
-      DomBlocks.push_back(Use.getParent());
-
-    MachineBasicBlock *PostDomBound =
-        PDT->findNearestCommonDominator(DomBlocks);
-
-    // FIXME: This fails to find irreducible cycles. If we have a def (other
-    // than a constant) in a pair of blocks that end up looping back to each
-    // other, it will be mishandle. Due to structurization this shouldn't occur
-    // in practice.
-    unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
-
     MachineIDFSSAUpdater SSAUpdater(*DT, *MF, DstReg);
-    SSAUpdater.addUseBlock(&MBB);
-
-    if (FoundLoopLevel) {
-      LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
-                        Incomings);
-
-      for (auto &Incoming : Incomings) {
-        SSAUpdater.addUseBlock(Incoming.Block);
-        Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-        SSAUpdater.addAvailableValue(Incoming.Block, Incoming.UpdatedReg);
-      }
-
-      SSAUpdater.calculate();
-
-      for (auto &Incoming : Incomings) {
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
-      }
-    } else {
-      // The phi is not observed from outside a loop. Use a more accurate
-      // lowering.
-      PIA.analyze(MBB, Incomings);
-
-      for (MachineBasicBlock *MBB : PIA.predecessors())
-        SSAUpdater.addAvailableValue(
-            MBB, insertUndefLaneMask(MBB, MRI, LaneMaskRegAttrs));
-
-      for (auto &Incoming : Incomings) {
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        if (PIA.isSource(IMBB)) {
-          constrainAsLaneMask(Incoming);
-          SSAUpdater.addAvailableValue(&IMBB, Incoming.Reg);
-        } else {
-          SSAUpdater.addUseBlock(&IMBB);
-          Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-          SSAUpdater.addAvailableValue(&IMBB, Incoming.UpdatedReg);
-        }
-      }
-
-      SSAUpdater.calculate();
-
-      for (auto &Incoming : Incomings) {
-        if (!Incoming.UpdatedReg.isValid())
-          continue;
-
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
-      }
-    }
+    mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
     Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
     if (NewReg != DstReg) {
@@ -572,7 +581,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  LoopFinder LF(*DT, *PDT);
+  AMDGPU::LoopFinder LF(*DT, *PDT);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : *MF) {
