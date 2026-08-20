@@ -64,8 +64,7 @@ void populateAllReduceEndomorphismSimplifyPatterns(RewritePatternSet &patterns,
       return false;
     auto inType = cast<ShapedType>(allReduceOp.getInput().getType());
     auto outType = cast<ShapedType>(allReduceOp.getResult().getType());
-    if (inType.getElementType() != outType.getElementType() ||
-        allReduceOp.getReduction() != reduction) {
+    if (inType.getElementType() != outType.getElementType()) {
       return false;
     }
 
@@ -78,13 +77,17 @@ void populateAllReduceEndomorphismSimplifyPatterns(RewritePatternSet &patterns,
       return false;
     }
 
-    if (!referenceOp) {
-      return true;
-    }
+    if (!referenceOp)
+      return allReduceOp.getReduction() == reduction;
 
     auto refAllReduceOp = llvm::dyn_cast<AllReduceOp>(referenceOp.value());
     auto refType = cast<ShapedType>(refAllReduceOp.getResult().getType());
-    return refAllReduceOp->getAttrs() == allReduceOp->getAttrs() &&
+    return refAllReduceOp.getGridAttr() == allReduceOp.getGridAttr() &&
+           refAllReduceOp.getGridAxesAttr() == allReduceOp.getGridAxesAttr() &&
+           refAllReduceOp.getReductionAttr() ==
+               allReduceOp.getReductionAttr() &&
+           refAllReduceOp->getDiscardableAttrDictionary() ==
+               allReduceOp->getDiscardableAttrDictionary() &&
            inType.getElementType() == refType.getElementType();
   };
   auto isAlgebraicOp = [](Operation *op) { return isa<AlgebraicOp>(op); };
