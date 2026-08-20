@@ -2,8 +2,8 @@
 ; RUN: opt -S -passes='loop-unroll' < %s | FileCheck --check-prefix=DEFAULT %s
 ; RUN: opt -S -passes='loop-unroll<prepare-for-lto>' < %s | FileCheck --check-prefix=LTO %s
 
-; a) Loop with extern declaration call — normally fully unrolled, but deferred
-;    under prepare-for-lto because the call may be inlined during LTO.
+; The normal unroll pass fully unrolls this loop. In prepare-for-lto mode, keep
+; it rolled so the external call can be inlined after linking.
 declare i32 @extern_func(i32)
 
 define i32 @extern_call(ptr %A) {
@@ -51,8 +51,145 @@ exit:
   ret i32 %add
 }
 
-; b) Loop with internal single-use call — suppressed in both modes because
-;    internal single-use functions are always considered inline candidates.
+; A noinline call to an external function cannot benefit from waiting for LTO,
+; so fully unroll this loop in both modes.
+define i32 @extern_noinline_call(ptr %A) {
+; DEFAULT-LABEL: @extern_noinline_call(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    br label [[LOOP:%.*]]
+; DEFAULT:       loop:
+; DEFAULT-NEXT:    [[V:%.*]] = call i32 @extern_func(i32 0) #[[ATTR0:[0-9]+]]
+; DEFAULT-NEXT:    [[V_1:%.*]] = call i32 @extern_func(i32 1) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_1:%.*]] = add i32 [[V]], [[V_1]]
+; DEFAULT-NEXT:    [[V_2:%.*]] = call i32 @extern_func(i32 2) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[V_2]]
+; DEFAULT-NEXT:    [[V_3:%.*]] = call i32 @extern_func(i32 3) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[V_3]]
+; DEFAULT-NEXT:    ret i32 [[ADD_3]]
+;
+; LTO-LABEL: @extern_noinline_call(
+; LTO-NEXT:  entry:
+; LTO-NEXT:    br label [[LOOP:%.*]]
+; LTO:       loop:
+; LTO-NEXT:    [[V:%.*]] = call i32 @extern_func(i32 0) #[[ATTR0:[0-9]+]]
+; LTO-NEXT:    [[V_1:%.*]] = call i32 @extern_func(i32 1) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_1:%.*]] = add i32 [[V]], [[V_1]]
+; LTO-NEXT:    [[V_2:%.*]] = call i32 @extern_func(i32 2) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[V_2]]
+; LTO-NEXT:    [[V_3:%.*]] = call i32 @extern_func(i32 3) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[V_3]]
+; LTO-NEXT:    ret i32 [[ADD_3]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %v = call i32 @extern_func(i32 %i) #0
+  %add = add i32 %sum, %v
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 4
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %add
+}
+
+; An indirect call may be resolved during LTO, so keep this loop rolled in
+; prepare-for-lto mode. The normal pass still fully unrolls it.
+define i32 @indirect_call(ptr %callee) {
+; DEFAULT-LABEL: @indirect_call(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    br label [[LOOP:%.*]]
+; DEFAULT:       loop:
+; DEFAULT-NEXT:    [[V:%.*]] = call i32 [[CALLEE:%.*]](i32 0)
+; DEFAULT-NEXT:    [[V_1:%.*]] = call i32 [[CALLEE]](i32 1)
+; DEFAULT-NEXT:    [[ADD_1:%.*]] = add i32 [[V]], [[V_1]]
+; DEFAULT-NEXT:    [[V_2:%.*]] = call i32 [[CALLEE]](i32 2)
+; DEFAULT-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[V_2]]
+; DEFAULT-NEXT:    [[V_3:%.*]] = call i32 [[CALLEE]](i32 3)
+; DEFAULT-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[V_3]]
+; DEFAULT-NEXT:    ret i32 [[ADD_3]]
+;
+; LTO-LABEL: @indirect_call(
+; LTO-NEXT:  entry:
+; LTO-NEXT:    br label [[LOOP:%.*]]
+; LTO:       loop:
+; LTO-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
+; LTO-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; LTO-NEXT:    [[V:%.*]] = call i32 [[CALLEE:%.*]](i32 [[I]])
+; LTO-NEXT:    [[ADD]] = add i32 [[SUM]], [[V]]
+; LTO-NEXT:    [[INC]] = add i32 [[I]], 1
+; LTO-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC]], 4
+; LTO-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; LTO:       exit:
+; LTO-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[LOOP]] ]
+; LTO-NEXT:    ret i32 [[ADD_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %v = call i32 %callee(i32 %i)
+  %add = add i32 %sum, %v
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 4
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %add
+}
+
+; Waiting for LTO cannot help a noinline call, so fully unroll this loop in
+; both modes.
+define i32 @indirect_noinline_call(ptr %callee) {
+; DEFAULT-LABEL: @indirect_noinline_call(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    br label [[LOOP:%.*]]
+; DEFAULT:       loop:
+; DEFAULT-NEXT:    [[V:%.*]] = call i32 [[CALLEE:%.*]](i32 0) #[[ATTR0]]
+; DEFAULT-NEXT:    [[V_1:%.*]] = call i32 [[CALLEE]](i32 1) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_1:%.*]] = add i32 [[V]], [[V_1]]
+; DEFAULT-NEXT:    [[V_2:%.*]] = call i32 [[CALLEE]](i32 2) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[V_2]]
+; DEFAULT-NEXT:    [[V_3:%.*]] = call i32 [[CALLEE]](i32 3) #[[ATTR0]]
+; DEFAULT-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[V_3]]
+; DEFAULT-NEXT:    ret i32 [[ADD_3]]
+;
+; LTO-LABEL: @indirect_noinline_call(
+; LTO-NEXT:  entry:
+; LTO-NEXT:    br label [[LOOP:%.*]]
+; LTO:       loop:
+; LTO-NEXT:    [[V:%.*]] = call i32 [[CALLEE:%.*]](i32 0) #[[ATTR0]]
+; LTO-NEXT:    [[V_1:%.*]] = call i32 [[CALLEE]](i32 1) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_1:%.*]] = add i32 [[V]], [[V_1]]
+; LTO-NEXT:    [[V_2:%.*]] = call i32 [[CALLEE]](i32 2) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[V_2]]
+; LTO-NEXT:    [[V_3:%.*]] = call i32 [[CALLEE]](i32 3) #[[ATTR0]]
+; LTO-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[V_3]]
+; LTO-NEXT:    ret i32 [[ADD_3]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %sum = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %v = call i32 %callee(i32 %i) #0
+  %add = add i32 %sum, %v
+  %inc = add i32 %i, 1
+  %cmp = icmp ult i32 %inc, 4
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %add
+}
+
+; The single-use helper is already an inline candidate, so leave this loop
+; rolled in both modes.
 define internal i32 @helper(i32 %x) {
 ; DEFAULT-LABEL: @helper(
 ; DEFAULT-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 42
@@ -113,7 +250,7 @@ exit:
   ret i32 %add
 }
 
-; c) Loop without calls — fully unrolled in both modes.
+; With no calls to inline, there is no reason to defer unrolling.
 define i32 @no_call(ptr %A) {
 ; DEFAULT-LABEL: @no_call(
 ; DEFAULT-NEXT:  entry:
@@ -163,3 +300,5 @@ loop:
 exit:
   ret i32 %add
 }
+
+attributes #0 = { noinline }

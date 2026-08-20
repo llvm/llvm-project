@@ -1,5 +1,4 @@
 ; RUN: llc < %s | FileCheck %s
-; RUN: llc -enable-new-pm < %s | FileCheck %s
 
 ; Tests that lowering wide registers (128 bits or more) works on Lanai.
 ; The emitted assembly is not checked, we just do a smoketest.

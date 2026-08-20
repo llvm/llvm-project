@@ -2123,9 +2123,8 @@ void LVIRReader::processBasicBlocks(Function &F) {
           DIExpression::convertToVariadicExpression(DV.Expression));
       RawLocationWrapper Locations(DV.Locations);
       for (DIExpression::ExprOperand ExprOp : CanonicalExpr->expr_ops()) {
-        if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg) {
-          AddLocationOp(Locations.getVariableLocationOp(ExprOp.getArg(0)),
-                        IsMem);
+        if (auto Arg = dyn_cast<DIExpression::ArgOp>(ExprOp)) {
+          AddLocationOp(Locations.getVariableLocationOp(Arg.getIndex()), IsMem);
         } else {
           if (ExprOp.getOp() > std::numeric_limits<uint8_t>::max())
             LLVM_DEBUG(dbgs() << "Bad DWARF op: " << ExprOp.getOp() << "\n");

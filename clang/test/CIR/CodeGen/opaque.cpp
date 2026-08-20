@@ -15,8 +15,8 @@ void foo() {
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
 // LLVM: store i32 1, ptr %[[B_ADDR]], align 4
 
 // OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
@@ -48,9 +48,9 @@ void foo2() {
 // CIR: }) : (!cir.bool) -> !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
-// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: %[[C_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { float, float }, align 4
+// LLVM: %[[C_ADDR:.*]] = alloca { float, float }, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { float, float } %[[TMP_A]], 0
 // LLVM: %[[A_IMAG:.*]] = extractvalue { float, float } %[[TMP_A]], 1
@@ -121,9 +121,9 @@ void foo3() {
 // CIR: }) : (!cir.bool) -> !s32i
 // CIR: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca i32, align 4
+// LLVM: %[[C_ADDR:.*]] = alloca i32, align 4
 // LLVM: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM: %[[COND:.*]] = icmp ne i32 %[[TMP_A]], 0
 // LLVM: br i1 %[[COND]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]

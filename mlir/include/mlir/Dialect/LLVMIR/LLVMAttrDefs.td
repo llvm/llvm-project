@@ -360,6 +360,15 @@ def LLVM_DILanguageParameter : LLVM_DIParameter<
   "language", /*default=*/"0", "Language", /*errorCase=*/"0"
 >;
 
+// Source-language dialect values are defined by LLVM's
+// dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
+// represents "no source-language dialect" as 0; the LLVM IR printer omits the
+// `dialect:` field for that value.
+def LLVM_DILanguageDialectParameter : LLVM_DIParameter<
+  "language dialect", /*default=*/"0", "LanguageDialect",
+  /*errorCase=*/"~0U"
+>;
+
 def LLVM_DITagParameter : LLVM_DIParameter<
   "tag", /*default=*/"0", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
@@ -448,6 +457,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     // DICompileUnitAttr specific parameters.
     OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
+    LLVM_DILanguageDialectParameter:$sourceLanguageDialect,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
     OptionalParameter<"bool">:$isOptimized,
@@ -459,6 +469,21 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage,
+      "unsigned":$sourceLanguageDialect, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
+    ), [{
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, sourceLanguageDialect, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
+    }]>,
+    AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
@@ -468,9 +493,9 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
       CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
       return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
-                   sourceLanguage, file, producer, isOptimized, emissionKind,
-                   isDebugInfoForProfiling, nameTableKind, splitDebugFilename,
-                   importedEntities);
+                   sourceLanguage, /*sourceLanguageDialect=*/0, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -1789,12 +1814,50 @@ def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
   let assemblyFormat = "`<` $name `>`";
 }
 
+def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
+  let summary = "LLVM null pointer as metadata";
+  let description = [{
+    Wraps a null pointer constant as an LLVM metadata node, corresponding to
+    `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantPointerNull` in LLVM
+    IR. `addressSpace` is the address space of the null pointer, so that
+    `ptr null` and `ptr addrspace(1) null` remain distinguishable.
+
+    Example:
+    ```mlir
+    #llvm.md_null<0>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
+}
+
+def LLVM_MDAddrSpaceCastAttr
+    : LLVM_Attr<"MDAddrSpaceCast", "md_addrspacecast"> {
+  let summary = "LLVM addrspacecast constant expression as metadata";
+  let description = [{
+    Wraps an `addrspacecast` constant expression as an LLVM metadata node,
+    corresponding to `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantExpr`
+    with an `addrspacecast` opcode in LLVM IR. `arg` is the metadata attribute
+    for the pointer being cast and `addressSpace` is the address space of the
+    resulting pointer.
+
+    Example:
+    ```mlir
+    #llvm.md_addrspacecast<#llvm.md_global_value<@my_global>, 0>
+    ```
+  }];
+  let parameters = (ins "Attribute":$arg, "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $arg `,` $addressSpace `>`";
+  let genVerifyDecl = 1;
+}
+
 def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let summary = "LLVM metadata node";
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_global_value`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, `#llvm.md_null`,
+    `#llvm.md_addrspacecast`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1810,9 +1873,32 @@ def LLVM_MDNodeArrayAttr
     : TypedArrayAttrBase<LLVM_MDNodeAttr,
                          "array of #llvm.md_node attributes">;
 
+def LLVM_FunctionMetadataAttr
+    : LLVM_Attr<"FunctionMetadata", "func_metadata"> {
+  let summary = "LLVM function metadata attachment";
+  let description = [{
+    Models one LLVM IR function metadata attachment. LLVM IR allows several
+    attachments with the same metadata kind, so function metadata is represented
+    as an ordered list of these entries instead of a dictionary.
+
+    Example:
+    ```mlir
+    #llvm.func_metadata<"type", <#llvm.md_string<"id">>>
+    ```
+  }];
+  let parameters = (ins "StringAttr":$metadataName, "MDNodeAttr":$node);
+  let assemblyFormat = "`<` $metadataName `,` $node `>`";
+  let genVerifyDecl = 1;
+}
+
+def LLVM_FunctionMetadataArrayAttr
+    : TypedArrayAttrBase<LLVM_FunctionMetadataAttr,
+                         "array of #llvm.func_metadata attributes">;
+
 def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
-    LLVM_MDNodeAttr],
-    "LLVM metadata attribute (md_string, md_const, md_global_value, or md_node)">;
+    LLVM_MDNullAttr, LLVM_MDAddrSpaceCastAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
+    "md_addrspacecast, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

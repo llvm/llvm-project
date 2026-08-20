@@ -24,7 +24,7 @@ module {
 #loc3 = loc("test-path":36:3)
 #loc4 = loc("test-path":37:5)
 #loc5 = loc("test-path":39:5)
-#di_compile_unit = #llvm.di_compile_unit<id = distinct[3]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false, emissionKind = Full>
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[3]<>, sourceLanguage = DW_LANG_Fortran95, sourceLanguageDialect = DW_LLVM_LANG_DIALECT_tile, file = #di_file, isOptimized = false, emissionKind = Full>
 #di_compile_unit1 = #llvm.di_compile_unit<id = distinct[4]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false, emissionKind = Full>
 #di_compile_unit2 = #llvm.di_compile_unit<id = distinct[5]<>, sourceLanguage = DW_LANG_Fortran95, file = #di_file, isOptimized = false, emissionKind = Full>
 #di_module = #llvm.di_module<file = #di_file, scope = #di_compile_unit1, name = "mod1">

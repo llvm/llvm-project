@@ -15,14 +15,15 @@ class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
+namespace arm_sve {
+void populateLowerContractionToSVEI8MMPatterns(RewritePatternSet &patterns);
+void populateLowerContractionToSVEBFMMLAPatterns(RewritePatternSet &patterns);
+} // namespace arm_sve
+
 /// Collect a set of patterns to lower ArmSVE ops to ops that map to LLVM
 /// intrinsics.
 void populateArmSVELegalizeForLLVMExportPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns);
-
-void populateLowerContractionToSVEI8MMPatterns(RewritePatternSet &patterns);
-
-void populateLowerContractionToSVEBFMMLAPatterns(RewritePatternSet &patterns);
 
 /// Configure the target to support lowering ArmSVE ops to ops that map to LLVM
 /// intrinsics.

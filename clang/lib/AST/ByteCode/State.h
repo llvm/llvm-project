@@ -92,6 +92,8 @@ public:
   ASTContext &getASTContext() const { return Ctx; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
+  bool shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId);
+
   /// Note that we have had a side-effect, and determine whether we should
   /// keep evaluating.
   bool noteSideEffect() const {
@@ -203,6 +205,8 @@ private:
   void addCallStack(unsigned Limit);
 
   PartialDiagnostic &addDiag(SourceLocation Loc, diag::kind DiagId);
+
+  void addExtendedDiag(SourceLocation Loc, diag::kind DiagId);
 
   OptionalDiagnostic diag(SourceLocation Loc, diag::kind DiagId,
                           unsigned ExtraNotes, bool IsCCEDiag);
