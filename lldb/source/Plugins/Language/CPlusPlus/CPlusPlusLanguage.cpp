@@ -1973,8 +1973,7 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "std::priority_queue summary provider",
                 "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
 
-  // Keep children visible: the summary only prints the integer value, so
-  // the category pointer (_Mycat / _M_cat) must still be inspectable.
+  // Keep the synthetic Category child visible alongside the integer summary.
   TypeSummaryImpl::Flags error_code_flags;
   error_code_flags.SetCascades(true)
       .SetSkipPointers(false)
@@ -1983,12 +1982,16 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetDontShowValue(false)
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
-  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_code summary provider",
                 "std::error_code", error_code_flags);
-  AddCXXSummary(cpp_category_sp, MsvcStlErrorCodeSummaryProvider,
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
                 "MSVC STL/libstdc++ std::error_condition summary provider",
                 "std::error_condition", error_code_flags);
+  AddCXXSynthetic(cpp_category_sp, GenericErrorCodeSyntheticFrontEndCreator,
+                  "MSVC STL/libstdc++ std::error_code/error_condition "
+                  "synthetic children",
+                  "^std::error_(code|condition)$", stl_synth_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

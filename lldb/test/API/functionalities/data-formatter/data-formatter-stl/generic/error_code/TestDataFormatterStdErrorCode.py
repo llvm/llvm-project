@@ -10,23 +10,25 @@ class StdErrorCodeTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
+    def check_value(self, name, summary):
+        value = self.frame().FindVariable(name)
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.summary, summary)
+        self.assertEqual(value.GetNumChildren(), 1)
+
+        category = value.GetChildMemberWithName("Category")
+        self.assertTrue(category.IsValid())
+        self.assertNotEqual(category.GetValueAsUnsigned(), 0)
+
     def do_test(self):
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
-        ec = self.frame().FindVariable("ec")
-        self.assertTrue(ec.GetError().Success())
-        self.assertRegex(ec.summary, r"value=\d+")
-        self.assertGreaterEqual(ec.GetNumChildren(), 1)
-
-        econd = self.frame().FindVariable("econd")
-        self.assertTrue(econd.GetError().Success())
-        self.assertRegex(econd.summary, r"value=\d+")
-
-        default_ec = self.frame().FindVariable("default_ec")
-        self.assertTrue(default_ec.GetError().Success())
-        self.assertEqual(default_ec.summary, "value=0")
+        self.check_value("ec", "value=2")
+        self.check_value("econd", "value=7")
+        self.check_value("negative", "value=-1")
+        self.check_value("default_ec", "value=0")
 
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
