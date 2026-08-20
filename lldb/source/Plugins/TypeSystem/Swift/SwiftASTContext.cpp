@@ -3368,7 +3368,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       LOG_PRINTF(GetLog(LLDBLog::Types), "REPL: prefer target triple.");
       preferred_arch = target_arch;
       preferred_triple = target_triple;
-    } else if (!sdk_path_override && !sdk && target_arch) {
+    } else if (!sdk_path_override && !cu && target_arch) {
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "No Swift debug info: prefer target triple.");
       if (!target_arch.IsCompatibleMatch(module_arch))

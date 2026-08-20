@@ -158,12 +158,9 @@ class TestSwiftPlaygrounds(TestBase):
         self.frame().EvaluateExpression("import PlaygroundsRuntime", options)
         ret = self.frame().EvaluateExpression("get_output()", options)
         err = res.GetError()
-        is_error = err.Fail() and not (err.GetType() == 1 and err.GetError() == 0x1001)
-        if is_error and not expect_error:
-            log = self.getBuildArtifact("types.log")
-            if os.path.exists(log):
-                with open(log) as f:
-                    print(f.read(), file=sys.stderr)
+        is_error = res.GetError().Fail() and not (
+            res.GetError().GetType() == 1 and res.GetError().GetError() == 0x1001
+        )
         playground_output = ret.GetSummary()
         with recording(self, self.TraceOn()) as sbuf:
             print("playground result: ", file=sbuf)
@@ -183,8 +180,6 @@ class TestSwiftPlaygrounds(TestBase):
         return playground_output
         
     def do_basic_test(self, force_target):
-        log = self.getBuildArtifact("types.log")
-        self.expect("log enable lldb types -f " + log)
         playground_output = self.execute_code('Contents.swift', not force_target)
         if not force_target:
             # This is expected to fail because the deployment target
