@@ -11,18 +11,35 @@
 ! RUN: %flang -fno-omit-frame-pointer --target=x86-none-none -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-ALLFP
 ! CHECK-ALLFP: "-fc1"{{.*}}"-mframe-pointer=all"
 
-! RUN: %flang -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer --target=aarch64-none-none -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
-! CHECK-FRAME-POINTER-ALL: "-fc1"{{.*}}"-mframe-pointer=all"
+! // =======
 
-! RUN: %flang -fno-omit-frame-pointer -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-X86-NONLEAF
-! CHECK-X86-NONLEAF: "-fc1"{{.*}}"-mframe-pointer=non-leaf-no-reserve"
+! Default behavior in x86_64-unknown-linux-gnu, -mframe-pointer=all at -O0 level.
 
-! RUN: %flang -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-omit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-LAST-WINS
-! CHECK-LAST-WINS: "-fc1"{{.*}}"-mframe-pointer=all"
+! RUN: %flang -O0 --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
+! RUN: %flang -O0 -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-NON-LEAF
+! RUN: %flang -O0 -mno-omit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
+! RUN: %flang -O0 -fomit-frame-pointer -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-NONE
+! RUN: %flang -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-omit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
+
+! Default behavior in x86_64-unknown-linux-gnu, -mframe-pointer=none at -O1/-O2/-O3 level.
+! RUN: %flang --target=x86_64-unknown-linux-gnu -O2 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-NONE
+
+! With -fno-omit-frame-pointer and -mno-omit-leaf-frame-pointer, -mframe-pointer=all.
+! RUN: %flang -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -O2 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
 
 ! Without -fno-omit-frame-pointer the leaf option is silently allowed but has no effect, matching Clang's behavior.
-! RUN: %flang -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -O2 -fsyntax-only -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-LEAF-ONLY
-! CHECK-LEAF-ONLY: "-fc1"{{.*}}"-mframe-pointer=none"
+! RUN: %flang -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -O2 -### %s -o %t 2>&1  | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-NONE
+! RUN: %flang -fno-omit-frame-pointer --target=x86_64-unknown-linux-gnu -O2 -### %s -o %t 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
 
-subroutine test
-end subroutine test
+! RUN: %flang -fno-omit-frame-pointer -momit-leaf-frame-pointer --target=x86_64-unknown-linux-gnu -O2 -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-NON-LEAF
+
+! Default behavior in aarch64-none-none, -mframe-pointer=non-leaf-no-reserve.
+! RUN: %flang -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer --target=aarch64-none-none -### %s 2>&1 | FileCheck %s --check-prefix=CHECK-FRAME-POINTER-ALL
+
+! CHECK-FRAME-POINTER-ALL: "-fc1"
+! CHECK-FRAME-POINTER-ALL-SAME: "-mframe-pointer=all"
+! CHECK-FRAME-POINTER-NON-LEAF: "-fc1"
+! CHECK-FRAME-POINTER-NON-LEAF-SAME: "-mframe-pointer=non-leaf-no-reserve"
+! CHECK-FRAME-POINTER-NONE: "-fc1"
+! CHECK-FRAME-POINTER-NONE-SAME: "-mframe-pointer=none"
+
