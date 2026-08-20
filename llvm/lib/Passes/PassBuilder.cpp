@@ -101,6 +101,7 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"

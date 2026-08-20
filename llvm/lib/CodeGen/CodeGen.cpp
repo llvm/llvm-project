@@ -49,7 +49,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFEntryInserterLegacyPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
-  initializeFuncletLayoutPass(Registry);
+  initializeFuncletLayoutLegacyPass(Registry);
   initializeGCEmptyBasicBlocksLegacyPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
