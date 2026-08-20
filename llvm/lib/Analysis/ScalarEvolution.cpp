@@ -16026,6 +16026,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     //  'max(a, b) <= c'   ->   '(a <= c) and (b <= c)',
     //  'max(a, b) <  c'   ->   '(a <  c) and (b <  c)'.
 
+    // Preserve the original RHS before it is adjusted by the switch below.
+    const SCEV *OrigRHS = RHS;
+
     // We cannot express strict predicates in SCEV, so instead we replace them
     // with non-strict ones against plus or minus one of RHS depending on the
     // predicate.
@@ -16065,12 +16068,34 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       append_range(Worklist, S->operands());
     };
 
+    // Look through `zext(X) <upred> RHS` and retry the idiom in X's type
+    // when truncating RHS is lossless.
+    auto TryMatchIdiomThroughZExt = [&](const SCEV *From) {
+      const SCEV *X;
+      if (!ICmpInst::isUnsigned(Predicate) ||
+          !match(From, m_scev_ZExt(m_SCEV(X))))
+        return false;
+
+      // The rewrite is only valid if truncating RHS is lossless,
+      // i.e. every possible value of RHS fits in X's type.
+      unsigned NarrowBits = SE.getTypeSizeInBits(X->getType());
+      if (SE.getUnsignedRange(OrigRHS).getActiveBits() > NarrowBits)
+        return false;
+
+      const SCEV *NarrowRHS = SE.getTruncateExpr(OrigRHS, X->getType());
+      return MatchRangeCheckIdiom(Predicate, X, NarrowRHS);
+    };
+
     while (!Worklist.empty()) {
       const SCEV *From = Worklist.pop_back_val();
       if (isa<SCEVConstant>(From))
         continue;
       if (!Visited.insert(From).second)
         continue;
+
+      if (TryMatchIdiomThroughZExt(From))
+        continue;
+
       const SCEV *FromRewritten = GetMaybeRewritten(From);
       const SCEV *To = nullptr;
 
