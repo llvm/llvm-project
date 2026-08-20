@@ -139,8 +139,15 @@ void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 ModulePass *createRISCVPromoteConstantPass();
 void initializeRISCVPromoteConstantPass(PassRegistry &);
 
-FunctionPass *createRISCVVLOptimizerPass();
-void initializeRISCVVLOptimizerPass(PassRegistry &);
+class RISCVVLOptimizerPass
+    : public OptionalPassInfoMixin<RISCVVLOptimizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVVLOptimizerLegacyPass();
+void initializeRISCVVLOptimizerLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);

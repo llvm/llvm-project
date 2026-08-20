@@ -252,7 +252,6 @@ func.func @orphan_loop_unroll_annotation(%buf: memref<8xi32>) {
   acc.loop control(%i : index) = (%c0 : index) to (%c8 : index) step (%c1 : index) {
     memref.store %c0_i32, %buf[%i] : memref<8xi32>
     acc.yield
-  } attributes {independent = [#acc.device_type<none>],
-                llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>} 
+  } independent attributes {llvm.loop_annotation = #llvm.loop_annotation<unroll = <disable = false, full = true>>} 
   return
 }
