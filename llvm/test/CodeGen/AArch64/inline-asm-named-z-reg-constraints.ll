@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
 ; RUN: not llc -mtriple=aarch64-linux-gnu %t/negative.ll -o - 2>&1 | FileCheck %s
 ; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve %t/negative.ll -o - 2>&1 | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve %t/positive.ll -o - | FileCheck %s --check-prefix=POSITIVE
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve %t/positive.ll -o - | FileCheck %s --check-prefix=POS
 
 ; CHECK-COUNT-7: error: could not allocate input reg for constraint '{z0}'
 ; CHECK-COUNT-14: error: could not allocate output register for constraint '{z0}'
@@ -118,28 +118,34 @@ define i32 @inout_scalar_i32(i32 %value) {
 ;--- positive.ll
 
 define void @input_scalable(<vscale x 2 x i64> %value) {
-; POSITIVE-LABEL: input_scalable:
-; POSITIVE:       //APP
-; POSITIVE-NEXT:  mov z0.d, z0.d
-; POSITIVE-NEXT:  //NO_APP
+; POS-LABEL: input_scalable:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
   call void asm sideeffect "mov $0.d, $0.d", "{z0}"(<vscale x 2 x i64> %value)
   ret void
 }
 
 define <vscale x 2 x i64> @output_scalable() {
-; POSITIVE-LABEL: output_scalable:
-; POSITIVE:       //APP
-; POSITIVE-NEXT:  mov z0.d, #0
-; POSITIVE-NEXT:  //NO_APP
+; POS-LABEL: output_scalable:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, #0 // =0x0
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
   %value = call <vscale x 2 x i64> asm sideeffect "dup $0.d, #0", "={z0}"()
   ret <vscale x 2 x i64> %value
 }
 
 define <vscale x 2 x i64> @inout_scalable(<vscale x 2 x i64> %value) {
-; POSITIVE-LABEL: inout_scalable:
-; POSITIVE:       //APP
-; POSITIVE-NEXT:  mov z0.d, z0.d
-; POSITIVE-NEXT:  //NO_APP
+; POS-LABEL: inout_scalable:
+; POS:       // %bb.0:
+; POS-NEXT:    //APP
+; POS-NEXT:    mov z0.d, z0.d
+; POS-NEXT:    //NO_APP
+; POS-NEXT:    ret
   %result = call <vscale x 2 x i64> asm sideeffect "mov $0.d, $0.d", "={z0},0"(<vscale x 2 x i64> %value)
   ret <vscale x 2 x i64> %result
 }

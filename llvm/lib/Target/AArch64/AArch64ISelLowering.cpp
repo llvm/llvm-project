@@ -14360,8 +14360,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       if (!AArch64::ZPRRegClass.hasSubClassEq(P->second))
         return *P;
 
-      // A named Z-register constraint with MVT::Other represents an untyped
-      // clobber.
+      // A named Z-register constraint with MVT::Other
+      // represents an untyped clobber.
       if (VT == MVT::Other) {
         // SME functions that are not in streaming mode, should
         // still observe clobbers of Z-registers by clobbering
@@ -14372,10 +14372,11 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         return *P;
       }
 
-      if (!VT.isScalableVector() || !Subtarget->isSVEorStreamingSVEAvailable())
-        return std::make_pair(0U, nullptr);
+      if (Subtarget->isSVEorStreamingSVEAvailable() &&
+          TRI->isTypeLegalForClass(AArch64::ZPRRegClass, getRegisterType(VT)))
+        return *P;
 
-      return *P;
+      return std::make_pair(0U, nullptr);
     }
     if (const auto PC = parsePredicateConstraint(Constraint))
       if (const auto *RegClass = getPredicateRegisterClass(*PC, VT))
