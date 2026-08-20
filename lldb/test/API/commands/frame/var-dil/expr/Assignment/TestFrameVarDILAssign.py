@@ -229,3 +229,26 @@ class TestFrameVarDILAssignment(TestBase):
             substrs=["Assignment is allowed only at top level"],
         )
         self.expect("frame variable '*(arr + 1) = 5'", substrs=["= 5"])
+
+        # Check that assignment is parsed correctly when combined
+        # with ternary conditional operator
+        self.expect("frame variable 'i = false ? 1 : 2'", substrs=["i = 2"])
+        self.expect(
+            "frame variable 'false ? i = 1 : i'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable 'false ? i : i = 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect("frame variable '(false ? i : j) = 1'", substrs=["j = 1"])
+        self.expect(
+            "frame variable '(true ? arr[0] : arr[1]) = false ? 0 : 5'", substrs=["= 5"]
+        )
+        self.expect(
+            "frame variable 'true ? arr[0] : arr[1] = false ? 0 : 5'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )

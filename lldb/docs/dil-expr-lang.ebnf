@@ -5,8 +5,8 @@
 
 expression = assignment_expression ;
 
-assignment_expression = pure_expression
-                      | pure_expression assignment_operator pure_expression ;
+assignment_expression = conditional_expression
+                      | logical_or_expression assignment_operator pure_expression ;
 
 assignment_operator = "="
                     | "+="

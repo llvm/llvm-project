@@ -85,6 +85,7 @@ private:
   ASTNodeUP ParseAssignmentExpression();
   ASTNodeUP ParsePureExpression();
   ASTNodeUP ParseConditionalExpression();
+  ASTNodeUP ParseConditionalBranches(ASTNodeUP condition);
   ASTNodeUP ParseLogicalOrExpression();
   ASTNodeUP ParseLogicalAndExpression();
   ASTNodeUP ParseInclusiveOrExpression();

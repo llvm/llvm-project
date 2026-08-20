@@ -134,8 +134,8 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 // Parse an assignment_expression
 //
 //  assignment_expression
-//    pure_expression
-//    pure_expression assignment_operator pure_expression
+//    conditional_expression
+//    logical_or_expression assignment_operator pure_expression
 //
 //  assignment_operator:
 //    "="
@@ -143,8 +143,14 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 //    "-="
 //
 ASTNodeUP DILParser::ParseAssignmentExpression() {
-  auto lhs = ParsePureExpression();
+  auto lhs = ParseLogicalOrExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's a ternary operator.
+  // This is done to keep conditional_expression's precedence
+  // over assignment_expression.
+  if (CurToken().Is(Token::question))
+    return ParseConditionalBranches(std::move(lhs));
 
   // Check if it's an assignment expression.
   if (CurToken().IsOneOf({Token::equal, Token::plusequal, Token::minusequal})) {
@@ -179,22 +185,26 @@ ASTNodeUP DILParser::ParseConditionalExpression() {
   auto lhs = ParseLogicalOrExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
-  // Check if it's a ternary operator.
-  if (CurToken().Is(Token::question)) {
-    Token token = CurToken();
-    m_dil_lexer.Advance();
-    auto true_op = ParsePureExpression();
-    assert(true_op && "ASTNodeUP must not contain a nullptr");
-    Expect(Token::colon);
-    m_dil_lexer.Advance();
-    auto false_op = ParsePureExpression();
-    assert(false_op && "ASTNodeUP must not contain a nullptr");
-    lhs = std::make_unique<ConditionalNode>(token.GetLocation(), std::move(lhs),
-                                            std::move(true_op),
-                                            std::move(false_op));
-  }
+  if (CurToken().Is(Token::question))
+    lhs = ParseConditionalBranches(std::move(lhs));
 
   return lhs;
+}
+
+ASTNodeUP DILParser::ParseConditionalBranches(ASTNodeUP condition) {
+  assert(condition && "ASTNodeUP must not contain a nullptr");
+
+  Token token = CurToken();
+  m_dil_lexer.Advance();
+  auto true_op = ParsePureExpression();
+  assert(true_op && "ASTNodeUP must not contain a nullptr");
+  Expect(Token::colon);
+  m_dil_lexer.Advance();
+  auto false_op = ParsePureExpression();
+  assert(false_op && "ASTNodeUP must not contain a nullptr");
+  return std::make_unique<ConditionalNode>(
+      token.GetLocation(), std::move(condition), std::move(true_op),
+      std::move(false_op));
 }
 
 // Parse a logical_or_expression.
