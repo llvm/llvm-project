@@ -1547,7 +1547,8 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
               lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang) {
-      auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
+      auto runtime = process_sp->GetLanguageRuntime(
+          Language::GetPrimaryLanguage(lang.AsLanguageType()));
       if (runtime)
         runtime->GetIRPasses(custom_passes);
     }
