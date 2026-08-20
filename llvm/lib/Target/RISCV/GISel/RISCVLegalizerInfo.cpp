@@ -542,6 +542,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 
+  // On RV64 the 64-bit counter CSRs (cycle/time) are read directly. On RV32
+  // they are custom-legally lowered to the ReadCounterWide target pseudo.
+  getActionDefinitionsBuilder({G_READCYCLECOUNTER, G_READSTEADYCOUNTER})
+      .legalFor(ST.is64Bit(), {s64})
+      .customFor(!ST.is64Bit(), {s64});
+
   // FP Operations
 
   // FIXME: Support s128 for rv32 when libcall handling is able to use sret.
@@ -885,6 +891,38 @@ bool RISCVLegalizerInfo::legalizeVAStart(MachineInstr &MI,
   assert(MI.hasOneMemOperand());
   MIRBuilder.buildStore(FINAddr, MI.getOperand(0).getReg(),
                         *MI.memoperands()[0]);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RISCVLegalizerInfo::legalizeReadCounter(
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder) const {
+  assert((MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER ||
+          MI.getOpcode() == TargetOpcode::G_READSTEADYCOUNTER) &&
+         "Unexpected opcode");
+  assert(!STI.is64Bit() && "READCYCLECOUNTER/READSTEADYCOUNTER only "
+                           "has custom type legalization on riscv32");
+
+  // On RV32 a 64-bit counter CSR must be read as two 32-bit halves. Lower to
+  // the ReadCounterWide target pseudo.
+  bool IsCycle = MI.getOpcode() == TargetOpcode::G_READCYCLECOUNTER;
+  int64_t LoCounter = IsCycle ? RISCVSysReg::cycle : RISCVSysReg::time;
+  int64_t HiCounter = IsCycle ? RISCVSysReg::cycleh : RISCVSysReg::timeh;
+
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  auto CreateGPR = [&]() {
+    Register R = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    MRI.setRegClass(R, &RISCV::GPRRegClass);
+    return R;
+  };
+  Register LoReg = CreateGPR();
+  Register HiReg = CreateGPR();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  MIRBuilder.setDebugLoc(MI.getDebugLoc());
+  MIRBuilder.buildInstr(RISCV::ReadCounterWide, {LoReg, HiReg},
+                        {LoCounter, HiCounter});
+  MIRBuilder.buildMergeValues(DstReg, {LoReg, HiReg});
   MI.eraseFromParent();
   return true;
 }
@@ -1601,6 +1639,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_READCYCLECOUNTER:
+  case TargetOpcode::G_READSTEADYCOUNTER:
+    return legalizeReadCounter(MI, MIRBuilder);
   case TargetOpcode::G_IS_FPCLASS: {
     Register GISFPCLASS = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
