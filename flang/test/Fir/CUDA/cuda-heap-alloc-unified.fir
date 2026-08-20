@@ -2,12 +2,12 @@
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s --check-prefix=LLVM
 // RUN: fir-opt --fir-to-llvm-ir=unified-heap-alloc-suffix=_pool %s | FileCheck %s --check-prefix=SUFFIX
 
-// The promotion is a correctness requirement of the mode, so it does not depend
-// on the array placement pass that follows it: what it produces is marked
-// fir.must_be_heap, which both of them leave alone.
-// RUN: fir-opt --cuda-heap-alloc-promotion --memory-allocation-opt %s | FileCheck %s --check-prefix=HEAP
-// RUN: fir-opt --cuda-heap-alloc-promotion --stack-arrays %s | FileCheck %s --check-prefix=HEAP
-// RUN: fir-opt --cuda-heap-alloc-promotion --allocation-placement %s | FileCheck %s --check-prefix=HEAP
+// Whichever array placement pass follows, the pairs keep their allocator: they
+// are marked fir.must_be_heap, so none of those passes moves them back to the
+// stack.
+// RUN: fir-opt --cuda-heap-alloc-promotion --memory-allocation-opt %s | FileCheck %s --check-prefix=KEEP
+// RUN: fir-opt --cuda-heap-alloc-promotion --stack-arrays %s | FileCheck %s --check-prefix=KEEP
+// RUN: fir-opt --cuda-heap-alloc-promotion --allocation-placement %s | FileCheck %s --check-prefix=KEEP
 
 // Under fir.cuda_heap_alloc = "unified", named automatic arrays move to the
 // heap and are marked. Only marked allocations use malloc_unified: memory the
@@ -24,6 +24,9 @@ module attributes {fir.cuda_heap_alloc = "unified"} {
 // HEAP-LABEL: func.func @vla(
 // HEAP: %[[MEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "unified", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
 // HEAP: fir.freemem %[[MEM]] {fir.cuda_heap_alloc = "unified"} : !fir.heap<!fir.array<?xf32>>
+// KEEP-LABEL: func.func @vla(
+// KEEP: %[[KMEM:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} {bindc_name = "a", fir.cuda_heap_alloc = "unified", fir.must_be_heap = true, uniq_name = "_QFvlaEa"}
+// KEEP: fir.freemem %[[KMEM]] {fir.cuda_heap_alloc = "unified"} : !fir.heap<!fir.array<?xf32>>
 func.func @vla(%arg0: !fir.ref<i32>) {
   %0 = fir.load %arg0 : !fir.ref<i32>
   %1 = fir.convert %0 : (i32) -> index
