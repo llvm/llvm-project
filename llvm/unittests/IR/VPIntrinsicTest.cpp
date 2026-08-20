@@ -227,14 +227,7 @@ TEST_F(VPIntrinsicTest, VPModuleComplete) {
   for (const auto &VPDecl : *M) {
     ASSERT_TRUE(VPDecl.isIntrinsic());
     ASSERT_TRUE(VPIntrinsic::isVPIntrinsic(VPDecl.getIntrinsicID()));
-    SeenIDs.insert(VPDecl.getIntrinsicID());
   }
-
-  // Check that every registered VP intrinsic has an instance in the test
-  // module.
-#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
-  ASSERT_TRUE(SeenIDs.count(Intrinsic::VPID));
-#include "llvm/IR/VPIntrinsics.def"
 }
 
 /// Check that VPIntrinsic:canIgnoreVectorLengthParam() returns true

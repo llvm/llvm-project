@@ -82,7 +82,6 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
-  static bool handleCUDALaunchBoundsAttr() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
@@ -248,7 +247,6 @@ struct MissingFeatures {
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIntLowering() { return false; }
-  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
