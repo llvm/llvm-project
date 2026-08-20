@@ -367,12 +367,12 @@ void AArch64PointerAuthImpl::authenticateLR(
   // outside the red-zone.
   SmallVector<MachineInstr *, 2> SPMods;
   if (ArgumentStackToRestore > 0) {
-    for (auto I = MBBI; I->getFlag(MachineInstr::FrameDestroy); --I) {
-      if ((I->getOpcode() == AArch64::ADDXri ||
-           I->getOpcode() == AArch64::SUBXri) &&
-          I->getOperand(0).getReg() == AArch64::SP &&
-          I->getOperand(1).getReg() == AArch64::SP)
-        SPMods.push_back(&*I);
+    for (MachineInstr &MI : reverse(make_range(MBB.begin(), MBBI))) {
+      if ((MI.getOpcode() == AArch64::ADDXri ||
+           MI.getOpcode() == AArch64::SUBXri) &&
+          MI.getOperand(0).getReg() == AArch64::SP &&
+          MI.getOperand(1).getReg() == AArch64::SP)
+        SPMods.push_back(&MI);
     }
   }
   for (auto *MI : SPMods)
