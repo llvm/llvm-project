@@ -28,6 +28,8 @@ add_libc_test(
   SRCS
     getrusage_test.cpp
   DEPENDS
+    libc.hdr.sys_resource_macros
     libc.hdr.types.struct_rusage
     libc.src.sys.resource.getrusage
+    libc.test.UnitTest.ErrnoCheckingTest
 )

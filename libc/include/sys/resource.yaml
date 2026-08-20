@@ -19,7 +19,8 @@ functions:
       - type: struct rlimit *
   - name: getrusage
     standards:
-      - posix
+      # GNU because we support RUSAGE_THREAD, which is not in POSIX.
+      - gnu
     return_type: int
     arguments:
       - type: int
