@@ -2021,8 +2021,8 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getKind() == ParsedAttr::AT_HLSLParsedSemantic) {
     diagnoseSystemSemanticAttr(D, AL, Index);
   } else {
-    D->addAttr(HLSLUnparsedSemanticAttr::Create(
-        SemaRef.getASTContext(), IndexValue, ExplicitIndex, AL));
+    D->addAttr(HLSLUnparsedSemanticAttr::Create(SemaRef.getASTContext(),
+                                                IndexValue, ExplicitIndex, AL));
   }
 }
 

@@ -5554,7 +5554,7 @@ TEST(Hover, HLSLSemanticAnnotations) {
        )hlsl",
        "TEXCOORD", "[TEXCOORD]"},
   };
-  
+
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
     Annotations T(Case.Code);
@@ -5566,11 +5566,10 @@ TEST(Hover, HLSLSemanticAnnotations) {
                    << Case.ExpectedName;
     EXPECT_EQ(H->Name, Case.ExpectedName);
     EXPECT_EQ(H->Definition, Case.ExpectedDefinition);
-    
+
     if (llvm::StringRef(Case.ExpectedDefinition).contains("TEXCOORD")) {
       EXPECT_EQ(H->Definition.find("\""), std::string::npos)
-          << "Definition leaked internal semantic arguments: "
-          << H->Definition;
+          << "Definition leaked internal semantic arguments: " << H->Definition;
     }
   }
 }
