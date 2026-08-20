@@ -441,13 +441,15 @@ uint32_t StackFrameList::SynthesizeInlineFrames(StackFrameSP frame_sp,
   Address next_frame_address;
   uint32_t num_inlined_frames = 0;
 
+  const bool behaves_like_zeroth_frame = frame_sp->m_behaves_like_zeroth_frame;
+
   while (unwind_sc.GetParentOfInlinedScope(curr_frame_address, next_frame_sc,
                                            next_frame_address)) {
     next_frame_sc.line_entry.ApplyFileMappings(target_sp);
     StackFrameSP inline_frame_sp = std::make_shared<StackFrame>(
         m_thread.shared_from_this(), m_frames.size(), concrete_frame_idx,
         frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
-        /*behaves_like_zeroth_frame=*/false, &next_frame_sc);
+        behaves_like_zeroth_frame, &next_frame_sc);
 
     inline_frame_sp->m_frame_list_id = GetIdentifier();
     m_frames.push_back(inline_frame_sp);
