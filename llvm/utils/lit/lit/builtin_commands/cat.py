@@ -90,20 +90,18 @@ def run(argv, stdin, stdout, stderr, cwd):
 
         if show_nonprinting:
             contents = convertToCaretAndMNotation(contents)
+
         # Determine if stdout expects text or binary
-        is_text_output = False
-        if hasattr(stdout, "mode"):
-            mode = getattr(stdout, "mode", "b")
-            is_text_output = "b" not in mode
+        mode = getattr(stdout, "mode", "b")
+        is_text_output = "b" not in mode
 
         if is_text_output:
             if isinstance(contents, bytes):
                 contents = contents.decode()
-            stdout.write(contents)
         else:
             if isinstance(contents, str):
                 contents = contents.encode()
-            stdout.write(contents)
+        stdout.write(contents)
 
     return 0
 

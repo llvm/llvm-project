@@ -4,6 +4,7 @@ import enum
 import io
 import os
 import pathlib
+import platform
 import re
 import shlex
 import signal
@@ -403,7 +404,8 @@ def _make_out_sink(stdout: int | TextIO, is_last: bool) -> IO[bytes] | None:
         last stage or a non-pipe target, which don't need this sink.
     """
     if stdout == subprocess.PIPE and not is_last:
-        return tempfile.SpooledTemporaryFile(max_size=1 << 20, mode="w+")
+        _mode = "w+" if platform.system() == "OS/390" else "w+b"
+        return tempfile.SpooledTemporaryFile(max_size=1 << 20, mode=_mode)
     return None
 
 

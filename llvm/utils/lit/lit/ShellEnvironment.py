@@ -228,7 +228,11 @@ def as_binary_reader(stream: None | int | io.TextIOBase | BinaryIO) -> BinaryIO:
         # No real input to read.
         return io.BytesIO(b"")
     if isinstance(stream, io.TextIOBase):
-        return stream
+        buffer = getattr(stream, "buffer", None)
+        if buffer is not None:
+            return buffer
+        data = stream.read()
+        return io.BytesIO(data.encode() if isinstance(data, str) else data)
     # Already a binary reader.
     assert hasattr(stream, "read"), f"expected a binary reader, got {type(stream)!r}"
     return stream
