@@ -5317,6 +5317,15 @@ recurse:
     break;
   }
 
+  case Expr::DependentTemplateIdExprClass: {
+    NotPrimaryExpr();
+    const auto *DTI = cast<DependentTemplateIdExpr>(E);
+    mangleUnresolvedName(NestedNameSpecifier(), DTI->getName(),
+                         DTI->template_arguments().data(),
+                         DTI->getNumTemplateArgs(), Arity);
+    break;
+  }
+
   case Expr::CXXUnresolvedConstructExprClass: {
     NotPrimaryExpr();
     const CXXUnresolvedConstructExpr *CE = cast<CXXUnresolvedConstructExpr>(E);

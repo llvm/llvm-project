@@ -663,11 +663,15 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
       Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
   DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
 
-  Value *StrictFlag = Builder.getInt64(KernelArgs.StrictBlocksAndThreads);
-  StrictFlag = Builder.CreateShl(StrictFlag, 6);
+  Value *StrictBlocksFlag = Builder.getInt64(KernelArgs.StrictBlocks);
+  Value *StrictThreadsFlag = Builder.getInt64(KernelArgs.StrictThreads);
+
+  StrictBlocksFlag = Builder.CreateShl(StrictBlocksFlag, 6);
+  StrictThreadsFlag = Builder.CreateShl(StrictThreadsFlag, 7);
 
   Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
-  Flags = Builder.CreateOr(Flags, StrictFlag);
+  Flags = Builder.CreateOr(Flags, StrictBlocksFlag);
+  Flags = Builder.CreateOr(Flags, StrictThreadsFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -10166,7 +10170,8 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(
         NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
-        HasNoWait, /*StrictBlocksAndThreads=*/false, DynCGroupMemFallback);
+        HasNoWait, /*StrictBlocks=*/false, /*StrictThreads=*/false,
+        DynCGroupMemFallback);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
@@ -10596,8 +10601,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Start the mapper function code generation.
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", MapperFn);
-  auto SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   Value *MapperHandle = MapperFn->getArg(0);
   Value *BaseIn = MapperFn->getArg(1);
@@ -10911,7 +10917,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
   return MapperFn;
 }
 

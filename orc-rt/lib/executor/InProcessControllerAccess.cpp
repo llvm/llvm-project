@@ -240,7 +240,7 @@ void InProcessControllerAccess::doDisconnect() {
   for (auto &[_, H] : ToDrain)
     failPendingControllerCall(std::move(H));
 
-  notifyDisconnected();
+  notifyDisconnected(Error::success());
 }
 
 void InProcessControllerAccess::callWrapper(

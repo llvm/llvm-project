@@ -1177,15 +1177,6 @@ void CodeGenModule::Release() {
   else
     EmitCXXGlobalInitFunc();
   EmitCXXGlobalCleanUpFunc();
-  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
-    auto [SYCLCtorFunction, SYCLDtorFunction] = embedSYCLDeviceBinary();
-    if (SYCLCtorFunction) {
-      // A static initializer may launch a kernel, so the device binaries have
-      // to be registered before any of them run, hence a priority.
-      AddGlobalCtor(SYCLCtorFunction, /*Priority=*/1);
-      AddGlobalDtor(SYCLDtorFunction, /*Priority=*/1);
-    }
-  }
   registerGlobalDtorsWithAtExit();
   EmitCXXThreadLocalInitFunc();
   if (ObjCRuntime)
@@ -1194,6 +1185,12 @@ void CodeGenModule::Release() {
   if (Context.getLangOpts().CUDA && CUDARuntime) {
     if (llvm::Function *CudaCtorFunction = CUDARuntime->finalizeModule())
       AddGlobalCtor(CudaCtorFunction);
+  }
+  if (LangOpts.SYCLIsHost && !CodeGenOpts.OffloadBinaryToEmbedFile.empty()) {
+    if (llvm::Function *SYCLCtorFunction = embedSYCLDeviceBinary())
+      // A static initializer may launch a kernel, so the device binary has to
+      // be registered before any of them run, hence a priority.
+      AddGlobalCtor(SYCLCtorFunction, /*Priority=*/101);
   }
   if (OpenMPRuntime) {
     OpenMPRuntime->createOffloadEntriesAndInfoMetadata();

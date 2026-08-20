@@ -550,8 +550,8 @@ let Class = DeducedTemplateSpecializationType in {
   def : Property<"keyword", ElaboratedTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"templateName", Optional<TemplateName>> {
-    let Read = [{ makeOptionalFromNullable(node->getTemplateName()) }];
+  def : Property<"templateName", TemplateName> {
+    let Read = [{ node->getTemplateName() }];
   }
   def : Property<"deducedKind", DeducedKind> {
     let Read = [{ node->getDeducedKind() }];
@@ -561,8 +561,7 @@ let Class = DeducedTemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getDeducedTemplateSpecializationType(deducedKind, deducedType, keyword,
-                                     makeNullableFromOptional(templateName));
+    return ctx.getDeducedTemplateSpecializationType(deducedKind, deducedType, keyword, templateName);
   }]>;
 }
 

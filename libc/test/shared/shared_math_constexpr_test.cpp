@@ -383,6 +383,18 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::floorf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxf128(Float128(0.0), Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::fminf128(Float128(0.0), Float128(0.0)));
+static_assert(0LL == LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::nearbyintf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
@@ -416,12 +428,7 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimumf128(float128(0.0),
                                                    float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fminf128(float128(0.0), float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
-
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaximum_numf128(float128(0.0),
                                                        float128(0.0)));
@@ -489,11 +496,7 @@ static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
 
 static_assert(0LL == LIBC_NAMESPACE::shared::llrintf128(float128(0.0)));
-static_assert(0LL == LIBC_NAMESPACE::shared::llroundf128(float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf128(float128(0.0)));
-static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::nextafterf128(float128(0.0),
                                                     float128(0.0)));
@@ -507,10 +510,6 @@ static_assert(1 == [] {
              LIBC_NAMESPACE::shared::nanf128(&arg))
       .is_nan();
 }());
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::roundf128(float128(0.0)));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 

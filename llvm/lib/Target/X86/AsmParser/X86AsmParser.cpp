@@ -462,7 +462,6 @@ private:
     bool OffsetOperator = false;
     bool AttachToOperandIdx = false;
     bool IsPIC = false;
-    SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
     bool setSymRef(const MCExpr *Val, StringRef ID, StringRef &ErrMsg) {
@@ -483,7 +482,6 @@ private:
     bool isMemExpr() const { return MemExpr; }
     bool isBracketUsed() const { return BracketUsed; }
     bool isOffsetOperator() const { return OffsetOperator; }
-    SMLoc getOffsetLoc() const { return OffsetOperatorLoc; }
     MCRegister getBaseReg() const { return BaseReg; }
     MCRegister getIndexReg() const { return IndexReg; }
     unsigned getScale() const { return Scale; }
@@ -1161,7 +1159,7 @@ private:
       PrevState = CurrState;
       return false;
     }
-    bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
+    bool onOffset(const MCExpr *Val, StringRef ID,
                   const InlineAsmIdentifierInfo &IDInfo,
                   bool ParsingMSInlineAsm, StringRef &ErrMsg) {
       PrevState = State;
@@ -1175,7 +1173,6 @@ private:
         if (setSymRef(Val, ID, ErrMsg))
           return true;
         OffsetOperator = true;
-        OffsetOperatorLoc = OffsetLoc;
         State = IES_OFFSET;
         // As we cannot yet resolve the actual value (offset), we retain
         // the requested semantics by pushing a '0' to the operands stack
@@ -1939,7 +1936,6 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
   } else if (Name.equals_insensitive("mod")) {
     SM.onMod();
   } else if (Name.equals_insensitive("offset")) {
-    SMLoc OffsetLoc = getTok().getLoc();
     const MCExpr *Val = nullptr;
     StringRef ID;
     InlineAsmIdentifierInfo Info;
@@ -1947,8 +1943,7 @@ bool X86AsmParser::ParseIntelNamedOperator(StringRef Name,
     if (ParseError)
       return true;
     StringRef ErrMsg;
-    ParseError =
-        SM.onOffset(Val, OffsetLoc, ID, Info, isParsingMSInlineAsm(), ErrMsg);
+    ParseError = SM.onOffset(Val, ID, Info, isParsingMSInlineAsm(), ErrMsg);
     if (ParseError)
       return Error(SMLoc::getFromPointer(Name.data()), ErrMsg);
   } else {
