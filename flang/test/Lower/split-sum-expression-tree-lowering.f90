@@ -750,6 +750,93 @@ end
 ! NO-REWRITE: %[[RES:.*]] = arith.addf %[[XFOOBC]], %[[DE]]
 ! NO-REWRITE: hlfir.assign %[[RES]] to %[[X]]#0
 
+! Default:   (((x + sqrt((a+b)+c)) + d*e) + f*g)
+! Rewritten: ((d*e + f*g) + (x + sqrt((a+b)+c)))
+! The pure call is an opaque outer term. Its additive argument retains source
+! order in this stage.
+subroutine eligible_pure_call(x,a,b,c,d,e,f,g)
+  real(8) :: x,a,b,c,d,e,f,g
+  x = x + sqrt(a+b+c) + d*e + f*g
+end
+
+! SPLIT-LABEL: func.func @_QPeligible_pure_call
+! SPLIT: %[[DV:.*]] = fir.load
+! SPLIT: %[[EV:.*]] = fir.load
+! SPLIT: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! SPLIT: %[[FV:.*]] = fir.load
+! SPLIT: %[[GV:.*]] = fir.load
+! SPLIT: %[[FG:.*]] = arith.mulf %[[FV]], %[[GV]]
+! SPLIT: %[[TAIL:.*]] = arith.addf %[[DE]], %[[FG]]
+! SPLIT: %[[XV:.*]] = fir.load
+! SPLIT: %[[AV:.*]] = fir.load
+! SPLIT: %[[BV:.*]] = fir.load
+! SPLIT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! SPLIT: %[[CV:.*]] = fir.load
+! SPLIT: %[[ABC:.*]] = arith.addf %[[AB]], %[[CV]]
+! SPLIT: %[[CALL:.*]] = math.sqrt %[[ABC]]
+! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! SPLIT: %[[RES:.*]] = arith.addf %[[TAIL]], %[[HEAD]]
+! SPLIT: hlfir.assign %[[RES]]
+
+! DEFAULT-LABEL: func.func @_QPeligible_pure_call
+! DEFAULT: %[[XV:.*]] = fir.load
+! DEFAULT: %[[AV:.*]] = fir.load
+! DEFAULT: %[[BV:.*]] = fir.load
+! DEFAULT: %[[AB:.*]] = arith.addf %[[AV]], %[[BV]]
+! DEFAULT: %[[CV:.*]] = fir.load
+! DEFAULT: %[[ABC:.*]] = arith.addf %[[AB]], %[[CV]]
+! DEFAULT: %[[CALL:.*]] = math.sqrt %[[ABC]]
+! DEFAULT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! DEFAULT: %[[DV:.*]] = fir.load
+! DEFAULT: %[[EV:.*]] = fir.load
+! DEFAULT: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! DEFAULT: %[[HEAD_DE:.*]] = arith.addf %[[HEAD]], %[[DE]]
+! DEFAULT: %[[FV:.*]] = fir.load
+! DEFAULT: %[[GV:.*]] = fir.load
+! DEFAULT: %[[FG:.*]] = arith.mulf %[[FV]], %[[GV]]
+! DEFAULT: %[[RES:.*]] = arith.addf %[[HEAD_DE]], %[[FG]]
+! DEFAULT: hlfir.assign %[[RES]]
+
+subroutine guard_pure_call_volatile_arg(x,v,a,b,c,d)
+  real(8) :: x,a,b,c,d
+  real(8), volatile :: v
+  x = x + sqrt(v) + a*b + c*d
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_pure_call_volatile_arg
+! NO-REWRITE: %[[XV:.*]] = fir.load
+! NO-REWRITE: %[[CALL:.*]] = math.sqrt
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[XV]], %[[CALL]]
+! NO-REWRITE: %[[AV:.*]] = fir.load
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
+! NO-REWRITE: %[[HEAD_AB:.*]] = arith.addf %[[HEAD]], %[[AB]]
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[DV:.*]] = fir.load
+! NO-REWRITE: %[[CD:.*]] = arith.mulf %[[CV]], %[[DV]]
+! NO-REWRITE: %[[RES:.*]] = arith.addf %[[HEAD_AB]], %[[CD]]
+! NO-REWRITE: hlfir.assign %[[RES]]
+
+subroutine guard_nested_impure_call(x,a,b,c,d,e)
+  real(8) :: x,a,b,c,d,e,foo
+  x = x + sqrt(foo(a)) + b*c + d*e
+end
+
+! NO-REWRITE-LABEL: func.func @_QPguard_nested_impure_call
+! NO-REWRITE: %[[XV:.*]] = fir.load
+! NO-REWRITE: %[[IMPURE:.*]] = fir.call @_QPfoo
+! NO-REWRITE: %[[PURE:.*]] = math.sqrt %[[IMPURE]]
+! NO-REWRITE: %[[HEAD:.*]] = arith.addf %[[XV]], %[[PURE]]
+! NO-REWRITE: %[[BV:.*]] = fir.load
+! NO-REWRITE: %[[CV:.*]] = fir.load
+! NO-REWRITE: %[[BC:.*]] = arith.mulf %[[BV]], %[[CV]]
+! NO-REWRITE: %[[HEAD_BC:.*]] = arith.addf %[[HEAD]], %[[BC]]
+! NO-REWRITE: %[[DV:.*]] = fir.load
+! NO-REWRITE: %[[EV:.*]] = fir.load
+! NO-REWRITE: %[[DE:.*]] = arith.mulf %[[DV]], %[[EV]]
+! NO-REWRITE: %[[RES:.*]] = arith.addf %[[HEAD_BC]], %[[DE]]
+! NO-REWRITE: hlfir.assign %[[RES]]
+
 subroutine guard_array(n,x,a,b,c,d,e,f)
   integer :: n
   real(8) :: x(n),a(n),b(n),c(n),d(n),e(n),f(n)
