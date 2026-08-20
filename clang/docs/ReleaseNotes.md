@@ -511,6 +511,8 @@ features cannot lower the translation-unit ABI level;
   to a subobject and is used in a context that requires an implicit conversion.
   (#GH215900)
 
+- Fixed an assertion during template argument deduction where a function parameter pack is referenced by other types in the function type. (#GH28877), (#GH213760)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
