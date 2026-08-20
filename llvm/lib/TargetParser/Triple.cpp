@@ -988,6 +988,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
+  case Triple::pisa:
   case Triple::ppc64le:
   case Triple::ppcle:
   case Triple::r600:
@@ -1038,9 +1039,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::spirv32:
   case Triple::spirv64:
     return Triple::SPIRV;
-
-  case Triple::pisa:
-    return Triple::ELF;
 
   case Triple::dxil:
     return Triple::DXContainer;
