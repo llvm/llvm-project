@@ -1214,12 +1214,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
                                                  Instruction *Imag) {
   auto IsOperationSupported = [](Instruction *I) -> bool {
     unsigned Opcode = I->getOpcode();
-    if (Opcode == Instruction::Call)
-      return match(I, m_Intrinsic<Intrinsic::fma>(m_Value(), m_Value(),
-                                                  m_Value())) ||
-             match(I, m_Intrinsic<Intrinsic::fmuladd>(m_Value(), m_Value(),
-                                                      m_Value()));
-    return Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
+    return match(I, m_AnyIntrinsic<Intrinsic::fma, Intrinsic::fmuladd>()) ||
+           Opcode == Instruction::FAdd || Opcode == Instruction::FSub ||
            Opcode == Instruction::FNeg || Opcode == Instruction::Add ||
            Opcode == Instruction::Sub;
   };
