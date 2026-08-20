@@ -85,10 +85,8 @@ protected:
   TargetSP m_target_sp;
 };
 
-// Frames synthesized for an inlined scope share the concrete frame's PC, so
-// they must share its symbolication convention. Resolving them at PC-1 names
-// whatever precedes the PC, which at a function's first instruction is a
-// different function entirely.
+// Frames synthesized for an inlined scope share the concrete frame's PC, they
+// should also share its "behaves like frame zero" behavior.
 TEST_F(StackFrameListTest, InlineFramesInheritZerothFrameSymbolication) {
   // outer() inlines inner() starting at this offset into .text; see the
   // generation recipe in Inputs/inlined-function.yaml.
@@ -109,7 +107,6 @@ TEST_F(StackFrameListTest, InlineFramesInheritZerothFrameSymbolication) {
   // The YAML object file creates a backtrace like this:
   //   frame #0: 0x000000000000000d inner() at inl.cpp:2:13 [inlined]
   //   frame #1: 0x000000000000000d outer() at inl.cpp:6:27
-
 
   for (uint32_t i = 0; i < thread_sp->GetStackFrameCount(); ++i) {
     StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
