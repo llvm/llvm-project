@@ -17,7 +17,7 @@
 func.func @tensor_add(%arg0: tensor<8x8xf32, #Sparse>) -> tensor<8x8xf32> {
   %result_out = tensor.empty() : tensor<8x8xf32>
 
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<8x8xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() alignment = 64 : memref<8x8xf32>
   // CHECK: %[[RES:.*]] = linalg.add ins(%{{.*}}, %{{.*}} : tensor<8x8xf32, #[[$SPARSE_1]]>, tensor<8x8xf32, #[[$SPARSE_1]]>)
   %result = linalg.add
     ins(%arg0, %arg0 : tensor<8x8xf32, #Sparse>, tensor<8x8xf32, #Sparse>)

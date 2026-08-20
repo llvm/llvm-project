@@ -437,7 +437,7 @@ module attributes {gpu.container_module} {
 
   func.func @mmamatrix_valid_scalar_element_type(%src : memref<32x32xf16, affine_map<(d0, d1) -> (d0 * 64 + d1)>>){
     // CHECK-LABEL: func @mmamatrix_valid_scalar_element_type
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     // CHECK: %[[wg:.*]] = memref.alloca()
     %i = arith.constant 16 : index
     // CHECK: %[[i:.*]] = arith.constant 16 : index

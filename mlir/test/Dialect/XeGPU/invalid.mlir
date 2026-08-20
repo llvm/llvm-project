@@ -606,7 +606,7 @@ func.func @slice_attr_repeat_dim() {
 
 // -----
 func.func @create_mem_desc_non_slm() {
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 1>
   // expected-error@+1 {{operand #0 must be reside in share memory and statically shaped memref }}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 1> -> !xegpu.mem_desc<16x64xf16>
   return
@@ -614,7 +614,7 @@ func.func @create_mem_desc_non_slm() {
 
 // -----
 func.func @create_mem_desc_mismatch_sizes() {
-  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %m = memref.alloca() alignment = 1024 : memref<2048xi8, 3>
   // expected-error@+1 {{failed to verify that all of {source, mem_desc} have same size in bits}}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 3> -> !xegpu.mem_desc<16x32xf16>
   return
@@ -815,7 +815,7 @@ func.func @contiguity_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask
 
 // -----
 func.func @create_mem_desc_non_contiguous() {
-  %m = memref.alloca() {alignment = 1024} : memref<32x64xf16, 3>
+  %m = memref.alloca() alignment = 1024 : memref<32x64xf16, 3>
   %m_sub = memref.subview %m[0, 0][16, 32][1, 1] : memref<32x64xf16, 3> to memref<16x32xf16, strided<[64, 1]>, 3>
   // expected-error@+1 {{source memref must be contiguous.}}
   %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x32xf16, strided<[64, 1]>, 3> -> !xegpu.mem_desc<16x32xf16>
