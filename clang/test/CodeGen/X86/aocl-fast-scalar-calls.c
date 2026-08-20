@@ -1,11 +1,11 @@
-// Verify that the -fsclrlib=AMDLIBM driver flag, together with fast-math at -O3,
+// Verify that the -ffastlib=AMDLIBM driver flag, together with fast-math at -O3,
 // rewrites scalar math library calls into their AMD AOCL fast-call equivalents
 // for X86, and leaves them untouched without the flag.
 
 // REQUIRES: x86-registered-target
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -O3 -ffast-math \
-// RUN:   -fsclrlib=AMDLIBM -S %s -o - | FileCheck %s --check-prefix=AMD
+// RUN:   -ffastlib=AMDLIBM -S %s -o - | FileCheck %s --check-prefix=AMD
 // RUN: %clang --target=x86_64-unknown-linux-gnu -O3 -ffast-math \
 // RUN:   -S %s -o - | FileCheck %s --check-prefix=STD
 

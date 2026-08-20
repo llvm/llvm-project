@@ -1159,7 +1159,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     StringRef Name = ArgScalarLib->getValue();
     if (Name == "AMDLIBM")
       CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                           "-scalar-library=" + Name));
+                                           "-fast-library=" + Name));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to

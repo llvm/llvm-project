@@ -10,8 +10,8 @@
 // corresponding AMD AOCL scalar library entries for X86 targets, e.g.:
 //     tan ---> amd_fasttan
 // Such lowering is only legal under fast-math semantics and when the AMD
-// scalar math library has been selected (-scalar-library=AMDLIBM /
-// -fsclrlib=AMDLIBM).
+// fast math library has been selected (-fast-library=AMDLIBM /
+// -ffastlib=AMDLIBM).
 //
 //===----------------------------------------------------------------------===//
 
@@ -72,7 +72,7 @@ private:
 // per-operation fast-math flags carried by the original call have already been
 // lowered away, so we rely on the function-level fast-math attribute that the
 // frontend sets under -ffast-math. Together with the explicit
-// -scalar-library=AMDLIBM opt-in (checked in runOnMachineFunction) this gates
+// -fast-library=AMDLIBM opt-in (checked in runOnMachineFunction) this gates
 // the transformation.
 bool X86GenScalarAmdFastCalls::isCandidateSafeToLower(MachineInstr *MI) const {
   const Function &F = MI->getMF()->getFunction();
@@ -146,7 +146,7 @@ bool X86GenScalarAmdFastCalls::runOnMachineFunction(MachineFunction &MF) {
 
   if (TLI->getScalarMathLib() !=
       TargetLibraryInfoImpl::ScalarLibrary::SCALAR_AMDLIBM) {
-    LLVM_DEBUG(dbgs() << "-scalar-library=AMDLIBM not used so bailing out.\n";);
+    LLVM_DEBUG(dbgs() << "-fast-library=AMDLIBM not used so bailing out.\n";);
     return Changed;
   }
 
