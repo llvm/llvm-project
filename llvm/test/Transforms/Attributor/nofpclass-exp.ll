@@ -4,6 +4,7 @@
 declare float @llvm.exp.f32(float)
 declare float @llvm.exp2.f32(float)
 declare float @llvm.exp10.f32(float)
+declare float @llvm.sqrt.f32(float)
 
 define float @ret_exp(float %arg0) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_exp
@@ -447,6 +448,62 @@ define float @ret_exp_fneg_fabs(float %arg) {
   %arg.fabs = call float @llvm.fabs.f32(float %arg)
   %arg.neg.fabs = fneg float %arg.fabs
   %call = call float @llvm.exp.f32(float %arg.neg.fabs)
+  ret float %call
+}
+
+; A negative subnormal input cannot produce zero or a subnormal result.
+define float @ret_exp_negative_subnormal(float nofpclass(inf zero norm psub) %arg) {
+; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_exp_negative_subnormal
+; CHECK-SAME: (float nofpclass(inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.exp.f32(float nofpclass(inf zero psub norm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.exp.f32(float %arg)
+  ret float %call
+}
+
+; A positive subnormal input cannot produce infinity.
+define float @ret_exp_positive_subnormal(float nofpclass(inf zero norm nsub) %arg) {
+; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_exp_positive_subnormal
+; CHECK-SAME: (float nofpclass(inf zero nsub norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.exp.f32(float nofpclass(inf zero nsub norm) [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.exp.f32(float %arg)
+  ret float %call
+}
+
+; Exercise exp after 1.0 / sqrt(x). For non-poison inputs, the division is
+; -Inf, +zero, positive normal, or +Inf.
+define float @ret_exp_one_over_sqrt(float %arg) {
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub nnorm) float @ret_exp_one_over_sqrt
+; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[ONE_OVER_SQRT:%.*]] = fdiv nnan float 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero sub nnorm) float @llvm.exp.f32(float [[ONE_OVER_SQRT]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %arg)
+  %one.over.sqrt = fdiv nnan float 1.000000e+00, %sqrt
+  %call = call float @llvm.exp.f32(float %one.over.sqrt)
+  ret float %call
+}
+
+; Exercise exp after -1.0 / sqrt(x). For non-poison inputs, the result is
+; -Inf, negative normal, -zero, or +Inf.
+define float @ret_exp_neg_one_over_sqrt(float %arg) {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_exp_neg_one_over_sqrt
+; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[ONE_OVER_SQRT:%.*]] = fdiv nnan float 1.000000e+00, [[SQRT]]
+; CHECK-NEXT:    [[NEG_ONE_OVER_SQRT:%.*]] = fneg float [[ONE_OVER_SQRT]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp.f32(float [[NEG_ONE_OVER_SQRT]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %sqrt = call nnan float @llvm.sqrt.f32(float %arg)
+  %one.over.sqrt = fdiv nnan float 1.000000e+00, %sqrt
+  %neg.one.over.sqrt = fneg float %one.over.sqrt
+  %call = call float @llvm.exp.f32(float %neg.one.over.sqrt)
   ret float %call
 }
 
