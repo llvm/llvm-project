@@ -1056,6 +1056,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::span<.+>$", stl_summary_flags, true);
 
   stl_summary_flags.SetSkipPointers(true);
+  stl_summary_flags.SetHideEmptyAggregates(true);
 
   AddCXXSummary(cpp_category_sp,
                 lldb_private::formatters::LibcxxSmartPointerSummaryProvider,
@@ -1889,15 +1890,19 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::initializer_list summary provider",
                 "^std::initializer_list<.+>$", stl_summary_flags, true);
+
+  TypeSummaryImpl::Flags stl_smart_pointer_flags = stl_summary_flags;
+  stl_smart_pointer_flags.SetHideEmptyAggregates(true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
-                "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+                "^std::shared_ptr<.+>(( )?&)?$", stl_smart_pointer_flags, true);
   AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::weak_ptr summary provider",
-                "^std::weak_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+                "^std::weak_ptr<.+>(( )?&)?$", stl_smart_pointer_flags, true);
   AddCXXSummary(cpp_category_sp, GenericUniquePtrSummaryProvider,
                 "MSVC STL/libstdc++ std::unique_ptr summary provider",
-                "^std::unique_ptr<.+>(( )?&)?$", stl_summary_flags, true);
+                "^std::unique_ptr<.+>(( )?&)?$", stl_smart_pointer_flags, true);
+
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "MSVC STL/libstdc++ std::tuple summary provider",
                 "^std::tuple<.*>(( )?&)?$", stl_summary_flags, true);

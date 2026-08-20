@@ -339,7 +339,9 @@ LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
 
 llvm::Expected<uint32_t>
 LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
-  return 1;
+  if (m_ptr_obj && m_ptr_obj->GetValueAsUnsigned(0) != 0)
+    return 1;
+  return 0;
 }
 
 lldb::ValueObjectSP
