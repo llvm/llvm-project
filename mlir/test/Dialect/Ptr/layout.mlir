@@ -151,11 +151,8 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 // -----
 
 // Regression test for https://github.com/llvm/llvm-project/issues/217170:
-// the default memory space in the data layout does not have to implement
-// `MemorySpaceAttrInterface` (e.g. it may be a plain integer attribute).
-// Querying a pointer type whose memory space differs from that default
-// memory space used to crash instead of falling back to the default
-// pointer spec.
+// querying the ptr layout caused a crash when the default memory space was not
+// a `MemorySpaceAttrInterface` (e.g. a plain `i32` attr).
 module attributes { dlti.dl_spec = #dlti.dl_spec<"dlti.default_memory_space" = 7 : ui64>} {
   // CHECK-LABEL: @non_memory_space_default
   func.func @non_memory_space_default() {
