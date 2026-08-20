@@ -52,6 +52,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -438,11 +439,25 @@ namespace amdgcn {
 // Constructs a triple string for clang offload bundler.
 // NOTE: copied from HIPUtility.cpp.
 static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
-  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
-                        T.getOSName() + "-" + T.getEnvironmentName())
-                           .str()
-                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+                                       StringRef TargetID) {
+  // The new 'amdgpu' target is expected to have a subarchitecture. Use the
+  // known architecture if one does not exist.
+  llvm::Triple Normalized = T;
+  if (Normalized.isAMDGCN() &&
+      Normalized.getSubArch() == llvm::Triple::NoSubArch &&
+      Normalized.getArchName() != "amdgcn") {
+    llvm::AMDGPU::GPUKind Kind =
+        llvm::AMDGPU::parseArchAMDGCN(TargetID.split(':').first);
+    if (Kind != llvm::AMDGPU::GK_NONE)
+      Normalized.setArch(llvm::Triple::amdgpu, llvm::AMDGPU::getSubArch(Kind));
+  }
+
+  return !TargetID.empty()
+             ? (Normalized.getArchName() + "-" + Normalized.getVendorName() +
+                "-" + Normalized.getOSName() + "-" +
+                Normalized.getEnvironmentName())
+                   .str()
+             : Normalized.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
 }
 
 Expected<StringRef>
@@ -480,8 +495,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
   SmallVector<StringRef> Targets = {
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
-    std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
+    std::string NormalizedTriple = normalizeForBundler(Triple(TripleRef), Arch);
     Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
