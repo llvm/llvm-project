@@ -18850,10 +18850,19 @@ static SDValue lowerVECTOR_COMPRESS(SDValue Op, const X86Subtarget &Subtarget,
 }
 
 // Lower a dynamic shuffle to native variable permutes: VPERMV/VPERMV3 on
-// AVX512, VPERMPS/VPERMD plus a select on AVX2, and PSHUFB on SSSE3.
+// AVX512, VPERMPS/VPERMD on AVX2, and whatever createVariablePermute picks for
+// a 128-bit vector (VPERMILPV, PSHUFB, VPPERM, ...).
 // Out-of-range indices may produce any value since those lanes are poison,
 // which is what the hardware's modulo (VPERMV*), zeroing (PSHUFB), or
 // concatenated-modulo (VPERMV3) behavior provides for free.
+//
+// createVariablePermute is X86's existing lowering for this same operation
+// (see LowerBUILD_VECTORAsVariablePermute) and covers more subtargets, but
+// only some of its paths emit a permute: the rest compare-and-select between
+// two in-lane permutes, and a vector SELECT_CC created this late in
+// legalization is scalarized rather than legalized, which costs more than the
+// generic stack expansion. So it is used for the vector sizes where its paths
+// are single permutes, and the wider types keep the direct lowering below.
 static SDValue lowerVECTOR_SHUFFLE_VAR(SDValue Op,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -18881,6 +18890,11 @@ static SDValue lowerVECTOR_SHUFFLE_VAR(SDValue Op,
     return DAG.getNode(X86ISD::VPERMV3, DL, VT, V, Idx, V);
   }
 
+  // A 256-bit vector of 32/64-bit elements on AVX512 without VLX widens to a
+  // 512-bit VPERMV, which beats the AVX2 sequence below.
+  if (VT.is256BitVector() && Subtarget.hasAVX512() && EltBits >= 32)
+    return createVariablePermute(VT, V, Mask, DL, DAG, Subtarget);
+
   // AVX2: 256-bit 32/64-bit elements via VPERMD/VPERMPS, which shuffle across
   // lanes with indices modulo 8. 64-bit elements are shuffled as pairs of
   // 32-bit elements with indices {2i, 2i+1}.
@@ -18902,31 +18916,10 @@ static SDValue lowerVECTOR_SHUFFLE_VAR(SDValue Op,
                                           DAG.getBitcast(PermVT, V)));
   }
 
-  // SSSE3: 128-bit vectors of any element width via a single PSHUFB on byte
-  // indices. PSHUFB zeroes a lane whose index has bit 7 set and otherwise uses
-  // the low 4 bits; both only affect out-of-range (poison) lanes.
-  if (VT.is128BitVector() && Subtarget.hasSSSE3()) {
-    SDValue ByteIdx = Idx;
-    if (EltBits > 8) {
-      // Turn element indices into per-byte indices: replicate idx * EltBytes
-      // into each byte of the lane and add the ascending byte offsets. The
-      // replication overflows only for out-of-range (poison) indices.
-      unsigned EltBytes = EltBits / 8;
-      APInt Repl(EltBits, 0), Offs(EltBits, 0);
-      for (unsigned I = 0; I != EltBytes; ++I) {
-        Repl.insertBits(APInt(8, EltBytes), I * 8);
-        Offs.insertBits(APInt(8, I), I * 8);
-      }
-      ByteIdx = DAG.getNode(ISD::ADD, DL, IdxVT,
-                            DAG.getNode(ISD::MUL, DL, IdxVT, Idx,
-                                        DAG.getConstant(Repl, DL, IdxVT)),
-                            DAG.getConstant(Offs, DL, IdxVT));
-    }
-    ByteIdx = DAG.getBitcast(MVT::v16i8, ByteIdx);
-    return DAG.getBitcast(VT,
-                          DAG.getNode(X86ISD::PSHUFB, DL, MVT::v16i8,
-                                      DAG.getBitcast(MVT::v16i8, V), ByteIdx));
-  }
+  // 128-bit vectors: a single VPERMILPV on AVX, VPPERM on XOP, a PSHUFB on
+  // byte indices on SSSE3, or the two-element select on SSE4.1.
+  if (VT.is128BitVector())
+    return createVariablePermute(VT, V, Mask, DL, DAG, Subtarget);
 
   return SDValue();
 }

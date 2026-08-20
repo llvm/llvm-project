@@ -14919,6 +14919,17 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE_VAR(SDValue Op,
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VT);
+
+  unsigned EltSize = ContainerVT.getScalarSizeInBits();
+  unsigned MaxVLMAX =
+      VT.isFixedLengthVector()
+          ? VT.getVectorNumElements()
+          : computeVLMAX(Subtarget.getRealMaxVLen(), EltSize,
+                         ContainerVT.getSizeInBits().getKnownMinValue());
+
   // vrgather.vv takes its indices at the data SEW. Fall back to
   // vrgatherei16.vv, which takes i16 indices regardless of the data SEW, in
   // two cases:
@@ -14926,24 +14937,21 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE_VAR(SDValue Op,
   //  - Since we can't introduce illegal index types at this stage, an index
   //    type wider than XLenVT is unusable (i64 indices on RV32), matching what
   //    the constant-mask shuffle lowering does.
-  //  - At SEW=8 an index only reaches element 255, so a vector that can be
-  //    longer than 256 elements is not fully addressable.
+  //  - At SEW=8 an index only reaches element 255, so a vector whose VLMAX can
+  //    exceed 256 elements is not fully addressable (as in
+  //    lowerVECTOR_REVERSE).
   unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
   MVT IndexVT = VT.changeTypeToInteger();
   if (IndexVT.getScalarType().bitsGT(XLenVT) ||
-      (VT.getScalarSizeInBits() == 8 &&
-       (VT.isScalableVector() || VT.getVectorNumElements() > 256))) {
+      (EltSize == 8 && MaxVLMAX > 256)) {
     GatherOpc = RISCVISD::VRGATHEREI16_VV_VL;
     IndexVT = IndexVT.changeVectorElementType(MVT::i16);
   }
 
-  MVT ContainerVT = VT;
-  MVT IndexContainerVT = IndexVT;
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(VT);
-    IndexContainerVT =
-        ContainerVT.changeVectorElementType(IndexVT.getScalarType());
-  }
+  MVT IndexContainerVT =
+      VT.isFixedLengthVector()
+          ? ContainerVT.changeVectorElementType(IndexVT.getScalarType())
+          : IndexVT;
   // vrgatherei16.vv at SEW=8 needs an index vector of twice the data LMUL,
   // which is not a legal type at the largest LMUL; bail out if so.
   if (!isTypeLegal(IndexContainerVT))

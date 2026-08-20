@@ -13574,18 +13574,19 @@ SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
   SDValue Chain =
       DAG.getStore(DAG.getEntryNode(), DL, V, StackPtr, PtrInfo, Alignment);
 
+  // Freeze the whole mask once, rather than each extracted index, in case it
+  // has poison/undef elements.
+  Mask = DAG.getFreeze(Mask);
+
   MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
   unsigned NumElts = VecVT.getVectorNumElements();
   SmallVector<SDValue, 16> Elts;
   Elts.reserve(NumElts);
   for (unsigned I = 0; I < NumElts; ++I) {
     SDValue Idx = DAG.getExtractVectorElt(DL, MaskScalarVT, Mask, I);
-    // Freeze in case we have poison/undef mask entries.
-    Idx = DAG.getFreeze(Idx);
     Idx = DAG.getZExtOrTrunc(Idx, DL, IdxVT);
     SDValue EltPtr = getVectorElementPointer(DAG, StackPtr, VecVT, Idx);
-    Elts.push_back(DAG.getLoad(ScalarVT, DL, Chain, EltPtr,
-                               MachinePointerInfo::getUnknownStack(MF)));
+    Elts.push_back(DAG.getLoad(ScalarVT, DL, Chain, EltPtr, PtrInfo));
   }
   return DAG.getBuildVector(VecVT, DL, Elts);
 }

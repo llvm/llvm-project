@@ -2399,7 +2399,12 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
-  setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
+  // A dynamic shuffle is lowered to TBL through a v16i8 bitcast, which on
+  // big-endian reverses the bytes within each lane; the byte-offset
+  // construction does not account for that, so leave big-endian to the
+  // generic expansion (and let the cost model see that it is not native).
+  if (Subtarget->isLittleEndian())
+    setOperationAction(ISD::VECTOR_SHUFFLE_VAR, VT, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
@@ -16319,14 +16324,13 @@ AArch64TargetLowering::LowerVECTOR_SHUFFLE_VAR(SDValue Op,
     return DAG.getBitcast(VT, Tbl);
   }
 
-  // Only handle NEON-sized fixed-length shuffles. Anything else falls back to
-  // the generic expansion, which for these types is a stack round trip.
-  // On big-endian the vNiW -> v16i8 bitcast below reverses the bytes within
-  // each lane, which the byte-offset construction does not account for.
-  if (!Subtarget->isNeonAvailable() || !Subtarget->isLittleEndian() ||
-      VT.getScalarSizeInBits() % 8 != 0 ||
-      (VT.getSizeInBits() != 64 && VT.getSizeInBits() != 128))
-    return SDValue();
+  // Everything reaching here was made Custom by addTypeForNEON, which only
+  // runs for little-endian NEON and only for 64/128-bit vectors of 8- to
+  // 64-bit elements.
+  assert(Subtarget->isNeonAvailable() && Subtarget->isLittleEndian() &&
+         VT.getScalarSizeInBits() % 8 == 0 &&
+         (VT.getSizeInBits() == 64 || VT.getSizeInBits() == 128) &&
+         "Unexpected type for a NEON dynamic shuffle");
 
   // Turn the mask of element indices into a mask of byte indices for TBL:
   //   ByteIdx = Mask * <EltBytes repeated in every byte of the lane>

@@ -29275,7 +29275,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
   EVT VT = N->getValueType(0);
 
   // An undef or poison index yields poison, as for EXTRACT_VECTOR_ELT.
-  if (Mask.isUndef() || Mask.getOpcode() == ISD::POISON)
+  if (Mask.isUndef())
     return DAG.getPOISON(VT);
 
   // Shuffling poison or undef gives it back.
@@ -29288,25 +29288,27 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
   if (!BV)
     return SDValue();
 
-  // A constant mask makes this a regular VECTOR_SHUFFLE.
+  // A constant mask makes this a regular VECTOR_SHUFFLE. getConstantRawBits
+  // truncates each operand to the mask's element width, which is what
+  // BUILD_VECTOR's implicit truncation means.
+  SmallVector<APInt> RawIndices;
+  BitVector UndefIndices;
+  if (!BV->getConstantRawBits(DAG.getDataLayout().isLittleEndian(),
+                              Mask.getValueType().getScalarSizeInBits(),
+                              RawIndices, UndefIndices))
+    return SDValue();
+
+  // Out-of-range indices produce poison.
   unsigned NumElts = VT.getVectorNumElements();
-  // BUILD_VECTOR operands are implicitly truncated to the element type, so
-  // take only as many bits as the mask element actually holds.
-  unsigned MaskEltBits = Mask.getValueType().getScalarSizeInBits();
   SmallVector<int, 16> Indices;
   Indices.reserve(NumElts);
-  for (SDValue Op : BV->ops()) {
-    if (Op.isUndef()) {
-      Indices.push_back(-1);
-      continue;
-    }
-    auto *C = dyn_cast<ConstantSDNode>(Op);
-    if (!C)
-      return SDValue();
-    // Out-of-range indices produce poison.
-    APInt Idx = C->getAPIntValue().zextOrTrunc(MaskEltBits);
-    Indices.push_back(Idx.ult(NumElts) ? (int)Idx.getZExtValue() : -1);
-  }
+  for (auto [I, Idx] : enumerate(RawIndices))
+    Indices.push_back(
+        UndefIndices[I] || Idx.uge(NumElts) ? -1 : (int)Idx.getZExtValue());
+
+  // After legalization the target may not accept an arbitrary shuffle mask.
+  if (LegalOperations && !TLI.isShuffleMaskLegal(Indices, VT))
+    return SDValue();
   return DAG.getVectorShuffle(VT, SDLoc(N), V, DAG.getPOISON(VT), Indices);
 }
 

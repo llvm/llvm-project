@@ -2600,13 +2600,11 @@ public:
       Type *EltTy = FixedVecTy->getElementType();
       InstructionCost Cost = thisT()->getMemoryOpCost(
           Instruction::Store, VecTy, DL.getABITypeAlign(VecTy), 0, CostKind);
-      Cost += getScalarizationOverhead(MaskTy, /*Insert=*/false,
-                                       /*Extract=*/true, CostKind);
       Cost += FixedVecTy->getNumElements() *
               thisT()->getMemoryOpCost(Instruction::Load, EltTy,
                                        DL.getABITypeAlign(EltTy), 0, CostKind);
-      Cost += getScalarizationOverhead(VecTy, /*Insert=*/true,
-                                       /*Extract=*/false, CostKind);
+      // Reading each index out of the mask and rebuilding the result vector.
+      Cost += getScalarizationOverhead(VecTy, ICA.getArgs(), Tys, CostKind);
       return Cost;
     }
     case Intrinsic::experimental_vector_histogram_add:

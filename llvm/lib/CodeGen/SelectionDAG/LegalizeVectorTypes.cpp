@@ -2961,9 +2961,9 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE_VAR(SDNode *N, SDValue &Lo,
   // shuffle too, so they stay poison. This needs HalfElts to be representable
   // in the mask element type; for scalable vectors that is only known when the
   // elements are wide enough to hold any element count a target can produce.
-  bool HalfEltsFits = HalfEC.isScalable() ? MaskEltBits >= 32
-                                          : MaxIdx.uge(HalfEC.getFixedValue());
-  if (!HalfEltsFits) {
+  // A fixed HalfElts is representable: the early return above took every case
+  // where the mask element type cannot reach it.
+  if (HalfEC.isScalable() && MaskEltBits < 32) {
     SDValue Expanded = TLI.expandVECTOR_SHUFFLE_VAR(N, DAG);
     std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
     return;
@@ -3909,7 +3909,7 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     Res = SplitVecOp_VECTOR_COMPRESS(N, OpNo);
     break;
   case ISD::VECTOR_SHUFFLE_VAR:
-    Res = SplitVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    Res = LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(N, OpNo);
     break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
@@ -4132,19 +4132,16 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VecVT, Lo, Hi);
 }
 
-SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
-                                                        unsigned OpNo) {
-  assert(OpNo == 1 && "The source shares the result's type, so splitting it "
-                      "is a result split.");
-  return LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(N);
-}
-
 /// The mask's element count is pinned to the (legal) result's, so an illegal
 /// mask type can only be fixed by changing its element type. Retry with the
 /// result's integer element type, which is legal whenever the result type is.
 /// Indices are unsigned and out-of-range lanes are poison, so narrowing the
-/// index type is always a legal refinement.
-SDValue DAGTypeLegalizer::LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(SDNode *N) {
+/// index type is always a legal refinement. This handles both a split and a
+/// widened mask, since either way the fix is the same re-typing.
+SDValue DAGTypeLegalizer::LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(SDNode *N,
+                                                                unsigned OpNo) {
+  assert(OpNo == 1 && "The source shares the result's type, so legalizing it "
+                      "is a result legalization.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   EVT NewMaskVT = VT.changeVectorElementTypeToInteger();
@@ -7759,7 +7756,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STRICT_FSETCCS:     Res = WidenVecOp_STRICT_FSETCC(N); break;
   case ISD::VSELECT:            Res = WidenVecOp_VSELECT(N); break;
   case ISD::VECTOR_SHUFFLE_VAR:
-    Res = WidenVecOp_VECTOR_SHUFFLE_VAR(N, OpNo);
+    Res = LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(N, OpNo);
     break;
   case ISD::FLDEXP:
   case ISD::FCOPYSIGN:
@@ -8832,13 +8829,6 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
   SDValue Select = DAG.getNode(N->getOpcode(), DL, LeftIn.getValueType(), Cond,
                                LeftIn, RightIn);
   return DAG.getExtractSubvector(DL, VT, Select, 0);
-}
-
-SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N,
-                                                        unsigned OpNo) {
-  assert(OpNo == 1 && "The source shares the result's type, so widening it "
-                      "is a result widen.");
-  return LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(N);
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_CttzElements(SDNode *N) {

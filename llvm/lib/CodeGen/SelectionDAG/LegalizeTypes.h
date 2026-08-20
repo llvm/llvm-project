@@ -994,8 +994,7 @@ private:
   SDValue SplitVecOp_UnaryOp(SDNode *N);
   SDValue SplitVecOp_TruncateHelper(SDNode *N);
   SDValue SplitVecOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo);
-  SDValue SplitVecOp_VECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
-  SDValue LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(SDNode *N);
+  SDValue LegalizeMaskTypeForVECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
 
   SDValue SplitVecOp_BITCAST(SDNode *N);
   SDValue SplitVecOp_INSERT_SUBVECTOR(SDNode *N, unsigned OpNo);
@@ -1138,7 +1137,6 @@ private:
   SDValue WidenVecOp_SETCC(SDNode* N);
   SDValue WidenVecOp_STRICT_FSETCC(SDNode* N);
   SDValue WidenVecOp_VSELECT(SDNode *N);
-  SDValue WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
 
   SDValue WidenVecOp_Convert(SDNode *N);
   SDValue WidenVecOp_FP_TO_XINT_SAT(SDNode *N);
