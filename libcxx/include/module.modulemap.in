@@ -413,7 +413,10 @@ module std {
     module find_if_not                            { header "__algorithm/find_if_not.h" }
     module find_if                                { header "__algorithm/find_if.h" }
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
-    module find                                   { header "__algorithm/find.h" }
+    module find                                   {
+      header "__algorithm/find.h"
+      export std.algorithm.simd_utils // TODO: Workaround for https://llvm.org/PR120108
+    }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
@@ -1701,7 +1704,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
-    module pstl                               { header "__memory/pstl.h" }    
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
