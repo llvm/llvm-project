@@ -77,6 +77,18 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return builtin(__rs1, __rs2);                                              \
   }
 
+#define __packed_ternary_builtin(name, ty, builtin)                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
+      ty __rd, ty __rs1, ty __rs2) {                                           \
+    return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
+#define __packed_ternary_builtin_mixed(name, rty, ty1, ty2, builtin)           \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(                     \
+      rty __rd, ty1 __rs1, ty2 __rs2) {                                        \
+    return builtin(__rd, __rs1, __rs2);                                        \
+  }
+
 #define __packed_sh1add(name, ty)                                              \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return (__rs1 << 1) + __rs2;                                               \
@@ -728,6 +740,14 @@ __packed_binary_builtin(pmulhru_u16x2, uint16x2_t, __builtin_riscv_pmulhru_u16x2
 __packed_binary_builtin_mixed(pmulhsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmulhsu_i16x2)
 __packed_binary_builtin_mixed(pmulhrsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmulhrsu_i16x2)
 
+/* Packed Multiply High Accumulate (32-bit) */
+__packed_ternary_builtin(pmhacc_i16x2, int16x2_t, __builtin_riscv_pmhacc_i16x2)
+__packed_ternary_builtin(pmhracc_i16x2, int16x2_t, __builtin_riscv_pmhracc_i16x2)
+__packed_ternary_builtin(pmhaccu_u16x2, uint16x2_t, __builtin_riscv_pmhaccu_u16x2)
+__packed_ternary_builtin(pmhraccu_u16x2, uint16x2_t, __builtin_riscv_pmhraccu_u16x2)
+__packed_ternary_builtin_mixed(pmhaccsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmhaccsu_i16x2)
+__packed_ternary_builtin_mixed(pmhraccsu_i16x2, int16x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pmhraccsu_i16x2)
+
 /* Packed Multiply High (64-bit) */
 __packed_binary_builtin(pmulh_i16x4, int16x4_t, __builtin_riscv_pmulh_i16x4)
 __packed_binary_builtin(pmulh_i32x2, int32x2_t, __builtin_riscv_pmulh_i32x2)
@@ -741,6 +761,20 @@ __packed_binary_builtin_mixed(pmulhsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, _
 __packed_binary_builtin_mixed(pmulhsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmulhsu_i32x2)
 __packed_binary_builtin_mixed(pmulhrsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmulhrsu_i16x4)
 __packed_binary_builtin_mixed(pmulhrsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmulhrsu_i32x2)
+
+/* Packed Multiply High Accumulate (64-bit) */
+__packed_ternary_builtin(pmhacc_i16x4, int16x4_t, __builtin_riscv_pmhacc_i16x4)
+__packed_ternary_builtin(pmhacc_i32x2, int32x2_t, __builtin_riscv_pmhacc_i32x2)
+__packed_ternary_builtin(pmhracc_i16x4, int16x4_t, __builtin_riscv_pmhracc_i16x4)
+__packed_ternary_builtin(pmhracc_i32x2, int32x2_t, __builtin_riscv_pmhracc_i32x2)
+__packed_ternary_builtin(pmhaccu_u16x4, uint16x4_t, __builtin_riscv_pmhaccu_u16x4)
+__packed_ternary_builtin(pmhaccu_u32x2, uint32x2_t, __builtin_riscv_pmhaccu_u32x2)
+__packed_ternary_builtin(pmhraccu_u16x4, uint16x4_t, __builtin_riscv_pmhraccu_u16x4)
+__packed_ternary_builtin(pmhraccu_u32x2, uint32x2_t, __builtin_riscv_pmhraccu_u32x2)
+__packed_ternary_builtin_mixed(pmhaccsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmhaccsu_i16x4)
+__packed_ternary_builtin_mixed(pmhaccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmhaccsu_i32x2)
+__packed_ternary_builtin_mixed(pmhraccsu_i16x4, int16x4_t, int16x4_t, uint16x4_t, __builtin_riscv_pmhraccsu_i16x4)
+__packed_ternary_builtin_mixed(pmhraccsu_i32x2, int32x2_t, int32x2_t, uint32x2_t, __builtin_riscv_pmhraccsu_i32x2)
 
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
@@ -900,6 +934,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_unary_op
 #undef __packed_binary_builtin
 #undef __packed_binary_builtin_mixed
+#undef __packed_ternary_builtin
+#undef __packed_ternary_builtin_mixed
 #undef __packed_sh1add
 #undef __packed_sh1sadd
 #undef __packed_cmp

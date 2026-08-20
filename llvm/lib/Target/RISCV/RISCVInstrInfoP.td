@@ -1778,6 +1778,10 @@ class PatAbdSumAcc<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
     : Pat<(XLenVT (OpNode (XLenVT GPR:$rd), (VecVT GPR:$rs1), (VecVT GPR:$rs2))),
           (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
+class PatGprGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VT>
+    : Pat<(VT (OpNode (VT GPR:$rd), (VT GPR:$rs1), (VT GPR:$rs2))),
+          (Inst GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -1886,6 +1890,18 @@ def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
+
+def SDT_RISCVSameTernary : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisSameAs<0, 3>]>;
+
+// Packed multiply high accumulate operations.
+def riscv_pmhacc    : RVSDNode<"PMHACC", SDT_RISCVSameTernary>;
+def riscv_pmhracc   : RVSDNode<"PMHRACC", SDT_RISCVSameTernary>;
+def riscv_pmhaccu   : RVSDNode<"PMHACCU", SDT_RISCVSameTernary>;
+def riscv_pmhraccu  : RVSDNode<"PMHRACCU", SDT_RISCVSameTernary>;
+def riscv_pmhaccsu  : RVSDNode<"PMHACCSU", SDT_RISCVSameTernary>;
+def riscv_pmhraccsu : RVSDNode<"PMHRACCSU", SDT_RISCVSameTernary>;
 
 // "Q-format" multiplication
 def riscv_mulq  : RVSDNode<"MULQ",  SDTIntBinOp>;
@@ -2126,6 +2142,14 @@ let Predicates = [HasStdExtP] in {
   def : PatGprGpr<riscv_mulhru, PMULHRU_H, XLenVecI16VT>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_H, XLenVecI16VT>;
 
+  // 16-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_pmhacc, PMHACC_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_pmhracc, PMHRACC_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_pmhaccu, PMHACCU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_pmhraccu, PMHRACCU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_pmhaccsu, PMHACCSU_H, XLenVecI16VT>;
+  def : PatGprGprGpr<riscv_pmhraccsu, PMHRACCSU_H, XLenVecI16VT>;
+
   // 16-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, PMULQ_H, XLenVecI16VT>;
   def : PatGprGpr<riscv_mulqr, PMULQR_H, XLenVecI16VT>;
@@ -2239,6 +2263,14 @@ let append Predicates = [IsRV32] in {
   def : PatGprGpr<riscv_mulhr, MULHR, i32>;
   def : PatGprGpr<riscv_mulhru, MULHRU, i32>;
   def : PatGprGpr<riscv_mulhrsu, MULHRSU, i32>;
+
+  // 32-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_pmhacc, MHACC, i32>;
+  def : PatGprGprGpr<riscv_pmhracc, MHRACC, i32>;
+  def : PatGprGprGpr<riscv_pmhaccu, MHACCU, i32>;
+  def : PatGprGprGpr<riscv_pmhraccu, MHRACCU, i32>;
+  def : PatGprGprGpr<riscv_pmhaccsu, MHACCSU, i32>;
+  def : PatGprGprGpr<riscv_pmhraccsu, MHRACCSU, i32>;
 
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, MULQ, i32>;
@@ -2775,6 +2807,14 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulhr, PMULHR_W, v2i32>;
   def : PatGprGpr<riscv_mulhru, PMULHRU_W, v2i32>;
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
+
+  // 32-bit multiply high accumulate patterns
+  def : PatGprGprGpr<riscv_pmhacc, PMHACC_W, v2i32>;
+  def : PatGprGprGpr<riscv_pmhracc, PMHRACC_W, v2i32>;
+  def : PatGprGprGpr<riscv_pmhaccu, PMHACCU_W, v2i32>;
+  def : PatGprGprGpr<riscv_pmhraccu, PMHRACCU_W, v2i32>;
+  def : PatGprGprGpr<riscv_pmhaccsu, PMHACCSU_W, v2i32>;
+  def : PatGprGprGpr<riscv_pmhraccsu, PMHRACCSU_W, v2i32>;
 
   // 32-bit "Q-format" multiplication patterns
   def : PatGprGpr<riscv_mulq, PMULQ_W, v2i32>;
