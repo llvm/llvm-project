@@ -50,7 +50,7 @@ func.func @tensor_convert() -> memref<?xindex> {
   // expected-error@+1 {{Level size mismatch between source/dest tensors}}
   %J = sparse_tensor.convert %I : tensor<32x32xf32> to tensor<32x32xf32, #Sparse>
 
-  %result = sparse_tensor.positions %J { level = 0 : index }
+  %result = sparse_tensor.positions %J level = 0
     : tensor<32x32xf32, #Sparse> to memref<?xindex>
 
   return %result : memref<?xindex>
