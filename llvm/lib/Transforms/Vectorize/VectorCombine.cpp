@@ -2101,7 +2101,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
 
-  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  DenseMap<Instruction *, ScalarizationResult> NeedFreeze;
   llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
@@ -2121,8 +2121,10 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
-      NeedFreeze.try_emplace(UI, ScalarIdx);
-      ScalarIdx.discard();
+      if (auto *IdxInst = dyn_cast<Instruction>(UI->getIndexOperand())) {
+        NeedFreeze.try_emplace(IdxInst, ScalarIdx);
+        ScalarIdx.discard();
+      }
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getIndexOperand());
@@ -2155,9 +2157,13 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(EI);
-    if (It != NeedFreeze.end())
-      It->second.freeze(Builder, *cast<Instruction>(Idx));
+    if (auto *IdxInst = dyn_cast<Instruction>(Idx)) {
+      auto It = NeedFreeze.find(IdxInst);
+      if (It != NeedFreeze.end()) {
+        It->second.freeze(Builder, *IdxInst);
+        NeedFreeze.erase(It);
+      }
+    }
 
     Builder.SetInsertPoint(EI);
     Value *GEP =
