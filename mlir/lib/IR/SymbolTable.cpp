@@ -496,9 +496,9 @@ public:
   OpTypeSymbolUseVerifier(MLIRContext *ctx, SymbolTableCollection &symbolTable)
       : cache(detail::getSymbolRefContainmentCache(ctx)) {
     typeWalker.addWalk([this, &symbolTable](Type type) -> WalkResult {
-      // Prune subtrees that provably hold no SymbolRefAttr; nothing under them
-      // can carry a symbol use.
-      if (!cache.mayContainSymbolRefs(type))
+      // Prune subtrees the cache proves free of any SymbolRefAttr; nothing
+      // under them can carry a symbol use.
+      if (cache.isSymbolRefFree(type))
         return WalkResult::skip();
       if (auto user = dyn_cast<SymbolUserTypeInterface>(type))
         if (failed(user.verifySymbolUses(anchor, symbolTable)))
@@ -508,7 +508,7 @@ public:
     typeWalker.addWalk([this](Attribute attr) -> WalkResult {
       // Prune reference-free attribute subtrees so the walk descends only where
       // a SymbolRefAttr, and thus a symbol-using type, may live.
-      if (!cache.mayContainSymbolRefs(attr))
+      if (cache.isSymbolRefFree(attr))
         return WalkResult::skip();
       return WalkResult::advance();
     });
@@ -534,15 +534,15 @@ public:
   }
 
 private:
-  /// Verify one root, probing its containment before entering the walker. A
+  /// Verify one root, first asking the cache whether it is symbol-ref-free. A
   /// clean top-level root is skipped outright -- kept out of the walk and out
   /// of the walker's visited memo, unlike the clean interior elements the walk
-  /// memoizes as it descends. A may-contain root is walked and reprobed by the
-  /// walker's root callback, so this spares only the clean roots, which
-  /// dominate.
+  /// memoizes as it descends. A root that may contain one is walked and
+  /// reprobed by the walker's root callback, so this spares only the clean
+  /// roots, which dominate.
   template <typename T>
   WalkResult visit(T root) {
-    if (!cache.mayContainSymbolRefs(root))
+    if (cache.isSymbolRefFree(root))
       return WalkResult::advance();
     return typeWalker.walk<WalkOrder::PreOrder>(root);
   }

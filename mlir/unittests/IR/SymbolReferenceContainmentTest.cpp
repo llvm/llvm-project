@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for the per-context symbol-reference containment cache, which records
-// which uniqued types and attributes are provably free of a transitive
-// SymbolRefAttr; everything else, including mutable storage, answers true
-// conservatively. Symbol-table verification relies on it to prune the
-// symbol-using types it would otherwise walk. Because a SymbolUserTypeInterface
-// implementation must spell its references as SymbolRefAttr sub-elements, a
-// false answer is a sound reason to skip such a type even after the interface
-// is attached late.
+// Tests for the per-context symbol-reference containment cache, whose
+// isSymbolRefFree query answers true for a uniqued type or attribute proven
+// free of any transitive SymbolRefAttr, and false conservatively otherwise
+// (including mutable storage). Symbol-table verification relies on it to prune
+// the symbol-using types it would otherwise walk. Because a
+// SymbolUserTypeInterface implementation must spell its references as
+// SymbolRefAttr sub-elements, a true (free) answer is a sound reason to skip
+// such a type even after the interface is attached late.
 //
 //===----------------------------------------------------------------------===//
 
@@ -76,15 +76,14 @@ protected:
     return test::TestSymbolRefAttr::get(&context, symbolRef());
   }
 
-  // Query the cache for `obj`. The row index names a failed row without
-  // printing `obj`, which a mutable-storage kind with an unset body cannot
-  // survive.
+  // Query the cache for `obj`; `expected` is whether it is proven symbol-ref-
+  // free. The row index names a failed row without printing `obj`, which a
+  // mutable-storage kind with an unset body cannot survive.
   template <typename T>
   void expect(T obj, bool expected) {
     SCOPED_TRACE("containment row " + std::to_string(++row));
     EXPECT_EQ(
-        detail::getSymbolRefContainmentCache(&context).mayContainSymbolRefs(
-            obj),
+        detail::getSymbolRefContainmentCache(&context).isSymbolRefFree(obj),
         expected);
   }
 
@@ -92,77 +91,78 @@ protected:
   MLIRContext context;
 };
 
-// The containment answer across leaves, self-references, conforming user
+// The symbol-ref-free answer across leaves, self-references, conforming user
 // types/attributes, and every nesting path a symbol reference can hide behind.
 TEST_F(SymbolReferenceContainmentTest, ContainmentTruthTable) {
   Type i32 = IntegerType::get(&context, 32);
 
-  // Leaves hold no reference.
-  expect(i32, false);
-  expect(StringAttr::get(&context, "hi"), false);
-  expect(TypeAttr::get(i32), false);
+  // Leaves hold no reference and are free.
+  expect(i32, true);
+  expect(StringAttr::get(&context, "hi"), true);
+  expect(TypeAttr::get(i32), true);
 
-  // A SymbolRefAttr, flat or nesting further references, is itself a reference.
-  expect(symbolRef(), true);
+  // A SymbolRefAttr, flat or nesting further references, is itself a reference,
+  // so it is not free.
+  expect(symbolRef(), false);
   expect(SymbolRefAttr::get(StringAttr::get(&context, "root"),
                             {FlatSymbolRefAttr::get(&context, "n")}),
-         true);
+         false);
 
-  // A conforming symbol-user type/attribute answers true through its
-  // SymbolRefAttr parameter, not through the interface (which plays no part).
-  expect(symbolUserType(), true);
-  expect(symbolUserAttr(), true);
+  // A conforming symbol-user type/attribute is not free -- it carries a
+  // SymbolRefAttr parameter (the interface plays no part in the answer).
+  expect(symbolUserType(), false);
+  expect(symbolUserAttr(), false);
 
-  // Nesting propagates the reference; ordinary nesting stays clear.
-  expect(TupleType::get(&context, {symbolUserType()}), true);
-  expect(TupleType::get(&context, {i32, i32}), false);
+  // Nesting propagates the reference; ordinary nesting stays free.
+  expect(TupleType::get(&context, {symbolUserType()}), false);
+  expect(TupleType::get(&context, {i32, i32}), true);
 
   // A type reaches a reference through an attribute sub-element -- a plain
   // SymbolRefAttr encoding, or a TypeAttr of a symbol-ref-bearing type.
-  expect(RankedTensorType::get({2}, i32, symbolRef()), true);
-  expect(TypeAttr::get(symbolUserType()), true);
+  expect(RankedTensorType::get({2}, i32, symbolRef()), false);
+  expect(TypeAttr::get(symbolUserType()), false);
   expect(RankedTensorType::get({2}, i32, TypeAttr::get(symbolUserType())),
-         true);
+         false);
 
   // A dictionary summarizes its whole nested tree, whichever way a reference
-  // hides, and stays clear when none does.
+  // hides, and stays free when none does.
   expect(DictionaryAttr::get(
              &context, {NamedAttribute(StringAttr::get(&context, "callee"),
                                        symbolRef())}),
-         true);
+         false);
   expect(DictionaryAttr::get(&context,
                              {NamedAttribute(StringAttr::get(&context, "key"),
                                              TypeAttr::get(symbolUserType()))}),
-         true);
+         false);
   expect(DictionaryAttr::get(&context,
                              {NamedAttribute(StringAttr::get(&context, "key"),
                                              TypeAttr::get(i32))}),
-         false);
+         true);
 
-  // A mutable-storage kind, and any container of one, answers true
+  // A mutable-storage kind, and any container of one, answers not-free
   // conservatively: its sub-elements may change after the query, so its
-  // contents are never read and no later mutation can turn a cached false
+  // contents are never read and no later mutation can turn a cached-free answer
   // stale.
-  expect(test::TestRecursiveType::get(&context, "rec"), true);
+  expect(test::TestRecursiveType::get(&context, "rec"), false);
   expect(
       TupleType::get(&context, {test::TestRecursiveType::get(&context, "c")}),
-      true);
+      false);
 
   // A DistinctAttr is keyed by its own always-allocated storage address, not
-  // the attribute uniquer; two instances answer false independently, and a
+  // the attribute uniquer; two instances answer free independently, and a
   // repeat query is stable across the cold fill and the warm hit.
   DistinctAttr d1 = DistinctAttr::create(UnitAttr::get(&context));
   DistinctAttr d2 = DistinctAttr::create(UnitAttr::get(&context));
   ASSERT_NE(d1, d2);
-  expect(d1, false);
-  expect(d1, false);
-  expect(d2, false);
+  expect(d1, true);
+  expect(d1, true);
+  expect(d2, true);
 }
 
 // Interface membership plays no part in the answer, so late attachment needs no
 // fallback: a type that structurally holds a SymbolRefAttr (a tensor with a
-// symbol-ref encoding) answers true from interning, so verification visits it
-// and the newly-attached verifySymbolUses fires.
+// symbol-ref encoding) is not symbol-ref-free from interning, so verification
+// visits it and the newly-attached verifySymbolUses fires.
 TEST_F(SymbolReferenceContainmentTest, LateInterfaceAttachmentStillVerifies) {
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(
       "module { \"foo.op\"() : () -> tensor<4xf32, @sym> }", &context);
@@ -177,9 +177,9 @@ TEST_F(SymbolReferenceContainmentTest, LateInterfaceAttachmentStillVerifies) {
 
 // The contract boundary: a type that references a symbol without spelling it as
 // a SymbolRefAttr (here f32, standing in for a non-conforming symbol-user type)
-// answers false and is therefore skipped -- its verifySymbolUses never fires,
-// so verification succeeds. This is the documented cost of the interface
-// contract.
+// answers symbol-ref-free and is therefore skipped -- its verifySymbolUses
+// never fires, so verification succeeds. This is the documented cost of the
+// interface contract.
 TEST_F(SymbolReferenceContainmentTest, NonConformingSymbolUserTypeIsSkipped) {
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(
       "module { \"foo.op\"() : () -> f32 }", &context);
@@ -236,9 +236,9 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
   std::vector<Type> types = buildTypes(context);
   std::vector<bool> attrTruth, typeTruth;
   for (Attribute a : attrs)
-    attrTruth.push_back(truthCache.mayContainSymbolRefs(a));
+    attrTruth.push_back(truthCache.isSymbolRefFree(a));
   for (Type t : types)
-    typeTruth.push_back(truthCache.mayContainSymbolRefs(t));
+    typeTruth.push_back(truthCache.isSymbolRefFree(t));
 
   MLIRContext raced;
   raced.loadDialect<test::TestDialect>();
@@ -260,9 +260,9 @@ TEST_F(SymbolReferenceContainmentTest, ConcurrentFillIsRaceFree) {
       while (!go.load())
         ;
       for (Attribute a : racedAttrs)
-        attrResults[i].push_back(racedCache.mayContainSymbolRefs(a));
+        attrResults[i].push_back(racedCache.isSymbolRefFree(a));
       for (Type t : racedTypes)
-        typeResults[i].push_back(racedCache.mayContainSymbolRefs(t));
+        typeResults[i].push_back(racedCache.isSymbolRefFree(t));
     });
   while (ready.load() < numThreads)
     ;

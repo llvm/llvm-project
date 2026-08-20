@@ -39,12 +39,13 @@ class MLIRContext;
 namespace detail {
 
 /// Per-context cache of the "provably free of a transitive SymbolRefAttr" fact
-/// for uniqued types and attributes, computed on demand, memoizing proven-clear
-/// answers. A false answer is authoritative -- the object references no symbol
-/// -- so a conforming SymbolUserTypeInterface has a vacuous verifySymbolUses
-/// and need never be visited. A true answer is conservative: a mutable-storage
-/// kind, whose sub-elements may change after the query, and anything containing
-/// one, always answers true.
+/// for uniqued types and attributes, computed on demand, memoizing proven-free
+/// answers. A true answer is authoritative -- the object references no symbol,
+/// so a conforming SymbolUserTypeInterface has a vacuous verifySymbolUses and
+/// the caller may prune it unvisited. A false answer is conservative: the
+/// object may contain a reference and the caller walks it, and a
+/// mutable-storage kind, whose sub-elements may change after the query, and
+/// anything containing one, always answers false.
 class SymbolRefContainmentCache {
 public:
   /// `isMultithreaded` is the context's runtime multithreading flag, read live
@@ -56,8 +57,10 @@ public:
   SymbolRefContainmentCache &
   operator=(const SymbolRefContainmentCache &) = delete;
 
-  bool mayContainSymbolRefs(Type type) { return compute(type); }
-  bool mayContainSymbolRefs(Attribute attr) { return compute(attr); }
+  /// Return whether `type`/`attr` is provably free of any transitive
+  /// SymbolRefAttr -- true is safe to prune, false is walked conservatively.
+  bool isSymbolRefFree(Type type) { return !compute(type); }
+  bool isSymbolRefFree(Attribute attr) { return !compute(attr); }
 
   /// Drop every recorded fact. The cache is a pure memo of proven-clear
   /// objects, so forgetting them all is always correct and only costs a
