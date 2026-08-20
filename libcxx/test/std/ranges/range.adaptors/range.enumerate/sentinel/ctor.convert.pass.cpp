@@ -27,8 +27,8 @@
 
 #include "test_iterators.h"
 
-#include "../types.h"
 #include "../../range_adaptor_types.h"
+#include "../types.h"
 
 template <class T>
 struct convertible_sentinel_wrapper {
@@ -57,7 +57,7 @@ struct NonSimpleNonCommonConvertibleView : IntBufferView {
 };
 
 // convertible_to<sentinel<false>, sentinel<Const>>
-static_assert(std::convertible_to< //
+static_assert(std::convertible_to<
               std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView>>,
               std::ranges::sentinel_t<std::ranges::enumerate_view<NonSimpleNonCommonConvertibleView> const>>);
 
@@ -67,8 +67,8 @@ constexpr void test_SFINAE() {
   // Underlying non-const to const not convertible.
   {
     std::ranges::enumerate_view v{NonSimpleNonCommonConvertibleView(buffer)};
-    auto sent1 = v.end();
-    auto sent2 = std::as_const(v).end();
+    auto st= v.end();
+    auto const_st= std::as_const(v).end();
 
     static_assert(!std::same_as<decltype(sent1), decltype(sent2)>);
 
@@ -111,7 +111,7 @@ constexpr void test() {
   {
     // Assigning a non-const sentinel to a const-sentinel-typed variable invokes
     // the converting constructor.
-    std::same_as<EnumerateSentinel> decltype(auto) s = view.end();
+    std::same_as<EnumerateSentinel> decltype(auto) st = view.end();
     std::same_as<Sentinel> decltype(auto) sResult    = s.base();
     assert(base(base(sResult)) == std::to_address(base(array.end())));
 
