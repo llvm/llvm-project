@@ -44,8 +44,9 @@ public:
                               bfloat16
 
                               ,
-                              fputil::Float128,
+                              fputil::Float128
 
+                              ,
                               fputil::Float80>();
 };
 template <typename T>

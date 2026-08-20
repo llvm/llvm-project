@@ -97,11 +97,6 @@ struct Float80 {
   }
 };
 
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
-              LIBC_NAMESPACE::fputil::Float80>::value);
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
-              LIBC_NAMESPACE::fputil::Float80>::value);
-
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 

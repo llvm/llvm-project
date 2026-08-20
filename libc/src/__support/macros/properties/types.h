@@ -100,6 +100,7 @@ namespace fputil {
 struct Float80;
 }
 } // namespace LIBC_NAMESPACE_DECL
+
 using float80 = LIBC_NAMESPACE::fputil::Float80;
 
 // -- bfloat16 support ---------------------------------------------------------

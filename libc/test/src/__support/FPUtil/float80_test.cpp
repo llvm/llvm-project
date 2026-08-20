@@ -16,8 +16,6 @@ using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float80;
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float80>;
 
-TEST(LlvmLibcFloat80Test, temp) { Float80 a(1.0f); }
-
 TEST(LlvmLibcFloat80Test, IntegerConversion) {
   // Float80 to Integer conversion test
   ASSERT_EQ(static_cast<int>(Float80(0.0f)), 0);
@@ -69,7 +67,6 @@ TEST(LlvmLibcFloat80Test, randomTest) {
       FPBitsL::inf(Sign::POS).uintval(),
       FPBitsL::inf(Sign::NEG).uintval(),
       FPBitsL::quiet_nan().uintval(),
-      FPBitsL::signaling_nan().uintval(),
       FPBitsL::min_subnormal(Sign::POS).uintval(),
       FPBitsL::min_subnormal(Sign::NEG).uintval(),
       FPBitsL::max_subnormal(Sign::POS).uintval(),
@@ -83,9 +80,6 @@ TEST(LlvmLibcFloat80Test, randomTest) {
   };
 
   for (FPBitsL::StorageType bits : EDGE_CASES) {
-    if (FPBitsL(bits).is_signaling_nan())
-      continue;
-
     long double native = FPBitsL(bits).get_val();
 
     Float80 f80_temp = LIBC_NAMESPACE::fputil::cast<Float80>(native);
