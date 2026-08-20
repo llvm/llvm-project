@@ -267,8 +267,8 @@ public:
     if (!dirContext_.empty() && GetContext().withinConstruct) {
       if (auto *symbol{DeclareOrMarkOtherAccessEntity(
               x.Name().thing, Symbol::Flag::AccPrivate)}) {
-        AddAccObjectWithDSA(
-            MakeBaseDesignatorPath(*symbol), Symbol::Flag::AccPrivate);
+        CheckClauseConsistencyInCurrentConstruct(x.Name().thing,
+            Symbol::Flag::AccPrivate, MakeBaseDesignatorPath(*symbol));
       }
     }
     return true;
@@ -410,8 +410,6 @@ private:
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive);
   void PopAccContext();
   static DesignatorPath MakeBaseDesignatorPath(const Symbol &);
-  void AddAccObjectWithDSA(DesignatorPath, Symbol::Flag,
-      const parser::AccObject *occurrence = nullptr);
   bool IsObjectWithVisibleDSA(const DesignatorPath &) const;
   void AdjustAccSymbolReference(const parser::Name &);
   void enterExpressionLikeContext() { ++expressionLikeDepthCount_; }
@@ -454,9 +452,14 @@ private:
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
-  void CheckMultipleAppearances(const parser::Name &, Symbol::Flag,
-      DesignatorPath, const parser::AccObject *occurrence = nullptr,
+  // Called for explicit clause objects and implicit loop privatization.
+  // Returns true iff the occurrence remains effective in the current OpenACC
+  // construct; common-block processing uses false to stop expanding the block.
+  bool CheckClauseConsistencyInCurrentConstruct(const parser::Name &,
+      Symbol::Flag, DesignatorPath,
+      const parser::AccObject *occurrence = nullptr,
       bool warnSameKindDuplicate = true);
+  bool AllowsExplicitCopyReductionPair() const;
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1942,14 +1945,6 @@ DesignatorPath AccAttributeVisitor::MakeBaseDesignatorPath(
   return path;
 }
 
-void AccAttributeVisitor::AddAccObjectWithDSA(DesignatorPath designator,
-    Symbol::Flag flag, const parser::AccObject *occurrence) {
-  if (!designator.empty()) {
-    GetContext().objectsWithDSA.push_back(
-        std::move(designator), {flag, occurrence});
-  }
-}
-
 bool AccAttributeVisitor::IsObjectWithVisibleDSA(
     const DesignatorPath &reference) const {
   for (std::size_t i{dirContext_.size()}; i != 0; --i) {
@@ -2233,20 +2228,14 @@ void AccAttributeVisitor::ResolveAccObject(
               }
             }
             // Then resolve the base entity so ACC_DECLARE flags are applied.
-            const bool isDataSharing{dataSharingAttributeFlags.test(accFlag)};
             if (ContainsStructureComponent(designator)) {
               // Finally register or compare only the complete component path;
               // a component clause does not cover every reference to its base.
               if (canCheckMultipleAppearances) {
                 const parser::Name &baseName{parser::GetFirstName(designator)};
                 if (baseName.symbol && !designatorPath.empty()) {
-                  if (isDataSharing) {
-                    CheckMultipleAppearances(baseName, accFlag,
-                        std::move(designatorPath), &accObject);
-                  } else {
-                    AddAccObjectWithDSA(
-                        std::move(designatorPath), accFlag, &accObject);
-                  }
+                  CheckClauseConsistencyInCurrentConstruct(
+                      baseName, accFlag, std::move(designatorPath), &accObject);
                 }
               }
               return;
@@ -2263,24 +2252,24 @@ void AccAttributeVisitor::ResolveAccObject(
               if (isBareName) {
                 designatorPath = MakeBaseDesignatorPath(*symbol);
               }
-              if (isDataSharing && canCheckMultipleAppearances) {
-                CheckMultipleAppearances(
+              if (canCheckMultipleAppearances && !designatorPath.empty()) {
+                CheckClauseConsistencyInCurrentConstruct(
                     baseName, accFlag, std::move(designatorPath), &accObject);
-              } else if (!designatorPath.empty()) {
-                AddAccObjectWithDSA(
-                    std::move(designatorPath), accFlag, &accObject);
               }
             }
           },
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
-              CheckMultipleAppearances(name, Symbol::Flag::AccCommonBlock,
-                  MakeBaseDesignatorPath(*symbol));
+              if (!CheckClauseConsistencyInCurrentConstruct(name,
+                      Symbol::Flag::AccCommonBlock,
+                      MakeBaseDesignatorPath(*symbol))) {
+                return;
+              }
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         DeclareOrMarkOtherAccessEntity(*object, accFlag)}) {
-                  AddAccObjectWithDSA(MakeBaseDesignatorPath(*resolvedObject),
-                      accFlag, &accObject);
+                  CheckClauseConsistencyInCurrentConstruct(name, accFlag,
+                      MakeBaseDesignatorPath(*resolvedObject), &accObject);
                 }
               }
             } else {
@@ -2315,11 +2304,21 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
-void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
-    Symbol::Flag accFlag, DesignatorPath designator,
+bool AccAttributeVisitor::AllowsExplicitCopyReductionPair() const {
+  switch (GetContext().directive) {
+  case llvm::acc::Directive::ACCD_parallel:
+  case llvm::acc::Directive::ACCD_serial:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool AccAttributeVisitor::CheckClauseConsistencyInCurrentConstruct(
+    const parser::Name &name, Symbol::Flag accFlag, DesignatorPath designator,
     const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
   if (designator.empty()) {
-    return;
+    return false;
   }
   const parser::CharBlock source{
       occurrence ? parser::FindSourceLocation(*occurrence) : name.source};
@@ -2333,8 +2332,48 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
       continue;
     }
 
+    if (entry.flag == Symbol::Flag::AccCommonBlock ||
+        accFlag == Symbol::Flag::AccCommonBlock) {
+      auto &message{context_.Say(source,
+          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
+          displayName)};
+      if (entry.occurrence) {
+        message.Attach(parser::FindSourceLocation(*entry.occurrence),
+            "previous data-sharing object appears here"_en_US);
+      }
+      return false;
+    }
+
+    const bool isExplicitCopyReductionPair{AllowsExplicitCopyReductionPair() &&
+        relation == DesignatorRelation::Equal &&
+        ((entry.flag == Symbol::Flag::AccCopy &&
+             accFlag == Symbol::Flag::AccReduction) ||
+            (entry.flag == Symbol::Flag::AccReduction &&
+                accFlag == Symbol::Flag::AccCopy))};
+    if (isExplicitCopyReductionPair) {
+      if (entry.flag == Symbol::Flag::AccCopy) {
+        if (entry.occurrence) {
+          context_.MarkAccObjectDuplicate(entry.occurrence);
+        }
+        iter = objectsWithDSA.erase(iter);
+        continue;
+      }
+      if (occurrence) {
+        context_.MarkAccObjectDuplicate(occurrence);
+      }
+      return false;
+    }
+
+    if (!(dataSharingAttributeFlags.test(entry.flag) ||
+            dataSharingAttributeFlags.test(accFlag))) {
+      ++iter;
+      continue;
+    }
+
     // TODO: Record the reduction operator in AccDataSharingEntry so compatible
-    // reductions can use the ordinary same-kind duplicate handling.
+    // reductions can use the ordinary same-kind duplicate handling. Also handle
+    // copy/reduction pairs on combined constructs and private/reduction
+    // interactions on loop constructs.
     if (entry.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
       auto &message{context_.Say(source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
@@ -2343,7 +2382,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
         message.Attach(parser::FindSourceLocation(*entry.occurrence),
             "previous data-sharing object appears here"_en_US);
       }
-      return;
+      return false;
     }
 
     switch (relation) {
@@ -2354,7 +2393,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
             displayName);
         context_.MarkAccObjectDuplicate(occurrence);
       }
-      return;
+      return false;
     case DesignatorRelation::Contains:
     case DesignatorRelation::ContainedBy:
     case DesignatorRelation::Overlaps: {
@@ -2367,13 +2406,14 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
         message.Attach(parser::FindSourceLocation(*entry.occurrence),
             "previous data-sharing object appears here"_en_US);
       }
-      return;
+      return false;
     }
     case DesignatorRelation::Disjoint:
       llvm_unreachable("disjoint relation handled above");
     }
   }
   objectsWithDSA.push_back(std::move(designator), {accFlag, occurrence});
+  return true;
 }
 
 #ifndef NDEBUG
