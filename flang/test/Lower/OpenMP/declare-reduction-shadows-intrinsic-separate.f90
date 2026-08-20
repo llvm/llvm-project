@@ -24,7 +24,7 @@ end module
 ! The op is owner-qualified to the module and carries the mangled shadowing name
 ! (op.max); the USE-associated clause materializes and binds that same op, so no
 ! TODO aborts the compile.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.max[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.max[A-Za-z0-9_.]*]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: not yet implemented

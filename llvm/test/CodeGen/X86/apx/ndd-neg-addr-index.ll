@@ -22,11 +22,9 @@ entry:
 define void @neg_8bit_2(i8 %int8) {
 ; NDD-LABEL: neg_8bit_2:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    # kill: def $edi killed $edi def $rdi
 ; NDD-NEXT:    addb %dil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x00,0xff]
-; NDD-NEXT:    negb %al, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd8]
-; NDD-NEXT:    leal 1(%rdi,%rax), %eax # encoding: [0x8d,0x44,0x07,0x01]
-; NDD-NEXT:    # kill: def $al killed $al killed $eax
+; NDD-NEXT:    subb %al, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x28,0xc7]
+; NDD-NEXT:    incb %al # EVEX TO LEGACY Compression encoding: [0xfe,0xc0]
 ; NDD-NEXT:    mulb %dil # encoding: [0x40,0xf6,0xe7]
 ; NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]

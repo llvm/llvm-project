@@ -5378,6 +5378,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
 
+    if (LHSTy->isMatrixType())
+      return Result;
+
   } else {
     // Complex Comparison: can only be an equality comparison.
     CodeGenFunction::ComplexPairTy LHS, RHS;
