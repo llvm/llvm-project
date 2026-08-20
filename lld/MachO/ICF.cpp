@@ -101,10 +101,13 @@ static bool isFoldableWithAddendsRemoved(const ConcatInputSection *isec) {
 static void getNormalizedData(const ConcatInputSection *isec,
                               SmallVectorImpl<uint8_t> &buf) {
   buf.assign(isec->data.begin(), isec->data.end());
-  for (const Relocation &r : isec->relocs) {
+  for (size_t i = 0; i < isec->relocs.size(); ++i) {
+    const Relocation &r = isec->relocs[i];
     size_t size = 1ULL << r.length;
     if (r.offset + size <= buf.size())
       memset(buf.data() + r.offset, 0, size);
+    if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND))
+      ++i; // Skip the paired minuend relocation
   }
 }
 
