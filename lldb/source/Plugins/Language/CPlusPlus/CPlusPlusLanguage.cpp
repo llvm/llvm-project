@@ -1840,6 +1840,10 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::initializer_list synthetic children",
                   "^std::initializer_list<.+>$", stl_synth_flags, true);
 
+  AddCXXSummary(cpp_category_sp, GenericFilesystemPathSummaryProvider,
+                "MSVC STL/libstdc++ std::filesystem::path summary provider",
+                "^std::filesystem::(__cxx11::)?path$", stl_summary_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
 

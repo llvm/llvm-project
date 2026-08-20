@@ -18,6 +18,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   CxxStringTypes.cpp
   Generic.cpp
   GenericBitset.cpp
+  GenericFilesystem.cpp
   GenericInitializerList.cpp
   GenericList.cpp
   GenericOptional.cpp
