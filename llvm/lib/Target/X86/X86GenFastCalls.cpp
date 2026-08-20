@@ -102,14 +102,13 @@ bool X86GenFastCalls::createFastCall(MachineInstr *MI) const {
   MI->getOperand(0).ChangeToES(LibFastFnName.data(),
                                MI->getOperand(0).getTargetFlags());
 
-  LLVM_DEBUG(dbgs() << "Successfully replaced with fastcall= "
-                    << LibFastFnName << "\n";);
+  LLVM_DEBUG(dbgs() << "Successfully replaced with fastcall= " << LibFastFnName
+                    << "\n";);
 
   ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "Passed", MI->getDebugLoc(),
                                      MI->getParent())
-           << "Successfully replaced with fastcall= " << LibFastFnName
-           << "\n";
+           << "Successfully replaced with fastcall= " << LibFastFnName << "\n";
   });
   return true;
 }
@@ -139,7 +138,8 @@ bool X86GenFastCalls::runOnMachineFunction(MachineFunction &MF) {
   if (!TLI)
     return Changed;
 
-  if (TLI->getFastMathLib() == TargetLibraryInfoImpl::FastLibrary::NoFastLibrary) {
+  if (TLI->getFastMathLib() ==
+      TargetLibraryInfoImpl::FastLibrary::NoFastLibrary) {
     LLVM_DEBUG(dbgs() << "No fast math library selected, bailing out.\n";);
     return Changed;
   }
@@ -162,8 +162,8 @@ INITIALIZE_PASS_BEGIN(X86GenFastCalls, DEBUG_TYPE,
                       "Generate Fast Library Calls", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
-INITIALIZE_PASS_END(X86GenFastCalls, DEBUG_TYPE,
-                    "Generate Fast Library Calls", false, false)
+INITIALIZE_PASS_END(X86GenFastCalls, DEBUG_TYPE, "Generate Fast Library Calls",
+                    false, false)
 
 FunctionPass *llvm::createX86GenFastCallsPass() {
   return new X86GenFastCalls();

@@ -1,0 +1,84 @@
+//===-- FastFuncs.def - Fast math library mappings ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This .def file creates mappings from standard math functions to their
+// corresponding fast math library entry points. The current support includes
+// such mappings for AMDLIBM. Additional libraries can add their own guarded
+// sections below, similar to VecFuncs.def.
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined(TLI_DEFINE_FASTFUNC))
+#define TLI_DEFINE_FASTFUNC(STANDARD, FAST) {STANDARD, FAST},
+#endif
+
+#if defined(TLI_DEFINE_AMDLIBM_FASTFUNCS)
+
+TLI_DEFINE_FASTFUNC("acosf", "amd_fastacosf")
+TLI_DEFINE_FASTFUNC("__acosf_finite", "amd_fastacosf")
+TLI_DEFINE_FASTFUNC("acos", "amd_fastacos")
+TLI_DEFINE_FASTFUNC("__acos_finite", "amd_fastacos")
+
+TLI_DEFINE_FASTFUNC("asinf", "amd_fastasinf")
+TLI_DEFINE_FASTFUNC("__asinf_finite", "amd_fastasinf")
+TLI_DEFINE_FASTFUNC("asin", "amd_fastasin")
+TLI_DEFINE_FASTFUNC("__asin_finite", "amd_fastasin")
+
+TLI_DEFINE_FASTFUNC("atanf", "amd_fastatanf")
+TLI_DEFINE_FASTFUNC("__atanf_finite", "amd_fastatanf")
+TLI_DEFINE_FASTFUNC("atan", "amd_fastatan")
+TLI_DEFINE_FASTFUNC("__atan_finite", "amd_fastatan")
+
+TLI_DEFINE_FASTFUNC("cosf", "amd_fastcosf")
+TLI_DEFINE_FASTFUNC("__cosf_finite", "amd_fastcosf")
+TLI_DEFINE_FASTFUNC("llvm.cos.f32", "amd_fastcosf")
+TLI_DEFINE_FASTFUNC("cos", "amd_fastcos")
+TLI_DEFINE_FASTFUNC("__cos_finite", "amd_fastcos")
+TLI_DEFINE_FASTFUNC("llvm.cos.f64", "amd_fastcos")
+
+TLI_DEFINE_FASTFUNC("erff", "amd_fasterff")
+TLI_DEFINE_FASTFUNC("__erff_finite", "amd_fasterff")
+TLI_DEFINE_FASTFUNC("erf", "amd_fasterf")
+TLI_DEFINE_FASTFUNC("__erf_finite", "amd_fasterf")
+
+TLI_DEFINE_FASTFUNC("expf", "amd_fastexpf")
+TLI_DEFINE_FASTFUNC("__expf_finite", "amd_fastexpf")
+TLI_DEFINE_FASTFUNC("llvm.exp.f32", "amd_fastexpf")
+TLI_DEFINE_FASTFUNC("exp", "amd_fastexp")
+TLI_DEFINE_FASTFUNC("__exp_finite", "amd_fastexp")
+TLI_DEFINE_FASTFUNC("llvm.exp.f64", "amd_fastexp")
+
+TLI_DEFINE_FASTFUNC("logf", "amd_fastlogf")
+TLI_DEFINE_FASTFUNC("__logf_finite", "amd_fastlogf")
+TLI_DEFINE_FASTFUNC("llvm.log.f32", "amd_fastlogf")
+TLI_DEFINE_FASTFUNC("log", "amd_fastlog")
+TLI_DEFINE_FASTFUNC("__log_finite", "amd_fastlog")
+TLI_DEFINE_FASTFUNC("llvm.log.f64", "amd_fastlog")
+
+TLI_DEFINE_FASTFUNC("powf", "amd_fastpowf")
+TLI_DEFINE_FASTFUNC("__powf_finite", "amd_fastpowf")
+TLI_DEFINE_FASTFUNC("llvm.pow.f32", "amd_fastpowf")
+TLI_DEFINE_FASTFUNC("pow", "amd_fastpow")
+TLI_DEFINE_FASTFUNC("__pow_finite", "amd_fastpow")
+TLI_DEFINE_FASTFUNC("llvm.pow.f64", "amd_fastpow")
+
+TLI_DEFINE_FASTFUNC("sinf", "amd_fastsinf")
+TLI_DEFINE_FASTFUNC("__sinf_finite", "amd_fastsinf")
+TLI_DEFINE_FASTFUNC("llvm.sin.f32", "amd_fastsinf")
+TLI_DEFINE_FASTFUNC("sin", "amd_fastsin")
+TLI_DEFINE_FASTFUNC("__sin_finite", "amd_fastsin")
+TLI_DEFINE_FASTFUNC("llvm.sin.f64", "amd_fastsin")
+
+TLI_DEFINE_FASTFUNC("tanf", "amd_fasttanf")
+TLI_DEFINE_FASTFUNC("__tanf_finite", "amd_fasttanf")
+TLI_DEFINE_FASTFUNC("tan", "amd_fasttan")
+TLI_DEFINE_FASTFUNC("__tan_finite", "amd_fasttan")
+
+#endif
+
+#undef TLI_DEFINE_FASTFUNC
