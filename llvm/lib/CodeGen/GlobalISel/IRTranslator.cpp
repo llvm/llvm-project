@@ -5267,7 +5267,6 @@ IRTranslatorPass::IRTranslatorPass(CodeGenOptLevel OptLevel)
 
 IRTranslatorPass::~IRTranslatorPass() = default;
 IRTranslatorPass::IRTranslatorPass(IRTranslatorPass &&) = default;
-IRTranslatorPass &IRTranslatorPass::operator=(IRTranslatorPass &&) = default;
 
 PreservedAnalyses IRTranslatorPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {

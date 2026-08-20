@@ -61,7 +61,6 @@ public:
   IRTranslatorPass(CodeGenOptLevel OptLevel);
   ~IRTranslatorPass();
   IRTranslatorPass(IRTranslatorPass &&);
-  IRTranslatorPass &operator=(IRTranslatorPass &&);
 
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
