@@ -902,8 +902,9 @@ bool RISCVVectorPeephole::foldVMANDToMaskedCompare(MachineInstr &MI) const {
     BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(),
             TII->get(TargetOpcode::COPY), MaskV0Reg)
         .addReg(MaskReg);
-    Register PassthruReg =
-        MRI->createVirtualRegister(TII->getRegClass(MaskedDesc, 1));
+    // The passthru shares the dest's class, which the V0 check above restricts
+    // to LMUL <= 1, so it is always a single vector register.
+    Register PassthruReg = MRI->createVirtualRegister(&RISCV::VRRegClass);
     BuildMI(*MI.getParent(), Cmp, Cmp.getDebugLoc(),
             TII->get(TargetOpcode::COPY), PassthruReg)
         .addReg(MaskReg);
