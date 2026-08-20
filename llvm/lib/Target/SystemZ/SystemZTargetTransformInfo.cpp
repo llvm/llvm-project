@@ -17,6 +17,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1384,10 +1385,32 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 const Instruction *I) const {
   assert(!Src->isVoidTy() && "Invalid type");
 
-  // FIXME: Load latency isn't handled here
-  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
-    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind, OpInfo, I);
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency) {
+    // How many machine loads does this IR load actually legalize to?
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+    // Pick a real SystemZ load opcode representative of the legalized
+    // type/width, and ask this subtarget's scheduling model for its
+    // latency.
+    unsigned RepOpc;
+    if (Src->isVectorTy()) {
+      RepOpc = SystemZ::VL;
+    } else if (Src->isFloatingPointTy()) {
+      RepOpc = (LT.second == MVT::f32) ? SystemZ::LE : SystemZ::LD;
+    } else {
+      unsigned BW = Src->getScalarSizeInBits();
+      RepOpc = (BW <= 8)  ? SystemZ::LLC
+             : (BW <= 16) ? SystemZ::LLH
+             : (BW <= 32) ? SystemZ::L
+             :              SystemZ::LG;
+    }
+
+    TargetSchedModel SchedModel;
+    SchedModel.init(ST);
+    unsigned LoadLatency = SchedModel.computeInstrLatency(RepOpc);
+
+    return LT.first * LoadLatency;
+  }
 
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
