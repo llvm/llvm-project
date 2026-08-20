@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_TARGETCALLINGCONV_H
 #define LLVM_CODEGEN_TARGETCALLINGCONV_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Alignment.h"
@@ -25,130 +26,145 @@ namespace llvm {
 namespace ISD {
 
   struct ArgFlagsTy {
+  public:
+    /// Flag bits describing an argument.
+    enum Flags : uint32_t {
+      NoFlags = 0,
+      ZExt = 1U << 0,     ///< Zero extended
+      SExt = 1U << 1,     ///< Sign extended
+      NoExt = 1U << 2,    ///< No extension
+      InReg = 1U << 3,    ///< Passed in register
+      SRet = 1U << 4,     ///< Hidden struct-ret ptr
+      ByVal = 1U << 5,    ///< Struct passed by value
+      ByRef = 1U << 6,    ///< Passed in memory
+      Nest = 1U << 7,     ///< Nested fn static chain
+      Returned = 1U << 8, ///< Always returned
+      Split = 1U << 9,
+      InAlloca = 1U << 10,      ///< Passed with inalloca
+      Preallocated = 1U << 11,  ///< ByVal without the copy
+      SplitEnd = 1U << 12,      ///< Last part of a split
+      SwiftSelf = 1U << 13,     ///< Swift self parameter
+      SwiftAsync = 1U << 14,    ///< Swift async context parameter
+      SwiftError = 1U << 15,    ///< Swift error parameter
+      CFGuardTarget = 1U << 16, ///< Control Flow Guard target
+      Hva = 1U << 17,           ///< HVA field
+      HvaStart = 1U << 18,      ///< HVA structure start
+      SecArgPass = 1U << 19,    ///< Second argument
+      InConsecutiveRegsLast = 1U << 20,
+      InConsecutiveRegs = 1U << 21,
+      CopyElisionCandidate = 1U << 22, ///< Argument copy elision candidate
+      Pointer = 1U << 23,
+      /// Whether this is part of a variable argument list (non-fixed).
+      VarArg = 1U << 24,
+
+      LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ VarArg)
+    };
+
   private:
-    unsigned IsZExt : 1;     ///< Zero extended
-    unsigned IsSExt : 1;     ///< Sign extended
-    unsigned IsNoExt : 1;    ///< No extension
-    unsigned IsInReg : 1;    ///< Passed in register
-    unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
-    unsigned IsByVal : 1;    ///< Struct passed by value
-    unsigned IsByRef : 1;    ///< Passed in memory
-    unsigned IsNest : 1;     ///< Nested fn static chain
-    unsigned IsReturned : 1; ///< Always returned
-    unsigned IsSplit : 1;
-    unsigned IsInAlloca : 1;   ///< Passed with inalloca
-    unsigned IsPreallocated : 1; ///< ByVal without the copy
-    unsigned IsSplitEnd : 1;   ///< Last part of a split
-    unsigned IsSwiftSelf : 1;  ///< Swift self parameter
-    unsigned IsSwiftAsync : 1;  ///< Swift async context parameter
-    unsigned IsSwiftError : 1; ///< Swift error parameter
-    unsigned IsCFGuardTarget : 1; ///< Control Flow Guard target
-    unsigned IsHva : 1;        ///< HVA field for
-    unsigned IsHvaStart : 1;   ///< HVA structure start
-    unsigned IsSecArgPass : 1; ///< Second argument
-    unsigned MemAlign : 6; ///< Log 2 of alignment when arg is passed in memory
-                           ///< (including byval/byref). The max alignment is
-                           ///< verified in IR verification.
-    unsigned OrigAlign : 5;    ///< Log 2 of original alignment
-    unsigned IsInConsecutiveRegsLast : 1;
-    unsigned IsInConsecutiveRegs : 1;
-    unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
-    unsigned IsPointer : 1;
-    /// Whether this is part of a variable argument list (non-fixed).
-    unsigned IsVarArg : 1;
+    Flags FlagVals = NoFlags;
+    unsigned MemAlign : 6;  ///< Log 2 of alignment when arg is passed in memory
+                            ///< (including byval/byref). The max alignment is
+                            ///< verified in IR verification.
+    unsigned OrigAlign : 5; ///< Log 2 of original alignment
 
     unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
     unsigned PointerAddrSpace = 0; ///< Address space of pointer argument
 
+    void setFlag(Flags Flag, bool Value = true) {
+      FlagVals = (FlagVals & ~Flag) | (Value ? Flag : NoFlags);
+    }
+
   public:
-    ArgFlagsTy()
-        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
-          IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
-          IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
-          IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
-          IsSecArgPass(0), MemAlign(0), OrigAlign(0),
-          IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0), IsVarArg(0) {
+    ArgFlagsTy() : MemAlign(0), OrigAlign(0) {
       static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
     }
 
-    bool isZExt() const { return IsZExt; }
-    void setZExt() { IsZExt = 1; }
+    /// Return the argument's boolean flags.
+    Flags getFlags() const { return FlagVals; }
 
-    bool isSExt() const { return IsSExt; }
-    void setSExt() { IsSExt = 1; }
+    bool isZExt() const { return FlagVals & ZExt; }
+    void setZExt() { setFlag(ZExt); }
 
-    bool isNoExt() const { return IsNoExt; }
-    void setNoExt() { IsNoExt = 1; }
+    bool isSExt() const { return FlagVals & SExt; }
+    void setSExt() { setFlag(SExt); }
 
-    bool isInReg() const { return IsInReg; }
-    void setInReg() { IsInReg = 1; }
+    bool isNoExt() const { return FlagVals & NoExt; }
+    void setNoExt() { setFlag(NoExt); }
 
-    bool isSRet() const { return IsSRet; }
-    void setSRet() { IsSRet = 1; }
+    bool isInReg() const { return FlagVals & InReg; }
+    void setInReg() { setFlag(InReg); }
 
-    bool isByVal() const { return IsByVal; }
-    void setByVal() { IsByVal = 1; }
+    bool isSRet() const { return FlagVals & SRet; }
+    void setSRet() { setFlag(SRet); }
 
-    bool isByRef() const { return IsByRef; }
-    void setByRef() { IsByRef = 1; }
+    bool isByVal() const { return FlagVals & ByVal; }
+    void setByVal() { setFlag(ByVal); }
 
-    bool isInAlloca() const { return IsInAlloca; }
-    void setInAlloca() { IsInAlloca = 1; }
+    bool isByRef() const { return FlagVals & ByRef; }
+    void setByRef() { setFlag(ByRef); }
 
-    bool isPreallocated() const { return IsPreallocated; }
-    void setPreallocated() { IsPreallocated = 1; }
+    bool isInAlloca() const { return FlagVals & InAlloca; }
+    void setInAlloca() { setFlag(InAlloca); }
 
-    bool isSwiftSelf() const { return IsSwiftSelf; }
-    void setSwiftSelf() { IsSwiftSelf = 1; }
+    bool isPreallocated() const { return FlagVals & Preallocated; }
+    void setPreallocated() { setFlag(Preallocated); }
 
-    bool isSwiftAsync() const { return IsSwiftAsync; }
-    void setSwiftAsync() { IsSwiftAsync = 1; }
+    bool isSwiftSelf() const { return FlagVals & SwiftSelf; }
+    void setSwiftSelf() { setFlag(SwiftSelf); }
 
-    bool isSwiftError() const { return IsSwiftError; }
-    void setSwiftError() { IsSwiftError = 1; }
+    bool isSwiftAsync() const { return FlagVals & SwiftAsync; }
+    void setSwiftAsync() { setFlag(SwiftAsync); }
 
-    bool isCFGuardTarget() const { return IsCFGuardTarget; }
-    void setCFGuardTarget() { IsCFGuardTarget = 1; }
+    bool isSwiftError() const { return FlagVals & SwiftError; }
+    void setSwiftError() { setFlag(SwiftError); }
 
-    bool isHva() const { return IsHva; }
-    void setHva() { IsHva = 1; }
+    bool isCFGuardTarget() const { return FlagVals & CFGuardTarget; }
+    void setCFGuardTarget() { setFlag(CFGuardTarget); }
 
-    bool isHvaStart() const { return IsHvaStart; }
-    void setHvaStart() { IsHvaStart = 1; }
+    bool isHva() const { return FlagVals & Hva; }
+    void setHva() { setFlag(Hva); }
 
-    bool isSecArgPass() const { return IsSecArgPass; }
-    void setSecArgPass() { IsSecArgPass = 1; }
+    bool isHvaStart() const { return FlagVals & HvaStart; }
+    void setHvaStart() { setFlag(HvaStart); }
 
-    bool isNest() const { return IsNest; }
-    void setNest() { IsNest = 1; }
+    bool isSecArgPass() const { return FlagVals & SecArgPass; }
+    void setSecArgPass() { setFlag(SecArgPass); }
 
-    bool isReturned() const { return IsReturned; }
-    void setReturned(bool V = true) { IsReturned = V; }
+    bool isNest() const { return FlagVals & Nest; }
+    void setNest() { setFlag(Nest); }
 
-    bool isInConsecutiveRegs()  const { return IsInConsecutiveRegs; }
-    void setInConsecutiveRegs(bool Flag = true) { IsInConsecutiveRegs = Flag; }
+    bool isReturned() const { return FlagVals & Returned; }
+    void setReturned(bool V = true) { setFlag(Returned, V); }
 
-    bool isInConsecutiveRegsLast() const { return IsInConsecutiveRegsLast; }
-    void setInConsecutiveRegsLast(bool Flag = true) {
-      IsInConsecutiveRegsLast = Flag;
+    bool isInConsecutiveRegs() const { return FlagVals & InConsecutiveRegs; }
+    void setInConsecutiveRegs(bool Flag = true) {
+      setFlag(InConsecutiveRegs, Flag);
     }
 
-    bool isSplit()   const { return IsSplit; }
-    void setSplit()  { IsSplit = 1; }
+    bool isInConsecutiveRegsLast() const {
+      return FlagVals & InConsecutiveRegsLast;
+    }
+    void setInConsecutiveRegsLast(bool Flag = true) {
+      setFlag(InConsecutiveRegsLast, Flag);
+    }
 
-    bool isSplitEnd()   const { return IsSplitEnd; }
-    void setSplitEnd()  { IsSplitEnd = 1; }
+    bool isSplit() const { return FlagVals & Split; }
+    void setSplit() { setFlag(Split); }
 
-    bool isCopyElisionCandidate()  const { return IsCopyElisionCandidate; }
-    void setCopyElisionCandidate() { IsCopyElisionCandidate = 1; }
+    bool isSplitEnd() const { return FlagVals & SplitEnd; }
+    void setSplitEnd() { setFlag(SplitEnd); }
 
-    bool isPointer()  const { return IsPointer; }
-    void setPointer() { IsPointer = 1; }
+    bool isCopyElisionCandidate() const {
+      return FlagVals & CopyElisionCandidate;
+    }
+    void setCopyElisionCandidate() { setFlag(CopyElisionCandidate); }
 
-    bool isVarArg() const { return IsVarArg; }
-    void setVarArg() { IsVarArg = 1; }
+    bool isPointer() const { return FlagVals & Pointer; }
+    void setPointer() { setFlag(Pointer); }
+
+    bool isVarArg() const { return FlagVals & VarArg; }
+    void setVarArg() { setFlag(VarArg); }
 
     Align getNonZeroMemAlign() const {
       return decodeMaybeAlign(MemAlign).valueOrOne();
