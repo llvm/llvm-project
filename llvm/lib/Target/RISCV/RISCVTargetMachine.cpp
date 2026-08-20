@@ -138,7 +138,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
-  initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVVLOptimizerLegacyPass(*PR);
   initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
@@ -622,7 +622,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
     // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
     // run.
     addPass(&EarlyMachineLICMID);
-    addPass(createRISCVVLOptimizerPass());
+    addPass(createRISCVVLOptimizerLegacyPass());
   }
 
   addPass(createRISCVVectorPeepholePass());

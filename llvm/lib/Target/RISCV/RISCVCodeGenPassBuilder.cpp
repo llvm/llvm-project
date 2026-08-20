@@ -110,7 +110,7 @@ void RISCVCodeGenPassBuilder::addMachineSSAOptimization(
     // vsetvli toggles, and still requires the MachineLoopInfo analysis to be
     // run.
     addMachineFunctionPass(EarlyMachineLICMPass(), PMW);
-    // TODO: RISCVVLOptimizerPass
+    addMachineFunctionPass(RISCVVLOptimizerPass(), PMW);
   }
 
   // TODO: RISCVVectorPeepholePass
