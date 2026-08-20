@@ -29,7 +29,9 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
 
 public:
   FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC) {}
+      : FactMgr(FactMgr), AC(AC),
+        IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
+                !AC.getASTContext().getLangOpts().ObjC) {}
 
   void run();
 
@@ -45,7 +47,7 @@ public:
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitReturnStmt(const ReturnStmt *RS);
   void VisitBinaryOperator(const BinaryOperator *BO);
-  void VisitConditionalOperator(const ConditionalOperator *CO);
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *FCE);
   void VisitInitListExpr(const InitListExpr *ILE);
@@ -55,6 +57,7 @@ public:
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
+  void VisitStmtExpr(const StmtExpr *SE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -63,11 +66,21 @@ private:
   bool hasOrigins(QualType QT) const;
   bool hasOrigins(const Expr *E) const;
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginList *Dst, OriginList *Src, bool Kill,
+            const CFGBlock *Block = nullptr);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
+
+  bool handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -91,6 +104,11 @@ private:
   void handleMovedArgsInCall(const FunctionDecl *FD,
                              ArrayRef<const Expr *> Args);
 
+  // Handles [[clang::lifetime_capture_by(X)]] annotations on a function call to
+  // create flow facts from captured arguments to the capturer
+  void handleLifetimeCaptureBy(const FunctionDecl *FD,
+                               ArrayRef<const Expr *> Args);
+
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
   /// \param IsGslConstruction True if this is a GSL construction where all
@@ -99,10 +117,14 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
-  // Detect container methods that invalidate iterators/references.
+  // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
+
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {
@@ -142,6 +164,7 @@ private:
   // exempting it from the check.
   llvm::DenseMap<const Expr *, UseFact *> UseFacts;
   const CFGBlock *CurrentBlock;
+  bool IsCMode = false;
 };
 
 } // namespace clang::lifetimes::internal

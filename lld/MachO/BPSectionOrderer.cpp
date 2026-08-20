@@ -8,10 +8,13 @@
 
 #include "BPSectionOrderer.h"
 #include "InputSection.h"
+#include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
@@ -37,9 +40,8 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
   static std::string getSectionName(const Section &sec) {
     return (sec.getSegName() + sec.getName()).str();
   }
-  // TODO: Use N_COLD_FUNC to separate cold code into a different subgroup.
   static std::string getCompressionSubgroupKey(const Section &sec) {
-    return "";
+    return sec.isCold ? ":cold" : "";
   }
   static ArrayRef<Defined *> getSymbols(const Section &sec) {
     return sec.symbols;
@@ -119,37 +121,71 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     bool compressionSortStartupFunctions, bool verbose) {
   // Collect candidate sections and associated symbols.
   SmallVector<InputSection *> sections;
+  DenseMap<const InputSection *, unsigned> sectionToIdx;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
+  auto addSection = [&](InputSection *isec) {
+    if (!isec || isec->data.empty() || !isec->data.data())
+      return;
+    // CString section order is handled by
+    // {Deduplicated}CStringSection::finalizeContents()
+    if (isa<CStringInputSection>(isec) || isec->isFinal)
+      return;
+    // ConcatInputSections are entirely live or dead, so the offset is
+    // irrelevant.
+    if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
+      return;
+    unsigned idx = sections.size();
+    if (!sectionToIdx.try_emplace(isec, idx).second)
+      return;
+    sections.emplace_back(isec);
+    for (auto *sym : isec->symbols) {
+      auto rootName = lld::utils::getRootSymbol(sym->getName());
+      rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
+      if (auto linkageName = BPOrdererMachO::getResolvedLinkageName(rootName))
+        rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(idx);
+    }
+  };
   for (const auto *file : inputFiles) {
     for (auto *sec : file->sections) {
+      if (sec->name == section_names::ehFrame &&
+          sec->segname == segment_names::text)
+        continue;
       for (auto &subsec : sec->subsections) {
-        auto *isec = subsec.isec;
-        if (!isec || isec->data.empty() || !isec->data.data())
-          continue;
-        // CString section order is handled by
-        // {Deduplicated}CStringSection::finalizeContents()
-        if (isa<CStringInputSection>(isec) || isec->isFinal)
-          continue;
-        // ConcatInputSections are entirely live or dead, so the offset is
-        // irrelevant.
-        if (isa<ConcatInputSection>(isec) && !isec->isLive(0))
-          continue;
-        size_t idx = sections.size();
-        sections.emplace_back(isec);
-        for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = lld::utils::getRootSymbol(sym->getName());
-          rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
-          if (auto linkageName =
-                  BPOrdererMachO::getResolvedLinkageName(rootName))
-            rootSymbolToSectionIdxs[CachedHashStringRef(*linkageName)].insert(
-                idx);
-        }
+        addSection(subsec.isec);
+        if (subsec.isec && subsec.isec->canonical() != subsec.isec)
+          addSection(subsec.isec->canonical());
       }
     }
   }
 
-  return BPOrdererMachO().computeOrder(
+  // A temporal profile naming an ICF thunk describes execution of both the
+  // thunk and the shared body it branches to. Add the body to each name that
+  // resolves to a thunk.
+  for (auto &[symbol, sectionIdxs] : rootSymbolToSectionIdxs) {
+    for (unsigned idx : sectionIdxs) {
+      InputSection *isec = sections[idx];
+      if (!llvm::any_of(isec->symbols, [](Defined *sym) {
+            return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
+          }))
+        continue;
+      auto *bodySym = cast<Defined>(target->getThunkBranchTarget(isec));
+      auto bodyIdx = sectionToIdx.find(bodySym->isec());
+      if (bodyIdx != sectionToIdx.end())
+        sectionIdxs.insert(bodyIdx->second);
+    }
+  }
+
+  auto result = BPOrdererMachO().computeOrder(
       profilePath, compressionSortSpecs, forFunctionCompression,
       forDataCompression, compressionSortStartupFunctions, verbose, sections,
       rootSymbolToSectionIdxs);
+  // BP already orders cold sections after non-cold via separate buckets.
+  // Unset isCold on sections that received a BP priority so Writer.cpp's
+  // stable_partition doesn't re-partition them. Sections without a BP priority
+  // (e.g. non-startup cold sections when only --bp-startup-sort is used) keep
+  // their isCold flag for Writer.cpp to handle.
+  for (auto *isec : sections)
+    if (result.contains(isec))
+      isec->isCold = false;
+  return result;
 }

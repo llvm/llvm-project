@@ -248,7 +248,7 @@ MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,
                                                           const SrcOp &Op0,
                                                           uint32_t NumBits) {
   LLT PtrTy = Res.getLLTTy(*getMRI());
-  LLT MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+  LLT MaskTy = LLT::integer(PtrTy.getSizeInBits());
   Register MaskReg = getMRI()->createGenericVirtualRegister(MaskTy);
   buildConstant(MaskReg, maskTrailingZeros<uint64_t>(NumBits));
   return buildPtrMask(Res, Op0, MaskReg);
@@ -409,9 +409,11 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      double Val) {
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
-  auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
-  return buildFConstant(Res, *CFP);
+  APFloat APF(Val);
+  bool Ignored;
+  APF.convert(getFltSemanticForLLT(DstTy.getScalarType()),
+              APFloat::rmNearestTiesToEven, &Ignored);
+  return buildFConstant(Res, *ConstantFP::get(Ctx, APF));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
@@ -496,6 +498,20 @@ MachineInstrBuilder MachineIRBuilder::buildStore(const SrcOp &Val,
   assert(Addr.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
 
   auto MIB = buildInstr(TargetOpcode::G_STORE);
+  Val.addSrcToMIB(MIB);
+  Addr.addSrcToMIB(MIB);
+  MIB.addMemOperand(&MMO);
+  return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildStoreInstr(unsigned Opcode,
+                                                      const SrcOp &Val,
+                                                      const SrcOp &Addr,
+                                                      MachineMemOperand &MMO) {
+  assert(Val.getLLTTy(*getMRI()).isValid() && "invalid operand type");
+  assert(Addr.getLLTTy(*getMRI()).isPointer() && "invalid operand type");
+
+  auto MIB = buildInstr(Opcode);
   Val.addSrcToMIB(MIB);
   Addr.addSrcToMIB(MIB);
   MIB.addMemOperand(&MMO);

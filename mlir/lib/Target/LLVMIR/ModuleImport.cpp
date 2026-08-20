@@ -30,6 +30,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
@@ -147,6 +148,112 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
 
   return failure();
+}
+
+FlatSymbolRefAttr
+ModuleImport::getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global) {
+  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(global)) {
+    StringRef name = globalVar->getName();
+    if (name.empty())
+      return getOrCreateNamelessSymbolName(globalVar);
+    if (name == getGlobalCtorsVarName() || name == getGlobalDtorsVarName())
+      return {};
+  }
+
+  if (auto *func = dyn_cast<llvm::Function>(global)) {
+    // Intrinsics with a dedicated import conversion do not have an imported
+    // function declaration that a metadata symbol reference could resolve to.
+    if (func->isIntrinsic() &&
+        iface.isConvertibleIntrinsic(func->getIntrinsicID()))
+      return {};
+  }
+
+  if (global->getName().empty())
+    return {};
+  return FlatSymbolRefAttr::get(context, global->getName());
+}
+
+/// Depth-first conversion of the metadata node `md` to the matching LLVM
+/// dialect metadata attribute. Returns a null attribute for shapes that the
+/// dialect's metadata-attribute hierarchy does not currently model. `path`
+/// holds the metadata nodes on the current depth-first search path. Cyclic
+/// metadata graphs are valid in LLVM IR, but they cannot be expressed by the
+/// immutable, structurally-uniqued metadata attributes built here. The `path`
+/// set lets the traversal recognize such a back-edge and bail out. `attrMap`
+/// caches the attributes of fully converted nodes so that shared subgraphs
+/// are visited only once.
+Attribute ModuleImport::convertMetadataToAttrImpl(
+    const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
+    DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
+  if (!md)
+    return {};
+  if (auto *mdStr = dyn_cast<llvm::MDString>(md))
+    return MDStringAttr::get(context,
+                             StringAttr::get(context, mdStr->getString()));
+  if (auto *cam = dyn_cast<llvm::ConstantAsMetadata>(md)) {
+    llvm::Constant *constant = cam->getValue();
+    if (auto *global = dyn_cast<llvm::GlobalValue>(constant)) {
+      if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(global))
+        return MDGlobalValueAttr::get(context, symbolRef);
+    }
+    if (auto *ci = dyn_cast<llvm::ConstantInt>(constant)) {
+      auto intType = IntegerType::get(context, ci->getBitWidth());
+      return MDConstantAttr::get(context,
+                                 IntegerAttr::get(intType, ci->getValue()));
+    }
+    if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant))
+      return MDNullAttr::get(context,
+                             nullPtr->getType()->getPointerAddressSpace());
+    if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
+      // Only `addrspacecast` is modelled; other constant expressions have no
+      // metadata-attribute counterpart.
+      if (constExpr->getOpcode() != llvm::Instruction::AddrSpaceCast)
+        return {};
+      Attribute argAttr = convertMetadataToAttrImpl(
+          llvm::ConstantAsMetadata::get(constExpr->getOperand(0)), path,
+          attrMap);
+      if (!argAttr)
+        return {};
+      return MDAddrSpaceCastAttr::get(
+          context, argAttr, constExpr->getType()->getPointerAddressSpace());
+    }
+    return {};
+  }
+  if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    // Metadata attributes cannot preserve distinctness, so bail out.
+    if (node->isDistinct())
+      return {};
+    if (Attribute cached = attrMap.lookup(node))
+      return cached;
+    // If `node` is already on the current search path, this is a back-edge into
+    // a cyclic graph. While that's valid it isn't implemented yet, so bail out.
+    if (!path.insert(node).second)
+      return {};
+    SmallVector<Attribute> operands;
+    operands.reserve(node->getNumOperands());
+    for (const llvm::MDOperand &op : node->operands()) {
+      Attribute opAttr = convertMetadataToAttrImpl(op.get(), path, attrMap);
+      if (!opAttr)
+        return {};
+      operands.push_back(opAttr);
+    }
+    path.erase(node);
+    Attribute nodeAttr = MDNodeAttr::get(context, operands);
+    attrMap.try_emplace(node, nodeAttr);
+    return nodeAttr;
+  }
+  return {};
+}
+
+/// Converts the metadata node `md` to the matching LLVM dialect metadata
+/// attribute. Returns a null attribute for shapes that the dialect's
+/// metadata-attribute hierarchy does not currently model, including distinct
+/// nodes and cyclic metadata graphs that the immutable metadata attributes
+/// cannot express.
+Attribute ModuleImport::convertMetadataToAttr(const llvm::Metadata *md) {
+  SmallPtrSet<const llvm::Metadata *, 8> path;
+  DenseMap<const llvm::Metadata *, Attribute> attrMap;
+  return convertMetadataToAttrImpl(md, path, attrMap);
 }
 
 /// Get a topologically sorted list of blocks for the given basic blocks.
@@ -1084,12 +1191,15 @@ void ModuleImport::convertTargetTriple() {
 }
 
 void ModuleImport::convertModuleLevelAsm() {
-  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
   llvm::SmallVector<mlir::Attribute> asmArrayAttr;
 
-  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
-    if (!line.empty())
-      asmArrayAttr.push_back(builder.getStringAttr(line));
+  for (const llvm::Module::GlobalAsmFragment &Frag :
+       llvmModule->getModuleInlineAsm()) {
+    // TODO: Preserve module asm properties.
+    for (llvm::StringRef line : llvm::split(Frag.Asm, '\n'))
+      if (!line.empty())
+        asmArrayAttr.push_back(builder.getStringAttr(line));
+  }
 
   mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                       builder.getArrayAttr(asmArrayAttr));
@@ -1403,12 +1513,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
-                                    convertLinkageFromLLVM(alias->getLinkage()),
-                                    alias->getName(),
-                                    /*dsoLocal=*/alias->isDSOLocal(),
-                                    /*thread_local=*/alias->isThreadLocal(),
-                                    /*attrs=*/ArrayRef<NamedAttribute>());
+  AliasOp aliasOp = AliasOp::create(
+      builder, mlirModule.getLoc(), type,
+      convertLinkageFromLLVM(alias->getLinkage()), alias->getName(),
+      /*dsoLocal=*/alias->isDSOLocal(),
+      convertThreadLocalModeFromLLVM(alias->getThreadLocalMode()),
+      /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
 
   clearRegionState();
@@ -1548,7 +1658,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
       /*dsoLocal=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      convertThreadLocalModeFromLLVM(globalVar->getThreadLocalMode()),
+      /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 
@@ -1904,13 +2015,28 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
-  assert(!isa<llvm::MetadataAsValue>(value) &&
-         "expected value to not be metadata");
-
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
   if (it != valueMapping.end())
     return it->getSecond();
+
+  // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
+  // MDString arguments used by the constrained floating-point intrinsics, or
+  // the named-register MDNode used by `llvm.read_register`) are lifted into a
+  // `llvm.mlir.metadata_as_value` SSA op carrying the corresponding metadata
+  // attribute.
+  if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
+    llvm::Metadata *md = mdAsVal->getMetadata();
+    Attribute mdAttr = convertMetadataToAttr(md);
+    if (!mdAttr)
+      return emitError(mlirModule.getLoc())
+             << "unsupported metadata: " << diagMD(md, llvmModule.get());
+    Value result =
+        MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
+            .getRes();
+    mapValue(value, result);
+    return result;
+  }
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))

@@ -14,6 +14,9 @@
 
     typeindex synopsis
 
+#include <compare>
+#include <typeinfo>
+
 namespace std
 {
 
@@ -50,11 +53,13 @@ struct hash<type_index>
 #else
 #  include <__config>
 #  include <__functional/unary_function.h>
-#  include <typeinfo>
 #  include <version>
 
 // standard-mandated includes
+
+// [type.index.synopsis]
 #  include <compare>
+#  include <typeinfo>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -102,12 +107,6 @@ struct hash<type_index> : public __unary_function<type_index, size_t> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <iosfwd>
-#    include <new>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_TYPEINDEX

@@ -265,9 +265,8 @@ exit:
 
 ;       i16       i32
 ; [ . . 0 0 . . 1 1] [ 1 1 0 0 . . 1 1 ]
-;  ^~~^ gep i8 = 1
-;  ^ ~~ ^ iv.2 = iv + 2
-;       ^ ~~~~~ ^ dependence distance = 4
+;   ^~^ gep i8 = 1
+;       ^ ~~~~ ^ dependence distance = 4
 ;              ^ ~~~~~~~~~~~~~~~~~ ^ 8
 ;       ^ ~~~~~~~~~~~~~~~~ ^ 8
 ;   ^ ~~~~~~~~~~~~~~~~ ^ iv.next = iv + 8
@@ -284,8 +283,8 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
-; CHECK-NEXT:            store i32 1, ptr %gep.4.iv, align 4
+; CHECK-NEXT:            store i16 0, ptr %gep.2.iv, align 2 ->
+; CHECK-NEXT:            store i32 1, ptr %gep.6.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -296,16 +295,17 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  %gep.4 = getelementptr nuw i8, ptr %dst, i64 4
+  ; Intentionally offset both to test logic.
+  %gep.2 = getelementptr nuw i8, ptr %dst, i64 2
+  %gep.6 = getelementptr nuw i8, ptr %dst, i64 6
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %iv.2 = add nuw nsw i64 %iv, 2
-  %gep.iv = getelementptr i8, ptr %dst, i64 %iv.2
-  store i16 0, ptr %gep.iv
-  %gep.4.iv = getelementptr i8, ptr %gep.4, i64 %iv.2
-  store i32 1, ptr %gep.4.iv
+  %gep.2.iv = getelementptr i8, ptr %gep.2, i64 %iv
+  store i16 0, ptr %gep.2.iv
+  %gep.6.iv = getelementptr i8, ptr %gep.6, i64 %iv
+  store i32 1, ptr %gep.6.iv
   %iv.next = add nuw nsw i64 %iv, 8
   %ec = icmp eq i64 %iv.next, 64
   br i1 %ec, label %exit, label %loop
@@ -317,9 +317,8 @@ exit:
 
 ;     i16      i64
 ; [ . 0 0 . 1 1 1 1] [ 1 x x 1 1 1 1 1 ]
-;  ^~~^ gep i8 = 1
-;  ^~~^ iv.1 = iv + 1
-;     ^ ~~ ^ dependence distance = 3
+;   ^~^ gep i8 = 1
+;     ^ ~~~ ^ dependence distance = 3
 ;     ^ ~~~~~~~~~~~~~~~~ ^ 8
 ;           ^ ~~~~~~~~~~~~~~~~ ^ 8
 ;   ^ ~~~~~~~~~~~~~~~~ ^ iv.next = iv + 8
@@ -333,8 +332,8 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
-; CHECK-NEXT:            store i64 1, ptr %gep.3.iv, align 4
+; CHECK-NEXT:            store i16 0, ptr %gep.1.iv, align 2 ->
+; CHECK-NEXT:            store i64 1, ptr %gep.4.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -345,16 +344,17 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  %gep.3 = getelementptr nuw i8, ptr %dst, i64 3
+  ; Intentionally offset both to test logic.
+  %gep.1 = getelementptr nuw i8, ptr %dst, i64 1
+  %gep.4 = getelementptr nuw i8, ptr %dst, i64 4
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %iv.1 = add nuw nsw i64 %iv, 1
-  %gep.iv = getelementptr i8, ptr %dst, i64 %iv.1
-  store i16 0, ptr %gep.iv
-  %gep.3.iv = getelementptr i8, ptr %gep.3, i64 %iv.1
-  store i64 1, ptr %gep.3.iv
+  %gep.1.iv = getelementptr i8, ptr %gep.1, i64 %iv
+  store i16 0, ptr %gep.1.iv
+  %gep.4.iv = getelementptr i8, ptr %gep.4, i64 %iv
+  store i64 1, ptr %gep.4.iv
   %iv.next = add nuw nsw i64 %iv, 8
   %ec = icmp eq i64 %iv.next, 64
   br i1 %ec, label %exit, label %loop
@@ -561,17 +561,11 @@ exit:
   ret void
 }
 
-; TODO: Relax HasSameSize check in isSafeDependenceDistance.
 define void @different_type_sizes_safe_dep_dist(i16  %n, ptr %p) {
 ; CHECK-LABEL: 'different_type_sizes_safe_dep_dist'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i32 0, ptr %gep.iv, align 1 ->
-; CHECK-NEXT:            store i16 1, ptr %gep.off.iv, align 1
-; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

@@ -43,7 +43,7 @@ define void @bar() personality ptr @__gxx_personality_v0 {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.eh.resume:
   ; CHECK-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.exn.slot
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.exn.slot)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (p0) from %ir.exn.slot)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   $x0 = COPY [[LOAD]](p0)
   ; CHECK-NEXT:   BL @_Unwind_Resume, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0

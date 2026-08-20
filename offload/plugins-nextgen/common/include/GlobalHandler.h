@@ -13,11 +13,14 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
+#include <optional>
 #include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
@@ -34,6 +37,9 @@ struct GenericDeviceTy;
 
 using namespace llvm::object;
 
+/// The kinds of symbols that can be enumerated in a device image.
+enum class SymbolKindTy { Kernel, GlobalVariable };
+
 /// Common abstraction for globals that live on the host and device.
 /// It simply encapsulates the symbol name, symbol size, and symbol address
 /// (which might be host or device depending on the context).
@@ -47,7 +53,7 @@ class GlobalTy {
   void *Ptr;
 
 public:
-  GlobalTy(const std::string &Name, uint32_t Size = 0, void *Ptr = nullptr)
+  GlobalTy(StringRef Name, uint32_t Size = 0, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
   const std::string &getName() const { return Name; }
@@ -72,11 +78,12 @@ struct __llvm_profile_gpu_sections {
 };
 
 extern "C" {
-extern int __attribute__((weak)) __llvm_write_custom_profile(
+extern int LLVM_ATTRIBUTE_WEAK __llvm_write_custom_profile(
     const char *Target, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
-    const uint64_t *VersionOverride);
+    const char *CountersEnd, const char *UniformCountersBegin,
+    const char *UniformCountersEnd, const char *NamesBegin,
+    const char *NamesEnd, const uint64_t *VersionOverride);
 }
 /// PGO profiling data extracted from a GPU device via __llvm_profile_sections.
 struct GPUProfGlobals {
@@ -214,6 +221,21 @@ public:
   /// with profiling prefixes.
   Expected<GPUProfGlobals> readProfilingGlobals(GenericDeviceTy &Device,
                                                 DeviceImageTy &Image);
+
+  /// Enumerate the names of the symbols of the given \p Kind in \p Image,
+  /// stopping early if \p Callback returns false.
+  virtual Error iterateSymbols(DeviceImageTy &Image, SymbolKindTy Kind,
+                               function_ref<bool(StringRef)> Callback);
+
+protected:
+  /// Returns whether a symbol with the given \p Flags is defined by and
+  /// exported from the image, and therefore usable by the runtime.
+  virtual bool isExportedSymbol(uint32_t Flags);
+
+  /// Returns the name \p Symbol is known by if it identifies a symbol of the
+  /// given \p Kind, otherwise std::nullopt.
+  virtual std::optional<StringRef>
+  matchSymbol(const ELFSymbolRef &Symbol, StringRef Name, SymbolKindTy Kind);
 };
 
 } // namespace plugin

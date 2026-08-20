@@ -37,8 +37,8 @@ RESOURCE Buffer;
 // CHECK: CXXRecordDecl {{.*}} implicit referenced class [[RESOURCE]] definition
 // CHECK: FinalAttr {{.*}}  Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::raw_buffer]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(char8_t)]]
 

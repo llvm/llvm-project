@@ -5,9 +5,7 @@
 define <16 x i8> @bitsel_v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) nounwind {
 ; CHECK-LABEL: bitsel_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vand.v $vr1, $vr2, $vr1
-; CHECK-NEXT:    vandn.v $vr0, $vr2, $vr0
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitsel.v $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <16 x i8> %c, %b
@@ -20,9 +18,7 @@ entry:
 define <8 x i16> @bitsel_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) nounwind {
 ; CHECK-LABEL: bitsel_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vand.v $vr1, $vr2, $vr1
-; CHECK-NEXT:    vandn.v $vr0, $vr2, $vr0
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitsel.v $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <8 x i16> %c, %b
@@ -35,9 +31,7 @@ entry:
 define <4 x i32> @bitsel_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) nounwind {
 ; CHECK-LABEL: bitsel_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vand.v $vr1, $vr2, $vr1
-; CHECK-NEXT:    vandn.v $vr0, $vr2, $vr0
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitsel.v $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <4 x i32> %c, %b
@@ -50,9 +44,7 @@ entry:
 define <2 x i64> @bitsel_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) nounwind {
 ; CHECK-LABEL: bitsel_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vand.v $vr1, $vr2, $vr1
-; CHECK-NEXT:    vandn.v $vr0, $vr2, $vr0
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vbitsel.v $vr0, $vr0, $vr1, $vr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <2 x i64> %c, %b
@@ -65,9 +57,7 @@ entry:
 define <16 x i8> @bitsel_v16i8_1(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECK-LABEL: bitsel_v16i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vandi.b $vr2, $vr0, 1
-; CHECK-NEXT:    vandn.v $vr0, $vr0, $vr1
-; CHECK-NEXT:    vor.v $vr0, $vr2, $vr0
+; CHECK-NEXT:    vbitseli.b $vr0, $vr1, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <16 x i8> %a, splat (i8 1)

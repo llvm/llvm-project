@@ -5,9 +5,7 @@
 define <32 x i8> @bitsel_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c) nounwind {
 ; CHECK-LABEL: bitsel_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvand.v $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvandn.v $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <32 x i8> %c, %b
@@ -20,9 +18,7 @@ entry:
 define <16 x i16> @bitsel_v16i16(<16 x i16> %a, <16 x i16> %b, <16 x i16> %c) nounwind {
 ; CHECK-LABEL: bitsel_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvand.v $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvandn.v $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <16 x i16> %c, %b
@@ -35,9 +31,7 @@ entry:
 define <8 x i32> @bitsel_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c) nounwind {
 ; CHECK-LABEL: bitsel_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvand.v $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvandn.v $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <8 x i32> %c, %b
@@ -50,9 +44,7 @@ entry:
 define <4 x i64> @bitsel_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) nounwind {
 ; CHECK-LABEL: bitsel_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvand.v $xr1, $xr2, $xr1
-; CHECK-NEXT:    xvandn.v $xr0, $xr2, $xr0
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvbitsel.v $xr0, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <4 x i64> %c, %b
@@ -65,9 +57,7 @@ entry:
 define <32 x i8> @bitsel_v32i8_1(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; CHECK-LABEL: bitsel_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvandi.b $xr2, $xr0, 1
-; CHECK-NEXT:    xvandn.v $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvor.v $xr0, $xr2, $xr0
+; CHECK-NEXT:    xvbitseli.b $xr0, $xr1, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = and <32 x i8> %a, splat (i8 1)

@@ -144,8 +144,6 @@ private:
                           int OpIdx) const;
   void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx) const;
-  void renderFrameIndex(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
 
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
@@ -359,12 +357,11 @@ RISCVInstructionSelector::selectSExtBits(MachineOperand &Root,
   if (!Root.isReg())
     return std::nullopt;
   Register RootReg = Root.getReg();
-  MachineInstr *RootDef = MRI->getVRegDef(RootReg);
 
-  if (RootDef->getOpcode() == TargetOpcode::G_SEXT_INREG &&
-      RootDef->getOperand(2).getImm() == Bits) {
-    return {
-        {[=](MachineInstrBuilder &MIB) { MIB.add(RootDef->getOperand(1)); }}};
+  Register SrcReg;
+  if (mi_match(RootReg, *MRI,
+               m_GSExtInReg(m_Reg(SrcReg), m_SpecificImm(Bits)))) {
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SrcReg); }}};
   }
 
   unsigned Size = MRI->getType(RootReg).getScalarSizeInBits();
@@ -422,9 +419,9 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 
   if (LeftShift.has_value()) {
     if (*LeftShift)
-      Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+      Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
     else
-      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getLimitedValue());
+      Mask &= maskTrailingOnes<uint64_t>(XLen - C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = XLen - Mask.getActiveBits();
@@ -436,7 +433,7 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SRLI, {DstReg}, {RegY})
-              .addImm(Trailing - C2.getLimitedValue());
+              .addImm(Trailing - C2.getZExtValue());
           MIB.addReg(DstReg);
         }}};
       }
@@ -475,12 +472,12 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
     // Given (shl (and y, mask), c2) in which mask has 32 leading zeros and
     // c3 trailing zeros. If c1 + c3 == ShAmt, we can emit SRLIW + SHXADD.
     bool Cond = *LeftShift && Leading == 32 && Trailing > 0 &&
-                (Trailing + C2.getLimitedValue()) == ShAmt;
+                (Trailing + C2.getZExtValue()) == ShAmt;
     if (!Cond)
       // Given (lshr (and y, mask), c2) in which mask has 32 leading zeros and
       // c3 trailing zeros. If c3 - c1 == ShAmt, we can emit SRLIW + SHXADD.
       Cond = !*LeftShift && Leading == 32 && C2.ult(Trailing) &&
-             (Trailing - C2.getLimitedValue()) == ShAmt;
+             (Trailing - C2.getZExtValue()) == ShAmt;
 
     if (Cond) {
       Register DstReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
@@ -514,7 +511,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
           RootReg, *MRI,
           m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
                                 m_ICst(Mask))))) {
-    Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+    Mask &= maskTrailingZeros<uint64_t>(C2.getZExtValue());
 
     if (Mask.isShiftedMask()) {
       unsigned Leading = Mask.countl_zero();
@@ -524,7 +521,7 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
         return {{[=](MachineInstrBuilder &MIB) {
           MachineIRBuilder(*MIB.getInstr())
               .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
-              .addImm(C2.getLimitedValue() - ShAmt);
+              .addImm(C2.getZExtValue() - ShAmt);
           MIB.addReg(DstReg);
         }}};
       }
@@ -537,11 +534,9 @@ RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
 InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
   assert(Root.isReg() && "Expected operand to be a Register");
-  MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-
-  if (RootDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-    auto C = RootDef->getOperand(1).getCImm();
-    if (C->getValue().isAllOnes())
+  std::optional<ValueAndVReg> C;
+  if (mi_match(Root.getReg(), *MRI, m_GCst(C))) {
+    if (C->Value.isAllOnes())
       // If the operand is a G_CONSTANT with value of all ones it is larger than
       // VLMAX. We convert it to an immediate with value VLMaxSentinel. This is
       // recognized specially by the vsetvli insertion pass.
@@ -549,8 +544,8 @@ RISCVInstructionSelector::renderVLOp(MachineOperand &Root) const {
         MIB.addImm(RISCV::VLMaxSentinel);
       }}};
 
-    if (isUInt<5>(C->getZExtValue())) {
-      uint64_t ZExtC = C->getZExtValue();
+    if (isUInt<5>(C->Value.getZExtValue())) {
+      uint64_t ZExtC = C->Value.getZExtValue();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(ZExtC); }}};
     }
   }
@@ -1017,12 +1012,8 @@ bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I) const {
         }
       }
 
-      MachineInstr *AVLDef = MRI->getVRegDef(AVLReg);
-      if (AVLDef && AVLDef->getOpcode() == TargetOpcode::G_CONSTANT) {
-        const auto *C = AVLDef->getOperand(1).getCImm();
-        if (C->getValue().isAllOnes())
-          VLMax = true;
-      }
+      if (mi_match(AVLReg, *MRI, m_AllOnes()))
+        VLMax = true;
     }
 
     if (VLMax) {
@@ -1552,14 +1543,6 @@ void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(CstVal + 1);
-}
-
-void RISCVInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_FRAME_INDEX && OpIdx == -1 &&
-         "Expected G_FRAME_INDEX");
-  MIB.add(MI.getOperand(1));
 }
 
 void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,

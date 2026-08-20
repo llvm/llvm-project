@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestCrossDSOTailCalls(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(dwarf_version=["<", "4"])

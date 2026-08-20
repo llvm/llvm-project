@@ -91,7 +91,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
     auto *obj = cast<WasmObjectFile>(bin.get());
     if (obj->hasUnmodeledTypes())
       fatal(toString(mb.getBufferIdentifier()) +
-            "file has unmodeled reference or GC types");
+            " file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
     return make<ObjFile>(mb, archiveName, lazy);
@@ -132,6 +132,7 @@ int64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64:
   case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64:
     return reloc.Addend;
   case R_WASM_SECTION_OFFSET_I32:
     return getSectionSymbol(reloc.Index)->section->getOffset(reloc.Addend);
@@ -181,12 +182,14 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_MEMORY_ADDR_I64:
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_MEMORY_ADDR_LOCREL_I64: {
     if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
     uint64_t value = D->getVA() + reloc.Addend;
-    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32) {
+    if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
+        reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) {
       const auto *segment = cast<InputSegment>(chunk);
       uint64_t p = segment->outputSeg->startVA + segment->outputSegmentOffset +
                    reloc.Offset - segment->getInputSectionOffset();

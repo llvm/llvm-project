@@ -58,6 +58,27 @@ extern cl::opt<bool> PreferInLoopReductions;
 std::optional<unsigned> getMaxVScale(const Function &F,
                                      const TargetTransformInfo &TTI);
 
+// Utility functions that are used by different vectorization classes
+namespace LoopVectorizationUtils {
+
+/// Reports a vectorization failure: print \p DebugMsg for debugging
+/// purposes along with the corresponding optimization remark \p RemarkName.
+/// If \p I is passed, it is an instruction that prevents vectorization.
+/// Otherwise, the loop \p TheLoop is used for the location of the remark.
+void reportVectorizationFailure(const StringRef DebugMsg,
+                                const StringRef OREMsg, const StringRef ORETag,
+                                OptimizationRemarkEmitter *ORE,
+                                const Loop *TheLoop, Instruction *I = nullptr);
+
+/// Same as above, but the debug message and optimization remark are identical
+inline void reportVectorizationFailure(const StringRef DebugMsg,
+                                       const StringRef ORETag,
+                                       OptimizationRemarkEmitter *ORE,
+                                       const Loop *TheLoop,
+                                       Instruction *I = nullptr) {
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
+}
+
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
@@ -67,15 +88,53 @@ void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              const Loop *TheLoop, Instruction *I = nullptr,
                              DebugLoc DL = {});
 
+/// Report successful vectorization of the loop. In case an outer loop is
+/// vectorized, prepend "outer" to the vectorization remark.
+void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+                         ElementCount VFWidth, unsigned IC);
+
+} // namespace LoopVectorizationUtils
+
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
-  VPBasicBlock *BB = nullptr;
-  VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
+private:
+  class VPInsertPoint {
+    VPBasicBlock *Block = nullptr;
+    VPBasicBlock::iterator Point;
+
+  public:
+    /// Creates a new insertion point which doesn't point to anything.
+    VPInsertPoint() = default;
+
+    /// Creates a new insertion point to insert at \p Point in \p Block.
+    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
+        : Block(Block), Point(Point) {}
+
+    /// Creates a new insertion point to insert before \p R.
+    VPInsertPoint(VPRecipeBase *R)
+        : Block(R->getParent()), Point(R->getIterator()) {}
+
+    /// Creates a new insertion point to insert at the end of \p Block.
+    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+
+    /// Returns true if this insert point is set.
+    operator bool() const { return Block; }
+
+    VPBasicBlock *getBlock() const { return Block; }
+
+    operator VPRecipeBase *() const {
+      return Point == Block->end() ? nullptr : &*Point;
+    }
+
+    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
+  };
+
+  VPInsertPoint InsertPt;
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
-    if (BB)
-      BB->insert(R, InsertPt);
+    if (InsertPt)
+      InsertPt.insert(R);
     return R;
   }
 
@@ -88,83 +147,41 @@ class VPBuilder {
   }
 
 public:
+  VPlan &getPlan() const {
+    assert(InsertPt && "Insert block must be set");
+    return *InsertPt.getBlock()->getPlan();
+  }
+
   VPBuilder() = default;
-  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
-  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    setInsertPoint(TheBB, IP);
-  }
+  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
+      : InsertPt(TheBB, IP) {}
 
-  /// Clear the insertion point: created instructions will not be inserted into
-  /// a block.
-  void clearInsertionPoint() {
-    BB = nullptr;
-    InsertPt = VPBasicBlock::iterator();
-  }
-
-  VPBasicBlock *getInsertBlock() const { return BB; }
-  VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+  /// Get the recipe at the current insert point or nullptr if the insert point
+  /// is the end of the block.
+  VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
   static VPBuilder getToInsertAfter(VPRecipeBase *R) {
-    VPBuilder B;
-    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
-    return B;
+    return {R->getParent(), std::next(R->getIterator())};
   }
-
-  /// InsertPoint - A saved insertion point.
-  class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    VPInsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    VPInsertPoint(VPBasicBlock *InsertBlock, VPBasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return Block != nullptr; }
-
-    VPBasicBlock *getBlock() const { return Block; }
-    VPBasicBlock::iterator getPoint() const { return Point; }
-  };
 
   /// Sets the current insert point to a previously-saved location.
-  void restoreIP(VPInsertPoint IP) {
-    if (IP.isSet())
-      setInsertPoint(IP.getBlock(), IP.getPoint());
-    else
-      clearInsertionPoint();
-  }
+  void restoreIP(VPInsertPoint IP) { InsertPt = IP; }
 
-  /// This specifies that created VPInstructions should be appended to the end
-  /// of the specified block.
-  void setInsertPoint(VPBasicBlock *TheBB) {
-    assert(TheBB && "Attempting to set a null insert point");
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    BB = TheBB;
+  /// Set the current insert point.
+  void setInsertPoint(const VPInsertPoint &IP) {
+    assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPRecipeBase *IP) {
-    BB = IP->getParent();
-    InsertPt = IP->getIterator();
+  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    assert(TheBB && "Attempting to set a null insert point");
+    InsertPt = VPInsertPoint(TheBB, IP);
   }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    BB->insert(R, InsertPt);
+    InsertPt.insert(R);
     return R;
   }
 
@@ -175,9 +192,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "") {
+                              const Twine &Name = "",
+                              Type *ResultTy = nullptr) {
     VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -199,6 +217,28 @@ public:
                               const Twine &Name = "") {
     return tryInsertInstruction(new VPInstructionWithType(
         Opcode, Operands, ResultTy, Flags, {}, DL, Name));
+  }
+
+  VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
+                                       DebugLoc DL = DebugLoc::getUnknown(),
+                                       const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name, IndexTy));
+  }
+
+  VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
+                                      DebugLoc DL = DebugLoc::getUnknown(),
+                                      const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::LastActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createOverflowingOp(
@@ -300,9 +340,7 @@ public:
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(
-        new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
-                          GEPNoWrapFlags::none(), {}, DL, Name));
+    return createNoWrapPtrAdd(Ptr, Offset, GEPNoWrapFlags::none(), DL, Name);
   }
 
   VPInstruction *createNoWrapPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -323,8 +361,10 @@ public:
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
+                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         Type *ResultTy = nullptr) {
+    return tryInsertInstruction(
+        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -334,26 +374,32 @@ public:
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
-    VPlan &Plan = *getInsertBlock()->getPlan();
-    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
+    VPlan &Plan = getPlan();
+    unsigned MinEC = EC.getKnownMinValue();
     if (EC.isScalable()) {
-      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
-      RuntimeEC = EC.getKnownMinValue() == 1
-                      ? VScale
-                      : createOverflowingOp(Instruction::Mul,
-                                            {VScale, RuntimeEC}, {true, false});
+      VPValue *VScale = createVScale(Ty);
+      if (MinEC == 1)
+        return VScale;
+      // TODO: Move this optimization into createOverflowingOp directly.
+      if (isPowerOf2_32(MinEC)) {
+        VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
+        return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
+                                   {true, false});
+      }
+      VPValue *MulAmt = Plan.getConstantInt(Ty, MinEC);
+      return createOverflowingOp(Instruction::Mul, {VScale, MulAmt},
+                                 {true, false});
     }
-    return RuntimeEC;
+    return Plan.getConstantInt(Ty, MinEC);
   }
 
-  /// Convert the input value \p Current to the corresponding value of an
-  /// induction with \p Start and \p Step values, using \p Start + \p Current *
-  /// \p Step.
+  /// Convert \p Current to \p Start + \p Current * \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
-                                     FPMathOperator *FPBinOp, VPIRValue *Start,
-                                     VPValue *Current, VPValue *Step) {
+                                     FPMathOperator *FPBinOp, VPValue *Start,
+                                     VPValue *Current, VPValue *Step,
+                                     const VPIRFlags::WrapFlagsTy &Flags = {}) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -379,8 +425,26 @@ public:
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
   }
 
-  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
+  /// result type \p ResultTy
+  VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
+                                       ArrayRef<VPValue *> Operands,
+                                       Type *ResultTy, DebugLoc DL) {
+    VPlan &Plan = getPlan();
+    SmallVector<VPValue *, 2> Ops(Operands);
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
+    return tryInsertInstruction(new VPInstructionWithType(
+        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+  }
+
+  /// Create a scalar llvm.vscale call.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createScalarIntrinsic(Intrinsic::vscale, {}, ResultTy, DL);
+  }
+
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -390,8 +454,8 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
-                                   DebugLoc DL) {
+  VPValue *createScalarSExtOrTrunc(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    Type *SrcTy = Op->getScalarType();
     if (ResultTy == SrcTy)
       return Op;
     Instruction::CastOps CastOp =
@@ -401,10 +465,32 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
+  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
+  }
+
+  /// Create a single-scalar recipe with \p Opcode and \p Operands without
+  /// inserting it.
+  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
+                                                 ArrayRef<VPValue *> Operands,
+                                                 VPValue *Mask,
+                                                 const VPIRFlags &Flags,
+                                                 const VPIRMetadata &Metadata,
+                                                 DebugLoc DL, Instruction *UV) {
+    if (Instruction::isCast(Opcode)) {
+      assert(!Mask && "Cast cannot be predicated");
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
+    }
+    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
+                                 Flags, Metadata, DL);
   }
 
   VPScalarIVStepsRecipe *
@@ -420,6 +506,47 @@ public:
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
+  VPVectorPointerRecipe *
+  createVectorPointer(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
+                      GEPNoWrapFlags GEPFlags, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
+  }
+
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, DebugLoc DL);
+
+  VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
+      Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
+      Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenMemIntrinsicRecipe(
+        VectorIntrinsicID, CallArguments, Ty, Alignment, MD, DL));
+  }
+
+  /// Create a recipe widening \p Load, loading from \p Addr with \p Mask (may
+  /// be null).
+  VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
+                                     VPValue *Mask, bool Consecutive,
+                                     const VPIRMetadata &Metadata,
+                                     DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  }
+
+  /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with
+  /// \p Mask (may be null).
+  VPWidenStoreRecipe *createWidenStore(StoreInst &Store, VPValue *Addr,
+                                       VPValue *StoredVal, VPValue *Mask,
+                                       bool Consecutive,
+                                       const VPIRMetadata &Metadata,
+                                       DebugLoc DL) {
+    return tryInsertInstruction(new VPWidenStoreRecipe(
+        Store, Addr, StoredVal, Mask, Consecutive, Metadata, DL));
+  }
+
   //===--------------------------------------------------------------------===//
   // RAII helpers.
   //===--------------------------------------------------------------------===//
@@ -428,17 +555,15 @@ public:
   /// the object is destroyed.
   class InsertPointGuard {
     VPBuilder &Builder;
-    VPBasicBlock *Block;
-    VPBasicBlock::iterator Point;
+    VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B)
-        : Builder(B), Block(B.getInsertBlock()), Point(B.getInsertPoint()) {}
+    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
-    ~InsertPointGuard() { Builder.restoreIP(VPInsertPoint(Block, Point)); }
+    ~InsertPointGuard() { Builder.restoreIP(InsertPt); }
   };
 };
 
@@ -552,6 +677,7 @@ class VFSelectionContext {
   const Loop *TheLoop;
   const Function &F;
   PredicatedScalarEvolution &PSE;
+  DemandedBits *DB;
   OptimizationRemarkEmitter *ORE;
   const LoopVectorizeHints *Hints;
 
@@ -585,6 +711,11 @@ class VFSelectionContext {
   /// computeFeasibleMaxVF.
   std::optional<unsigned> MaxSafeElements;
 
+  /// Map of scalar integer values to the smallest bitwidth they can be legally
+  /// represented as. The vector equivalents of these values should be truncated
+  /// to this type.
+  MapVector<Instruction *, uint64_t> MinBWs;
+
 public:
   /// The kind of cost that we are calculating.
   const TTI::TargetCostKind CostKind;
@@ -596,11 +727,11 @@ public:
   VFSelectionContext(const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
-                     PredicatedScalarEvolution &PSE,
+                     PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), ORE(ORE),
-        Hints(Hints),
+      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
+        ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -608,6 +739,16 @@ public:
 
   /// \return The vscale value used for tuning the cost model.
   std::optional<unsigned> getVScaleForTuning() const { return VScaleForTuning; }
+
+  const TargetTransformInfo &getTTI() const { return TTI; }
+
+  PredicatedScalarEvolution &getPSE() const { return PSE; }
+
+  /// \return The loop being analyzed.
+  const Loop *getLoop() const { return TheLoop; }
+
+  /// \return The vectorization hints for the loop being analyzed.
+  const LoopVectorizeHints &getHints() const { return *Hints; }
 
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
@@ -649,15 +790,12 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine supports masked store operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
-                          unsigned AddressSpace) const;
-
-  /// Returns true if the target machine supports masked load operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
-                         unsigned AddressSpace) const;
+  /// Returns true if the target machine supports a masked load (if \p IsLoad)
+  /// or masked store of scalar type \p ScalarTy with \p Alignment in address
+  /// space \p AddressSpace. The caller must ensure the access is consecutive or
+  /// part of an interleave group.
+  bool isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy, Align Alignment,
+                                unsigned AddressSpace) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
   /// or scatter operation.
@@ -688,6 +826,20 @@ public:
   /// Check whether vectorization would require runtime checks. When optimizing
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
+
+  /// Returns a scalable VF to use for outer-loop vectorization if the target
+  /// supports it and a fixed VF otherwise.
+  FixedScalableVFPair computeVPlanOuterloopVF(ElementCount UserVF);
+
+  /// Compute smallest bitwidth each instruction can be represented with.
+  /// The vector equivalents of these instructions should be truncated to this
+  /// type.
+  void computeMinimalBitwidths();
+
+  /// \returns The smallest bitwidth each instruction can be represented with.
+  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
+    return MinBWs;
+  }
 };
 
 /// Planner drives the vectorization process after having passed
@@ -722,8 +874,6 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
-  const LoopVectorizeHints &Hints;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -756,18 +906,14 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, VFSelectionContext &Config,
       InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
+      OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
   void plan(ElementCount UserVF, unsigned UserIC);
-
-  /// Use the VPlan-native path to plan how to best vectorize, return the best
-  /// VF and its cost.
-  VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -849,41 +995,35 @@ public:
   /// the average trip count and invocation weight of the original loop (\p
   /// OrigAverageTripCount and \p OrigLoopInvocationWeight respectively). They
   /// cannot be retrieved after the plan has been executed, as the original loop
-  /// may have been removed.
+  /// may have been removed. \p UnrollVectorizedLoop indicates whether the
+  /// target wants the vector loop left eligible for runtime unrolling.
   void updateLoopMetadataAndProfileInfo(
       Loop *VectorLoop, VPBasicBlock *HeaderVPBB, const VPlan &Plan,
       bool VectorizingEpilogue, MDNode *OrigLoopID,
       std::optional<unsigned> OrigAverageTripCount,
       unsigned OrigLoopInvocationWeight, unsigned EstimatedVFxUF,
-      bool DisableRuntimeUnroll);
-
-protected:
-  /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
-  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
+      bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
-  /// Build a VPlan according to the information gathered by Legal. \return a
-  /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
-  /// the input range, set the largest included VF to the maximum VF for which
-  /// no plan could be built.
-  VPlanPtr tryToBuildVPlan(VFRange &Range);
+  /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
+  /// scalar transformations applied. Returns null if an initial VPlan cannot
+  /// be built.
+  VPlanPtr tryToBuildVPlan1();
 
-  /// Build a VPlan using VPRecipes according to the information gather by
-  /// Legal. This method is only used for the legacy inner loop vectorizer.
-  /// \p Range's largest included VF is restricted to the maximum VF the
-  /// returned VPlan is valid for. If no VPlan can be built for the input range,
-  /// set the largest included VF to the maximum VF for which no plan could be
-  /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
-  /// is a plain CFG VPlan wrapping the original scalar loop.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range);
+  /// Build a VPlan using VPRecipes according to the information gathered by
+  /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
+  /// conversion only. For inner loops, \p Range's largest included VF is
+  /// restricted to the maximum VF the returned VPlan is valid for. If no VPlan
+  /// can be built for the input range, set the largest included VF to the
+  /// maximum VF for which no plan could be built. Each VPlan is built starting
+  /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
+  /// original scalar loop.
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
-  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
+  /// based on \p VPlan1 and according to the information gathered by Legal
+  /// when it checked if it is legal to vectorize the loop.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
@@ -910,6 +1050,16 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
+
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type.
+inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
+}
 
 } // namespace llvm
 

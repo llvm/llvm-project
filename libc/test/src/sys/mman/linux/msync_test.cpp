@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/mlock.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/msync.h"

@@ -30,7 +30,7 @@ using namespace __sanitizer;
 using namespace __tysan;
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-tysan_set_type_unknown(const void *addr, uptr size) {
+__tysan_set_type_unknown(const void *addr, uptr size) {
   if (tysan_inited)
     internal_memset(shadow_for(addr), 0, size * sizeof(uptr));
 }
@@ -331,8 +331,6 @@ __tysan_instrument_mem_inst(char *dest, char *src, uint64_t size,
 
   if (needsMemMove) {
     internal_memmove((char *)destShadowDataPtr, srcShadow, size << PtrShift());
-  } else {
-    internal_memcpy((char *)destShadowDataPtr, srcShadow, size << PtrShift());
   }
 }
 

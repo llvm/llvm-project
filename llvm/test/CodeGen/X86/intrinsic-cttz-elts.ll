@@ -21,11 +21,10 @@ define i8 @ctz_v8i16(<8 x i16> %a) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    psubusw %xmm0, %xmm1
 ; CHECK-NEXT:    paddw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrld $16, %xmm0
-; CHECK-NEXT:    psubusw %xmm1, %xmm0
-; CHECK-NEXT:    paddw %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    cmpw %cx, %ax
+; CHECK-NEXT:    cmoval %eax, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
@@ -45,19 +44,20 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; CHECK-NEXT:    por %xmm3, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm1
+; CHECK-NEXT:    pandn %xmm3, %xmm2
+; CHECK-NEXT:    por %xmm1, %xmm2
+; CHECK-NEXT:    movd %xmm2, %eax
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,1,1]
 ; CHECK-NEXT:    movd %xmm0, %ecx
 ; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cmpl %eax, %ecx
-; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cmpl %eax, %ecx
-; CHECK-NEXT:    cmovbel %eax, %ecx
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -89,11 +89,10 @@ define i8 @ctz_v8i16_poison(<8 x i16> %a) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    psubusw %xmm0, %xmm1
 ; CHECK-NEXT:    paddw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrld $16, %xmm0
-; CHECK-NEXT:    psubusw %xmm1, %xmm0
-; CHECK-NEXT:    paddw %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    cmpw %cx, %ax
+; CHECK-NEXT:    cmoval %eax, %ecx
 ; CHECK-NEXT:    movl $8, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax

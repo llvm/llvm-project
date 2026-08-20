@@ -299,7 +299,7 @@ void baz(int n) {
   }
 }
 
-// CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: !{!"llvm.loop.vectorize.enable"}
 
 #endif
 

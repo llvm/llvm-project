@@ -12,13 +12,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-const char *SimpleExecutorDylibManagerInstanceName =
-    "__llvm_orc_SimpleExecutorDylibManager_Instance";
-const char *SimpleExecutorDylibManagerOpenWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_open_wrapper";
-const char *SimpleExecutorDylibManagerResolveWrapperName =
-    "__llvm_orc_SimpleExecutorDylibManager_resolve_wrapper";
-
 const char *SimpleExecutorMemoryManagerInstanceName =
     "__llvm_orc_SimpleExecutorMemoryManager_Instance";
 const char *SimpleExecutorMemoryManagerReserveWrapperName =
@@ -41,56 +34,23 @@ const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName =
 const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName =
     "__llvm_orc_ExecutorSharedMemoryMapperService_Release";
 
-const char *MemoryWriteUInt8sWrapperName =
-    "__llvm_orc_bootstrap_mem_write_uint8s_wrapper";
-const char *MemoryWriteUInt16sWrapperName =
-    "__llvm_orc_bootstrap_mem_write_uint16s_wrapper";
-const char *MemoryWriteUInt32sWrapperName =
-    "__llvm_orc_bootstrap_mem_write_uint32s_wrapper";
-const char *MemoryWriteUInt64sWrapperName =
-    "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
-const char *MemoryWritePointersWrapperName =
-    "__llvm_orc_bootstrap_mem_write_pointers_wrapper";
-const char *MemoryWriteBuffersWrapperName =
-    "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
-
-const char *MemoryReadUInt8sWrapperName =
-    "__llvm_orc_bootstrap_mem_read_uint8s_wrapper";
-const char *MemoryReadUInt16sWrapperName =
-    "__llvm_orc_bootstrap_mem_read_uint16s_wrapper";
-const char *MemoryReadUInt32sWrapperName =
-    "__llvm_orc_bootstrap_mem_read_uint32s_wrapper";
-const char *MemoryReadUInt64sWrapperName =
-    "__llvm_orc_bootstrap_mem_read_uint64s_wrapper";
-const char *MemoryReadPointersWrapperName =
-    "__llvm_orc_bootstrap_mem_read_pointers_wrapper";
-const char *MemoryReadBuffersWrapperName =
-    "__llvm_orc_bootstrap_mem_read_buffers_wrapper";
-const char *MemoryReadStringsWrapperName =
-    "__llvm_orc_bootstrap_mem_read_strings_wrapper";
-
 const char *RegisterEHFrameSectionAllocActionName =
     "llvm_orc_registerEHFrameAllocAction";
 const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
 const char *RegisterJITLoaderGDBAllocActionName =
-    "llvm_orc_registerJITLoaderGDBAllocAction";
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_register";
+const char *DeregisterJITLoaderGDBAllocActionName =
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_deregister";
 
-const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
-const char *RunAsVoidFunctionWrapperName =
-    "__llvm_orc_bootstrap_run_as_void_function_wrapper";
-const char *RunAsIntFunctionWrapperName =
-    "__llvm_orc_bootstrap_run_as_int_function_wrapper";
+const char *const DispatchName = "__orc_rt_jit_dispatch";
+const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
 
-const SimpleExecutorMemoryManagerSymbolNames
-    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_SimpleNativeMemoryMap_Instance",
-        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
-};
+const MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
 
 } // end namespace rt
 namespace rt_alt {

@@ -14,42 +14,24 @@ from lldbsuite.test.lldbtest import *
 class TestRunLocker(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"])
-    # Is flaky on Linux AArch64 buildbot.
-    @skipIf(oslist=["linux"], archs=["aarch64"])
-    def test_run_locker(self):
-        """Test that the run locker is set correctly when we launch"""
-        self.build()
-        self.runlocker_test(False)
-
-    @expectedFailureAll(oslist=["windows"])
-    # Is flaky on Linux AArch64 buildbot.
-    @skipIf(oslist=["linux"], archs=["aarch64"])
-    def test_run_locker_stop_at_entry(self):
-        """Test that the run locker is set correctly when we launch"""
-        self.build()
-        self.runlocker_test(False)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         self.main_source_file = lldb.SBFileSpec("main.c")
 
-    def runlocker_test(self, stop_at_entry):
-        """The code to stop at entry handles events slightly differently, so
-        we test both versions of process launch."""
-
+    @expectedFailureAll(oslist=["windows"])
+    def test_run_locker(self):
+        """Test that the run locker is set correctly as we're running"""
+        self.build()
         target = lldbutil.run_to_breakpoint_make_target(self)
-
         launch_info = target.GetLaunchInfo()
-        if stop_at_entry:
-            flags = launch_info.GetFlags()
-            launch_info.SetFlags(flags | lldb.eLaunchFlagStopAtEntry)
 
         error = lldb.SBError()
         # We are trying to do things when the process is running, so
         # we have to run the debugger asynchronously.
         self.dbg.SetAsync(True)
+
+        main_bp = target.BreakpointCreateByName("main")
 
         listener = lldb.SBListener("test-run-lock-listener")
         launch_info.SetListener(listener)
@@ -69,17 +51,24 @@ class TestRunLocker(TestBase):
             )
             state_type = lldb.SBProcess.GetStateFromEvent(event)
 
-        self.assertState(state_type, lldb.eStateRunning, "Didn't get a running event")
-
-        # We aren't checking the entry state, but just making sure
-        # the running state is set properly if we continue in this state.
-
-        if stop_at_entry:
+        # We may be in eStateStopped if we hit the breakpoint already.
+        if state_type != lldb.eStateStopped:
+            self.assertState(
+                state_type, lldb.eStateRunning, "Didn't get a running event"
+            )
             event_result = listener.WaitForEvent(10, event)
-            self.assertTrue(event_result, "Timed out waiting for stop at entry stop")
+            self.assertTrue(event_result, "timed out waiting for breakpoint stop")
             state_type = lldb.SBProcess.GetStateFromEvent(event)
-            self.assertState(state_type, eStateStopped, "Stop at entry stopped")
-            process.Continue()
+
+        self.assertState(state_type, lldb.eStateStopped, "Stop at main stopped")
+        main_bp.SetEnabled(False)
+        process.Continue()
+
+        event_result = listener.WaitForEvent(10, event)
+        self.assertTrue(event_result, "timed out waiting for process resume")
+        state_type = lldb.SBProcess.GetStateFromEvent(event)
+
+        self.assertState(state_type, lldb.eStateRunning, "Continue after main() bp")
 
         # Okay, now the process is running, make sure we can't do things
         # you aren't supposed to do while running, and that we get some
@@ -90,7 +79,7 @@ class TestRunLocker(TestBase):
         self.assertIn(
             "can't evaluate expressions when the process is running",
             repr(val),
-            "repr works"
+            "repr works",
         )
         error = val.GetError()
         self.assertTrue(error.Fail(), "Failed to run expression")

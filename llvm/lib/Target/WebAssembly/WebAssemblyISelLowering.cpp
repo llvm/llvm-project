@@ -152,6 +152,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
+      setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
+    }
     // When experimental v8f16 support is enabled these instructions don't need
     // to be expanded.
     if (T != MVT::v8f16) {
@@ -197,6 +201,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
         {MVT::v4f32, MVT::v2f64}, Custom);
   }
+
+  // Combine expands these operations, because wasi-libc and emscripten do not
+  // yet have the dedicated libcalls.
+  setTargetDAGCombine(
+      {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM});
+
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
@@ -247,6 +257,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     if (Subtarget->hasFP16()) {
       setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16, Custom);
       setOperationAction(ISD::FP_ROUND, MVT::v4f16, Custom);
     }
 
@@ -434,24 +445,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.
   setMinimumJumpTableEntries(2);
-}
-
-MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
-                                            uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerTy(DL, AS);
-}
-
-MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
-                                               uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerMemTy(DL, AS);
 }
 
 TargetLowering::AtomicExpansionKind
@@ -1052,9 +1045,7 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtT = ExtVal.getValueType();
-  SDValue N0 = ExtVal->getOperand(0);
-  if (N0.getOpcode() == ISD::FREEZE)
-    N0 = N0.getOperand(0);
+  SDValue N0 = peekThroughFreeze(ExtVal->getOperand(0));
   auto *Load = dyn_cast<LoadSDNode>(N0);
   if (!Load)
     return false;
@@ -1296,6 +1287,17 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   auto Layout = MF.getDataLayout();
 
+  // A call through a funcref is expressed in IR as a call through the pointer
+  // produced by the llvm.wasm.funcref.to_ptr intrinsic. Detect this here and
+  // recover the underlying funcref value so the call can be lowered to a
+  // table.set + call_indirect through the dedicated __funcref_call_table.
+  bool IsFuncrefCall = false;
+  if (Callee.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Callee.getConstantOperandVal(0) == Intrinsic::wasm_funcref_to_ptr) {
+    Callee = Callee.getOperand(1);
+    IsFuncrefCall = true;
+  }
+
   CallingConv::ID CallConv = CLI.CallConv;
   if (!callingConvSupported(CallConv))
     fail(DL, DAG,
@@ -1394,8 +1396,9 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
-      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode,
-                            Out.Flags.getNonZeroByValAlign(),
+      Align Alignment = Out.Flags.getNonZeroByValAlign();
+      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode, Alignment,
+                            Alignment,
                             /*isVolatile*/ false, /*AlwaysInline=*/false,
                             /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
                             MachinePointerInfo());
@@ -1538,8 +1541,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
-                    CLI.CB->getCalledOperand()->getType())) {
+  if (IsFuncrefCall) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1555,11 +1557,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
     SDValue TableSet = DAG.getMemIntrinsicNode(
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
-        MVT::funcref,
-        // Machine Mem Operand args
-        MachinePointerInfo(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
-        CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
+        MVT::funcref, MachinePointerInfo(), Align(1),
         MachineMemOperand::MOStore);
 
     Ops[0] = TableSet; // The new chain is the TableSet itself
@@ -2089,17 +2087,11 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
        getTargetMachine().shouldAssumeDSOLocal(GV))) {
-    // For DSO-local TLS variables we use offset from __tls_base
+    // For DSO-local TLS variables we use offset from __tls_base, or
+    // __wasm_get_tls_base() if using libcall thread context.
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *BaseName = MF.createExternalSymbolName("__tls_base");
-
-    SDValue BaseAddr(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(BaseName, PtrVT)),
-        0);
+    SDValue BaseAddr(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
 
     SDValue TLSOffset = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
@@ -2284,15 +2276,19 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
   }
 
+  case Intrinsic::wasm_funcref_to_ptr: {
+    // llvm.wasm.funcref.to_ptr only has a defined lowering when its result
+    // feeds directly into an indirect call. Reaching here means the pointer
+    // escapes a direct call. We haven't implemented conversion of a funcref
+    // into a real function pointer so we crash if we get here.
+    fail(DL, DAG,
+         "a funcref can only be converted to a pointer to be directly called; "
+         "the resulting pointer cannot otherwise be used");
+    return DAG.getPOISON(Op.getValueType());
+  }
+
   case Intrinsic::thread_pointer: {
-    MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
-    return SDValue(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
-        0);
+    return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
   }
   }
 }
@@ -2516,7 +2512,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   if (VT == MVT::v8f16) {
-    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scalar
     // FP16 type, so cast them to I16s.
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 8> NewOps;
@@ -2823,6 +2819,18 @@ SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
 SDValue
 WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+      Op.getValueType() == MVT::v8f16) {
+    // INSERT_VECTOR_ELT can't handle FP16 operands since Wasm doesn't have a
+    // scalar FP16 type, so cast them to I16s.
+    SDLoc DL(Op);
+    SDValue IntVector = DAG.getBitcast(MVT::v8i16, Op.getOperand(0));
+    SDValue IntElement = DAG.getBitcast(MVT::i16, Op.getOperand(1));
+    SDValue Inserted = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16,
+                                   IntVector, IntElement, Op.getOperand(2));
+    return DAG.getBitcast(MVT::v8f16, Inserted);
+  }
+
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {
@@ -3006,8 +3014,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 /// split up into scalar instructions during legalization, and the vector
 /// extending instructions are selected in performVectorExtendCombine below.
 static SDValue
-performVectorExtendToFPCombine(SDNode *N,
-                               TargetLowering::DAGCombinerInfo &DCI) {
+performVectorExtendToFPCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const WebAssemblySubtarget *Subtarget) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::UINT_TO_FP ||
          N->getOpcode() == ISD::SINT_TO_FP);
@@ -3019,6 +3027,8 @@ performVectorExtendToFPCombine(SDNode *N,
     ExtVT = MVT::v4i32;
   else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
     ExtVT = MVT::v2i32;
+  else if (Subtarget->hasFP16() && ResVT == MVT::v8f16 && InVT == MVT::v8i8)
+    ExtVT = MVT::v8i16;
   else
     return SDValue();
 
@@ -3374,7 +3384,7 @@ static SDValue performBitcastCombine(SDNode *N,
   EVT SrcVT = Src.getValueType();
 
   if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
+        SrcVT.isFixedLengthVectorOf(MVT::i1)))
     return SDValue();
 
   unsigned NumElts = SrcVT.getVectorNumElements();
@@ -3535,27 +3545,108 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-template <int MatchRHS, ISD::CondCode MatchCond, bool RequiresNegate,
-          Intrinsic::ID Intrin>
-static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Cond = N->getOperand(2);
-  if (MatchCond != cast<CondCodeSDNode>(Cond)->get())
-    return SDValue();
+struct MaskReduceInfo {
+  Intrinsic::ID IID;
+  unsigned WideCombineOpcode;
+  bool Invert;
+};
 
-  if (MatchRHS != cast<ConstantSDNode>(RHS)->getSExtValue())
-    return SDValue();
+static SDValue combineSmallMaskReduction(SDNode *N, EVT FromVT,
+                                         unsigned NumElts,
+                                         const MaskReduceInfo &Info,
+                                         SelectionDAG &DAG) {
+  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
+                                             MVT::getIntegerVT(128 / NumElts));
+  assert(VecVT.getSizeInBits() == 128 &&
+         "mask reduction should be widened to a 128-bit vector");
 
   SDLoc DL(N);
-  SDValue Ret =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                  {DAG.getConstant(Intrin, DL, MVT::i32),
-                   DAG.getSExtOrTrunc(LHS->getOperand(0), DL, VecVT)});
-  if (RequiresNegate)
+  SDValue Mask = N->getOperand(0)->getOperand(0);
+  SDValue Ret = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                            {DAG.getConstant(Info.IID, DL, MVT::i32),
+                             DAG.getSExtOrTrunc(Mask, DL, VecVT)});
+  if (Info.Invert)
     Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
                       DAG.getConstant(1, DL, MVT::i32));
   return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+}
+
+static SDValue combineWideMaskReduction(SDNode *N, SDValue Mask, EVT MaskVT,
+                                        unsigned NumElts,
+                                        const MaskReduceInfo &Info,
+                                        SelectionDAG &DAG) {
+  assert((NumElts == 32 || NumElts == 64) &&
+         "combineWideMaskReduction is only for wide masks");
+  assert(MaskVT.isFixedLengthVector() &&
+         MaskVT.getVectorElementType() == MVT::i1);
+  SDLoc DL(N);
+  unsigned ChunkElts = 16;
+  EVT ChunkMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                     ElementCount::getFixed(ChunkElts));
+  EVT LegalVecVT = ChunkMaskVT.changeVectorElementType(
+      *DAG.getContext(), MVT::getIntegerVT(128 / ChunkElts));
+
+  SmallVector<SDValue, 4> ChunkResults;
+  // Split the wide mask into v16i1 chunks and reduce each chunk separately.
+  // For example:
+  //   v32i1:  [0..15] [16..31]
+  //              |       |
+  //              v       v
+  //            chunk0  chunk1
+  //
+  //   v64i1:  [0..15] [16..31] [32..47] [48..63]
+  //              |       |       |       |
+  //              v       v       v       v
+  //            chunk0  chunk1  chunk2  chunk3
+  //
+  //   each chunk:
+  //     v16i1 -> v16i8 -> wasm_anytrue/alltrue -> i32 0/1
+  for (unsigned I = 0; I < NumElts; I += ChunkElts) {
+    SDValue ChunkMask = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ChunkMaskVT,
+                                    Mask, DAG.getVectorIdxConstant(I, DL));
+    SDValue LegalMask = DAG.getSExtOrTrunc(ChunkMask, DL, LegalVecVT);
+    SDValue Reduced =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    DAG.getConstant(Info.IID, DL, MVT::i32), LegalMask);
+    ChunkResults.push_back(Reduced);
+  }
+
+  SDValue Acc = ChunkResults[0];
+  for (unsigned I = 1; I < ChunkResults.size(); ++I)
+    Acc =
+        DAG.getNode(Info.WideCombineOpcode, DL, MVT::i32, Acc, ChunkResults[I]);
+
+  if (Info.Invert)
+    Acc = DAG.getNode(ISD::XOR, DL, MVT::i32, Acc,
+                      DAG.getConstant(1, DL, MVT::i32));
+
+  return DAG.getZExtOrTrunc(Acc, DL, N->getValueType(0));
+}
+
+static std::optional<MaskReduceInfo> classifyMaskReduction(SDNode *N) {
+  auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!C)
+    return std::nullopt;
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  // setcc (bitcast mask), 0, ne  -> any_true(mask)
+  if (C->isZero() && CC == ISD::SETNE)
+    return MaskReduceInfo{Intrinsic::wasm_anytrue, ISD::OR, false};
+
+  // setcc (bitcast mask), 0, eq  -> !any_true(mask)
+  if (C->isZero() && CC == ISD::SETEQ)
+    return MaskReduceInfo{Intrinsic::wasm_anytrue, ISD::OR, true};
+
+  // setcc (bitcast mask), -1, eq -> all_true(mask)
+  if (C->isAllOnes() && CC == ISD::SETEQ)
+    return MaskReduceInfo{Intrinsic::wasm_alltrue, ISD::AND, false};
+
+  // setcc (bitcast mask), -1, ne -> !all_true(mask)
+  if (C->isAllOnes() && CC == ISD::SETNE)
+    return MaskReduceInfo{Intrinsic::wasm_alltrue, ISD::AND, true};
+
+  return std::nullopt;
 }
 
 /// Try to convert a i128 comparison to a v16i8 comparison before type
@@ -3623,43 +3714,22 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   EVT FromVT = LHS->getOperand(0).getValueType();
-  if (!FromVT.isFixedLengthVector() || FromVT.getVectorElementType() != MVT::i1)
+  if (!FromVT.isFixedLengthVectorOf(MVT::i1))
     return SDValue();
 
   unsigned NumElts = FromVT.getVectorNumElements();
-  if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-    return SDValue();
-
-  if (!cast<ConstantSDNode>(N->getOperand(1)))
+  auto Info = classifyMaskReduction(N);
+  if (!Info)
     return SDValue();
 
   auto &DAG = DCI.DAG;
-  EVT VecVT = FromVT.changeVectorElementType(*DAG.getContext(),
-                                             MVT::getIntegerVT(128 / NumElts));
-  // setcc (iN (bitcast (vNi1 X))), 0, ne
-  //   ==> any_true (vNi1 X)
-  if (auto Match = TryMatchTrue<0, ISD::SETNE, false, Intrinsic::wasm_anytrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), 0, eq
-  //   ==> xor (any_true (vNi1 X)), -1
-  if (auto Match = TryMatchTrue<0, ISD::SETEQ, true, Intrinsic::wasm_anytrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), -1, eq
-  //   ==> all_true (vNi1 X)
-  if (auto Match = TryMatchTrue<-1, ISD::SETEQ, false, Intrinsic::wasm_alltrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
-  // setcc (iN (bitcast (vNi1 X))), -1, ne
-  //   ==> xor (all_true (vNi1 X)), -1
-  if (auto Match = TryMatchTrue<-1, ISD::SETNE, true, Intrinsic::wasm_alltrue>(
-          N, VecVT, DAG)) {
-    return Match;
-  }
+  if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16)
+    return combineSmallMaskReduction(N, FromVT, NumElts, *Info, DAG);
+
+  if (NumElts == 32 || NumElts == 64)
+    return combineWideMaskReduction(N, LHS.getOperand(0), FromVT, NumElts,
+                                    *Info, DAG);
+
   return SDValue();
 }
 
@@ -3935,6 +4005,28 @@ static SDValue performShiftCombine(SDNode *N,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MulLo, MulHi);
 }
 
+static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getValueType(0) != MVT::f128)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  switch (N->getOpcode()) {
+  // wasi-libc and emscripten do not currently define fminimuml and fmaximuml.
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return TLI.expandFMINIMUM_FMAXIMUM(N, DAG);
+
+  // wasi-libc and emscripten do not currently define fminimum_numl and
+  // fmaximum_numl.
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return TLI.expandFMINIMUMNUM_FMAXIMUMNUM(N, DAG);
+
+  default:
+    return SDValue();
+  }
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3951,11 +4043,11 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
   case ISD::UINT_TO_FP:
-    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI))
+    if (auto ExtCombine = performVectorExtendToFPCombine(N, DCI, Subtarget))
       return ExtCombine;
     return performVectorNonNegToFPCombine(N, DCI);
   case ISD::SINT_TO_FP:
-    return performVectorExtendToFPCombine(N, DCI);
+    return performVectorExtendToFPCombine(N, DCI, Subtarget);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::FP_ROUND:
@@ -3975,5 +4067,10 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DCI);
   case ISD::SHL:
     return performShiftCombine(N, DCI);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return performMinMaxF128Combine(N, DCI.DAG);
   }
 }

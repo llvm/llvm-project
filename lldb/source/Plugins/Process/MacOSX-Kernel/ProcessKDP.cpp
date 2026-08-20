@@ -577,8 +577,9 @@ bool ProcessKDP::IsAlive() {
 }
 
 // Process Memory
-size_t ProcessKDP::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                Status &error) {
+size_t ProcessKDP::DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                                size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   uint8_t *data_buffer = (uint8_t *)buf;
   if (m_comm.IsConnected()) {
     const size_t max_read_size = 512;
@@ -633,7 +634,7 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (!IsBreakpointSiteEnabled(*bp_site)) {
+    if (!IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       if (m_comm.SendRequestBreakpoint(true, bp_site->GetLoadAddress())) {
         SetBreakpointSiteEnabled(*bp_site);
         bp_site->SetType(BreakpointSite::eExternal);
@@ -649,7 +650,7 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (IsBreakpointSiteEnabled(*bp_site)) {
+    if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       BreakpointSite::Type bp_type = bp_site->GetType();
       if (bp_type == BreakpointSite::eExternal) {
         if (m_destroy_in_process && m_comm.IsRunning()) {

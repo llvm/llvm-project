@@ -984,6 +984,10 @@ struct OperationState {
   Attribute propertiesAttr;
 
 private:
+  /// The deleter and setter are non-null whenever `properties` is, and are
+  /// only called after checking it. Coverity misses this invariant and flags
+  /// the empty `function_ref`s as uninitialized.
+  // coverity[uninit_member]
   PropertyRef properties;
   llvm::function_ref<void(PropertyRef)> propertiesDeleter;
   llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;
@@ -1451,14 +1455,6 @@ private:
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::OperationName> {
-  static mlir::OperationName getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::OperationName::getFromOpaquePointer(pointer);
-  }
-  static mlir::OperationName getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::OperationName::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::OperationName val) {
     return DenseMapInfo<void *>::getHashValue(val.getAsOpaquePointer());
   }
@@ -1469,14 +1465,6 @@ struct DenseMapInfo<mlir::OperationName> {
 template <>
 struct DenseMapInfo<mlir::RegisteredOperationName>
     : public DenseMapInfo<mlir::OperationName> {
-  static mlir::RegisteredOperationName getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
-  }
-  static mlir::RegisteredOperationName getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::RegisteredOperationName::getFromOpaquePointer(pointer);
-  }
 };
 
 template <>

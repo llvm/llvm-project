@@ -28,11 +28,15 @@ enum PartialMappingIdx {
   PMI_None = -1,
   PMI_I32 = 1,
   PMI_I64,
+  PMI_F32,
+  PMI_F64,
   PMI_Min = PMI_I32,
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
-                                                      {0, 64, I64RegBank}};
+                                                      {0, 64, I64RegBank},
+                                                      {0, 32, F32RegBank},
+                                                      {0, 64, F64RegBank}};
 
 } // namespace WebAssembly
 } // namespace llvm
@@ -78,6 +82,12 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
       } else if (OpSize[Idx] == 64) {
         OpRegBankIdx[Idx] = WebAssembly::PMI_I64;
+      }
+    } else if (Ty.isFloatIEEE()) {
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F64;
       }
     }
   }

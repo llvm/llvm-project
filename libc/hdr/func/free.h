@@ -11,7 +11,11 @@
 
 #ifdef LIBC_FULL_BUILD
 
-extern "C" void free(void *) noexcept;
+#include "include/__llvm-libc-common.h"
+
+__BEGIN_C_DECLS
+void free(void *) __NOEXCEPT;
+__END_C_DECLS
 
 #else // Overlay mode
 

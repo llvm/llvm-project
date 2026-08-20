@@ -52,6 +52,11 @@ public:
   const ARMSubtarget *getSubtargetImpl() const = delete;
   bool isLittleEndian() const { return isLittle; }
 
+  /// Returns the floating-point ABI in effect for \p M: the "float-abi" module
+  /// flag if present, otherwise the ABI implied by the target triple. An
+  /// explicit -target-abi=aapcs16 forces the hard-float ABI.
+  FloatABI::ABIType getFloatABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -76,16 +81,6 @@ public:
   bool isAAPCS16_ABI() const {
     assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
     return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };

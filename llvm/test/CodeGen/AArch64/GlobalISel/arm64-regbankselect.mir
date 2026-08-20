@@ -124,9 +124,9 @@ body: |
   bb.0.entry:
     liveins: $x0
     ; CHECK-LABEL: name: defaultMapping
-    ; CHECK:      %1:gpr(s32) = G_ADD %0
-    %0(s32) = COPY $w0
-    %1(s32) = G_ADD %0, %0
+    ; CHECK:      %1:gpr(i32) = G_ADD %0
+    %0(i32) = COPY $w0
+    %1(i32) = G_ADD %0, %0
 ...
 
 ---
@@ -142,10 +142,10 @@ body: |
   bb.0.entry:
     liveins: $d0
     ; CHECK-LABEL: name: defaultMappingVector
-    ; CHECK:      %0:fpr(<2 x s32>) = COPY $d0
-    ; CHECK:      %1:fpr(<2 x s32>) = G_ADD %0
-    %0(<2 x s32>) = COPY $d0
-    %1(<2 x s32>) = G_ADD %0, %0
+    ; CHECK:      %0:fpr(<2 x i32>) = COPY $d0
+    ; CHECK:      %1:fpr(<2 x i32>) = G_ADD %0
+    %0(<2 x i32>) = COPY $d0
+    %1(<2 x i32>) = G_ADD %0, %0
 ...
 
 ---
@@ -162,13 +162,13 @@ body: |
   bb.0.entry:
     liveins: $s0, $x0
     ; CHECK-LABEL: name: defaultMapping1Repair
-    ; CHECK:           %0:fpr(s32) = COPY $s0
-    ; CHECK-NEXT:      %1:gpr(s32) = COPY $w0
+    ; CHECK:           %0:fpr(i32) = COPY $s0
+    ; CHECK-NEXT:      %1:gpr(i32) = COPY $w0
     ; CHECK-NEXT:      %3:gpr(i32) = COPY %0
-    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %3, %1
-    %0(s32) = COPY $s0
-    %1(s32) = COPY $w0
-    %2(s32) = G_ADD %0, %1
+    ; CHECK-NEXT:      %2:gpr(i32) = G_ADD %3, %1
+    %0(i32) = COPY $s0
+    %1(i32) = COPY $w0
+    %2(i32) = G_ADD %0, %1
 ...
 
 # Check that we repair the assignment for %0 differently for both uses.
@@ -181,12 +181,12 @@ body: |
   bb.0.entry:
     liveins: $s0, $x0
     ; CHECK-LABEL: name: defaultMapping2Repairs
-    ; CHECK:           %0:fpr(s32) = COPY $s0
+    ; CHECK:           %0:fpr(i32) = COPY $s0
     ; CHECK-NEXT:      %2:gpr(i32) = COPY %0
     ; CHECK-NEXT:      %3:gpr(i32) = COPY %0
-    ; CHECK-NEXT:      %1:gpr(s32) = G_ADD %2, %3
-    %0(s32) = COPY $s0
-    %1(s32) = G_ADD %0, %0
+    ; CHECK-NEXT:      %1:gpr(i32) = G_ADD %2, %3
+    %0(i32) = COPY $s0
+    %1(i32) = G_ADD %0, %0
 ...
 
 ---
@@ -203,11 +203,11 @@ body: |
   bb.0.entry:
     liveins: $w0
     ; CHECK-LABEL: name: defaultMappingDefRepair
-    ; CHECK:           %0:gpr(s32) = COPY $w0
+    ; CHECK:           %0:gpr(i32) = COPY $w0
     ; CHECK-NEXT:      %2:gpr(i32) = G_ADD %0, %0
-    ; CHECK-NEXT:      %1:fpr(s32) = COPY %2
-    %0(s32) = COPY $w0
-    %1(s32) = G_ADD %0, %0
+    ; CHECK-NEXT:      %1:fpr(i32) = COPY %2
+    %0(i32) = COPY $w0
+    %1(i32) = G_ADD %0, %0
 ...
 
 ---
@@ -233,19 +233,19 @@ body: |
     successors: %bb.2.end, %bb.1.then
     liveins: $x0, $x1, $w2
 
-    %0 = LDRWui killed $x0, 0 :: (load (s32) from %ir.src)
-    %5(s32) = COPY %0
+    %0 = LDRWui killed $x0, 0 :: (load (i32) from %ir.src)
+    %5(i32) = COPY %0
     %1(p0) = COPY $x1
     %2 = COPY $w2
     TBNZW killed %2, 0, %bb.2.end
 
   bb.1.then:
     successors: %bb.2.end
-    %3(s32) = G_ADD %5, %5
+    %3(i32) = G_ADD %5, %5
 
   bb.2.end:
-    %4(s32) = PHI %0, %bb.0.entry, %3, %bb.1.then
-    G_STORE killed %4, killed %1 :: (store (s32) into %ir.dst)
+    %4(i32) = PHI %0, %bb.0.entry, %3, %bb.1.then
+    G_STORE killed %4, killed %1 :: (store (i32) into %ir.dst)
     RET_ReallyLR
 ...
 
@@ -261,13 +261,13 @@ body: |
   bb.0.entry:
     liveins: $w0, $s0
     ; CHECK-LABEL: name: defaultMappingUseRepairPhysReg
-    ; CHECK:           %0:gpr(s32) = COPY $w0
-    ; CHECK-NEXT:      %1:fpr(s32) = COPY $s0
+    ; CHECK:           %0:gpr(i32) = COPY $w0
+    ; CHECK-NEXT:      %1:fpr(i32) = COPY $s0
     ; CHECK-NEXT:      %3:gpr(i32) = COPY %1
-    ; CHECK-NEXT:      %2:gpr(s32) = G_ADD %0, %3
-    %0(s32) = COPY $w0
-    %1(s32) = COPY $s0
-    %2(s32) = G_ADD %0, %1
+    ; CHECK-NEXT:      %2:gpr(i32) = G_ADD %0, %3
+    %0(i32) = COPY $w0
+    %1(i32) = COPY $s0
+    %2(i32) = G_ADD %0, %1
 ...
 
 ---
@@ -281,11 +281,11 @@ body: |
   bb.0.entry:
     liveins: $w0
     ; CHECK-LABEL: name: defaultMappingDefRepairPhysReg
-    ; CHECK:           %0:gpr(s32) = COPY $w0
-    ; CHECK-NEXT:      %1:gpr(s32) = G_ADD %0, %0
+    ; CHECK:           %0:gpr(i32) = COPY $w0
+    ; CHECK-NEXT:      %1:gpr(i32) = G_ADD %0, %0
     ; CHECK-NEXT:      $s0 = COPY %1
-    %0(s32) = COPY $w0
-    %1(s32) = G_ADD %0, %0
+    %0(i32) = COPY $w0
+    %1(i32) = G_ADD %0, %0
     $s0 = COPY %1
 ...
 
@@ -301,22 +301,22 @@ registers:
 body: |
   bb.0.entry:
     liveins: $x0, $x1
-    ; CHECK: %0:gpr(<2 x s32>) = COPY $x0
-    ; CHECK-NEXT: %1:gpr(<2 x s32>) = COPY $x1
+    ; CHECK: %0:gpr(<2 x i32>) = COPY $x0
+    ; CHECK-NEXT: %1:gpr(<2 x i32>) = COPY $x1
 
     ; Fast mode tries to reuse the source of the copy for the destination.
     ; Now, the default mapping says that %0 and %1 need to be in FPR.
     ; The repairing code insert two copies to materialize that.
-    ; FAST-NEXT: %3:fpr(<2 x s32>) = COPY %0
-    ; FAST-NEXT: %4:fpr(<2 x s32>) = COPY %1
+    ; FAST-NEXT: %3:fpr(<2 x i32>) = COPY %0
+    ; FAST-NEXT: %4:fpr(<2 x i32>) = COPY %1
     ; The mapping of G_OR is on FPR.
-    ; FAST-NEXT: %2:fpr(<2 x s32>) = G_OR %3, %4
+    ; FAST-NEXT: %2:fpr(<2 x i32>) = G_OR %3, %4
 
     ; Greedy mode remapped the instruction on the GPR bank.
-    ; GREEDY-NEXT: %2:gpr(<2 x s32>) = G_OR %0, %1
-    %0(<2 x s32>) = COPY $x0
-    %1(<2 x s32>) = COPY $x1
-    %2(<2 x s32>) = G_OR %0, %1
+    ; GREEDY-NEXT: %2:gpr(<2 x i32>) = G_OR %0, %1
+    %0(<2 x i32>) = COPY $x0
+    %1(<2 x i32>) = COPY $x1
+    %2(<2 x i32>) = G_OR %0, %1
 ...
 
 ---
@@ -334,24 +334,24 @@ body: |
     liveins: $x0, $x1
     ; CHECK-LABEL: name: greedyMappingOrWithConstraints
 
-    ; CHECK: %0:gpr(<2 x s32>) = COPY $x0
-    ; CHECK-NEXT: %1:gpr(<2 x s32>) = COPY $x1
+    ; CHECK: %0:gpr(<2 x i32>) = COPY $x0
+    ; CHECK-NEXT: %1:gpr(<2 x i32>) = COPY $x1
 
     ; Fast mode tries to reuse the source of the copy for the destination.
     ; Now, the default mapping says that %0 and %1 need to be in FPR.
     ; The repairing code insert two copies to materialize that.
-    ; FAST-NEXT: %3:fpr(<2 x s32>) = COPY %0
-    ; FAST-NEXT: %4:fpr(<2 x s32>) = COPY %1
+    ; FAST-NEXT: %3:fpr(<2 x i32>) = COPY %0
+    ; FAST-NEXT: %4:fpr(<2 x i32>) = COPY %1
     ; The mapping of G_OR is on FPR.
-    ; FAST-NEXT: %2:fpr(<2 x s32>) = G_OR %3, %4
+    ; FAST-NEXT: %2:fpr(<2 x i32>) = G_OR %3, %4
 
     ; Greedy mode remapped the instruction on the GPR bank.
-    ; GREEDY-NEXT: %3:gpr(<2 x s32>) = G_OR %0, %1
+    ; GREEDY-NEXT: %3:gpr(<2 x i32>) = G_OR %0, %1
     ; We need to keep %2 into FPR because we do not know anything about it.
-    ; GREEDY-NEXT: %2:fpr(<2 x s32>) = COPY %3
-    %0(<2 x s32>) = COPY $x0
-    %1(<2 x s32>) = COPY $x1
-    %2(<2 x s32>) = G_OR %0, %1
+    ; GREEDY-NEXT: %2:fpr(<2 x i32>) = COPY %3
+    %0(<2 x i32>) = COPY $x0
+    %1(<2 x i32>) = COPY $x1
+    %2(<2 x i32>) = G_OR %0, %1
 ...
 
 ---
@@ -404,15 +404,15 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:      %0:gpr(s32) = COPY $w0
-# CHECK-NEXT: %1:gpr(<4 x s8>) = G_BITCAST %0
+# CHECK:      %0:gpr(i32) = COPY $w0
+# CHECK-NEXT: %1:gpr(<4 x i8>) = G_BITCAST %0
 # The greedy check is incorrect and should produce fpr.
 body:             |
   bb.0:
     liveins: $w0
 
-    %0(s32) = COPY $w0
-    %1(<4 x s8>) = G_BITCAST %0
+    %0(i32) = COPY $w0
+    %1(<4 x i8>) = G_BITCAST %0
 ...
 
 ---
@@ -428,14 +428,14 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0:fpr(<2 x s16>) = COPY $s0
-# CHECK:    %1:fpr(s32) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x i16>) = COPY $s0
+# CHECK:    %1:fpr(i32) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $s0
 
-    %0(<2 x s16>) = COPY $s0
-    %1(s32) = G_BITCAST %0
+    %0(<2 x i16>) = COPY $s0
+    %1(i32) = G_BITCAST %0
 ...
 
 ---
@@ -451,14 +451,14 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0:gpr(s32) = COPY $w0
-# CHECK:    %1:gpr(<2 x s16>) = G_BITCAST %0
+# CHECK:    %0:gpr(i32) = COPY $w0
+# CHECK:    %1:gpr(<2 x i16>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $w0
 
-    %0(s32) = COPY $w0
-    %1(<2 x s16>) = G_BITCAST %0
+    %0(i32) = COPY $w0
+    %1(<2 x i16>) = G_BITCAST %0
 ...
 
 ---
@@ -469,14 +469,14 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0:fpr(<2 x s16>) = COPY $s0
-# CHECK:    %1:fpr(s32) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x i16>) = COPY $s0
+# CHECK:    %1:fpr(i32) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $s0
 
-    %0(<2 x s16>) = COPY $s0
-    %1(s32) = G_BITCAST %0
+    %0(<2 x i16>) = COPY $s0
+    %1(i32) = G_BITCAST %0
 ...
 
 ---
@@ -487,14 +487,14 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0:gpr(s64) = COPY $x0
-# CHECK:    %1:gpr(<2 x s32>) = G_BITCAST %0
+# CHECK:    %0:gpr(i64) = COPY $x0
+# CHECK:    %1:gpr(<2 x i32>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $x0
 
-    %0(s64) = COPY $x0
-    %1(<2 x s32>) = G_BITCAST %0
+    %0(i64) = COPY $x0
+    %1(<2 x i32>) = G_BITCAST %0
 ...
 
 ---
@@ -505,14 +505,14 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0:fpr(<2 x s32>) = COPY $d0
-# CHECK:    %1:fpr(s64) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x i32>) = COPY $d0
+# CHECK:    %1:fpr(i64) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $d0
 
-    %0(<2 x s32>) = COPY $d0
-    %1(s64) = G_BITCAST %0
+    %0(<2 x i32>) = COPY $d0
+    %1(i64) = G_BITCAST %0
 ...
 
 ---
@@ -523,14 +523,14 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0:gpr(s64) = COPY $x0
-# CHECK:    %1:gpr(<2 x s32>) = G_BITCAST %0
+# CHECK:    %0:gpr(i64) = COPY $x0
+# CHECK:    %1:gpr(<2 x i32>) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $x0
 
-    %0(s64) = COPY $x0
-    %1(<2 x s32>) = G_BITCAST %0
+    %0(i64) = COPY $x0
+    %1(<2 x i32>) = G_BITCAST %0
 ...
 
 ---
@@ -541,14 +541,14 @@ registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
 # CHECK:  body:
-# CHECK:    %0:fpr(<2 x s32>) = COPY $d0
-# CHECK:    %1:fpr(s64) = G_BITCAST %0
+# CHECK:    %0:fpr(<2 x i32>) = COPY $d0
+# CHECK:    %1:fpr(i64) = G_BITCAST %0
 body:             |
   bb.0:
     liveins: $d0
 
-    %0(<2 x s32>) = COPY $d0
-    %1(s64) = G_BITCAST %0
+    %0(<2 x i32>) = COPY $d0
+    %1(i64) = G_BITCAST %0
 ...
 
 ---
@@ -561,16 +561,16 @@ registers:
   - { id: 1, class: _}
   - { id: 2, class: _}
   - { id: 3, class: _}
-# CHECK: %3:fpr(s128) = G_MERGE_VALUES
-# CHECK: %2:fpr(<2 x s64>) = G_BITCAST %3(s128)
+# CHECK: %3:fpr(i128) = G_MERGE_VALUES
+# CHECK: %2:fpr(<2 x i64>) = G_BITCAST %3(i128)
 body:             |
   bb.1:
     liveins: $x0, $x1
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %3(s128) = G_MERGE_VALUES %0(s64), %1(s64)
-    %2(<2 x s64>) = G_BITCAST %3(s128)
-    $q0 = COPY %2(<2 x s64>)
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %3(i128) = G_MERGE_VALUES %0(i64), %1(i64)
+    %2(<2 x i64>) = G_BITCAST %3(i128)
+    $q0 = COPY %2(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -589,18 +589,18 @@ registers:
   - { id: 2, class: _}
   - { id: 3, class: _}
   - { id: 4, class: _}
-# CHECK: %3:fpr(s128) = G_MERGE_VALUES
-# CHECK: %4:fpr(s128) = COPY %3(s128)
-# CHECK-NEXT: %2:fpr(<2 x s64>) = G_BITCAST %4(s128)
+# CHECK: %3:fpr(i128) = G_MERGE_VALUES
+# CHECK: %4:fpr(i128) = COPY %3(i128)
+# CHECK-NEXT: %2:fpr(<2 x i64>) = G_BITCAST %4(i128)
 body:             |
   bb.1:
     liveins: $x0, $x1
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %3(s128) = G_MERGE_VALUES %0(s64), %1(s64)
-    %4(s128) = COPY %3(s128)
-    %2(<2 x s64>) = G_BITCAST %4(s128)
-    $q0 = COPY %2(<2 x s64>)
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %3(i128) = G_MERGE_VALUES %0(i64), %1(i64)
+    %4(i128) = COPY %3(i128)
+    %2(<2 x i64>) = G_BITCAST %4(i128)
+    $q0 = COPY %2(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -623,13 +623,13 @@ registers:
 # CHECK: registers:
 # CHECK:  - { id: 0, class: fpr128, preferred-register: '', flags: [  ] }
 # CHECK:  - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
-# CHECK: %1:fpr(s128) = COPY %0
+# CHECK: %1:fpr(i128) = COPY %0
 body:             |
   bb.1:
     liveins: $x0
     %0 = LDRQui killed $x0, 0
-    %1(s128) = COPY %0
-    $q0 = COPY %1(s128)
+    %1(i128) = COPY %0
+    $q0 = COPY %1(i128)
     RET_ReallyLR implicit $q0
 
 ...
@@ -650,14 +650,14 @@ registers:
 # CHECK: registers:
 # CHECK:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
-# CHECK: %0:gpr(s32) = COPY $w0
-# CHECK-NEXT: %1:gpr(s16) = G_TRUNC %0(s32)
+# CHECK: %0:gpr(i32) = COPY $w0
+# CHECK-NEXT: %1:gpr(i16) = G_TRUNC %0(i32)
 body:             |
   bb.1:
     liveins: $w0
-    %0(s32) = COPY $w0
-    %1(s16) = G_TRUNC %0(s32)
-    $h0 = COPY %1(s16)
+    %0(i32) = COPY $w0
+    %1(i16) = G_TRUNC %0(i32)
+    $h0 = COPY %1(i16)
     RET_ReallyLR implicit $h0
 
 ...
@@ -678,30 +678,30 @@ registers:
   - { id: 4, class: _ }
   - { id: 5, class: _ }
 # No repairing should be necessary for both modes.
-# CHECK:         %0:gpr(s64) = COPY $x0
+# CHECK:         %0:gpr(i64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
-# FAST-NEXT:     %2:gpr(<2 x s32>) = G_BITCAST %0(s64)
-# FAST-NEXT:     %3:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
-# FAST-NEXT:     %6:fpr(<2 x s32>) = COPY %2
-# FAST-NEXT:     %4:fpr(<2 x s32>) = G_OR %6, %3
-# FAST-NEXT:     %5:fpr(s64) = G_BITCAST %4(<2 x s32>)
-# GREEDY-NEXT:   %2:gpr(<2 x s32>) = G_BITCAST %0(s64)
-# GREEDY-NEXT:   %3:gpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
-# GREEDY-NEXT:   %4:gpr(<2 x s32>) = G_OR %2, %3
-# GREEDY-NEXT:   %5:gpr(s64) = G_BITCAST %4(<2 x s32>)
-# CHECK-NEXT:    $x0 = COPY %5(s64)
+# FAST-NEXT:     %2:gpr(<2 x i32>) = G_BITCAST %0(i64)
+# FAST-NEXT:     %3:fpr(<2 x i32>) = G_LOAD %1(p0) :: (load (<2 x i32>) from %ir.addr)
+# FAST-NEXT:     %6:fpr(<2 x i32>) = COPY %2
+# FAST-NEXT:     %4:fpr(<2 x i32>) = G_OR %6, %3
+# FAST-NEXT:     %5:fpr(i64) = G_BITCAST %4(<2 x i32>)
+# GREEDY-NEXT:   %2:gpr(<2 x i32>) = G_BITCAST %0(i64)
+# GREEDY-NEXT:   %3:gpr(<2 x i32>) = G_LOAD %1(p0) :: (load (<2 x i32>) from %ir.addr)
+# GREEDY-NEXT:   %4:gpr(<2 x i32>) = G_OR %2, %3
+# GREEDY-NEXT:   %5:gpr(i64) = G_BITCAST %4(<2 x i32>)
+# CHECK-NEXT:    $x0 = COPY %5(i64)
 # CHECK-NEXT:    RET_ReallyLR implicit $x0
 body:             |
   bb.0:
     liveins: $x0, $x1
 
-    %0(s64) = COPY $x0
+    %0(i64) = COPY $x0
     %1(p0) = COPY $x1
-    %2(<2 x s32>) = G_BITCAST %0(s64)
-    %3(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
-    %4(<2 x s32>) = G_OR %2, %3
-    %5(s64) = G_BITCAST %4(<2 x s32>)
-    $x0 = COPY %5(s64)
+    %2(<2 x i32>) = G_BITCAST %0(i64)
+    %3(<2 x i32>) = G_LOAD %1(p0) :: (load (<2 x i32>) from %ir.addr)
+    %4(<2 x i32>) = G_OR %2, %3
+    %5(i64) = G_BITCAST %4(<2 x i32>)
+    $x0 = COPY %5(i64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -726,24 +726,24 @@ registers:
   - { id: 3, class: _ }
 
 # No repairing should be necessary for both modes.
-# CHECK:         %0:gpr(s64) = COPY $x0
+# CHECK:         %0:gpr(f64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
-# CHECK-NEXT:    %2:fpr(s64) = G_LOAD %1(p0) :: (load (s64) from %ir.addr)
+# CHECK-NEXT:    %2:fpr(f64) = G_LOAD %1(p0) :: (load (f64) from %ir.addr)
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %4:fpr(i64) = COPY %0
-# CHECK-NEXT:    %3:fpr(s64) = G_FADD %4, %2
-# CHECK-NEXT:    $x0 = COPY %3(s64)
+# CHECK-NEXT:    %4:fpr(f64) = COPY %0
+# CHECK-NEXT:    %3:fpr(f64) = G_FADD %4, %2
+# CHECK-NEXT:    $x0 = COPY %3(f64)
 # CHECK-NEXT:    RET_ReallyLR implicit $x0
 
 body:             |
   bb.0:
     liveins: $x0, $x1
 
-    %0(s64) = COPY $x0
+    %0(f64) = COPY $x0
     %1(p0) = COPY $x1
-    %2(s64) = G_LOAD %1(p0) :: (load (s64) from %ir.addr)
-    %3(s64) = G_FADD %0, %2
-    $x0 = COPY %3(s64)
+    %2(f64) = G_LOAD %1(p0) :: (load (f64) from %ir.addr)
+    %3(f64) = G_FADD %0, %2
+    $x0 = COPY %3(f64)
     RET_ReallyLR implicit $x0
 
 ...
@@ -766,23 +766,23 @@ registers:
   - { id: 1, class: _ }
   - { id: 2, class: _ }
 
-# CHECK:         %0:gpr(s64) = COPY $x0
+# CHECK:         %0:gpr(f64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(i64) = COPY %0
-# CHECK-NEXT:    %4:fpr(i64) = COPY %0
-# CHECK-NEXT:    %2:fpr(s64) = G_FADD %3, %4
-# CHECK-NEXT:    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.addr)
+# CHECK-NEXT:    %3:fpr(f64) = COPY %0
+# CHECK-NEXT:    %4:fpr(f64) = COPY %0
+# CHECK-NEXT:    %2:fpr(f64) = G_FADD %3, %4
+# CHECK-NEXT:    G_STORE %2(f64), %1(p0) :: (store (f64) into %ir.addr)
 # CHECK-NEXT:    RET_ReallyLR
 
 body:             |
   bb.0:
     liveins: $x0, $x1
 
-    %0(s64) = COPY $x0
+    %0(f64) = COPY $x0
     %1(p0) = COPY $x1
-    %2(s64) = G_FADD %0, %0
-    G_STORE %2(s64), %1(p0) :: (store (s64) into %ir.addr)
+    %2(f64) = G_FADD %0, %0
+    G_STORE %2(f64), %1(p0) :: (store (f64) into %ir.addr)
     RET_ReallyLR
 
 ...
@@ -797,16 +797,18 @@ legalized:       true
 # CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:   - { id: 2, class: fpr, preferred-register: '', flags: [  ] }
-# CHECK-NEXT:   - { id: 3, class: fpr, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# CHECK:         %1:gpr(s32) = COPY $w0
-# CHECK-NEXT:    %0:gpr(s16) = G_TRUNC %1
+  - { id: 3, class: _ }
+# CHECK:         %1:gpr(i32) = COPY $w0
+# CHECK-NEXT:    %0:gpr(i16) = G_TRUNC %1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(i16) = COPY %0
-# CHECK-NEXT:    %2:fpr(s32) = G_FPEXT %3
+# CHECK-NEXT:    %3:gpr(f16) = G_BITCAST %0
+# CHECK-NEXT:    %4:fpr(f16) = COPY %3
+# CHECK-NEXT:    %2:fpr(f32) = G_FPEXT %4
 # CHECK-NEXT:    $s0 = COPY %2
 # CHECK-NEXT:    RET_ReallyLR
 
@@ -814,10 +816,11 @@ body:             |
   bb.1:
     liveins: $w0
 
-    %1(s32) = COPY $w0
-    %0(s16) = G_TRUNC %1(s32)
-    %2(s32) = G_FPEXT %0(s16)
-    $s0 = COPY %2(s32)
+    %1(i32) = COPY $w0
+    %0(i16) = G_TRUNC %1(i32)
+    %3(f16) = G_BITCAST %0
+    %2(f32) = G_FPEXT %3(f16)
+    $s0 = COPY %2(f32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -832,16 +835,18 @@ legalized:       true
 # CHECK-NEXT:  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK-NEXT:   - { id: 2, class: fpr, preferred-register: '', flags: [  ] }
-# CHECK-NEXT:   - { id: 3, class: fpr, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 3, class: gpr, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
   - { id: 2, class: _ }
-# CHECK:         %1:gpr(s32) = COPY $w0
-# CHECK-NEXT:    %0:gpr(s16) = G_TRUNC %1
+  - { id: 3, class: _ }
+# CHECK:         %1:gpr(i32) = COPY $w0
+# CHECK-NEXT:    %0:gpr(i16) = G_TRUNC %1
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %3:fpr(i16) = COPY %0
-# CHECK-NEXT:    %2:fpr(s64) = G_FPEXT %3
+# CHECK-NEXT:    %3:gpr(f16) = G_BITCAST %0
+# CHECK-NEXT:    %4:fpr(f16) = COPY %3
+# CHECK-NEXT:    %2:fpr(f64) = G_FPEXT %4
 # CHECK-NEXT:    $d0 = COPY %2
 # CHECK-NEXT:    RET_ReallyLR
 
@@ -849,10 +854,11 @@ body:             |
   bb.1:
     liveins: $w0
 
-    %1(s32) = COPY $w0
-    %0(s16) = G_TRUNC %1(s32)
-    %2(s64) = G_FPEXT %0(s16)
-    $d0 = COPY %2(s64)
+    %1(i32) = COPY $w0
+    %0(i16) = G_TRUNC %1(i32)
+    %3(f16) = G_BITCAST %0
+    %2(f64) = G_FPEXT %3(f16)
+    $d0 = COPY %2(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -870,19 +876,19 @@ legalized:       true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
-# CHECK:         %0:gpr(s32) = COPY $w0
+# CHECK:         %0:gpr(f32) = COPY $w0
 # %0 has been mapped to GPR, we need to repair to match FPR.
-# CHECK-NEXT:    %2:fpr(i32) = COPY %0
-# CHECK-NEXT:    %1:fpr(s64) = G_FPEXT %2
+# CHECK-NEXT:    %2:fpr(f32) = COPY %0
+# CHECK-NEXT:    %1:fpr(f64) = G_FPEXT %2
 # CHECK-NEXT:    $d0 = COPY %1
 # CHECK-NEXT:    RET_ReallyLR
 body:             |
   bb.1:
     liveins: $w0
 
-    %0(s32) = COPY $w0
-    %1(s64) = G_FPEXT %0(s32)
-    $d0 = COPY %1(s64)
+    %0(f32) = COPY $w0
+    %1(f64) = G_FPEXT %0(f32)
+    $d0 = COPY %1(f64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -892,8 +898,8 @@ body:             |
 # CHECK-LABEL: name: passFp16
 # CHECK: registers:
 # CHECK:  - { id: 0, class: fpr, preferred-register: '', flags: [  ] }
-# CHECK:  %0:fpr(s16) = COPY $h0
-# CHECK-NEXT: $h0 = COPY %0(s16)
+# CHECK:  %0:fpr(i16) = COPY $h0
+# CHECK-NEXT: $h0 = COPY %0(i16)
 name:            passFp16
 alignment:       4
 legalized:       true
@@ -903,8 +909,8 @@ body:             |
   bb.1.entry:
     liveins: $h0
 
-    %0(s16) = COPY $h0
-    $h0 = COPY %0(s16)
+    %0(i16) = COPY $h0
+    $h0 = COPY %0(i16)
     RET_ReallyLR implicit $h0
 
 ...
@@ -917,17 +923,17 @@ body:             |
 # CHECK:  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK:  - { id: 2, class: fpr, preferred-register: '', flags: [  ] }
 #
-# CHECK:  %0:fpr(s16) = COPY $h0
+# CHECK:  %0:fpr(i16) = COPY $h0
 # CHECK-NEXT: %1:gpr(p0) = G_FRAME_INDEX %stack.0.p.addr
 # If we didn't look through the copy for %0, the default mapping
 # would have been on GPR and we would have to insert a copy to move
 # the value away from FPR (h0).
-# CHECK-NEXT: G_STORE %0(s16), %1(p0) :: (store (s16) into %ir.p.addr)
+# CHECK-NEXT: G_STORE %0(i16), %1(p0) :: (store (i16) into %ir.p.addr)
 # If we didn't look through the copy for %2, the default mapping
 # would have been on GPR and we would have to insert a copy to move
 # the value to FPR (h0).
-# CHECK-NEXT: %2:fpr(s16) = G_LOAD %1(p0) :: (load (s16) from %ir.p.addr)
-# CHECK-NEXT: $h0 = COPY %2(s16)
+# CHECK-NEXT: %2:fpr(i16) = G_LOAD %1(p0) :: (load (i16) from %ir.p.addr)
+# CHECK-NEXT: $h0 = COPY %2(i16)
 name:            passFp16ViaAllocas
 alignment:       4
 legalized:       true
@@ -944,11 +950,11 @@ body:             |
   bb.1.entry:
     liveins: $h0
 
-    %0(s16) = COPY $h0
+    %0(i16) = COPY $h0
     %1(p0) = G_FRAME_INDEX %stack.0.p.addr
-    G_STORE %0(s16), %1(p0) :: (store (s16) into %ir.p.addr)
-    %2(s16) = G_LOAD %1(p0) :: (load (s16) from %ir.p.addr)
-    $h0 = COPY %2(s16)
+    G_STORE %0(i16), %1(p0) :: (store (i16) into %ir.p.addr)
+    %2(i16) = G_LOAD %1(p0) :: (load (i16) from %ir.p.addr)
+    $h0 = COPY %2(i16)
     RET_ReallyLR implicit $h0
 
 ...

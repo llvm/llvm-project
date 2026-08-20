@@ -18,6 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <functional>
 
 #define DEBUG_TYPE "dxil-legalize"
@@ -526,6 +527,9 @@ public:
       for (auto *Inst : reverse(ToRemove))
         Inst->eraseFromParent();
     }
+
+    if (MadeChange)
+      MadeChange |= removeUnreachableBlocks(F);
     return MadeChange;
   }
 

@@ -3,7 +3,7 @@
 func.func @empty_body(%sz : index) {
   // expected-error@+1 {{'gpu.launch' op body region is empty}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
@@ -13,19 +13,33 @@ func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index) -> ()
   return
 }
 
 // -----
 
 func.func @no_region_attrs(%sz : index) {
-  // expected-error@+1 {{unexpected number of region arguments}}
+  // expected-error@+1 {{expected at least 12 region arguments, but got 6}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @not_enough_cluster_region_attrs(%sz : index) {
+  // expected-error@+1 {{expected at least 18 region arguments, but got 12}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz, %sz, %sz, %sz) ({
+  ^bb1(%bx: index, %by: index, %bz: index,
+       %tx: index, %ty: index, %tz: index,
+       %sbx: index, %sby: index, %sbz: index,
+       %stx: index, %sty: index, %stz: index):
+    gpu.terminator
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0>} : (index, index, index, index, index, index, index, index, index) -> ()
   return
 }
 
@@ -82,6 +96,32 @@ func.func @launch_wrong_threads(%sz : index) {
   // expected-error@+1 {{'gpu.launch' threads expects 3 arguments, but got 1}}
   gpu.launch blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
              threads(%tx) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @launch_async_deps_no_token(%dep : !gpu.async.token, %sz : index) {
+  // expected-error@+1 {{'gpu.launch' op dependency operands require the dependency-based async model i.e. returning a token}}
+  "gpu.launch"(%dep, %sz, %sz, %sz, %sz, %sz, %sz) ({
+  ^bb0(%bx: index, %by: index, %bz: index,
+       %tx: index, %ty: index, %tz: index,
+       %nbx: index, %nby: index, %nbz: index,
+       %ntx: index, %nty: index, %ntz: index):
+    gpu.terminator
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0>}
+     : (!gpu.async.token, index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @launch_async_object_and_token(%sz : index, %stream : !llvm.ptr) {
+  // expected-error@+1 {{'gpu.launch' op stream-based and dependency-based async models are mutually exclusive}}
+  %t = gpu.launch <%stream : !llvm.ptr> async blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
     gpu.terminator
   }
   return
@@ -216,6 +256,44 @@ module attributes {gpu.container_module} {
 
   func.func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr) {
     gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    gpu.func @kernel_1() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_async_deps_and_async_object(%sz : index,
+                                                     %stream : !llvm.ptr) {
+    %dep = gpu.wait async
+    // expected-error@+1 {{stream-based and dependency-based async models are mutually exclusive}}
+    %t = gpu.launch_func async [%dep] <%stream : !llvm.ptr> @kernels::@kernel_1
+        blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    gpu.func @kernel_1() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_async_deps_no_token(%dep : !gpu.async.token, %sz : index) {
+    // expected-error@+1 {{'gpu.launch_func' op dependency operands require the dependency-based async model i.e. returning a token}}
+    "gpu.launch_func"(%dep, %sz, %sz, %sz, %sz, %sz, %sz) {
+        kernel = @kernels::@kernel_1,
+        operandSegmentSizes = array<i32: 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0>}
+      : (!gpu.async.token, index, index, index, index, index, index) -> ()
     return
   }
 }
@@ -428,8 +506,8 @@ func.func @subgroup_reduce_zero_cluster_stride(%arg0 : vector<4xf32>) {
 // -----
 
 func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
-  // expected-error@+1 {{cluster stride can only be specified if cluster size is specified}}
-  %res = gpu.subgroup_reduce add %arg0 { cluster_stride = 2 : i32 } : (vector<4xf32>) -> vector<4xf32>
+  // expected-error@+1 {{expected 'size'}}
+  %res = gpu.subgroup_reduce add %arg0 cluster(stride = 2) : (vector<4xf32>) -> vector<4xf32>
   return
 }
 
@@ -736,30 +814,30 @@ func.func @memset_incompatible_shape(%dst : memref<?xf32>, %value : i32) {
 // -----
 
 func.func @mmamatrix_invalid_shape(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType must have exactly two dimensions}}
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16x16xf16, "AOp">
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16x16xf16, "AOp">
     return
 }
 
 // -----
 
 func.func @mmamatrix_operand_type(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{operand expected to be one of AOp, BOp or COp}}
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "EOp">
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "EOp">
     return
 }
 
 // -----
 
 func.func @mmamatrix_invalid_element_type(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64}}
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
     return
 }
 
@@ -768,10 +846,10 @@ func.func @mmamatrix_invalid_element_type(){
 #layout_map_col_major = affine_map<(i, j) -> (j, i)>
 
 func.func @mmaLoadOp_identity_layout(){
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, #layout_map_col_major, 3>
     %i = arith.constant 16 : index
     // expected-error @+1 {{expected source memref most minor dim must have unit stride}}
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, #layout_map_col_major, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] leadDimension 32 : memref<32x32xf16, #layout_map_col_major, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
 }
 
@@ -779,7 +857,7 @@ func.func @mmaLoadOp_identity_layout(){
 
 func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index) {
     // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float values of ranks 1 values}}
-    %0 = gpu.subgroup_mma_load_matrix %src[%i, %i] {leadDimension = 4 : index} : memref<32x4xvector<4x8xf32>> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    %0 = gpu.subgroup_mma_load_matrix %src[%i, %i] leadDimension 4 : memref<32x4xvector<4x8xf32>> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
 }
 
@@ -788,22 +866,22 @@ func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index
 #layout_map_col_major = affine_map<(i, j) -> (j, i)>
 
 func.func @wmmaStoreOp_invalid_map(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, #layout_map_col_major, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, #layout_map_col_major, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     // expected-error @+1 {{expected destination memref most minor dim must have unit stride}}
-    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16,#layout_map_col_major, 3>
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] leadDimension 32 : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16,#layout_map_col_major, 3>
     return
 }
 
 // -----
 
 func.func @wmmaStoreOp_invalid_store_operand(%arg0 : !gpu.mma_matrix<16x16xf16, "AOp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     // expected-error @+1 {{expected the operand matrix being stored to have 'COp' operand type}}
-    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] {leadDimension= 32 : index} : !gpu.mma_matrix<16x16xf16, "AOp">, memref<32x32xf16, 3>
+    gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] leadDimension 32 : !gpu.mma_matrix<16x16xf16, "AOp">, memref<32x32xf16, 3>
     return
 }
 

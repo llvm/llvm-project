@@ -95,4 +95,4 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK: ![[ACCESS_GROUP]] = distinct !{}
 // CHECK: ![[LOOP]] = distinct !{![[LOOP]], ![[PARALLEL_ACCESS:.*]], ![[VECTORIZE:.*]]}
 // CHECK: ![[PARALLEL_ACCESS]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP]]}
-// CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable"}

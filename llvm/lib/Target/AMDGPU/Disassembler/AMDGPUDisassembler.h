@@ -54,7 +54,7 @@ private:
 
   const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
-  void decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
+  bool decodeImmOperands(MCInst &MI, const MCInstrInfo &MCII) const;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -62,6 +62,8 @@ public:
   ~AMDGPUDisassembler() override = default;
 
   void setABIVersion(unsigned Version) override;
+
+  void emitTargetIDIfSupported(raw_ostream &OS, unsigned EFlags) const override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -122,8 +124,8 @@ public:
   void convertVINTERPInst(MCInst &MI) const;
   void convertFMAanyK(MCInst &MI) const;
   void convertSDWAInst(MCInst &MI) const;
-  void convertMAIInst(MCInst &MI) const;
-  void convertWMMAInst(MCInst &MI) const;
+  bool convertMAIInst(MCInst &MI) const;
+  bool convertWMMAInst(MCInst &MI) const;
   void convertDPP8Inst(MCInst &MI) const;
   void convertMIMGInst(MCInst &MI) const;
   void convertVOP3DPPInst(MCInst &MI) const;
@@ -135,8 +137,11 @@ public:
 
   unsigned getVgprClassId(unsigned Width) const;
   unsigned getAgprClassId(unsigned Width) const;
-  unsigned getSgprClassId(unsigned Width) const;
-  unsigned getTtmpClassId(unsigned Width) const;
+
+  /// Return the SGPR/TTMP register class accepted by source decoding for
+  /// \p Width, or std::nullopt if that width has no supported encoding.
+  std::optional<unsigned> getSgprClassId(unsigned Width) const;
+  std::optional<unsigned> getTtmpClassId(unsigned Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
 

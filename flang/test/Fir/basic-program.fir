@@ -21,18 +21,23 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT:  'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'omp.declare_reduction' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT: 'omp.private' Pipeline
 // PASSES-NEXT:   SimplifyHLFIRIntrinsics
 // PASSES-NEXT:   InlineElementals
+// PASSES-NEXT:   SeparateAllocatableAssign
 // PASSES-NEXT:   Canonicalizer
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:    (S) 0 num-cse'd - Number of operations CSE'd
@@ -88,7 +93,6 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'fir.global' Pipeline
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   ArrayValueCopy
 // PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'omp.declare_mapper' Pipeline
 // PASSES-NEXT:   CharacterConversion
@@ -115,6 +119,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: PolymorphicOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT: SelectOpsConversion
 // PASSES-NEXT: AssumedRankOpConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   OptimizeArrayRepacking
@@ -156,6 +162,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'func.func' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
+// PASSES-NEXT:    RematerializeFIRBoxOpsPass
 // PASSES-NEXT:  'gpu.module' Pipeline
 // PASSES-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
 // PASSES-NEXT:   'func.func' Pipeline
@@ -176,8 +183,14 @@ func.func @_QQmain() {
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:  FunctionAttr
 // PASSES-NEXT:  LowerNontemporalPass
+// PASSES-NEXT: MarkDeclareTargetPass
+// PASSES-NEXT: UnimplementedDeviceCheckPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: EmitMIFGlobalCtors
+// PASSES-NEXT: MarkDeclareTargetPass
+// PASSES-NEXT: FunctionFilteringPass
+// PASSES-NEXT: HostOpFilteringPass
 // PASSES-NEXT: 'llvm.func' Pipeline
 // PASSES-NEXT:  StackToSharedPass
 // PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass

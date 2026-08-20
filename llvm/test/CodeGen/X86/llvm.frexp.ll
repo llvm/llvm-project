@@ -5,36 +5,13 @@
 define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %ecx
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    andl $31744, %eax # imm = 0x7C00
-; X64-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; X64-NEXT:    pextrw $0, %xmm0, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    andl $32767, %esi # imm = 0x7FFF
-; X64-NEXT:    cmpl $1024, %esi # imm = 0x400
-; X64-NEXT:    cmovael %edx, %ecx
-; X64-NEXT:    cmovael %esi, %eax
-; X64-NEXT:    shrl $10, %eax
-; X64-NEXT:    leal -12(%rax), %edi
-; X64-NEXT:    cmpl $1024, %esi # imm = 0x400
-; X64-NEXT:    cmovael %eax, %edi
-; X64-NEXT:    addl $-14, %edi
-; X64-NEXT:    andl $-31745, %ecx # imm = 0x83FF
-; X64-NEXT:    orl $14336, %ecx # imm = 0x3800
-; X64-NEXT:    addl $-31744, %esi # imm = 0x8400
-; X64-NEXT:    movzwl %si, %esi
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $33792, %esi # imm = 0x8400
-; X64-NEXT:    cmoval %edi, %eax
-; X64-NEXT:    cmovbel %edx, %ecx
-; X64-NEXT:    pinsrw $0, %ecx, %xmm0
-; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32:
@@ -64,26 +41,12 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32_only_use_fract:
 ; X64:       # %bb.0:
-; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexpf@PLT
 ; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; X64-NEXT:    pextrw $0, %xmm0, %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    andl $32767, %edx # imm = 0x7FFF
-; X64-NEXT:    cmpl $1024, %edx # imm = 0x400
-; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    andl $-31745, %eax # imm = 0x83FF
-; X64-NEXT:    orl $14336, %eax # imm = 0x3800
-; X64-NEXT:    addl $-31744, %edx # imm = 0x8400
-; X64-NEXT:    movzwl %dx, %edx
-; X64-NEXT:    cmpl $33792, %edx # imm = 0x8400
-; X64-NEXT:    cmovbel %ecx, %eax
-; X64-NEXT:    pinsrw $0, %eax, %xmm0
-; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_fract:
@@ -110,29 +73,12 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; X64-LABEL: test_frexp_f16_i32_only_use_exp:
 ; X64:       # %bb.0:
-; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    andl $31744, %eax # imm = 0x7C00
-; X64-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
-; X64-NEXT:    pextrw $0, %xmm0, %ecx
-; X64-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpl $1024, %ecx # imm = 0x400
-; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    shrl $10, %eax
-; X64-NEXT:    leal -12(%rax), %edx
-; X64-NEXT:    cmpl $1024, %ecx # imm = 0x400
-; X64-NEXT:    cmovael %eax, %edx
-; X64-NEXT:    addl $-14, %edx
-; X64-NEXT:    addl $-31744, %ecx # imm = 0x8400
-; X64-NEXT:    movzwl %cx, %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpl $33792, %ecx # imm = 0x8400
-; X64-NEXT:    cmoval %edx, %eax
-; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexpf@PLT
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_exp:
@@ -171,6 +117,52 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ;   %result.1 = extractvalue { <2 x half>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
+
+define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
+; X64-LABEL: test_frexp_bf16_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexpf@PLT
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+;
+; WIN32-LABEL: test_frexp_bf16_i32:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    pushl %esi
+; WIN32-NEXT:    subl $28, %esp
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstps (%esp)
+; WIN32-NEXT:    calll ___truncsfbf2
+; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    shll $16, %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstps (%esp)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN32-NEXT:    calll ___truncsfbf2
+; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
+; WIN32-NEXT:    shll $16, %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    addl $28, %esp
+; WIN32-NEXT:    popl %esi
+; WIN32-NEXT:    retl
+  %result = call { bfloat, i32 } @llvm.frexp.bf16.i32(bfloat %a)
+  ret { bfloat, i32 } %result
+}
 
 define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
 ; X64-LABEL: test_frexp_f32_i32:
@@ -615,18 +607,5 @@ define { float, i32 } @pr160981() {
 ;   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
-
-declare { float, i32 } @llvm.frexp.f32.i32(float) #0
-declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>) #0
-declare { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float>) #0
-
-declare { half, i32 } @llvm.frexp.f16.i32(half) #0
-declare { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half>) #0
-
-declare { double, i32 } @llvm.frexp.f64.i32(double) #0
-declare { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double>) #0
-
-declare { half, i16 } @llvm.frexp.f16.i16(half) #0
-declare { <2 x half>, <2 x i16> } @llvm.frexp.v2f16.v2i16(<2 x half>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

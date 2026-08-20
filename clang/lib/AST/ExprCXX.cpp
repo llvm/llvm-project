@@ -149,6 +149,11 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
 bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+
+  if (const CXXRecordDecl *RD = E->getType()->getAsCXXRecordDecl())
+    if (RD->isEffectivelyFinal())
+      return true;
+
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
     if (!Ty->isPointerOrReferenceType())
@@ -396,14 +401,40 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
-static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
-    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
-  if (std::distance(Begin, End) != 1)
-    return false;
-  NamedDecl *ND = *Begin;
-  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
-    return TTP->isParameterPack();
-  return false;
+DependentTemplateIdExpr::DependentTemplateIdExpr(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Context.DependentTy, VK_LValue,
+           OK_Ordinary),
+      NameInfo(NameInfo), Name(Name) {
+  KWAndArgs.initializeFrom(/*TemplateKWLoc=*/{}, TemplateArgs,
+                           getTrailingObjects());
+  setDependence(computeDependence(this));
+}
+
+DependentTemplateIdExpr::DependentTemplateIdExpr(EmptyShell Empty,
+                                                 unsigned NumTemplateArgs)
+    : Expr(DependentTemplateIdExprClass, Empty) {
+  KWAndArgs.NumTemplateArgs = NumTemplateArgs;
+}
+
+DependentTemplateIdExpr *DependentTemplateIdExpr::Create(
+    const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+    TemplateName Name, const TemplateArgumentListInfo &TemplateArgs) {
+  void *Mem = Context.Allocate(
+      totalSizeToAlloc<TemplateArgumentLoc>(TemplateArgs.size()),
+      alignof(DependentTemplateIdExpr));
+  return new (Mem)
+      DependentTemplateIdExpr(Context, NameInfo, Name, TemplateArgs);
+}
+
+DependentTemplateIdExpr *
+DependentTemplateIdExpr::CreateEmpty(const ASTContext &Context,
+                                     unsigned NumTemplateArgs) {
+  void *Mem =
+      Context.Allocate(totalSizeToAlloc<TemplateArgumentLoc>(NumTemplateArgs),
+                       alignof(DependentTemplateIdExpr));
+  return new (Mem) DependentTemplateIdExpr(EmptyShell(), NumTemplateArgs);
 }
 
 // UnresolvedLookupExpr
@@ -414,11 +445,10 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(
-          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
-          NameInfo, TemplateArgs, Begin, End, KnownDependent,
-          KnownInstantiationDependent,
-          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
+    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
+                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
+                   KnownDependent, KnownInstantiationDependent,
+                   /*KnownContainsUnexpandedParameterPack=*/false),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -1597,14 +1627,13 @@ CXXThisExpr *CXXThisExpr::CreateEmpty(const ASTContext &Ctx) {
 static bool hasOnlyNonStaticMemberFunctions(UnresolvedSetIterator begin,
                                             UnresolvedSetIterator end) {
   do {
-    NamedDecl *decl = *begin;
+    NamedDecl *decl = (*begin)->getUnderlyingDecl();
     if (isa<UnresolvedUsingValueDecl>(decl))
       return false;
 
     // Unresolved member expressions should only contain methods and
     // method templates.
-    if (cast<CXXMethodDecl>(decl->getUnderlyingDecl()->getAsFunction())
-            ->isStatic())
+    if (cast<CXXMethodDecl>(decl->getAsFunction())->isStatic())
       return false;
   } while (++begin != end);
 
@@ -1763,18 +1792,6 @@ PackIndexingExpr::CreateDeserialized(ASTContext &Context,
   void *Storage =
       Context.Allocate(totalSizeToAlloc<Expr *>(NumTransformedExprs));
   return new (Storage) PackIndexingExpr(EmptyShell{});
-}
-
-QualType SubstNonTypeTemplateParmExpr::getParameterType(
-    const ASTContext &Context) const {
-  // Note that, for a class type NTTP, we will have an lvalue of type 'const
-  // T', so we can't just compute this from the type and value category.
-
-  QualType Type = getType();
-
-  if (isReferenceParameter())
-    return Context.getLValueReferenceType(Type);
-  return Type.getUnqualifiedType();
 }
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
@@ -2037,4 +2054,16 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionSelectExprClass, Empty) {}
+
+CXXExpansionSelectExpr::CXXExpansionSelectExpr(const ASTContext &C,
+                                               InitListExpr *Range, Expr *Idx)
+    : Expr(CXXExpansionSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary) {
+  setDependence(ExprDependence::TypeValueInstantiation);
+  SubExprs[RANGE] = Range;
+  SubExprs[INDEX] = Idx;
 }
