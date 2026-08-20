@@ -50720,8 +50720,13 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
-  
   if (!Subtarget.hasSSE2())
+    return SDValue();
+
+  if (!VT.isVector() && (Subtarget.useSoftFloat() ||
+                         DAG.getMachineFunction().getFunction().hasFnAttribute(
+                             Attribute::NoImplicitFloat) ||
+                         DAG.getMachineFunction().getFunction().hasOptSize()))
     return SDValue();
 
   SDValue Dividend = N->getOperand(0);
@@ -50735,33 +50740,28 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
   bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
 
-  // Scalar functions that do not use XMM registers must not get this combine.
-  if (!VT.isVector() &&
-      (Subtarget.useSoftFloat() ||
-       DAG.getMachineFunction().getFunction().hasFnAttribute(
-           Attribute::NoImplicitFloat)))
-    return SDValue();
-
   // If the result is only read back as scalar extracts, scalarization computes
   // just the demanded lanes. Keep the vector operation when every lane is
   // extracted, which occurs when non-power-of-two vectors are returned.
-  APInt ExtractedElts = APInt::getZero(VT.getVectorNumElements());
-  bool OnlyExtracts = true;
-  for (const SDNode *U : N->users()) {
-    if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
-      OnlyExtracts = false;
-      break;
+  if (VT.isVector()) {
+    APInt ExtractedElts = APInt::getZero(VT.getVectorNumElements());
+    bool OnlyExtracts = true;
+    for (const SDNode *U : N->users()) {
+      if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+        OnlyExtracts = false;
+        break;
+      }
+      auto *Idx = dyn_cast<ConstantSDNode>(U->getOperand(1));
+      if (!Idx)
+        continue;
+      const APInt &IdxVal = Idx->getAPIntValue();
+      if (IdxVal.uge(VT.getVectorNumElements()))
+        continue;
+      ExtractedElts.setBit(IdxVal.getZExtValue());
     }
-    auto *Idx = dyn_cast<ConstantSDNode>(U->getOperand(1));
-    if (!Idx)
-      continue;
-    const APInt &IdxVal = Idx->getAPIntValue();
-    if (IdxVal.uge(VT.getVectorNumElements()))
-      continue;
-    ExtractedElts.setBit(IdxVal.getZExtValue());
+    if (OnlyExtracts && !ExtractedElts.isAllOnes())
+      return SDValue();
   }
-  if (OnlyExtracts && !ExtractedElts.isAllOnes())
-    return SDValue();
 
   // Magic multiply lowers constant divisors cheaper than a divide.
   if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))

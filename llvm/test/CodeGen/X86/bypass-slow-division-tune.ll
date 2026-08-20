@@ -314,44 +314,18 @@ define i64 @div64_hugews(i64 %a, i64 %b) {
 }
 
 define i32 @div32_optsize(i32 %a, i32 %b) optsize {
-; ATOM-LABEL: div32_optsize:
-; ATOM:       # %bb.0:
-; ATOM-NEXT:    cvtsi2sd %esi, %xmm0
-; ATOM-NEXT:    cvtsi2sd %edi, %xmm1
-; ATOM-NEXT:    divsd %xmm0, %xmm1
-; ATOM-NEXT:    cvttsd2si %xmm1, %eax
-; ATOM-NEXT:    retq
-;
-; X64-LABEL: div32_optsize:
-; X64:       # %bb.0:
-; X64-NEXT:    cvtsi2sd %esi, %xmm0
-; X64-NEXT:    cvtsi2sd %edi, %xmm1
-; X64-NEXT:    divsd %xmm0, %xmm1
-; X64-NEXT:    cvttsd2si %xmm1, %eax
-; X64-NEXT:    retq
-;
-; SLM-LABEL: div32_optsize:
-; SLM:       # %bb.0:
-; SLM-NEXT:    cvtsi2sd %esi, %xmm0
-; SLM-NEXT:    cvtsi2sd %edi, %xmm1
-; SLM-NEXT:    divsd %xmm0, %xmm1
-; SLM-NEXT:    cvttsd2si %xmm1, %eax
-; SLM-NEXT:    retq
-;
-; SKL-LABEL: div32_optsize:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
-; SKL-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
-; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
-; SKL-NEXT:    vcvttsd2si %xmm0, %eax
-; SKL-NEXT:    retq
+; CHECK-LABEL: div32_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div32_optsize:
 ; HUGEWS:       # %bb.0:
-; HUGEWS-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
-; HUGEWS-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
-; HUGEWS-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
-; HUGEWS-NEXT:    vcvttsd2si %xmm0, %eax
+; HUGEWS-NEXT:    movl %edi, %eax
+; HUGEWS-NEXT:    cltd
+; HUGEWS-NEXT:    idivl %esi
 ; HUGEWS-NEXT:    retq
   %div = sdiv i32 %a, %b
   ret i32 %div
@@ -402,44 +376,18 @@ define i32 @div32_pgso(i32 %a, i32 %b) !prof !15 {
 }
 
 define i32 @div32_minsize(i32 %a, i32 %b) minsize {
-; ATOM-LABEL: div32_minsize:
-; ATOM:       # %bb.0:
-; ATOM-NEXT:    cvtsi2sd %esi, %xmm0
-; ATOM-NEXT:    cvtsi2sd %edi, %xmm1
-; ATOM-NEXT:    divsd %xmm0, %xmm1
-; ATOM-NEXT:    cvttsd2si %xmm1, %eax
-; ATOM-NEXT:    retq
-;
-; X64-LABEL: div32_minsize:
-; X64:       # %bb.0:
-; X64-NEXT:    cvtsi2sd %esi, %xmm0
-; X64-NEXT:    cvtsi2sd %edi, %xmm1
-; X64-NEXT:    divsd %xmm0, %xmm1
-; X64-NEXT:    cvttsd2si %xmm1, %eax
-; X64-NEXT:    retq
-;
-; SLM-LABEL: div32_minsize:
-; SLM:       # %bb.0:
-; SLM-NEXT:    cvtsi2sd %esi, %xmm0
-; SLM-NEXT:    cvtsi2sd %edi, %xmm1
-; SLM-NEXT:    divsd %xmm0, %xmm1
-; SLM-NEXT:    cvttsd2si %xmm1, %eax
-; SLM-NEXT:    retq
-;
-; SKL-LABEL: div32_minsize:
-; SKL:       # %bb.0:
-; SKL-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
-; SKL-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
-; SKL-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
-; SKL-NEXT:    vcvttsd2si %xmm0, %eax
-; SKL-NEXT:    retq
+; CHECK-LABEL: div32_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
 ;
 ; HUGEWS-LABEL: div32_minsize:
 ; HUGEWS:       # %bb.0:
-; HUGEWS-NEXT:    vcvtsi2sd %esi, %xmm15, %xmm0
-; HUGEWS-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm1
-; HUGEWS-NEXT:    vdivsd %xmm0, %xmm1, %xmm0
-; HUGEWS-NEXT:    vcvttsd2si %xmm0, %eax
+; HUGEWS-NEXT:    movl %edi, %eax
+; HUGEWS-NEXT:    cltd
+; HUGEWS-NEXT:    idivl %esi
 ; HUGEWS-NEXT:    retq
   %div = sdiv i32 %a, %b
   ret i32 %div
