@@ -18,6 +18,7 @@ set(NVPTXCodeGen_sources
   NVPTXAsmPrinter.cpp
   NVPTXAssignValidGlobalNames.cpp
   NVPTXAtomicLower.cpp
+  NVPTXCodeGenPassBuilder.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
@@ -61,9 +62,12 @@ add_llvm_target(NVPTXCodeGen
   CodeGenTypes
   Core
   IPO
+  IRPrinter
   MC
   NVPTXDesc
   NVPTXInfo
+  ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

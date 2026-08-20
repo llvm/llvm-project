@@ -64,6 +64,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
@@ -1009,18 +1010,12 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
-    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    // Enforce the single-operand form of the loop enable/disable pairs.
     if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
-      Check(CurrentMD->getNumOperands() == 1,
-            "Expected one operand for llvm.loop.distribute metadata",
-            CurrentMD);
-
-    // Enforce the single-operand form of llvm.loop.vectorize.enable metadata.
-    if (CurrentMD->getNumOperands() > 0 &&
-        (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
-         CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
+        any_of(OldBooleanLoopTags, [CurrentMD](const BooleanLoopTags &Tags) {
+          return CurrentMD->getOperand(0).equalsStr(Tags.Enable) ||
+                 CurrentMD->getOperand(0).equalsStr(Tags.Disable);
+        }))
       Check(CurrentMD->getNumOperands() == 1,
             "Expecting only the metadata name", CurrentMD);
 
@@ -2026,6 +2021,12 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+  }
+
+  if (ID->getString() == "target-abi") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "target-abi metadata requires a non-empty string argument", Op);
   }
 
   if (ID->getString() == "Linker Options") {
@@ -3927,9 +3928,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  // FIXME: Missing verifier check to forbid a call site marked strictfp without
-  // caller function marked strictfp.
-
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4665,6 +4663,19 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
+
+    if (SI.isElementwise()) {
+      Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise store cannot be sequentially consistent.", &SI);
+
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise store operand must have fixed vector type!",
+            &SI, ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4673,6 +4684,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
+    Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }
@@ -5577,11 +5589,15 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
     return MD->getNumOperands() == 0 && MD->isDistinct();
   };
 
-  // It must be either an access scope itself...
-  if (IsValidAccessScope(MD))
+  // An empty node is an access scope, and it must be 'distinct'. It is never a
+  // list, because an empty list is not allowed: it would look the same as an
+  // access scope.
+  if (MD->getNumOperands() == 0) {
+    Check(MD->isDistinct(), "Access scope must be 'distinct'", MD);
     return;
+  }
 
-  // ...or a list of access scopes.
+  // A non-empty node is a list of access scopes.
   for (const MDOperand &Op : MD->operands()) {
     const auto *OpMD = dyn_cast<MDNode>(Op);
     Check(OpMD != nullptr, "Access scope list must consist of MDNodes", MD);

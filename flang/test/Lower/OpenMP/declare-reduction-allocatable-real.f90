@@ -20,8 +20,7 @@ subroutine test_udr_real_allocatable()
   end do
 end subroutine
 
-! CHECK-LABEL: omp.declare_reduction @{{.*}}rmax_byref_box_heap_f32 : !fir.ref<!fir.box<!fir.heap<f32>>>
-! CHECK-SAME:  attributes {byref_element_type = f32}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}rmax_byref_box_heap_f32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<f32>>>
 ! CHECK:       alloc {
 ! CHECK:         fir.alloca !fir.box<!fir.heap<f32>>
 ! CHECK:         omp.yield

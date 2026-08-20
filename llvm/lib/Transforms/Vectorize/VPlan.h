@@ -77,7 +77,6 @@ using VPlanPtr = std::unique_ptr<VPlan>;
 /// Different methods of handling early exits.
 ///
 enum class UncountableExitStyle {
-  NoUncountableExit = 0,
   /// No side effects to worry about, so we can process any uncountable exits
   /// in the loop and branch either to the middle block if the trip count was
   /// reached, or an early exitblock to determine which exit was taken.
@@ -1242,13 +1241,21 @@ public:
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
-    // The size of the mask returned is VF * Multiplier (UF, third op).
+    // ActiveLaneMask is used for tail-folding, with the exception of the
+    // DataAndControlFlow style. The size of the mask returned is VF.
+    // When unrolled, ActiveLaneMask is duplicated.
     ActiveLaneMask,
+    // As above, but takes an additional operand (Multiplier). The size of
+    // the mask returned is VF * Multiplier (UF, op2).
+    // WideActiveLaneMask is used for control flow and is unrolled by widening,
+    // with one extract vector created per unroll part.
+    WideActiveLaneMask,
+    // Extracts each unrolled part of a (VF * UF) widened vector/mask.
+    ExtractVectorForPart,
     ExplicitVectorLength,
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
-    CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -1833,7 +1840,12 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands,
                             computeScalarTypeForInstruction(Opcode, Operands),
                             Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {
+    assert(flagsValidForOpcode(Opcode) &&
+           "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode) &&
+           "Opcode requires specific flags to be set");
+  }
 
   ~VPWidenRecipe() override = default;
 
@@ -2057,7 +2069,6 @@ class VPWidenMemIntrinsicRecipe final : public VPWidenIntrinsicRecipe {
   Align Alignment;
 
 public:
-  // TODO: support StoreInst for strided store
   VPWidenMemIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
                             ArrayRef<VPValue *> CallArguments, Type *Ty,
                             Align Alignment, const VPIRMetadata &MD = {},
@@ -2066,7 +2077,8 @@ public:
                                VectorIntrinsicID, CallArguments, Ty, {}, MD,
                                DL),
         Alignment(Alignment) {
-    assert(VectorIntrinsicID == Intrinsic::experimental_vp_strided_load &&
+    assert((VectorIntrinsicID == Intrinsic::experimental_vp_strided_load ||
+            VectorIntrinsicID == Intrinsic::experimental_vp_strided_store) &&
            "Unexpected intrinsic");
   }
 
@@ -4909,6 +4921,13 @@ public:
   bool hasTailFolded() const {
     const VPRegionBlock *LoopRegion = getVectorLoopRegion();
     return LoopRegion && LoopRegion->getHeaderMask();
+  }
+
+  /// Returns true if the plan requires a scalar epilogue after the vector
+  /// loop. Must be called before removeBranchOnConst.
+  bool requiresScalarEpilogue() const {
+    const VPBasicBlock *MiddleVPBB = getMiddleBlock();
+    return MiddleVPBB->getSingleSuccessor() == getScalarPreheader();
   }
 
   /// Returns the 'middle' block of the plan, that is the block that selects

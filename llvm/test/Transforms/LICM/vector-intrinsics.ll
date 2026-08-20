@@ -38,7 +38,7 @@ define i32 @vp_umax(<2 x i32> %inv.l, <2 x i32> %inv.r, i1 %c) {
 ; CHECK-LABEL: define i32 @vp_umax(
 ; CHECK-SAME: <2 x i32> [[INV_L:%.*]], <2 x i32> [[INV_R:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[VP_UMAX:%.*]] = call <2 x i32> @llvm.vp.umax.v2i32(<2 x i32> [[INV_L]], <2 x i32> [[INV_R]], <2 x i1> splat (i1 true), i32 2)
+; CHECK-NEXT:    [[VP_UMAX:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[INV_L]], <2 x i32> [[INV_R]])
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x i32> [[VP_UMAX]], i32 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
