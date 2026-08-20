@@ -21,8 +21,8 @@ func.func @combine_region_private_dest(%arg: memref<i32>) {
   %c128 = arith.constant 128 : index
   %bx = acc.par_width %c1_pw par_dim(#acc.par_dim<block_x>)
   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
-  %pv_outer = acc.privatize {acc.par_dims = #acc<par_dims[block_x, thread_x]>} : () -> !acc.private_type<memref<i32>>
-  %pv_inner = acc.privatize {acc.par_dims = #acc<par_dims[block_x, thread_x]>} : () -> !acc.private_type<memref<i32>>
+  %pv_outer = acc.privatize par_dims(#acc<par_dims[block_x, thread_x]>) : () -> !acc.private_type<memref<i32>>
+  %pv_inner = acc.privatize par_dims(#acc<par_dims[block_x, thread_x]>) : () -> !acc.private_type<memref<i32>>
   acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%a_res = %arg, %po = %pv_outer, %pi = %pv_inner) : (memref<i32>, !acc.private_type<memref<i32>>, !acc.private_type<memref<i32>>) {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -49,7 +49,7 @@ func.func @combine_region_private_dest(%arg: memref<i32>) {
             memref.store %c1_i32, %inner[] : memref<i32>
           }
           %v = memref.load %inner[] : memref<i32>
-          acc.reduction_accumulate %v to %inner <add> : i32 -> memref<i32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+          acc.reduction_accumulate %v to %inner <add> par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
           acc.predicate_region {
             acc.reduction_combine_region %inner into %outer : memref<i32> {
               %la = memref.load %outer[] : memref<i32>
@@ -62,7 +62,7 @@ func.func @combine_region_private_dest(%arg: memref<i32>) {
           scf.reduce
         } {acc.par_dims = #acc<par_dims[sequential]>}
         %ov = memref.load %outer[] : memref<i32>
-        acc.reduction_accumulate %ov to %outer <add> : i32 -> memref<i32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        acc.reduction_accumulate %ov to %outer <add> par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       scf.reduce

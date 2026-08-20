@@ -46,7 +46,7 @@ func.func @array_reduction_shared(%arg0: memref<8192xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       %b = acc.bounds extent(%c8192 : index)
-      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<8192xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+      acc.reduction_accumulate_array %2 bounds(%b) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<8192xi32>
       acc.reduction_combine_region %2 into %arg2 : memref<8192xi32> {
         scf.for %i = %c0 to %c8192 step %c1 {
           %3 = memref.load %2[%i] : memref<8192xi32>
@@ -102,7 +102,7 @@ func.func @array_reduction_shared_partitioned(%arg0: memref<8192xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       %b = acc.bounds extent(%c8192 : index)
-      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<8192xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+      acc.reduction_accumulate_array %2 bounds(%b) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<8192xi32>
       acc.reduction_combine_region %2 into %arg2 : memref<8192xi32> {
         scf.for %i = %c0 to %c8192 step %c1 {
           %3 = memref.load %2[%i] : memref<8192xi32>
@@ -138,7 +138,7 @@ func.func @array_reduction_gang_storage_thread_accum(%arg0: memref<4xi32>) {
     %bx = acc.par_width %c2 par_dim(#acc.par_dim<block_x>)
     %wy = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
     %tx = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
-    %private = acc.privatize [#acc<par_dims[block_x]>] : () -> !acc.private_type<memref<4xi32>>
+    %private = acc.privatize par_dims(#acc<par_dims[block_x]>) : () -> !acc.private_type<memref<4xi32>>
     acc.compute_region launch(%kbx = %bx, %kwy = %wy, %ktx = %tx) ins(%arg2 = %0, %priv = %private) : (memref<4xi32>, !acc.private_type<memref<4xi32>>) {
       %c0 = arith.constant 0 : index
       %c1 = arith.constant 1 : index
@@ -157,7 +157,7 @@ func.func @array_reduction_gang_storage_thread_accum(%arg0: memref<4xi32>) {
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_y]>}
         %b = acc.bounds extent(%c4_idx : index)
-        acc.reduction_accumulate_array %local bounds(%b) <add> : memref<4xi32> <{par_dims = #acc<par_dims[thread_y]>}>
+        acc.reduction_accumulate_array %local bounds(%b) <add> par_dims(#acc<par_dims[thread_y]>) : memref<4xi32>
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield

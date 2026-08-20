@@ -45,7 +45,7 @@ func.func @reduction_accumulate_invalid_operator() {
   %partial = arith.constant 1.0 : f32
   %private = memref.alloca() : memref<f32>
   acc.reduction_accumulate %partial to %private <addi>
-      : f32 -> memref<f32> <{par_dims = #acc<par_dims[thread_x]>}>
+      par_dims(#acc<par_dims[thread_x]>) : f32 -> memref<f32>
   // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
   // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
   return
@@ -58,7 +58,7 @@ func.func @reduction_accumulate_type_mismatch() {
   %private_i32 = memref.alloca() : memref<i32>
   // expected-error@+1 {{pointer-like element type must match value type}}
   acc.reduction_accumulate %wrong_ty to %private_i32 <add>
-      : f32 -> memref<i32> <{par_dims = #acc<par_dims[thread_x]>}>
+      par_dims(#acc<par_dims[thread_x]>) : f32 -> memref<i32>
   return
 }
 
@@ -69,7 +69,7 @@ func.func @reduction_accumulate_empty_par_dims() {
   %private4 = memref.alloca() : memref<i32>
   // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
   acc.reduction_accumulate %partial3 to %private4 <add>
-      : i32 -> memref<i32> <{par_dims = #acc<par_dims[]>}>
+      par_dims(#acc<par_dims[]>) : i32 -> memref<i32>
   return
 }
 
@@ -77,7 +77,7 @@ func.func @reduction_accumulate_empty_par_dims() {
 
 func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
   acc.reduction_accumulate_array %private bounds(%bounds) <addi>
-      : memref<4xi32> <{par_dims = #acc<par_dims[thread_x]>}>
+      par_dims(#acc<par_dims[thread_x]>) : memref<4xi32>
   // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
   // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
   return
@@ -88,7 +88,7 @@ func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, 
 func.func @reduction_accumulate_array_empty_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
   // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
   acc.reduction_accumulate_array %private bounds(%bounds) <add>
-      : memref<4xi32> <{par_dims = #acc<par_dims[]>}>
+      par_dims(#acc<par_dims[]>) : memref<4xi32>
   return
 }
 

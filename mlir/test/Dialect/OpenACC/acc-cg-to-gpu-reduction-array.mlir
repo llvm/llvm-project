@@ -47,7 +47,7 @@ func.func @array_reduction(%arg0: memref<2xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       %b = acc.bounds extent(%c2 : index)
-      acc.reduction_accumulate_array %2 bounds(%b) <add> : memref<2xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+      acc.reduction_accumulate_array %2 bounds(%b) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2xi32>
       acc.reduction_combine_region %2 into %arg2 : memref<2xi32> {
         scf.for %i = %c0 to %c2 step %c1 {
           %3 = memref.load %2[%i] : memref<2xi32>
@@ -77,7 +77,7 @@ func.func @array_reduction_small_shared() {
     %shared = memref.alloc() : memref<2xi32>
     %bounds = acc.bounds extent(%c2 : index)
     acc.reduction_accumulate_array %shared bounds(%bounds) <add>
-        : memref<2xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2xi32>
     memref.dealloc %shared : memref<2xi32>
     acc.yield
   } {origin = "acc.parallel"}
@@ -105,7 +105,7 @@ func.func @array_reduction_strided_extent() {
     %bounds = acc.bounds lowerbound(%c1_b : index) extent(%c3 : index)
         stride(%c2 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
-        : memref<8xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : memref<8xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -128,8 +128,7 @@ func.func @array_reduction_dynamic_par_dims(%buf: memref<?xi32>, %n: index) {
         : memref<?xi32> to memref<?xi32, strided<[1]>>
     %bounds = acc.bounds extent(%ext : index)
     acc.reduction_accumulate_array %view bounds(%bounds) <add>
-        : memref<?xi32, strided<[1]>>
-        <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : memref<?xi32, strided<[1]>>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -153,12 +152,12 @@ func.func @rank_two_array_reduction() {
   %c128 = arith.constant 128 : index
   %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
-  %private = acc.privatize [#acc<par_dims[block_x, thread_x]>] : () -> !acc.private_type<memref<2x3xi32>>
+  %private = acc.privatize par_dims(#acc<par_dims[block_x, thread_x]>) : () -> !acc.private_type<memref<2x3xi32>>
   acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%arg0 = %private) : (!acc.private_type<memref<2x3xi32>>) {
     %c6 = arith.constant 6 : index
     %local = acc.private_local %arg0 {acc.par_dims = #acc<par_dims[block_x, thread_x]>} : (!acc.private_type<memref<2x3xi32>>) -> memref<2x3xi32>
     %bounds = acc.bounds extent(%c6 : index)
-    acc.reduction_accumulate_array %local bounds(%bounds) <add> : memref<2x3xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+    acc.reduction_accumulate_array %local bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x3xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -185,12 +184,12 @@ func.func @rank_three_array_reduction() {
   %c128 = arith.constant 128 : index
   %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
-  %private = acc.privatize [#acc<par_dims[block_x, thread_x]>] : () -> !acc.private_type<memref<2x2x2xi32>>
+  %private = acc.privatize par_dims(#acc<par_dims[block_x, thread_x]>) : () -> !acc.private_type<memref<2x2x2xi32>>
   acc.compute_region launch(%kbx = %bx, %ktx = %tx) ins(%arg0 = %private) : (!acc.private_type<memref<2x2x2xi32>>) {
     %c8 = arith.constant 8 : index
     %local = acc.private_local %arg0 {acc.par_dims = #acc<par_dims[block_x, thread_x]>} : (!acc.private_type<memref<2x2x2xi32>>) -> memref<2x2x2xi32>
     %bounds = acc.bounds extent(%c8 : index)
-    acc.reduction_accumulate_array %local bounds(%bounds) <add> : memref<2x2x2xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+    acc.reduction_accumulate_array %local bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x2x2xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -218,7 +217,7 @@ func.func @dynamic_rank_two_array_reduction(
     %c2 = arith.constant 2 : index
     %extent = arith.muli %c2, %arg1 : index
     %bounds = acc.bounds extent(%extent : index)
-    acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> : memref<2x?xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+    acc.reduction_accumulate_array %arg0 bounds(%bounds) <add> par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2x?xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -249,8 +248,7 @@ func.func @rank_two_partial_bounds_strided_layout() {
     %bounds = acc.bounds lowerbound(%lb : index) extent(%extent : index)
         stride(%step : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
-        : memref<3x4xi32, strided<[8, 2]>>
-        <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : memref<3x4xi32, strided<[8, 2]>>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -272,7 +270,7 @@ func.func @partial_thread_x_reduction() {
     %local = memref.alloca() : memref<2xi32>
     %bounds = acc.bounds extent(%c2 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
-        : memref<2xi32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : memref<2xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -291,8 +289,7 @@ func.func @thread_y_reduction_still_aligned() {
     %c0_i32 = arith.constant 0 : i32
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
-        : i32 -> memref<i32>
-        <{par_dims = #acc<par_dims[block_x, thread_y]>}>
+        par_dims(#acc<par_dims[block_x, thread_y]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -316,8 +313,7 @@ func.func @thread_x_reduction_with_thread_y_width() {
     %c0_i32 = arith.constant 0 : i32
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
-        : i32 -> memref<i32>
-        <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -341,8 +337,7 @@ func.func @thread_x_reduction_with_thread_z_width() {
     %c0_i32 = arith.constant 0 : i32
     %local = memref.alloca() : memref<i32>
     acc.reduction_accumulate %c0_i32 to %local <add>
-        : i32 -> memref<i32>
-        <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+        par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
     acc.yield
   } {origin = "acc.parallel"}
   return
@@ -372,7 +367,7 @@ func.func @thread_only_array_reduction_single_block() {
     }
     %bounds = acc.bounds extent(%c8 : index)
     acc.reduction_accumulate_array %local bounds(%bounds) <add>
-        : memref<8xi32> <{par_dims = #acc<par_dims[thread_x]>}>
+        par_dims(#acc<par_dims[thread_x]>) : memref<8xi32>
     acc.yield
   } {origin = "acc.parallel"}
   return

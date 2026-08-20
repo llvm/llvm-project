@@ -10,7 +10,7 @@ func.func @mixed_scope_worker_reduction_combine(
   %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
   %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     // expected-error@+1 {{failed to legalize operation 'acc.compute_region' that was explicitly marked illegal}}
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
@@ -50,7 +50,7 @@ func.func @worker_combine_with_single_store(%result: memref<i32>) {
   %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
   %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     // expected-error@+1 {{failed to legalize operation 'acc.compute_region' that was explicitly marked illegal}}
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
@@ -90,7 +90,7 @@ func.func @worker_combine_with_atomic_update(%result: memref<i32>) {
   %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
   %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     // expected-error@+1 {{failed to legalize operation 'acc.compute_region' that was explicitly marked illegal}}
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
