@@ -210,7 +210,7 @@ define amdgpu_kernel void @kernel_no_table() {
 define amdgpu_kernel void @k01() {
 ; OPT-LABEL: define amdgpu_kernel void @k01(
 ; OPT-SAME: ) #[[ATTR0]] {{.*}}.amdgcn.lds.kernel.id [[META2:![0-9]+]] {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds) ], !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k01.lds) ], !alias.scope [[META3:![0-9]+]]
 ; OPT-NEXT:    call void @f0()
 ; OPT-NEXT:    call void @f1()
 ; OPT-NEXT:    ret void
@@ -260,8 +260,8 @@ define amdgpu_kernel void @k01() {
 
 define amdgpu_kernel void @k23() {
 ; OPT-LABEL: define amdgpu_kernel void @k23(
-; OPT-SAME: ) #[[ATTR1:[0-9]+]] {{.*}}.amdgcn.lds.kernel.id [[META8:![0-9]+]] {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
+; OPT-SAME: ) #[[ATTR1:[0-9]+]] {{.*}}.amdgcn.lds.kernel.id [[META6:![0-9]+]] {
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k23.lds) ], !alias.scope [[META7:![0-9]+]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    call void @f3()
 ; OPT-NEXT:    ret void
@@ -311,12 +311,12 @@ define amdgpu_kernel void @k23() {
 ; Access and allocate three variables
 define amdgpu_kernel void @k123() {
 ; OPT-LABEL: define amdgpu_kernel void @k123(
-; OPT-SAME: ) #[[ATTR1]] {{.*}}.amdgcn.lds.kernel.id [[META14:![0-9]+]] {
-; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META15:![0-9]+]], !noalias [[META18:![0-9]+]]
+; OPT-SAME: ) #[[ATTR1]] {{.*}}.amdgcn.lds.kernel.id [[META10:![0-9]+]] {
+; OPT-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds) ], !alias.scope [[META11:![0-9]+]]
 ; OPT-NEXT:    call void @f1()
-; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21:![0-9]+]], !noalias [[META22:![0-9]+]]
+; OPT-NEXT:    [[LD:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META14:![0-9]+]]
 ; OPT-NEXT:    [[MUL:%.*]] = mul i8 [[LD]], 8
-; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META21]], !noalias [[META22]]
+; OPT-NEXT:    store i8 [[MUL]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_K123_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.k123.lds, i32 0, i32 1), align 2, !alias.scope [[META14]]
 ; OPT-NEXT:    call void @f2()
 ; OPT-NEXT:    ret void
 ;
