@@ -74,7 +74,7 @@ constexpr bool test() {
   {
     // Underlying non-const to const not convertible.
     std::ranges::enumerate_view v(ConstIterIncompatibleView{buffer});
-    auto it             = v.begin();
+    auto it       = v.begin();
     auto const_it = std::as_const(v).begin();
 
     static_assert(!std::same_as<decltype(it), decltype(const_it)>);
