@@ -1757,7 +1757,8 @@ public:
 
   /// Return an AddrSpaceCastSDNode.
   LLVM_ABI SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
-                                    unsigned SrcAS, unsigned DestAS);
+                                    unsigned SrcAS, unsigned DestAS,
+                                    const SDNodeFlags Flags = SDNodeFlags());
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
