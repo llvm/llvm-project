@@ -24,6 +24,24 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
+// The full build compiles with -nostdinc against LLVM-libc's generated
+// <fenv.h>, which does not expose Apple's private __fpcr_* control-word bit
+// masks or the Apple-only FE_FLUSHTOZERO status bit. Provide the same values
+// as the macOS SDK's <fenv.h> so this file compiles in the full build.
+#ifndef __fpcr_trap_invalid
+#define __fpcr_trap_invalid 0x00000100u
+#define __fpcr_trap_divbyzero 0x00000200u
+#define __fpcr_trap_overflow 0x00000400u
+#define __fpcr_trap_underflow 0x00000800u
+#define __fpcr_trap_inexact 0x00001000u
+#define __fpcr_trap_denormal 0x00008000u
+#define __fpcr_flush_to_zero 0x01000000u
+#endif
+
+#ifndef FE_FLUSHTOZERO
+#define FE_FLUSHTOZERO 0x80u
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 

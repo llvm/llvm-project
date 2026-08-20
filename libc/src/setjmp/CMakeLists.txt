@@ -3,12 +3,14 @@
 # Then process OS-specific subdirectory
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  add_object_library(
-    sigsetjmp_epilogue
-    ALIAS
-    DEPENDS
-      .${LIBC_TARGET_OS}.sigsetjmp_epilogue
-  )
+  if(TARGET libc.src.setjmp.${LIBC_TARGET_OS}.sigsetjmp_epilogue)
+    add_object_library(
+      sigsetjmp_epilogue
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.sigsetjmp_epilogue
+    )
+  endif()
 endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})

@@ -1,0 +1,3 @@
+[submodule "libc/src/signal/wg14"]
+	path = libc/src/signal/wg14
+	url = https://github.com/ned14/wg14_signals.git
