@@ -1121,8 +1121,7 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
     mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
     auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
-    return cgm.getBuilder().getConstRecordOrZeroAttr(
-        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+    return cgm.getBuilder().getConstRecordOrZeroAttr(newMembers, recordTy);
   }
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
@@ -3618,13 +3617,10 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { x.method() }
-    //
-    // Be sure to insert a new function before a current one.
-    CIRGenFunction *cgf = this->curCGF;
-    if (cgf)
-      builder.setInsertionPoint(cgf->curFn);
+    // Functions always belong at module scope, but the ambient insertion
+    // point may be inside another op's region, e.g. a thunk body or a
+    // global's ctor region, so it cannot be used here.
+    builder.setInsertionPointToEnd(theModule.getBody());
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
 
@@ -3649,9 +3645,6 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Record the func_info tag, a C++ special member form or a known standard
     // library entity.
     setFuncInfoAttr(func, funcDecl);
-
-    if (!cgf)
-      theModule.push_back(func);
 
     if (this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are

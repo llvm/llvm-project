@@ -32,68 +32,64 @@ struct StructTypeStorage : public mlir::TypeStorage {
     mlir::StringAttr name;
     bool incomplete;
     bool packed;
-    bool padded;
     llvm::ArrayRef<RecordMemberKind> member_kinds;
     bool is_class;
 
     KeyTy(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-          bool incomplete, bool packed, bool padded,
+          bool incomplete, bool packed,
           llvm::ArrayRef<RecordMemberKind> member_kinds, bool is_class)
         : members(members), name(name), incomplete(incomplete), packed(packed),
-          padded(padded), member_kinds(member_kinds), is_class(is_class) {}
+          member_kinds(member_kinds), is_class(is_class) {}
   };
 
   llvm::ArrayRef<mlir::Type> members;
   mlir::StringAttr name;
   bool incomplete;
   bool packed;
-  bool padded;
   llvm::ArrayRef<RecordMemberKind> member_kinds;
   bool is_class;
 
   StructTypeStorage(llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
-                    bool incomplete, bool packed, bool padded,
+                    bool incomplete, bool packed,
                     llvm::ArrayRef<RecordMemberKind> member_kinds,
                     bool is_class)
       : members(members), name(name), incomplete(incomplete), packed(packed),
-        padded(padded), member_kinds(member_kinds), is_class(is_class) {
+        member_kinds(member_kinds), is_class(is_class) {
     assert((name || !incomplete) && "Incomplete records must have a name");
     assert(member_kinds.size() == members.size() &&
            "every member must say what it holds");
   }
 
   KeyTy getAsKey() const {
-    return KeyTy(members, name, incomplete, packed, padded, member_kinds,
-                 is_class);
+    return KeyTy(members, name, incomplete, packed, member_kinds, is_class);
   }
 
   bool operator==(const KeyTy &key) const {
     if (name)
       return (name == key.name) && (is_class == key.is_class);
-    return std::tie(members, name, incomplete, packed, padded, member_kinds,
+    return std::tie(members, name, incomplete, packed, member_kinds,
                     is_class) == std::tie(key.members, key.name, key.incomplete,
-                                          key.packed, key.padded,
-                                          key.member_kinds, key.is_class);
+                                          key.packed, key.member_kinds,
+                                          key.is_class);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
     if (key.name)
       return llvm::hash_combine(key.name, key.is_class);
     return llvm::hash_combine(key.members, key.incomplete, key.packed,
-                              key.padded, key.member_kinds, key.is_class);
+                              key.member_kinds, key.is_class);
   }
 
   static StructTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
     return new (allocator.allocate<StructTypeStorage>()) StructTypeStorage(
         allocator.copyInto(key.members), key.name, key.incomplete, key.packed,
-        key.padded, allocator.copyInto(key.member_kinds), key.is_class);
+        allocator.copyInto(key.member_kinds), key.is_class);
   }
 
   /// Mutates the members and attributes of an identified struct/class.
   llvm::LogicalResult mutate(mlir::TypeStorageAllocator &allocator,
                              llvm::ArrayRef<mlir::Type> members, bool packed,
-                             bool padded,
                              llvm::ArrayRef<RecordMemberKind> memberKinds) {
     if (!name)
       return llvm::failure();
@@ -102,9 +98,9 @@ struct StructTypeStorage : public mlir::TypeStorage {
     // including the kinds: otherwise it silently keeps the kinds it was given
     // the first time.
     if (!incomplete)
-      return mlir::success(
-          (this->members == members) && (this->packed == packed) &&
-          (this->padded == padded) && (this->member_kinds == memberKinds));
+      return mlir::success((this->members == members) &&
+                           (this->packed == packed) &&
+                           (this->member_kinds == memberKinds));
 
     // mutate is the one entrance verify() never sees, so check the length here
     // rather than leave it to an assert.
@@ -113,7 +109,6 @@ struct StructTypeStorage : public mlir::TypeStorage {
 
     this->members = allocator.copyInto(members);
     this->packed = packed;
-    this->padded = padded;
     this->member_kinds = allocator.copyInto(memberKinds);
     incomplete = false;
     return llvm::success();

@@ -151,8 +151,10 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
-  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
+  auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize() +
+                                         Block::InlineDescMD);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
+                                     /*IsStatic=*/false);
   B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.

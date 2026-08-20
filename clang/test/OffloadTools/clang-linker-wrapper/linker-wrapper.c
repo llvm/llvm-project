@@ -131,7 +131,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // HIP: clang{{.*}} -o [[IMG_GFX90A:.+]] -dumpdir a.out.amdgpu9.0a.gfx90a.img. --target=amdgpu9.0a-amd-amdhsa -mcpu=gfx90a
 // HIP: clang{{.*}} -o [[IMG_GFX908:.+]] -dumpdir a.out.amdgpu9.08.gfx908.img. --target=amdgpu9.08-amd-amdhsa -mcpu=gfx908
-// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a,hip-amdgpu9.08-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
+// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input={{/dev/null|NUL}} -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
 // RUN: llvm-offload-binary -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgpu9.08-amd-amdhsa,arch=gfx908 \
@@ -417,7 +417,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-HIP
 
 // RELOCATABLE-LINK-HIP: clang{{.*}} -o {{.*}}.img -dumpdir a.out.amdgpu9.0a.gfx90a.img. --target=amdgpu9.0a-amd-amdhsa
-// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a -input={{/dev/null|NUL}} -input={{.*}} -output={{.*}}
+// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa--gfx90a -input={{/dev/null|NUL}} -input={{.*}} -output={{.*}}
 // RELOCATABLE-LINK-HIP: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-HIP: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 // RELOCATABLE-LINK-HIP: --rename-section llvm_offload_entries

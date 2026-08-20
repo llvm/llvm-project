@@ -218,3 +218,13 @@ define float @ret_atan2_nonan(float nofpclass(nan) %arg0, float nofpclass(nan) %
   %call = call float @llvm.atan2.f32(float %arg0, float %arg1)
   ret float %call
 }
+
+define float @ret_atan2_nosnan(float nofpclass(snan) %arg0, float nofpclass(snan) %arg1) {
+; CHECK-LABEL: define nofpclass(snan inf) float @ret_atan2_nosnan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], float nofpclass(snan) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan inf) float @llvm.atan2.f32(float nofpclass(snan) [[ARG0]], float nofpclass(snan) [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.atan2.f32(float %arg0, float %arg1)
+  ret float %call
+}
