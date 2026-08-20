@@ -58,8 +58,8 @@ EXPECTED_CORE_FRAMES = [
 ]
 
 
-@skipIfLLVMTargetMissing("X86")
 class TestDAP_coreFile(DAPTestCaseBase):
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file(self):
         exe_file = self.getSourcePath("linux-x86_64.out")
         core_file = self.getSourcePath("linux-x86_64.core")
@@ -83,6 +83,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
         frames = session.stack_trace(thread_id).body.stackFrames
         self.assertEqual(frames, EXPECTED_CORE_FRAMES)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file_attach_commands(self):
         """Loading a core through "attachCommands" (e.g. `target create --core`)
         should behave identically to using the "coreFile" attach key: the
@@ -98,7 +99,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
         process_event = session.attach(
             AttachArgs(
                 program=exe_file,
-                attachCommands=[f"target create --core '{core_file}' '{exe_file}"],
+                attachCommands=[f"target create --core '{core_file}' '{exe_file}'"],
             )
         )
 
@@ -132,6 +133,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
         resp_error = self.expect_not_none(resp.body and resp.body.error)
         self.assertEqual(resp_error.format, "Failed to create the process")
 
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file_stopped_reason(self):
         """The stopped event for a core file should report the actual crash
         reason (e.g. 'exception') rather than 'entry'."""
@@ -144,6 +146,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
         stop_event = session.verify_stopped_on_exception(after=process_event)
         self.assertIsNotNone(stop_event.body.description, "expect a stop description.")
 
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping_array(self):
         """Test that sourceMap property is correctly applied when loading a core"""
         exe_file = self.getSourcePath("linux-x86_64.out")
@@ -164,6 +167,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
         top_source = self.expect_not_none(top_frame.source and top_frame.source.path)
         self.assertIn(current_dir, top_source)
 
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping_object(self):
         """Test that sourceMap property is correctly applied when loading a core"""
         exe_file = self.getSourcePath("linux-x86_64.out")
