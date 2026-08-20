@@ -63,12 +63,17 @@ class StdSourceLocationTestCase(TestBase):
         self.expect_var_path(
             "loc_main",
             summary=re.compile(r'main\.cpp":6:\d+.*main'),
-            children=[],
         )
         self.expect_var_path(
             "loc_foo",
             summary=re.compile(r'main\.cpp":3:\d+.*foo'),
-            children=[],
         )
-        loc_empty = self.expect_var_path("loc_empty", children=[])
+        loc_empty = self.expect_var_path("loc_empty")
         self.assertIsNone(loc_empty.summary)
+
+        for member in ("_File =", "_Function =", "_Line =", "_Column ="):
+            self.expect(
+                "frame variable loc_main loc_foo",
+                matching=False,
+                substrs=[member],
+            )
