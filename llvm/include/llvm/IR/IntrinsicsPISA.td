@@ -10,11 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Pointer type definitions.
+// Pointer type definitions. See the PISA address-space specification:
+// https://intel.github.io/pisa/spaces_types.html#address-spaces
+def pisa_generic_ptr_ty  : LLVMQualPointerType<0>;  // (generic)*
 def pisa_global_ptr_ty   : LLVMQualPointerType<1>;  // (global)*
 def pisa_constant_ptr_ty : LLVMQualPointerType<2>;  // (constant)*
 def pisa_shared_ptr_ty   : LLVMQualPointerType<3>;  // (shared)*
-def pisa_generic_ptr_ty  : LLVMQualPointerType<0>;  // (generic)*
 
 // Base classes.
 class PISAIntrinsic<list<LLVMType> ret_types, list<LLVMType> param_types = [],
@@ -53,7 +54,8 @@ defvar MAX_WORK_DIM = 3;
 defvar MAX_LOCAL_SIZE = 65536;
 defvar MAX_SUB_GROUP_SIZE = 32;
 
-// Helper classes for common ArgInfo patterns.
+// Helper classes for common ArgInfo patterns. See the PISA rounding modes:
+// https://intel.github.io/pisa/floating_point.html#rounding-mode
 class RoundingModeArgInfo<ArgIndex idx> : ArgInfo<idx, [ArgName<"round">, ImmArgPrinter<"printRoundingMode">]>;
 class SaturationArgInfo<ArgIndex idx>   : ArgInfo<idx, [ArgName<"saturation">]>;
 class NanPropagateArgInfo<ArgIndex idx> : ArgInfo<idx, [ArgName<"nanp">]>;
@@ -92,6 +94,7 @@ class PISAFloatIntrinsic<LLVMType ret_ty, list<LLVMType> operand_types>
 
 //===----------------------------------------------------------------------===//
 // 1. Special Registers
+// https://intel.github.io/pisa/special_registers.html
 //===----------------------------------------------------------------------===//
 
 defm int_pisa_local_id             : PISAIntrinsicXYZ<[llvm_i32_ty], [], [IntrNoMem, Range<RetIndex, 0, MAX_LOCAL_SIZE>], "local_id">;
@@ -115,6 +118,7 @@ def int_pisa_activemask          : PISAIntrinsicClang<[llvm_i32_ty], [], [IntrNo
 
 //===----------------------------------------------------------------------===//
 // 2. Integer Arithmetic
+// https://intel.github.io/pisa/instructions_arithmetic.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_dp4a_uu : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
@@ -139,6 +143,7 @@ def int_pisa_smad : PISADefaultAttrsIntrinsic<[llvm_anyint_ty],
 
 //===----------------------------------------------------------------------===//
 // 3. Floating Point
+// https://intel.github.io/pisa/instructions_floating_point.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_fabs   : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
@@ -180,6 +185,7 @@ def int_pisa_log10_rnd  : PISAUnaryRndIntrinsic;
 
 //===----------------------------------------------------------------------===//
 // 4. Logic and Shift
+// https://intel.github.io/pisa/instructions_logical.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_bfi  : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty],
@@ -194,6 +200,7 @@ def int_pisa_bfn  : PISADefaultAttrsIntrinsic<[llvm_anyint_ty],
 
 //===----------------------------------------------------------------------===//
 // 5. Data Movement and Conversion
+// https://intel.github.io/pisa/instructions_data_movement.html
 //===----------------------------------------------------------------------===//
 
 // Conversions with explicit rounding mode (metadata).
@@ -218,6 +225,7 @@ def int_pisa_isaddr_global  : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [pis
 
 //===----------------------------------------------------------------------===//
 // 6. Subgroup Communication
+// https://intel.github.io/pisa/instructions_cross_lane.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_shfl : PISADefaultAttrsIntrinsic<[llvm_i32_ty],
@@ -239,6 +247,7 @@ def int_pisa_redfirstidx : PISADefaultAttrsIntrinsicClang<[llvm_i32_ty], [llvm_i
 
 //===----------------------------------------------------------------------===//
 // 7. Memory and Atomics
+// https://intel.github.io/pisa/instructions_memory.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_cas_fatom : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty],
@@ -247,6 +256,7 @@ def int_pisa_cas_fatom : PISADefaultAttrsIntrinsic<[llvm_anyfloat_ty],
 
 //===----------------------------------------------------------------------===//
 // 8. Synchronization
+// https://intel.github.io/pisa/instructions_synchronization.html
 //===----------------------------------------------------------------------===//
 
 def int_pisa_workgroup_barrier : PISAIntrinsicBarrier<"workgroup_barrier">;
