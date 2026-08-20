@@ -6,26 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AS_match {
-  code generic = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC;
-  }];
-  code shared = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED;
-  }];
-  code shared_cluster = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED_CLUSTER;
-  }];
-  code global = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL;
-  }];
-  code const = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
-  }];
-  code param = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_ENTRY_PARAM;
-  }];
+// Apply the operator of op to size operands named $op0, $op1, ...
+// For example, BuildNodeDag<(ops), 2>.ret is (ops node:$op0, node:$op1).
+class BuildNodeDag<dag op, int size> {
+  dag ret = !dag(!getdagop(op), !listsplat(node, size),
+                 !foreach(i, !range(size), "op" # i));
 }
+
+// A fragment matching intr, but only when the memory operation it represents
+// lies in the address space as. The shape of the fragment comes from the
+// intrinsic, so callers need only name the intrinsic.
+//
+// Matching this way requires the intrinsic to be registered in
+// getTgtMemIntrinsic so that the address space is preserved in the
+// SelectionDAG.
+class IntrinsicInAS<Intrinsic intr, NVPTXAddressSpace as>
+  : PatFrag<BuildNodeDag<(ops), !size(intr.ParamTypes)>.ret,
+            BuildNodeDag<(intr), !size(intr.ParamTypes)>.ret,
+            "return cast<MemSDNode>(N)->getAddressSpace() == llvm::"
+            # as.Enum # ";">;
 
 
 //===----------------------------------------------------------------------===//
@@ -1149,27 +1148,16 @@ defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
 
 //Prefetchu and Prefetch
 
-defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
+class PREFETCH_TENSORMAP_INST<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs), (ins ADDR:$addr),
+      "prefetch" # as.Suffix # ".tensormap",
+      [(IntrinsicInAS<int_nvvm_prefetch_tensormap, as> addr:$addr)]>,
+    Requires<[PTX80, SM90]>;
 
-multiclass PREFETCH_TENSORMAP_PATFRAG<string suffix, code predicate> {
-  def !tolower(suffix) : PatFrag<!setdagop(frag_pat, ops), frag_pat, predicate>;
-}
+def PREFETCH_CONST_TENSORMAP   : PREFETCH_TENSORMAP_INST<AddrSpaceConst>;
+def PREFETCH_GENERIC_TENSORMAP : PREFETCH_TENSORMAP_INST<AddrSpaceGeneric>;
+def PREFETCH_PARAM_TENSORMAP   : PREFETCH_TENSORMAP_INST<AddrSpaceParam>;
 
-defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"CONST", AS_match.const>;
-defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"GENERIC", AS_match.generic>;
-defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"PARAM", AS_match.param>;
-
-multiclass PREFETCH_TENSORMAP_INST<string addrspace_name, PatFrag pattern_frag> {
-  def "" : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-           "prefetch" # addrspace_name # ".tensormap",
-           [(pattern_frag addr:$addr)]>,
-           Requires<[PTX80, SM90]>;
-}
-
-defm PREFETCH_CONST_TENSORMAP   : PREFETCH_TENSORMAP_INST<".const", prefetch_tensormap_const>;
-defm PREFETCH_GENERIC_TENSORMAP : PREFETCH_TENSORMAP_INST<"", prefetch_tensormap_generic>;
-defm PREFETCH_PARAM_TENSORMAP   : PREFETCH_TENSORMAP_INST<".param", prefetch_tensormap_param>;
-  
 class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr),
           InstName,
@@ -5291,20 +5279,12 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
 }
 
 // Convert dag of arguments into a dag to match given intrinsic.
-class BuildPatternI<Intrinsic Intr, dag Ins> {
+class BuildPattern<SDPatternOperator Intr, dag Ins> {
   // Build a dag pattern that matches the intrinsic call.
   dag ret = !foreach(tmp, Ins,
                           !subst(ADDR, addr,
                           !subst(ins, Intr,
                           !subst(i32imm, timm, tmp))));
-}
-
-// Same as above, but uses PatFrag instead of an Intrinsic.
-class BuildPatternPF<PatFrag Intr, dag Ins> {
-  // Build a dag pattern that matches the intrinsic call.
-  dag ret = !foreach(tmp, Ins,
-                          !subst(ADDR, addr,
-                          !subst(ins, Intr, tmp)));
 }
 
 // Common WMMA-related fields used for building patterns for all MMA instructions.
@@ -5314,31 +5294,20 @@ class WMMA_INSTR<string _Intr, list<dag> _Args>
   // Concatenate all arguments into a single dag.
   dag Args = !foldl((ins), _Args, a, b, !con(a, b));
   // Pre-build the pattern to match (intrinsic arg0, arg1, ...).
-  dag IntrinsicPattern = BuildPatternI<!cast<Intrinsic>(Intr), Args>.ret;
+  dag IntrinsicPattern = BuildPattern<!cast<Intrinsic>(Intr), Args>.ret;
 }
 
 //
 // wmma.load.[a|b|c].sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
 
-class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
+class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, NVPTXAddressSpace Space,
+                bit WithStride>
   : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record_name,
                               [!con((ins ADDR:$src),
                                     !if(WithStride, (ins B32:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
-  // Load/store intrinsics are overloaded on pointer's address space.
-  // To match the right intrinsic, we need to build AS-constrained PatFrag.
-  // Operands is a dag equivalent in shape to Args, but using (ops node:$name, .....).
-  dag PFOperands = !if(WithStride, (ops node:$src, node:$ldm), (ops node:$src));
-  dag PFOperandsIntr = !if(WithStride, (Intr node:$src, node:$ldm), (Intr node:$src));
-  // Build PatFrag that only matches particular address space.
-  PatFrag IntrFrag = PatFrag<PFOperands,
-                             PFOperandsIntr,
-                             !cond(!eq(Space, ".shared"): AS_match.shared,
-                                   !eq(Space, ".global"): AS_match.global,
-                                   true: AS_match.generic)>;
-  // Build AS-constrained pattern.
-  let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
+  let IntrinsicPattern = BuildPattern<IntrinsicInAS<Intr, Space>, Args>.ret;
 
   let OutOperandList = Frag.Outs;
   let InOperandList = !con(Args, (ins MmaCode:$ptx));
@@ -5348,7 +5317,7 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
                   # "${ptx:aligned}"
                   # "." # Layout
                   # "." # Frag.geom
-                  # Space
+                  # Space.Suffix
                   # "." # Frag.ptx_elt_type # " \t"
                   # Frag.regstring
                   # ", [$src]"
@@ -5359,28 +5328,16 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
 //
 // wmma.store.d.sync.[row|col].m16n16k16[|.global|.shared].[f16|f32]
 //
-class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
+class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, NVPTXAddressSpace Space,
                    bit WithStride>
   : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record_name,
                [!con((ins ADDR:$dst),
                      Frag.Ins,
                      !if(WithStride, (ins B32:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
-
-  // Load/store intrinsics are overloaded on pointer's address space.
-  // To match the right intrinsic, we need to build AS-constrained PatFrag.
-  // Operands is a dag equivalent in shape to Args, but using (ops node:$name, .....).
-  dag PFOperands = !con((ops node:$dst),
-                        !dag(ops, !listsplat(node, !size(Frag.regs)), Frag.reg_names),
-                        !if(WithStride, (ops node:$ldm), (ops)));
-  // Build PatFrag that only matches particular address space.
-  PatFrag IntrFrag = PatFrag<PFOperands,
-                             !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
-                             !cond(!eq(Space, ".shared"): AS_match.shared,
-                                   !eq(Space, ".global"): AS_match.global,
-                                   true: AS_match.generic)>;
-  // Build AS-constrained pattern.
-  let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
+  // Load/store intrinsics are overloaded on pointer's address space, so only
+  // match the intrinsic when it accesses this instruction's address space.
+  let IntrinsicPattern = BuildPattern<IntrinsicInAS<Intr, Space>, Args>.ret;
 
   let InOperandList  = !con(Args, (ins MmaCode:$ptx));
   let OutOperandList = (outs);
@@ -5388,7 +5345,7 @@ class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
                   # "${ptx:aligned}"
                   # "." # Layout
                   # "." # Frag.geom
-                  # Space
+                  # Space.Suffix
                   # "." # Frag.ptx_elt_type
                   # " \t[$dst],"
                   # Frag.regstring
@@ -5400,7 +5357,7 @@ class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
 defset list<WMMA_INSTR> MMA_LDSTs  = {
   foreach layout = ["row", "col"] in {
     foreach stride = [false, true] in {
-      foreach space = [".global", ".shared", ""] in {
+      foreach space = [AddrSpaceGlobal, AddrSpaceShared, AddrSpaceGeneric] in {
         foreach frag = NVVM_MMA_OPS.all_ld_ops in
           if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
             def : WMMA_LOAD<WMMA_REGINFO<frag, "load">, layout, space, stride>;
@@ -5727,15 +5684,12 @@ defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
 //
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
-class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
+class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, NVPTXAddressSpace Space>
   : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record_name, [(ins ADDR:$src)]>,
     Requires<Frag.Predicates> {
-  // Build PatFrag that only matches particular address space.
-  PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
-                             !cond(!eq(Space, ".shared"): AS_match.shared,
-                                   true: AS_match.generic)>;
-  // Build AS-constrained pattern.
-  let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
+  // ldmatrix is overloaded on pointer's address space, so only match the
+  // intrinsic when it accesses this instruction's address space.
+  let IntrinsicPattern = BuildPattern<IntrinsicInAS<Intr, Space>, Args>.ret;
 
   let OutOperandList = Frag.Outs;
   let InOperandList = !con(Args, (ins MmaCode:$ptx));
@@ -5743,7 +5697,7 @@ class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
                   # Frag.geom
                   # "." # Frag.frag
                   # !if(Transposed, ".trans", "")
-                  # Space
+                  # Space.Suffix
                   # "." # Frag.ptx_elt_type
                   # " " # Frag.regstring # ", [$src];";
 }
@@ -5751,7 +5705,7 @@ class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
 // Create all ldmatrix variants
 defset list<WMMA_INSTR> LDMATRIXs  = {
   foreach transposed = [false, true] in {
-    foreach space = [".shared", ""] in {
+    foreach space = [AddrSpaceShared, AddrSpaceGeneric] in {
       foreach frag = NVVM_MMA_OPS.all_ldmatrix_ops in
         if NVVM_LDMATRIX_SUPPORTED<frag, transposed>.ret then
           def : LDMATRIX<WMMA_REGINFO<frag, "ldmatrix">, transposed, space>;
@@ -5762,32 +5716,25 @@ defset list<WMMA_INSTR> LDMATRIXs  = {
 //
 // stmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
-class STMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
+class STMATRIX<WMMA_REGINFO Frag, bit Transposed, NVPTXAddressSpace Space>
   : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record_name, [!con((ins ADDR:$dst), Frag.Ins)]>,
     Requires<Frag.Predicates> {
-  // Build PatFrag that only matches particular address space.
-  dag PFOperands = !con((ops node:$dst),
-                        !dag(ops, !listsplat(node, !size(Frag.regs)), Frag.reg_names));
-  PatFrag IntrFrag = PatFrag<PFOperands,
-                             !foreach(tmp, PFOperands, !subst(ops, Intr, tmp)),
-                             !cond(!eq(Space, ".shared"): AS_match.shared,
-                                   true: AS_match.generic)>;
-  // Build AS-constrained pattern.
-  let IntrinsicPattern = BuildPatternPF<IntrFrag, Args>.ret;
+  let IntrinsicPattern = BuildPattern<IntrinsicInAS<Intr, Space>, Args>.ret;
+
   let OutOperandList = (outs);
   let InOperandList = !con(Args, (ins MmaCode:$ptx));
   let AsmString = "stmatrix.sync.aligned."
                   # Frag.geom
                   # "." # Frag.frag
                   # !if(Transposed, ".trans", "")
-                  # Space
+                  # Space.Suffix
                   # "." # Frag.ptx_elt_type
                   # " [$dst], " # Frag.regstring # ";";
 }
 
 // Create all stmatrix variants
 defset list<WMMA_INSTR> STMATRIXs = {
-  foreach transposed = [false, true] in {foreach space = [".shared", ""] in {
+  foreach transposed = [false, true] in {foreach space = [AddrSpaceShared, AddrSpaceGeneric] in {
       foreach frag = NVVM_MMA_OPS.all_stmatrix_ops in
         if NVVM_STMATRIX_SUPPORTED<frag, transposed>.ret then
           def : STMATRIX<WMMA_REGINFO<frag, "stmatrix">, transposed, space>;
@@ -5897,30 +5844,41 @@ let Predicates = [SM90] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
+multiclass TCGEN05_ALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar prefix = "tcgen05.alloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned";
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
+
+  let isConvergent = true, Predicates = Pred in {
+    def _GENERIC : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".b32",
+        [(IntrinsicInAS<Intr, AddrSpaceGeneric> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+    def _SHARED : BasicNVPTXInst<(outs), (ins ADDR:$dst, B32:$ncols), prefix # ".shared::cta.b32",
+        [(IntrinsicInAS<Intr, AddrSpaceShared> addr:$dst, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+  }
+}
+defm TCGEN05_ALLOC_CG1           : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1>;
+defm TCGEN05_ALLOC_CG2           : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG1 : TCGEN05_ALLOC_INTR<"1", int_nvvm_tcgen05_alloc_cg1, 1>;
+defm TCGEN05_ALLOC_EXCLUSIVE_CG2 : TCGEN05_ALLOC_INTR<"2", int_nvvm_tcgen05_alloc_cg2, 1>;
+
+multiclass TCGEN05_DEALLOC_INTR<string CtaGroup, Intrinsic Intr, bit IsExclusive = 0> {
+  defvar Pred = !if(IsExclusive,
+                    [hasTcgen05InstSupport, PTX94],
+                    [hasTcgen05InstSupport]);
+
+  let isConvergent = true, Predicates = Pred in
+    def "" : BasicNVPTXInst<(outs), (ins B32:$tmem_addr, B32:$ncols),
+        "tcgen05.dealloc" # !if(IsExclusive, ".exclusive", "") # ".cta_group::" # CtaGroup # ".sync.aligned.b32",
+        [(Intr B32:$tmem_addr, B32:$ncols, !if(IsExclusive, -1, 0))]>;
+}
+defm TCGEN05_DEALLOC_CG1           : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
+defm TCGEN05_DEALLOC_CG2           : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG1 : TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1, 1>;
+defm TCGEN05_DEALLOC_EXCLUSIVE_CG2 : TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2, 1>;
+
 let isConvergent = true in {
 let Predicates = [hasTcgen05InstSupport] in {
-multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$dst, B32:$ncols),
-             "tcgen05.alloc.cta_group::" # num # ".sync.aligned" # AS # ".b32",
-             [(Intr addr:$dst, B32:$ncols)]>;
-}
-
-defm TCGEN05_ALLOC_CG1 : TCGEN05_ALLOC_INTR<"", "1", int_nvvm_tcgen05_alloc_cg1>;
-defm TCGEN05_ALLOC_CG2 : TCGEN05_ALLOC_INTR<"", "2", int_nvvm_tcgen05_alloc_cg2>;
-
-defm TCGEN05_ALLOC_S64_CG1 : TCGEN05_ALLOC_INTR<".shared::cta", "1", int_nvvm_tcgen05_alloc_shared_cg1>;
-defm TCGEN05_ALLOC_S64_CG2 : TCGEN05_ALLOC_INTR<".shared::cta", "2", int_nvvm_tcgen05_alloc_shared_cg2>;
-
-multiclass TCGEN05_DEALLOC_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins B32:$tmem_addr, B32:$ncols),
-             "tcgen05.dealloc.cta_group::" # num # ".sync.aligned.b32",
-             [(Intr B32:$tmem_addr, B32:$ncols)]>;
-}
-defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1>;
-defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
-
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
   def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }
@@ -6812,61 +6770,57 @@ foreach sparse = [0, 1] in {
 
 class TensormapReplaceInst_2<string state_space, string field_name, 
   string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  code predicate> :
+  NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs), 
     (ins ADDR:$addr, val_RC:$val), 
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(PatFrag<(ops node:$addr, node:$val),
-       (Intrin node:$addr, node:$val), predicate>
-      addr:$addr, ValTy:$val)]>;
+    [(IntrinsicInAS<Intrin, as> addr:$addr, ValTy:$val)]>;
 
 class TensormapReplaceInst_3<string state_space, string field_name, 
   string regclass_name, NVPTXRegClass val_RC, ValueType ValTy, Intrinsic Intrin,
-  code predicate> :
+  NVPTXAddressSpace as> :
   BasicNVPTXInst<(outs), 
     (ins ADDR:$addr, B32:$ord, val_RC:$val), 
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # regclass_name,
-    [(PatFrag<(ops node:$addr, node:$ord, node:$val),
-       (Intrin node:$addr, node:$ord, node:$val), predicate>
-      addr:$addr, i32:$ord, ValTy:$val)]>;
+    [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, ValTy:$val)]>;
 
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
-  defvar pred = !if(!eq(ss, "GLOBAL"), AS_match.global, AS_match.shared);
+  defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
   let Predicates = [hasTensormapReplaceSupport] in {
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss : 
       TensormapReplaceInst_2<ss_ptx, "global_address", "b64", B64, i64,
-        int_nvvm_tensormap_replace_global_address, pred>;
+        int_nvvm_tensormap_replace_global_address, as>;
 
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
         TensormapReplaceInst_2<ss_ptx, !tolower(field_name), "b32", B32, i32,
-          intrin, pred>;
+          intrin, as>;
     } // field_name
 
     def TENSORMAP_REPLACE_TILE_GLOBAL_STRIDE_ # ss : 
       TensormapReplaceInst_3<ss_ptx, "global_stride", "b64", B64, i64, 
-        int_nvvm_tensormap_replace_global_stride, pred>;
+        int_nvvm_tensormap_replace_global_stride, as>;
 
     foreach field_name = ["BOX_DIM", "GLOBAL_DIM", "ELEMENT_STRIDE"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss : 
         TensormapReplaceInst_3<ss_ptx, !tolower(field_name), "b32", B32, i32, 
-          intrin, pred>;
+          intrin, as>;
     } // field_name
   } // hasTensormapReplaceSupport
 
   def TENSORMAP_REPLACE_TILE_ELEMTYPE_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "elemtype", "b32", B32, i32, 
-      int_nvvm_tensormap_replace_elemtype, pred>;
+      int_nvvm_tensormap_replace_elemtype, as>;
 
   def TENSORMAP_REPLACE_SWIZZLE_ATOMICITY_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "swizzle_atomicity", "b32", B32, i32, 
-      int_nvvm_tensormap_replace_swizzle_atomicity, pred>,
+      int_nvvm_tensormap_replace_swizzle_atomicity, as>,
     Requires<[hasTensormapReplaceSwizzleAtomicitySupport]>;
 
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss : 
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", "b32", B32, i32, 
-      int_nvvm_tensormap_replace_swizzle_mode, pred>;
+      int_nvvm_tensormap_replace_swizzle_mode, as>;
 } // state_space

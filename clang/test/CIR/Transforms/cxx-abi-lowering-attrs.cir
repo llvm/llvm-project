@@ -3,7 +3,7 @@
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Other = !cir.struct<"Other" padded {data !u8i}>
+!rec_Other = !cir.struct<"Other" {pad !u8i}>
 !rec_Struct = !cir.struct<"Struct" {data !cir.data_member<!s32i in !rec_Other>}>
 // CHECK: !rec_Struct = !cir.struct<"Struct" {data !s64i}>
 

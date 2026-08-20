@@ -21,8 +21,8 @@ float test_lod(float2 loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::SamplerState", ptr %[[SAMPLER]], i32 0, i32 0
 // CHECK: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK: %[[COORD_VAL:.*]] = load <2 x float>, ptr %[[COORD]]
-// DXIL: %[[RES:.*]] = call {{.*}} float @llvm.dx.resource.calculate.lod.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]])
-// SPIRV: %[[RES:.*]] = call {{.*}} float @llvm.spv.resource.calculate.lod.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]])
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.calculate.lod.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]]) [ "convergencectrl"(token %0) ]
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.calculate.lod.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]]) [ "convergencectrl"(token %0) ]
 // CHECK: ret float %[[RES]]
 
 // CHECK: define hidden {{.*}} float @test_lod_unclamped(float vector[2])(<2 x float> noundef nofpclass(nan inf) %[[LOC:.*]])
@@ -41,6 +41,6 @@ float test_lod_unclamped(float2 loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::SamplerState", ptr %[[SAMPLER]], i32 0, i32 0
 // CHECK: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK: %[[COORD_VAL:.*]] = load <2 x float>, ptr %[[COORD]]
-// DXIL: %[[RES:.*]] = call {{.*}} float @llvm.dx.resource.calculate.lod.unclamped.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]])
-// SPIRV: %[[RES:.*]] = call {{.*}} float @llvm.spv.resource.calculate.lod.unclamped.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]])
+// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.dx.resource.calculate.lod.unclamped.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]]) [ "convergencectrl"(token %0) ]
+// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn float @llvm.spv.resource.calculate.lod.unclamped.f32.{{.*}}(target("spirv.Image", float, 1, 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], <2 x float> %[[COORD_VAL]]) [ "convergencectrl"(token %0) ]
 // CHECK: ret float %[[RES]]

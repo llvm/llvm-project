@@ -397,6 +397,9 @@ public:
   /// Prefix to use for -save-temps output.
   std::string SaveTempsFilePrefix;
 
+  /// Prefix to use for -save-dynamic-debugging-temps output.
+  std::string SaveDynDbgTempsFilePrefix;
+
   /// Name of file passed with -foffload-include-binary option to forward to
   /// offloading runtime back-end for incorporating them into host-side object
   /// file.

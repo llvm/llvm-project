@@ -190,14 +190,14 @@ static BinaryOperator *isFMulAddCandidate(Value *V) {
     return m_CombineAnd(m_AllowContract(m_OneUse(m_FMul(m_Value(), m_Value()))),
                         m_BinOp(FMul));
   };
-  BinaryOperator *Mul0 = nullptr, *Mul1 = nullptr;
-  match(FAdd->getOperand(0), ContractableFMul(Mul0));
-  match(FAdd->getOperand(1), ContractableFMul(Mul1));
+  BinaryOperator *Mul = nullptr, *OtherMul = nullptr;
+  Value *OtherOp = nullptr;
   // Keep constants visible to the enclosing expression so they still can be
   // folded there.
-  if (!Mul0 == !Mul1 || isa<Constant>(FAdd->getOperand(Mul0 ? 1 : 0)))
+  if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
+      isa<Constant>(OtherOp) || match(OtherOp, ContractableFMul(OtherMul)))
     return nullptr;
-  return Mul0 ? Mul0 : Mul1;
+  return Mul;
 }
 
 void ReassociatePass::BuildRankMap(Function &F,
