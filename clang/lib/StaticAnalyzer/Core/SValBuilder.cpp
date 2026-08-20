@@ -326,6 +326,12 @@ loc::MemRegionVal SValBuilder::getCXXThis(const CXXRecordDecl *D,
 std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
   E = E->IgnoreParens();
 
+  if (E->getType()->isFunctionPointerType()) {
+    if (const auto *FD =
+            dyn_cast_or_null<FunctionDecl>(E->getReferencedDeclOfCallee()))
+      return getFunctionPointer(FD);
+  }
+
   switch (E->getStmtClass()) {
   // Handle expressions that we treat differently from the AST's constant
   // evaluator.
