@@ -78,14 +78,14 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_ternary_builtin(name, ty, builtin)                            \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      ty __rd, ty __rs1, ty __rs2) {                                           \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         ty __rs2) {           \
     return builtin(__rd, __rs1, __rs2);                                        \
   }
 
 #define __packed_ternary_builtin_mixed(name, rty, ty1, ty2, builtin)           \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(                     \
-      rty __rd, ty1 __rs1, ty2 __rs2) {                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(rty __rd, ty1 __rs1, \
+                                                          ty2 __rs2) {         \
     return builtin(__rd, __rs1, __rs2);                                        \
   }
 

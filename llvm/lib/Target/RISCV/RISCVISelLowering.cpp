@@ -12525,10 +12525,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       auto [RdLo, RdHi] = DAG.SplitVector(Rd, DL);
       auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
       auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
-      SDValue Lo =
-          DAG.getNode(MulOpc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
-      SDValue Hi =
-          DAG.getNode(MulOpc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
+      SDValue Lo = DAG.getNode(MulOpc, DL, MVT::v2i16, RdLo, Rs1Lo, Rs2Lo);
+      SDValue Hi = DAG.getNode(MulOpc, DL, MVT::v2i16, RdHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
@@ -12537,9 +12535,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         return DAG.getExtractVectorElt(DL, MVT::i32, V, Idx);
       };
       SDValue Lo = DAG.getNode(MulOpc, DL, MVT::i32, Extract(Rd, 0),
-                                Extract(Rs1, 0), Extract(Rs2, 0));
+                               Extract(Rs1, 0), Extract(Rs2, 0));
       SDValue Hi = DAG.getNode(MulOpc, DL, MVT::i32, Extract(Rd, 1),
-                                Extract(Rs1, 1), Extract(Rs2, 1));
+                               Extract(Rs1, 1), Extract(Rs2, 1));
       return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
     }
 
@@ -16625,15 +16623,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
       EVT WideVT = MVT::v4i16;
       SDValue Undef = DAG.getUNDEF(VT);
-      SDValue Rd = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
-                               N->getOperand(1), Undef);
-      SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
-                                N->getOperand(2), Undef);
-      SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT,
-                                N->getOperand(3), Undef);
-      SDValue Res =
-          DAG.getNode(getRVPMulHighAccumulateOpcode(IntNo), DL, WideVT, Rd,
-                      Rs1, Rs2);
+      SDValue Rd =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Rs1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      SDValue Rs2 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(3), Undef);
+      SDValue Res = DAG.getNode(getRVPMulHighAccumulateOpcode(IntNo), DL,
+                                WideVT, Rd, Rs1, Rs2);
       Results.push_back(DAG.getExtractSubvector(DL, VT, Res, 0));
       return;
     }
