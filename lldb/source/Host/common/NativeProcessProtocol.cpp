@@ -18,6 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/Process.h"
+#include <iterator>
 #include <optional>
 
 using namespace lldb;
@@ -651,18 +652,31 @@ Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
 
 Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
                                           size_t size, size_t &bytes_written) {
-  const uint8_t *byte_buf = static_cast<const uint8_t *>(buf);
-  bytes_written = 0;
   Status error;
+  bytes_written = 0;
 
   if (!size)
     return error;
 
-  for (auto &[sbp_addr, sbp_data] : m_software_breakpoints) {
+  if (m_software_breakpoints.empty())
+    return DoWriteMemory(addr, buf, size, bytes_written);
+
+  // Find first breakpoint that starts > addr.
+  std::map<lldb::addr_t, SoftwareBreakpoint>::iterator bkpt =
+      m_software_breakpoints.upper_bound(addr);
+
+  // it points to the first breakpoint starting at > addr, but the one
+  // immediately before it may extend over addr, or begin exactly at addr.
+  if (bkpt != m_software_breakpoints.begin())
+    bkpt = std::prev(bkpt);
+
+  const uint8_t *byte_buf = static_cast<const uint8_t *>(buf);
+  for (; bkpt != m_software_breakpoints.end(); ++bkpt) {
+    auto &[sbp_addr, sbp_data] = *bkpt;
     // If the address is before a breakpoint site, write up to the site, or to
     // the end of the write. Whichever comes first.
     if (addr < sbp_addr) {
-      size_t to_write = std::min(size, sbp_addr - addr);
+      const size_t to_write = std::min(size, sbp_addr - addr);
       size_t part_bytes_written = 0;
       error = DoWriteMemory(addr, byte_buf, to_write, part_bytes_written);
       bytes_written += part_bytes_written;
@@ -687,11 +701,12 @@ Status NativeProcessProtocol::WriteMemory(lldb::addr_t addr, const void *buf,
         (addr < (sbp_addr + sbp_data.saved_opcodes.size()))) {
       // Instead of writing this chunk, update the saved bytes in the
       // breakpoint.
-      size_t idx = addr - sbp_addr;
-      size_t to_write = std::min(size, sbp_data.saved_opcodes.size() - idx);
+      const size_t idx = addr - sbp_addr;
+      const size_t to_write =
+          std::min(size, sbp_data.saved_opcodes.size() - idx);
       for (size_t copied = 0; copied < to_write;
-           ++idx, ++bytes_written, ++byte_buf, ++addr, --size, ++copied)
-        sbp_data.saved_opcodes[idx] = *byte_buf;
+           ++bytes_written, ++byte_buf, ++addr, --size, ++copied)
+        sbp_data.saved_opcodes[idx + copied] = *byte_buf;
     }
 
     if (!size)
