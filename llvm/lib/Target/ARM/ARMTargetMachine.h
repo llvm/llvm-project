@@ -52,6 +52,11 @@ public:
   const ARMSubtarget *getSubtargetImpl() const = delete;
   bool isLittleEndian() const { return isLittle; }
 
+  /// Returns the floating-point ABI in effect for \p M: the "float-abi" module
+  /// flag if present, otherwise the ABI implied by the target triple. An
+  /// explicit -target-abi=aapcs16 forces the hard-float ABI.
+  FloatABI::ABIType getFloatABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration

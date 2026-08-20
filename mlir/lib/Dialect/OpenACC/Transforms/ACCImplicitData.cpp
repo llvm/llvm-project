@@ -215,7 +215,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <type_traits>
 
@@ -458,6 +457,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -480,16 +488,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  }
-
-  if (acc::isDeviceValue(var)) {
-    // Variable is device data with no existing dominating mapping: use
-    // deviceptr clause.
-    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                               "device data\n");
-    return acc::DevicePtrOp::create(builder, loc, var,
-                                    /*structured=*/true, /*implicit=*/true,
-                                    accSupport.getVariableName(var));
   }
 
   if (isScalar) {
@@ -704,35 +702,6 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
   }
 }
 
-/// A present() clause on a device value always holds. Erase it to allow the
-/// implicit data to generate an acc.deviceptr for it.
-template <typename OpT>
-static void foldPresentDeviceValue(OpT computeConstructOp) {
-  SmallVector<Value> remainingOperands;
-  SmallVector<acc::PresentOp> toErase;
-  for (Value var : computeConstructOp.getDataClauseOperands()) {
-    if (auto presentOp =
-            dyn_cast_if_present<acc::PresentOp>(var.getDefiningOp())) {
-      if (acc::isDeviceValue(presentOp.getVar())) {
-        toErase.push_back(presentOp);
-        continue;
-      }
-    }
-    remainingOperands.push_back(var);
-  }
-  if (toErase.empty())
-    return;
-
-  computeConstructOp.getDataClauseOperandsMutable().assign(remainingOperands);
-  for (acc::PresentOp presentOp : toErase) {
-    Operation *exitOp = findDataExitOp(presentOp);
-    assert(exitOp && exitOp->getNumResults() == 0);
-    presentOp.getAccVar().replaceAllUsesWith(presentOp.getVar());
-    exitOp->erase();
-    presentOp->erase();
-  }
-}
-
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
@@ -821,24 +790,19 @@ void ACCImplicitData::runOnOperation() {
 
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
-  SmallVector<Operation *> computeConstructOps;
   module.walk([&](Operation *op) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op))
-      computeConstructOps.push_back(op);
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
+      assert(op->getNumRegions() == 1 && "must have 1 region");
+
+      auto defaultClause = acc::getDefaultAttr(op);
+      llvm::TypeSwitch<Operation *, void>(op)
+          .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
+              [&](auto op) {
+                generateImplicitDataOps(module, op, defaultClause, accSupport);
+              })
+          .Default([&](Operation *) {});
+    }
   });
-
-  for (Operation *op : computeConstructOps) {
-    assert(op->getNumRegions() == 1 && "must have 1 region");
-
-    auto defaultClause = acc::getDefaultAttr(op);
-    llvm::TypeSwitch<Operation *, void>(op)
-        .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
-            [&](auto op) {
-              foldPresentDeviceValue(op);
-              generateImplicitDataOps(module, op, defaultClause, accSupport);
-            })
-        .Default([&](Operation *) {});
-  }
 }
 
 } // namespace

@@ -387,3 +387,29 @@ template <class T> class A {
   friend void foo<T>() {} // expected-error {{ambiguous}} expected-error{{no candidate function template was found for dependent friend function template specialization}}
 };
 }
+
+namespace test19 {
+template <class V> class B;
+
+template <class T> struct A {
+  template <class U> static void f(B<T> &);
+};
+
+template <class V> class B {
+  int n; // #test19-B-n
+  friend void A<V>::template f<int>(B<V> &);
+};
+
+template <class T>
+template <class U>
+void A<T>::f(B<T> &x) {
+  x.n = 0;
+  // expected-error@-1 {{'n' is a private member of 'test19::B<long>'}}
+  //   expected-note@#test19-B-n {{implicitly declared private here}}
+}
+
+template class B<long>;
+template void A<long>::f<int>(B<long> &);
+template void A<long>::f<double>(B<long> &);
+// expected-note@-1 {{in instantiation of function template specialization 'test19::A<long>::f<double>' requested here}}
+}

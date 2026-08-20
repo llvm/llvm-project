@@ -49,7 +49,7 @@ public:
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
     // here manually so they are properly freeing their resources.
-    for (auto RecordPair : Records) {
+    for (const auto &RecordPair : Records) {
       if (Record *R = RecordPair.second)
         R->~Record();
     }
@@ -122,17 +122,15 @@ public:
   /// Creates a descriptor for a primitive type.
   Descriptor *createDescriptor(DeclOrExpr D, PrimType T,
                                const Type *SourceTy = nullptr,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false,
                                bool IsVolatile = false) {
-    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
-                              IsMutable, IsVolatile);
+    return allocateDescriptor(D, SourceTy, T, IsConst, IsTemporary, IsMutable,
+                              IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(DeclOrExpr D, const Type *Ty,
-                               Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);

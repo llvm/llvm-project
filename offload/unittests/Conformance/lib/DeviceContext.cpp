@@ -175,6 +175,7 @@ DeviceContext::DeviceContext(std::size_t GlobalDeviceId)
                 llvm::Twine(Devices.size()));
 
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
 }
 
 DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
@@ -210,6 +211,12 @@ DeviceContext::DeviceContext(llvm::StringRef Platform, std::size_t DeviceId)
 
   GlobalDeviceId = *FoundGlobalDeviceId;
   DeviceHandle = Devices[GlobalDeviceId].Handle;
+  OL_CHECK(olCreateContext(1, &DeviceHandle, &Context));
+}
+
+DeviceContext::~DeviceContext() {
+  if (Context)
+    olDestroyContext(Context);
 }
 
 [[nodiscard]] llvm::Expected<std::shared_ptr<DeviceImage>>

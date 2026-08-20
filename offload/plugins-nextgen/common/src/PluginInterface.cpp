@@ -259,21 +259,25 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
              "Non-bare mode should only use the first thread and block "
              "dimensions");
 
-  assert(!LaunchArgs.Flags.StrictBlocksAndThreads ||
+  assert(!LaunchArgs.Flags.StrictBlocks ||
+         EffectiveNumBlocks[0] > 0 && EffectiveNumBlocks[1] > 0 &&
+             EffectiveNumBlocks[2] > 0 &&
+             "Strict requires number of blocks greater than zero");
+  assert(!LaunchArgs.Flags.StrictThreads ||
          EffectiveNumThreads[0] > 0 && EffectiveNumThreads[1] > 0 &&
-             EffectiveNumThreads[2] > 0 && EffectiveNumBlocks[0] > 0 &&
-             EffectiveNumBlocks[1] > 0 && EffectiveNumBlocks[2] > 0 &&
-             "Strict requires number of blocks and threads greater than zero");
+             EffectiveNumThreads[2] > 0 &&
+             "Strict requires number of threads greater than zero");
 
   // Calculate or adjust the effective number of threads and blocks if needed.
-  if (!LaunchArgs.Flags.StrictBlocksAndThreads) {
+  if (!LaunchArgs.Flags.StrictThreads)
     EffectiveNumThreads[0] =
         getEffectiveNumThreads(GenericDevice, EffectiveNumThreads[0]);
 
+  if (!LaunchArgs.Flags.StrictBlocks)
     EffectiveNumBlocks[0] = getEffectiveNumBlocks(
         GenericDevice, EffectiveNumBlocks[0], LaunchArgs.Tripcount,
-        EffectiveNumThreads[0], LaunchArgs.UserThreadLimit[0] > 0);
-  }
+        EffectiveNumThreads[0], LaunchArgs.Flags.StrictThreads,
+        LaunchArgs.UserThreadLimit[0] > 0);
 
   auto DynBlockMemConfOrErr = prepareBlockMemory(
       GenericDevice, LaunchArgs,
@@ -349,7 +353,7 @@ GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
     GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
     uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-    bool IsNumThreadsFromUser) const {
+    bool IsNumThreadsStrict, bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
   // NOTE: This clamps the user-requested number of blocks to the device limit
@@ -380,7 +384,7 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
       // Honor the thread_limit clause; only lower the number of threads.
       [[maybe_unused]] auto OldNumThreads = EffectiveNumThreads;
       if (LoopTripCount >= DefaultNumBlocks * EffectiveNumThreads ||
-          IsNumThreadsFromUser) {
+          IsNumThreadsFromUser || IsNumThreadsStrict) {
         // Enough parallelism for blocks and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / EffectiveNumThreads) + 1;
         assert(IsNumThreadsFromUser ||
@@ -1169,14 +1173,15 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr,
   return Err;
 }
 
-Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
+Error PluginContextTy::initAsyncInfo(GenericDeviceTy &Device,
+                                     __tgt_async_info **AsyncInfoPtr) {
   assert(AsyncInfoPtr && "Invalid async info");
 
   *AsyncInfoPtr = new __tgt_async_info();
 
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, *AsyncInfoPtr);
+  AsyncInfoWrapperTy AsyncInfoWrapper(Device, *AsyncInfoPtr);
 
-  auto Err = initAsyncInfoImpl(AsyncInfoWrapper);
+  auto Err = initAsyncInfoImpl(Device, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }
@@ -1813,20 +1818,6 @@ int32_t GenericPluginTy::destroy_event(int32_t DeviceId, void *EventPtr) {
 void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
-}
-
-int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
-                                         __tgt_async_info **AsyncInfoPtr) {
-  assert(AsyncInfoPtr && "Invalid async info");
-
-  auto Err = getDevice(DeviceId).initAsyncInfo(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to initialize async info at " << *AsyncInfoPtr
-             << " on device " << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
 }
 
 int32_t GenericPluginTy::set_device_identifier(int32_t UserId,

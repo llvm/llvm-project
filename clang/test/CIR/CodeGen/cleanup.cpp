@@ -7,9 +7,7 @@ struct Struk {
   ~Struk();
 };
 
-// CHECK: !rec_Struk = !cir.struct<"Struk" padded {!u8i}>
-
-// CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
+// CHECK: !rec_Struk = !cir.struct<"Struk" {pad !u8i}>
 
 void test_cleanup() {
   Struk s;
@@ -19,6 +17,8 @@ void test_cleanup() {
 // CHECK:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_Struk>
 // CHECK:   cir.call @_ZN5StrukD1Ev(%[[S_ADDR]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:   cir.return
+
+// CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
 
 void test_cleanup_ifelse(bool b) {
   if (b) {

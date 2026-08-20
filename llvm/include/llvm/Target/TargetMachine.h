@@ -138,6 +138,11 @@ public:
   StringRef getTargetFeatureString() const { return TargetFS; }
   void setTargetFeatureString(StringRef FS) { TargetFS = std::string(FS); }
 
+  /// Returns the effective target ABI name. Reads the "target-abi" module flag
+  /// if present, otherwise the -target-abi option. Emits an error if both are
+  /// present and disagree.
+  StringRef getTargetABIName(const Module &M) const;
+
   /// Virtual method implemented by subclasses that returns a reference to that
   /// target's TargetSubtargetInfo-derived member variable.
   virtual const TargetSubtargetInfo *getSubtargetImpl(const Function &) const {
@@ -276,6 +281,7 @@ public:
 
   void setLargeDataThreshold(uint64_t LDT) { LargeDataThreshold = LDT; }
   bool isLargeGlobalValue(const GlobalValue *GV) const;
+  bool isLargeDataSize(uint64_t Size) const;
 
   bool isPositionIndependent() const;
 

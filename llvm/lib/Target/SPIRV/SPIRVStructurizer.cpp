@@ -124,33 +124,6 @@ static bool isMergeInstruction(Instruction *I) {
   return getDesignatedMergeBlock(I) != nullptr;
 }
 
-// Returns all blocks in F having at least one OpLoopMerge or OpSelectionMerge
-// instruction.
-static SmallPtrSet<BasicBlock *, 2> getHeaderBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (getDesignatedMergeBlock(&I) != nullptr)
-        Output.insert(&BB);
-    }
-  }
-  return Output;
-}
-
-// Returns all basic blocks in |F| referenced by at least 1
-// OpSelectionMerge/OpLoopMerge instruction.
-static SmallPtrSet<BasicBlock *, 2> getMergeBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      BasicBlock *MB = getDesignatedMergeBlock(&I);
-      if (MB != nullptr)
-        Output.insert(MB);
-    }
-  }
-  return Output;
-}
-
 // Return all the merge instructions contained in BB.
 // Note: the SPIR-V spec doesn't allow a single BB to contain more than 1 merge
 // instruction, but this can happen while we structurize the CFG.
@@ -162,19 +135,33 @@ static std::vector<Instruction *> getMergeInstructions(BasicBlock &BB) {
   return Output;
 }
 
-// Returns all basic blocks in |F| referenced as continue target by at least 1
-// OpLoopMerge instruction.
-static SmallPtrSet<BasicBlock *, 2> getContinueBlocks(Function &F) {
-  SmallPtrSet<BasicBlock *, 2> Output;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      BasicBlock *MB = getDesignatedContinueBlock(&I);
-      if (MB != nullptr)
-        Output.insert(MB);
+// Bundles the header/merge/continue block sets for a function, computed in a
+// single scan since they all classify the same instructions. Callers only
+// needing a subset of them still share the single underlying scan.
+struct HeaderMergeContinueBlocks {
+  // Blocks in F having at least one OpLoopMerge or OpSelectionMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Header;
+  // Blocks in F referenced by at least 1 OpSelectionMerge/OpLoopMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Merge;
+  // Blocks in F referenced as continue target by at least 1 OpLoopMerge
+  // instruction.
+  SmallPtrSet<BasicBlock *, 2> Continue;
+
+  HeaderMergeContinueBlocks(Function &F) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (BasicBlock *MB = getDesignatedMergeBlock(&I)) {
+          Header.insert(&BB);
+          Merge.insert(MB);
+        }
+        if (BasicBlock *CB = getDesignatedContinueBlock(&I))
+          Continue.insert(CB);
+      }
     }
   }
-  return Output;
-}
+};
 
 // Do a preorder traversal of the CFG starting from the BB |Start|.
 // point. Calls |op| on each basic block encountered during the traversal.
@@ -647,8 +634,9 @@ class SPIRVStructurizerImpl {
     PDT.recalculate(F);
     bool Modified = false;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
 
     for (auto &BB : F) {
       if (getMergeInstructions(BB).size() != 0)
@@ -924,8 +912,9 @@ class SPIRVStructurizerImpl {
   bool removeUselessBlocks(Function &F) {
     std::vector<BasicBlock *> ToRemove;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
 
     for (BasicBlock &BB : F) {
       if (BB.size() != 1)
@@ -957,9 +946,10 @@ class SPIRVStructurizerImpl {
   bool addHeaderToRemainingDivergentDAG(Function &F) {
     bool Modified = false;
 
-    auto MergeBlocks = getMergeBlocks(F);
-    auto ContinueBlocks = getContinueBlocks(F);
-    auto HeaderBlocks = getHeaderBlocks(F);
+    HeaderMergeContinueBlocks Blocks(F);
+    auto &MergeBlocks = Blocks.Merge;
+    auto &ContinueBlocks = Blocks.Continue;
+    auto &HeaderBlocks = Blocks.Header;
 
     DomTreeBuilder::BBDomTree DT;
     DomTreeBuilder::BBPostDomTree PDT;

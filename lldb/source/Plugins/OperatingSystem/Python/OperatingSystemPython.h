@@ -73,10 +73,9 @@ protected:
       lldb_private::ThreadList &old_thread_list,
       std::vector<bool> &core_used_map, bool *did_create_ptr);
 
-  lldb_private::DynamicRegisterInfo *GetDynamicRegisterInfo();
+  lldb::DynamicRegisterInfoSP GetDynamicRegisterInfo();
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
-  std::unique_ptr<lldb_private::DynamicRegisterInfo> m_register_info_up;
   lldb_private::ScriptInterpreter *m_interpreter = nullptr;
   lldb::OperatingSystemInterfaceSP m_operating_system_interface_sp = nullptr;
   lldb_private::StructuredData::GenericSP m_script_object_sp = nullptr;
