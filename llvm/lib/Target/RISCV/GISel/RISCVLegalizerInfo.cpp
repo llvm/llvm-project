@@ -956,8 +956,8 @@ bool RISCVLegalizerInfo::legalizeReadCounter(
     MRI.setRegClass(R, &RISCV::GPRRegClass);
     return R;
   };
-  Register HiReg = CreateGPR();
   Register LoReg = CreateGPR();
+  Register HiReg = CreateGPR();
   Register ReadAgainReg = CreateGPR();
 
   // read:
@@ -965,23 +965,22 @@ bool RISCVLegalizerInfo::legalizeReadCounter(
   //   csrrs LoReg, counter     # low word
   //   csrrs ReadAgainReg, counterh
   //   bne   HiReg, ReadAgainReg, read
-  // Build the target instructions fully before inserting so the change
-  // observer (CSEInfo) and the legalizer worklist see their final form;
-  // raw BuildMI or chaining after insertInstr would bypass the observer.
-  MIRBuilder.setInsertPt(*LoopMBB, LoopMBB->begin());
-  MIRBuilder.setDebugLoc(DL);
-  auto BuildCSRRS = [&](Register Dst, int64_t Csr) {
-    MachineInstrBuilder MIB = MIRBuilder.buildInstrNoInsert(RISCV::CSRRS);
-    MIB.addReg(Dst, RegState::Define).addImm(Csr).addReg(RISCV::X0);
-    MIRBuilder.insertInstr(MIB);
-  };
-  BuildCSRRS(HiReg, HiCounter);
-  BuildCSRRS(LoReg, LoCounter);
-  BuildCSRRS(ReadAgainReg, HiCounter);
+  // Emit the target instructions directly with BuildMI.
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), HiReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), LoReg)
+      .addImm(LoCounter)
+      .addReg(RISCV::X0);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::CSRRS), ReadAgainReg)
+      .addImm(HiCounter)
+      .addReg(RISCV::X0);
 
-  MachineInstrBuilder BNE = MIRBuilder.buildInstrNoInsert(RISCV::BNE);
-  BNE.addReg(HiReg).addReg(ReadAgainReg).addMBB(LoopMBB);
-  MIRBuilder.insertInstr(BNE);
+  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+      .addReg(HiReg)
+      .addReg(ReadAgainReg)
+      .addMBB(LoopMBB);
 
   LoopMBB->addSuccessor(LoopMBB);
   LoopMBB->addSuccessor(DoneMBB);
