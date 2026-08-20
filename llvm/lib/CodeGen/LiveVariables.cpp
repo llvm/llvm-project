@@ -571,7 +571,7 @@ void LiveVariables::runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs) {
 
   // MachineCSE may CSE instructions which write to non-allocatable physical
   // registers across MBBs. Remember if any reserved register is liveout.
-  SmallSet<unsigned, 4> LiveOuts;
+  SmallSet<MCRegister, 4> LiveOuts;
   for (const MachineBasicBlock *SuccMBB : MBB->successors()) {
     if (SuccMBB->isEHPad())
       continue;

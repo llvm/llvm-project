@@ -434,6 +434,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ceilf128
     libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -528,6 +529,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  floorf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf128_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   floorf16_test
   NEED_MPFR
   SUITE
@@ -600,6 +617,21 @@ add_fp_unittest(
     libc.src.math.roundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundf128_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(
@@ -1790,6 +1822,8 @@ add_fp_unittest(
     SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.integer_literals
 )
 
 add_fp_unittest(
@@ -2873,6 +2907,7 @@ add_fp_unittest(
     atan2f128_test.cpp
   DEPENDS
     libc.src.math.atan2f128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 

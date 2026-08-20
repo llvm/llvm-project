@@ -9,6 +9,6 @@ attributes(global) subroutine sync()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsync() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: nvvm.memory.barrier <gpu>
-! CHECK: nvvm.memory.barrier <cta>
-! CHECK: nvvm.memory.barrier <sys>
+! CHECK: nvvm.memory.barrier gpu
+! CHECK: nvvm.memory.barrier cta
+! CHECK: nvvm.memory.barrier sys
