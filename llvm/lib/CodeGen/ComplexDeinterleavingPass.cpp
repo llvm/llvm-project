@@ -668,7 +668,7 @@ ComplexDeinterleavingGraph::identifyNodeWithImplicitAdd(
   if (isNeg(I0)) {
     Negs |= 2;
     Negs ^= 1;
-    I0 = Op;
+    I0 = getNegOperand(I0);
   } else if (match(I1, m_Neg(m_Value(Op)))) {
     Negs |= 2;
     Negs ^= 1;
