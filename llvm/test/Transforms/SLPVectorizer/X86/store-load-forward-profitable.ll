@@ -59,26 +59,26 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; VETO-NEXT:    [[T:%.*]] = load i32, ptr [[BGEP]], align 4
 ; VETO-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i64 0
 ; VETO-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; VETO-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 4>
+; VETO-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[TMP1]], <i32 3, i32 4>
 ; VETO-NEXT:    [[TMP3:%.*]] = mul <2 x i32> [[TMP2]], [[TMP2]]
-; VETO-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 7, i32 10>
+; VETO-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 9, i32 10>
 ; VETO-NEXT:    [[TMP5:%.*]] = mul <2 x i32> [[TMP4]], [[TMP2]]
-; VETO-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP5]], <i32 11, i32 14>
+; VETO-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP5]], <i32 13, i32 14>
 ; VETO-NEXT:    [[TMP7:%.*]] = mul <2 x i32> [[TMP6]], [[TMP4]]
-; VETO-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; VETO-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
 ; VETO-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
 ; VETO-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; VETO-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; VETO-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; VETO-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
-; VETO-NEXT:    store i32 [[TMP8]], ptr [[G0]], align 4
-; VETO-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP1]], <i32 2, i32 3>
+; VETO-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP1]], <i32 1, i32 2>
 ; VETO-NEXT:    [[TMP10:%.*]] = mul <2 x i32> [[TMP9]], [[TMP9]]
-; VETO-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP10]], <i32 8, i32 9>
+; VETO-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP10]], <i32 7, i32 8>
 ; VETO-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP11]], [[TMP9]]
-; VETO-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP12]], <i32 12, i32 13>
+; VETO-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP12]], <i32 11, i32 12>
 ; VETO-NEXT:    [[TMP14:%.*]] = mul <2 x i32> [[TMP13]], [[TMP11]]
-; VETO-NEXT:    store <2 x i32> [[TMP14]], ptr [[G1]], align 4
+; VETO-NEXT:    store <2 x i32> [[TMP14]], ptr [[G0]], align 4
+; VETO-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
+; VETO-NEXT:    store i32 [[TMP16]], ptr [[G1]], align 4
 ; VETO-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
 ; VETO-NEXT:    store i32 [[TMP15]], ptr [[G3]], align 4
 ; VETO-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4

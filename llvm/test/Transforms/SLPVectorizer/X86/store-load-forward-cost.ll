@@ -28,18 +28,18 @@ define void @stlf_recurrence(ptr noalias %A, i64 %n) {
 ; PENALTY-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
 ; PENALTY-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; PENALTY-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; PENALTY-NEXT:    [[T1:%.*]] = add nsw i32 [[T]], 1
+; PENALTY-NEXT:    [[T3:%.*]] = add nsw i32 [[T]], 3
 ; PENALTY-NEXT:    [[T4:%.*]] = add nsw i32 [[T]], 4
-; PENALTY-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; PENALTY-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
 ; PENALTY-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
 ; PENALTY-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; PENALTY-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; PENALTY-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; PENALTY-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
 ; PENALTY-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i64 0
 ; PENALTY-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; PENALTY-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 2, i32 3>
-; PENALTY-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP1]], align 4
+; PENALTY-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 2>
+; PENALTY-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; PENALTY-NEXT:    store i32 [[T3]], ptr [[GEP1]], align 4
 ; PENALTY-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
 ; PENALTY-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; PENALTY-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

@@ -28276,6 +28276,26 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   return Changed;
 }
 
+/// Returns the constant loop-carried byte stride of \p Ptr in \p L, i.e. the
+/// step of its affine SCEV recurrence, or std::nullopt when \p Ptr is not a
+/// simple affine recurrence in \p L with a constant step. This is the same
+/// notion as LoopAccessAnalysis's CommonStride; it is computed here directly
+/// from ScalarEvolution rather than via getPtrStride, whose no-wrap versioning
+/// and PredicatedScalarEvolution machinery is meant for legality, not costing.
+static std::optional<int64_t>
+getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Ptr));
+  if (!AR || AR->getLoop() != L)
+    return std::nullopt;
+  const auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(SE));
+  if (!Step)
+    return std::nullopt;
+  const APInt &StepVal = Step->getAPInt();
+  if (StepVal.getSignificantBits() > 64)
+    return std::nullopt;
+  return StepVal.getSExtValue();
+}
+
 bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
                                               unsigned VF) {
   if (!BaseStore)
@@ -28300,6 +28320,12 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
                     << " ElementSize=" << ElementSize
                     << " VectorStoreBytes=" << VectorStoreBytes << "\n");
+
+  // Loop-carried byte stride of the store. A conflict is only a real hazard if
+  // a future iteration's load re-reads the bytes this store wrote, which is a
+  // property of the stride (see the per-load check below).
+  std::optional<int64_t> StoreStride = getConstantLoopStrideInBytes(
+      FirstStore->getPointerOperand(), *SE, StoreL);
 
   // A store-to-load forwarding hazard can involve any load in the loop that
   // reads the widened store's base, not only loads that became SLP tree nodes.
@@ -28351,6 +28377,30 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
           LTE->getOpcode() == Instruction::Load) {
         LoadElementSize *= LTE->getVectorFactor();
         break;
+      }
+    }
+    // A conflict is only a real hazard if a future iteration's load actually
+    // re-reads the bytes this store wrote. With a common positive loop-carried
+    // stride S, equal for the load and the store, the store's bytes are re-read
+    // iff there is an integer k >= 1 with
+    //   Distance - LoadElementSize < k * S < Distance + VectorStoreBytes.
+    // If no such k exists the accesses are strided-independent, so there is no
+    // forwarding hazard. When the stride is unknown, non-positive, or differs
+    // between load and store, fall back to the conservative check below.
+    std::optional<int64_t> LoadStride =
+        getConstantLoopStrideInBytes(LoadI->getPointerOperand(), *SE, StoreL);
+    if (StoreStride && LoadStride && *StoreStride == *LoadStride &&
+        *StoreStride > 0) {
+      int64_t Stride = *StoreStride;
+      int64_t Lo = static_cast<int64_t>(Distance) -
+                   static_cast<int64_t>(LoadElementSize);
+      int64_t Hi = static_cast<int64_t>(Distance) +
+                   static_cast<int64_t>(VectorStoreBytes);
+      int64_t K = Lo < Stride ? 1 : (Lo / Stride) + 1;
+      if (Stride * K >= Hi) {
+        LLVM_DEBUG(dbgs() << "SLP: STLF: strided-independent (stride " << Stride
+                          << "), no future re-read -> no conflict\n");
+        continue;
       }
     }
     // Conflict if the load overlaps two wide stores within the recency window,

@@ -683,8 +683,9 @@ public:
 
   /// Default store-to-load forwarding stall penalty (in cycles) charged when no
   /// subtarget scheduling model is available. Kept intentionally in sync with
-  /// MCSchedModel::DefaultStoreLoadForwardingPenalty (the scheduling-model field
-  /// default); the cost layer keeps its own copy so it does not depend on MC.
+  /// MCSchedModel::DefaultStoreLoadForwardingPenalty (the scheduling-model
+  /// field default); the cost layer keeps its own copy so it does not depend on
+  /// MC.
   static constexpr unsigned DefaultStoreLoadForwardingPenalty = 10;
 
   virtual InstructionCost getStoreLoadForwardingConflictCost(

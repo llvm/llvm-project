@@ -37,18 +37,18 @@ define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
 ; STLF-ON-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; STLF-ON-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[T]], 1
+; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[T]], 3
 ; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[T]], 4
-; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
 ; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
 ; STLF-ON-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i64 0
 ; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 2, i32 3>
-; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP1]], align 4
+; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 2>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP1]], align 4
 ; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
@@ -611,18 +611,18 @@ define void @stlf_conflict_short_backward(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
 ; STLF-ON-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; STLF-ON-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[T]], 1
+; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[T]], 3
 ; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[T]], 4
-; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
 ; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
 ; STLF-ON-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i64 0
 ; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 2, i32 3>
-; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP1]], align 4
+; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 2>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP1]], align 4
 ; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
