@@ -111,7 +111,7 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
     } else if (RegCB != ConstrainingRegCB)
       return false;
   }
-  if (ConstrainingRegTy.isValid() && !RegTy.isValid())
+  if (ConstrainingRegTy.isValid())
     setType(Reg, ConstrainingRegTy);
   return true;
 }

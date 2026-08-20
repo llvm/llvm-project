@@ -120,7 +120,7 @@ define amdgpu_kernel void @test_uniform_indirect_call_from_kernel(ptr %fptr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr16
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr15
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr14
@@ -149,7 +149,7 @@ define amdgpu_kernel void @test_uniform_indirect_call_from_kernel(ptr %fptr) {
   ; CHECK-NEXT:   $sgpr13 = COPY [[COPY12]](s32)
   ; CHECK-NEXT:   $sgpr14 = COPY [[COPY13]](s32)
   ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]](s32)
-  ; CHECK-NEXT:   $vgpr31 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   $vgpr31 = COPY [[COPY]](i32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[LOAD]](p0), 0, csr_amdgpu_gfx90ainsts, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
