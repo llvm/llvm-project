@@ -26,4 +26,35 @@ define <4 x float> @complex_mul_fmuladd(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %r
 }
 
+; Expected not to transform
+define <4 x float> @complex_mul_fmuladd_no_fmf(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: complex_mul_fmuladd_no_fmf:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
+; CHECK-NEXT:    zip2 v5.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v1.2s, v1.2s, v3.2s
+; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
+; CHECK-NEXT:    fmul v3.2s, v4.2s, v5.2s
+; CHECK-NEXT:    fneg v2.2s, v3.2s
+; CHECK-NEXT:    fmul v3.2s, v4.2s, v1.2s
+; CHECK-NEXT:    fmla v2.2s, v1.2s, v0.2s
+; CHECK-NEXT:    fmla v3.2s, v5.2s, v0.2s
+; CHECK-NEXT:    zip1 v0.4s, v2.4s, v3.4s
+; CHECK-NEXT:    ret
+  %a.re = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.im = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.re = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.im = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+
+  %t0 = fmul <2 x float> %a.im, %b.im
+  %neg = fneg <2 x float> %t0
+  %re = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> %a.re, <2 x float> %b.re, <2 x float> %neg)
+  %t1 = fmul <2 x float> %a.im, %b.re
+  %im = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> %a.re, <2 x float> %b.im, <2 x float> %t1)
+  %r = shufflevector <2 x float> %re, <2 x float> %im, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %r
+}
+
 declare <2 x float> @llvm.fmuladd.v2f32(<2 x float>, <2 x float>, <2 x float>)
