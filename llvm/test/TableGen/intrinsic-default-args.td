@@ -6,7 +6,7 @@
 // RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NEGATIVE 2>&1 | FileCheck %s --check-prefix=ERR-NEGATIVE
 // RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_RANGE 2>&1 | FileCheck %s --check-prefix=ERR-RANGE
 // RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NONINT 2>&1 | FileCheck %s --check-prefix=ERR-NONINT
-// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DTEST_OVERLOADED | FileCheck %s --check-prefix=OVERLOADED
+// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_OVERLOADED 2>&1 | FileCheck %s --check-prefix=ERR-OVERLOADED
 // RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_GAP 2>&1 | FileCheck %s --check-prefix=ERR-GAP
 
 include "llvm/IR/Intrinsics.td"
@@ -77,29 +77,12 @@ def int_test_nonint :
               [ImmArg<ArgIndex<1>, DefaultValue<1>>]>;
 #endif
 
-#ifdef TEST_OVERLOADED
+// A default on an overloaded intrinsic is rejected (not yet supported).
+#ifdef ERROR_OVERLOADED
+// ERR-OVERLOADED: error: default argument values are not supported for overloaded intrinsics
 def int_test_overloaded :
     Intrinsic<[llvm_anyint_ty], [llvm_anyint_ty, llvm_i32_ty],
               [ImmArg<ArgIndex<1>, DefaultValue<5>>]>;
-
-def int_test_overloaded_two_defaults :
-    Intrinsic<[llvm_anyint_ty],
-              [LLVMMatchType<0>, llvm_i1_ty, llvm_i32_ty],
-              [ImmArg<ArgIndex<1>, DefaultValue<0>>,
-               ImmArg<ArgIndex<2>, DefaultValue<7>>]>;
-
-def int_test_overloaded_ptr :
-    Intrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_i32_ty],
-              [ImmArg<ArgIndex<1>, DefaultValue<1>>]>;
-
-// Header (1 << 32) | 1 = 4294967297 for single trailing defaults.
-// Header (2 << 32) | 1 = 8589934593 for two trailing defaults.
-// OVERLOADED:      static constexpr uint64_t DefaultArgValuesTable[] = {
-// OVERLOADED-NEXT:   0, // offset 0: sentinel for intrinsics without defaults
-// OVERLOADED-DAG: {{.*}}4294967297,{{.*}}5,{{.*}}0,
-// OVERLOADED-DAG: {{.*}}8589934593,{{.*}}0,{{.*}}7,{{.*}}0,
-// OVERLOADED-DAG: {{.*}}4294967297,{{.*}}1,{{.*}}0,
-// OVERLOADED: Intrinsic::getAllDefaultArgValues(ID IID) {
 #endif
 
 // Defaults must form a contiguous trailing block.
