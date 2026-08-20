@@ -1735,6 +1735,8 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       sanitizer = "AddressSanitizer";
     } else if (Sanitize.needsTsanRt()) {
       sanitizer = "ThreadSanitizer";
+    } else if (Sanitize.needsDeadlockRt()) {
+      sanitizer = "DeadlockSanitizer";
     }
     if (sanitizer) {
       getDriver().Diag(diag::err_drv_unsupported_static_sanitizer_darwin)
@@ -1771,6 +1773,11 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       assert(Sanitize.needsSharedRt() &&
              "Static sanitizer runtimes not supported");
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan");
+    }
+    if (Sanitize.needsDeadlockRt()) {
+      assert(Sanitize.needsSharedRt() &&
+             "Static sanitizer runtimes not supported");
+      AddLinkSanitizerLibArgs(Args, CmdArgs, "tsan_deadlock");
     }
     if (Sanitize.needsTysanRt())
       AddLinkSanitizerLibArgs(Args, CmdArgs, "tysan");
