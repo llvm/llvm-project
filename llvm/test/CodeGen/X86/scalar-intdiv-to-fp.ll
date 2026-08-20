@@ -288,3 +288,26 @@ define i32 @sdiv_i32_strictfp(i32 %a, i32 %b) nounwind strictfp {
   %r = sdiv i32 %a, %b
   ret i32 %r
 }
+
+define i32 @sdiv_i32_optsize(i32 %a, i32 %b) nounwind optsize {
+; CHECK-LABEL: sdiv_i32_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
+  %r = sdiv i32 %a, %b
+  ret i32 %r
+}
+
+define i32 @sdiv_i32_minsize(i32 %a, i32 %b) nounwind minsize {
+; CHECK-LABEL: sdiv_i32_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cltd
+; CHECK-NEXT:    idivl %esi
+; CHECK-NEXT:    retq
+  %r = sdiv i32 %a, %b
+  ret i32 %r
+}
+
