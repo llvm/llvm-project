@@ -2018,11 +2018,12 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   assert(IndexValue > 0 ? ExplicitIndex : true);
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
-
-  if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
+  if (AL.getKind() == ParsedAttr::AT_HLSLParsedSemantic) {
     diagnoseSystemSemanticAttr(D, AL, Index);
-  else
-    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+  } else {
+    D->addAttr(HLSLUnparsedSemanticAttr::Create(
+        SemaRef.getASTContext(), IndexValue, ExplicitIndex, AL));
+  }
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {

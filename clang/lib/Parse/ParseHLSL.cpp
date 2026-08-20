@@ -176,11 +176,14 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   }
 
   ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
+    ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_Microsoft);
+  if (AttrKind != ParsedAttr::AT_HLSLParsedSemantic)
+    AttrKind =
+        ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
   Parser::ParsedSemantic Semantic;
-  if (AttrKind == ParsedAttr::AT_HLSLUnparsedSemantic)
+  if (AttrKind == ParsedAttr::AT_HLSLUnparsedSemantic ||
+      AttrKind == ParsedAttr::AT_HLSLParsedSemantic)
     Semantic = ParseHLSLSemantic();
-
   SourceLocation Loc = ConsumeToken();
   if (EndLoc)
     *EndLoc = Tok.getLocation();
@@ -332,6 +335,17 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     II = PP.getIdentifierInfo(Semantic.Name);
     break;
   }
+  case ParsedAttr::AT_HLSLParsedSemantic: {
+  ASTContext &Ctx = Actions.getASTContext();
+  ArgExprs.push_back(IntegerLiteral::Create(
+      Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.IntTy), Semantic.Index),
+      Ctx.IntTy, SourceLocation()));
+  ArgExprs.push_back(IntegerLiteral::Create(
+      Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy,
+      SourceLocation()));
+  II = PP.getIdentifierInfo(Semantic.Name);
+  break;
+}
   case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?
     break;
   default:
@@ -339,7 +353,9 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     break;
   }
 
+  ParsedAttr::Form Form = (AttrKind == ParsedAttr::AT_HLSLParsedSemantic)
+                            ? ParsedAttr::Form::Microsoft()
+                            : ParsedAttr::Form::HLSLAnnotation();
   Attrs.addNew(II, SourceRange(Loc, AttrEndLoc), AttributeScopeInfo(),
-               ArgExprs.data(), ArgExprs.size(),
-               ParsedAttr::Form::HLSLAnnotation());
+              ArgExprs.data(), ArgExprs.size(), Form);
 }

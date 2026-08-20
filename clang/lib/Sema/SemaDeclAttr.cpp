@@ -8288,6 +8288,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLParsedSemantic:
+    S.HLSL().handleSemanticAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkLocation:
     S.HLSL().handleVkLocationAttr(D, AL);
     break;
