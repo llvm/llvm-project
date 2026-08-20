@@ -21,12 +21,12 @@ int128_t bar(int128_t a, int128_t b) { return a * b; }
 
 // X64-LABEL: define dso_local void @bar(
 // X64-SAME: sret(i128) align 16
-// X64-SAME: ptr noundef align 16 dead_on_return
-// X64-SAME: ptr noundef align 16 dead_on_return
+// X64-SAME: ptr nofree noundef align 16 dead_on_return
+// X64-SAME: ptr nofree noundef align 16 dead_on_return
 // NOSSE-LABEL: define dso_local void @bar(
 // NOSSE-SAME: sret(i128) align 16
-// NOSSE-SAME: ptr noundef align 16 dead_on_return
-// NOSSE-SAME: ptr noundef align 16 dead_on_return
+// NOSSE-SAME: ptr nofree noundef align 16 dead_on_return
+// NOSSE-SAME: ptr nofree noundef align 16 dead_on_return
 // ARM: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
 
 #if defined(__x86_64__) && !defined(__arm64ec__)
@@ -41,8 +41,8 @@ int128_t __attribute__((vectorcall)) vectorcall_bar(int128_t a, int128_t b) {
 
 // X64-LABEL: define dso_local x86_vectorcallcc void @"\01vectorcall_bar@@32"(
 // X64-SAME: sret(i128) align 16
-// X64-SAME: ptr noundef align 16 dead_on_return
-// X64-SAME: ptr noundef align 16 dead_on_return
+// X64-SAME: ptr nofree noundef align 16 dead_on_return
+// X64-SAME: ptr nofree noundef align 16 dead_on_return
 #endif
 
 void vararg(int a, ...) {

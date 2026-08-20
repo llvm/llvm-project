@@ -3637,6 +3637,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
 
+  if (FI.getReturnInfo().isIndirect() && FI.isInstanceMethod() &&
+      getCXXABI().isSRetParameterAfterThis())
+    FI.getReturnInfo().setSRetAfterThis(true);
+
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
     FreeSSERegs = 6;
