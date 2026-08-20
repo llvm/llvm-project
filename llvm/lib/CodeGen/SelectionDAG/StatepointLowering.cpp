@@ -1108,7 +1108,9 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
   if (!GCResultLocality.first && !GCResultLocality.second) {
     // The return value is not needed, just generate a poison value.
     // Note: This covers the void return case.
-    setValue(&I, DAG.getIntPtrConstant(-1, getCurSDLoc()));
+    const auto &TLI = DAG.getTargetLoweringInfo();
+    setValue(&I, DAG.getSignedConstant(-1, getCurSDLoc(),
+                                       TLI.getPointerTy(DAG.getDataLayout())));
     return;
   }
 
