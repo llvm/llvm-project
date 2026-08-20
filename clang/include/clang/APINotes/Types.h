@@ -1121,21 +1121,20 @@ struct FunctionTableSelectorKey {
 struct FunctionTableKey {
   uint32_t parentContextID;
   uint32_t nameID;
-  std::optional<llvm::SmallVector<IdentifierID, 4>> parameterTypeIDs;
-  std::optional<FunctionObjectSelector> objectSelector;
+  FunctionTableSelectorKey Selector;
 
   FunctionTableKey() : parentContextID(-1), nameID(-1) {}
 
   FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
                    FunctionTableSelectorKey Selector = {})
       : parentContextID(ParentContextID), nameID(NameID),
-        parameterTypeIDs(std::move(Selector.Parameters)),
-        objectSelector(Selector.Object) {}
+        Selector(std::move(Selector)) {}
 
   FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
                    const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
       : parentContextID(ParentContextID), nameID(NameID) {
-    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
+                                ParameterTypeIDs.end());
   }
 
   FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
@@ -1149,26 +1148,27 @@ struct FunctionTableKey {
       : FunctionTableKey(ParentCtx ? ParentCtx->id.Value
                                    : static_cast<uint32_t>(-1),
                          NameID) {
-    parameterTypeIDs.emplace(ParameterTypeIDs.begin(), ParameterTypeIDs.end());
+    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
+                                ParameterTypeIDs.end());
   }
 
   llvm::hash_code hashValue() const {
     auto Hash = llvm::hash_combine(parentContextID, nameID,
-                                   static_cast<bool>(parameterTypeIDs),
-                                   static_cast<bool>(objectSelector));
-    if (parameterTypeIDs) {
-      Hash = llvm::hash_combine(Hash, parameterTypeIDs->size());
-      for (IdentifierID TypeID : *parameterTypeIDs)
+                                   static_cast<bool>(Selector.Parameters),
+                                   static_cast<bool>(Selector.Object));
+    if (Selector.Parameters) {
+      Hash = llvm::hash_combine(Hash, Selector.Parameters->size());
+      for (IdentifierID TypeID : *Selector.Parameters)
         Hash = llvm::hash_combine(Hash, static_cast<unsigned>(TypeID));
     }
-    if (objectSelector)
+    if (Selector.Object)
       Hash = llvm::hash_combine(
-          Hash, objectSelector->Const.value_or(false),
-          static_cast<bool>(objectSelector->Const),
-          objectSelector->Volatile.value_or(false),
-          static_cast<bool>(objectSelector->Volatile),
-          objectSelector->Ref ? llvm::to_underlying(*objectSelector->Ref) + 1
-                              : 0);
+          Hash, Selector.Object->Const.value_or(false),
+          static_cast<bool>(Selector.Object->Const),
+          Selector.Object->Volatile.value_or(false),
+          static_cast<bool>(Selector.Object->Volatile),
+          Selector.Object->Ref ? llvm::to_underlying(*Selector.Object->Ref) + 1
+                               : 0);
     return Hash;
   }
 };
@@ -1177,8 +1177,8 @@ inline bool operator==(const FunctionTableKey &LHS,
                        const FunctionTableKey &RHS) {
   return LHS.parentContextID == RHS.parentContextID &&
          LHS.nameID == RHS.nameID &&
-         LHS.parameterTypeIDs == RHS.parameterTypeIDs &&
-         LHS.objectSelector == RHS.objectSelector;
+         LHS.Selector.Parameters == RHS.Selector.Parameters &&
+         LHS.Selector.Object == RHS.Selector.Object;
 }
 
 /// Stable reader-facing identity for an API notes function selector entry.

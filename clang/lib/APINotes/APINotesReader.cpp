@@ -979,7 +979,7 @@ void APINotesReader::Implementation::collectFunctionSelectorsForDiagnostics(
   constexpr bool IsCXXMethod = std::is_same_v<TableT, SerializedCXXMethodTable>;
 
   for (const FunctionTableKey &Key : Table.keys()) {
-    if (!Key.parameterTypeIDs && !Key.objectSelector)
+    if (!Key.Selector.Parameters && !Key.Selector.Object)
       continue;
 
     Selectors.push_back(APINotesFunctionSelectorKey{Key, IsCXXMethod});
@@ -2519,12 +2519,12 @@ void APINotesReader::collectFunctionSelectorsForDiagnostics(
 std::optional<llvm::SmallVector<std::string, 4>>
 APINotesReader::getParameterSelectorSpellingsForDiagnostics(
     const APINotesFunctionSelectorKey &Key) {
-  if (!Key.Key.parameterTypeIDs)
+  if (!Key.Key.Selector.Parameters)
     return std::nullopt;
 
   llvm::SmallVector<std::string, 4> ParameterSpellings;
-  ParameterSpellings.reserve(Key.Key.parameterTypeIDs->size());
-  for (IdentifierID TypeID : *Key.Key.parameterTypeIDs) {
+  ParameterSpellings.reserve(Key.Key.Selector.Parameters->size());
+  for (IdentifierID TypeID : *Key.Key.Selector.Parameters) {
     std::optional<llvm::StringRef> TypeName =
         Implementation->getIdentifierString(TypeID);
     if (!TypeName)
