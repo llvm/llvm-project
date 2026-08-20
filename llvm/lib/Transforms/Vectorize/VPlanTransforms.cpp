@@ -5571,16 +5571,6 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     if (match(ToMultiVersion, m_scev_UndefOrPoison()))
       continue;
 
-    // Corner case probably, `stride == [sz]ext i1 %val`. For stores, LAA would
-    // probably introduce run-time checks to avoid stores to a potentially loop
-    // invariant address and for loads a more effective strategy would be to
-    // have a branch inside loop body to choose between unit-strided/broadcasted
-    // load, if that ever becomes important.
-    //
-    // As a bonus, we wouldn't need to worry about `sext(i1 1)` being negative.
-    if (ToMultiVersion->getType()->isIntegerTy(1))
-      continue;
-
     if (!isa<SCEVUnknown>(ToMultiVersion)) {
       // Match legacy behavior.
       // If/when changed, make sure that explicit poison/undef in the defining
