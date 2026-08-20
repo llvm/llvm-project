@@ -19863,33 +19863,32 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // On AArch64, this helps in fusing a mov instruction, associated with
   // extractelement, with fmul in the backend so that extractelement is free.
   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
-  // Detect external uses that drive address computations: the scalar (through
-  // an optional single-use index-promotion cast) is used as a GEP index.
   bool AllUsersGEPSWithStoresLoads = true;
+  SmallBitVector UsedLanes(getRootNode().getVectorFactor());
   SmallVector<const Value *> Pointers;
   Type *UserScalarTy = nullptr;
   for (ExternalUser &EU : ExternalUses) {
     ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
-    Value *Usr = EU.User;
-    if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
-      Usr = cast<Instruction>(Usr)->user_back();
-    auto *User = dyn_cast_if_present<GetElementPtrInst>(Usr);
-    // Only a GEP that feeds a single load/store of a fixed access type drives
-    // a real memory address computation.
-    Type *AccessTy = nullptr;
-    if (User && User->hasOneUse() &&
-        isa<LoadInst, StoreInst>(User->user_back()))
-      AccessTy = getValueType(User->user_back());
-    if (!AccessTy || isa<ScalableVectorType>(AccessTy))
-      User = nullptr;
-    if (User && (!UserScalarTy || UserScalarTy == AccessTy)) {
-      UserScalarTy = AccessTy;
-      Pointers.push_back(User);
-    } else {
-      AllUsersGEPSWithStoresLoads = false;
-      break;
+    if (EU.E.Idx == 0) {
+      UsedLanes.set(EU.Lane);
+      auto *User = dyn_cast_if_present<GetElementPtrInst>(EU.User);
+      if (User && User->hasOneUse() &&
+          isa<LoadInst, StoreInst>(User->user_back())) {
+        Type *LocalTy = getValueType(User->user_back());
+        if (!UserScalarTy && !isa<ScalableVectorType>(LocalTy)) {
+          UserScalarTy = LocalTy;
+        } else if (UserScalarTy != LocalTy) {
+          AllUsersGEPSWithStoresLoads = false;
+          break;
+        }
+        Pointers.push_back(User);
+      } else {
+        AllUsersGEPSWithStoresLoads = false;
+        break;
+      }
     }
   }
+  AllUsersGEPSWithStoresLoads &= UsedLanes.all();
 
   // Pre-pass: for each externally-used scalar, find the basic block at which
   // the extractelement will be placed by codegen. This mirrors what
@@ -20265,14 +20264,18 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
 
     ExtractCost += ExtraCost;
   }
-  // Charge the pointer-chain cost difference once when every escaped scalar
-  // is used only to drive an address computation (see the detection loop
-  // above). Vectorizing the tree in this pattern forces lane extracts (or a
-  // vector GEP with unknown stride) to drive the address computation, which is
-  // typically more expensive than keeping the indices scalar in a unit-stride
-  // address chain. Add the delta once rather than per external use.
+  // Charge the pointer-chain cost difference once for the root entry when
+  // every external use of its scalars is a GEP feeding a single load/store
+  // (see the detection loop above). Vectorizing the root in this pattern
+  // forces lane extracts (or a vector GEP with unknown stride) to drive the
+  // address computation, which is typically more expensive than keeping the
+  // indices scalar in a unit-stride address chain. Add the delta once rather
+  // than per external use.
   if (AllUsersGEPSWithStoresLoads && !Pointers.empty()) {
     const TreeEntry &RootEntry = getRootNode();
+    const bool AnyRootKeptAsScalar = any_of(RootEntry.Scalars, [&](Value *V) {
+      return ExternalUsesAsOriginalScalar.contains(V);
+    });
     const Value *CommonBase = nullptr;
     bool HaveCommonBase = true;
     for (const Value *P : Pointers) {
@@ -20284,7 +20287,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         break;
       }
     }
-    if (HaveCommonBase) {
+    if (!AnyRootKeptAsScalar && HaveCommonBase) {
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
       auto *VecTy = getWidenedType(UserScalarTy, RootEntry.Scalars.size());
       InstructionCost ScalarGEPCost = TTI->getPointersChainCost(
