@@ -207,7 +207,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
     m_takedown_done = true;
     RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
     if (reg_ctx_sp)
-      m_stop_address = thread.GetRegisterContext()->GetPC();
+      m_stop_address = reg_ctx_sp->GetPC();
     else
       m_stop_address = LLDB_INVALID_ADDRESS;
 
