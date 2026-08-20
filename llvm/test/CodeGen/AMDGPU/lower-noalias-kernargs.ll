@@ -37,9 +37,9 @@ define amdgpu_kernel void @aliasinfo_2i32_NA(ptr addrspace(1) noalias %out, ptr 
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]], !noalias [[META4:![0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3]]
-; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4]], !noalias [[META1]]
+; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META4:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -87,9 +87,9 @@ define amdgpu_kernel void @aliasinfo_2i32_NA_AS(ptr addrspace(1) noalias %out, p
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[IN_GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META14:![0-9]+]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(1) [[IN_GEP]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META9]]
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i32 @llvm.ctlz.i32(i32 [[VAL]], i1 false) #[[ATTR3]]
-; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META14]], !noalias [[META11]]
+; CHECK-NEXT:    store i32 [[CTLZ]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META14:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -154,12 +154,12 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA(ptr addrspace(1) noalias %ou
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META16:![0-9]+]], !noalias [[META19:![0-9]+]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META23:![0-9]+]], !noalias [[META24:![0-9]+]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META16:![0-9]+]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META19:![0-9]+]]
 ; CHECK-NEXT:    [[SHUFFLE0_0:%.*]] = shufflevector <4 x i8> [[LOAD]], <4 x i8> [[LOAD1]], <4 x i32> <i32 3, i32 2, i32 6, i32 2>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <4 x i8> [[SHUFFLE0_0]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META25:![0-9]+]], !noalias [[META26:![0-9]+]]
-; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META28:![0-9]+]]
+; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META21:![0-9]+]]
+; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META23:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -228,12 +228,12 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA_AS(ptr addrspace(1) noalias 
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN_LOAD]], i32 [[TID]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <4 x i8>, ptr addrspace(1) [[IN1_LOAD]], i32 [[TID]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META29:![0-9]+]], !noalias [[META32:![0-9]+]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META36:![0-9]+]], !noalias [[META37:![0-9]+]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META25:![0-9]+]], !noalias [[META9]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load <4 x i8>, ptr addrspace(1) [[GEP1]], align 1, !alias.scope [[META28:![0-9]+]], !noalias [[META9]]
 ; CHECK-NEXT:    [[SHUFFLE0_0:%.*]] = shufflevector <4 x i8> [[LOAD]], <4 x i8> [[LOAD1]], <4 x i32> <i32 3, i32 2, i32 6, i32 2>
 ; CHECK-NEXT:    [[CVT:%.*]] = uitofp <4 x i8> [[SHUFFLE0_0]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META38:![0-9]+]], !noalias [[META39:![0-9]+]]
-; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META40:![0-9]+]], !noalias [[META41:![0-9]+]]
+; CHECK-NEXT:    store <4 x float> [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 16, !alias.scope [[META30:![0-9]+]], !noalias [[META6]]
+; CHECK-NEXT:    store <4 x i8> [[SHUFFLE0_0]], ptr addrspace(1) [[OUT1_LOAD]], align 4, !alias.scope [[META32:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -287,11 +287,11 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA(ptr addrspace(1) noalia
 ; CHECK-NEXT:    [[INOUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[INOUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT]], i64 52
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META42:![0-9]+]], !noalias [[META45:![0-9]+]]
-; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META48:![0-9]+]], !noalias [[META49:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META45]], !noalias [[META42]]
+; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META34:![0-9]+]]
+; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META37:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[VAL3:%.*]] = fmul <4 x float> [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META48]], !noalias [[META49]]
+; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META37]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -341,11 +341,11 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA_AS(ptr addrspace(1) noa
 ; CHECK-NEXT:    [[INOUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[INOUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT]], i64 52
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META50:![0-9]+]], !noalias [[META53:![0-9]+]]
-; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META56:![0-9]+]], !noalias [[META57:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META53]], !noalias [[META50]]
+; CHECK-NEXT:    [[VAL1:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[IN_LOAD]]), !alias.scope [[META41:![0-9]+]], !noalias [[META9]]
+; CHECK-NEXT:    [[VAL2:%.*]] = call <4 x float> @llvm.amdgcn.global.load.tr.b256.v4f32.p1(ptr addrspace(1) [[INOUT_LOAD]]), !alias.scope [[META44:![0-9]+]], !noalias [[META9]]
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[OUT_LOAD]], ptr addrspace(1) [[INOUT_LOAD]], i64 16, i1 false), !alias.scope [[META46:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    [[VAL3:%.*]] = fmul <4 x float> [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META58:![0-9]+]], !noalias [[META59:![0-9]+]]
+; CHECK-NEXT:    store <4 x float> [[VAL3]], ptr addrspace(1) [[INOUT_LOAD]], align 16, !alias.scope [[META48:![0-9]+]], !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -374,7 +374,7 @@ attributes #2 = { nounwind readnone speculatable }
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]]}
 ; CHECK: [[META2]] = distinct !{[[META2]], [[META3:![0-9]+]], !"in"}
-; CHECK: [[META3]] = distinct !{[[META3]], i1 false, !"aliasinfo_2i32_NA"}
+; CHECK: [[META3]] = distinct !{[[META3]], i1 true, !"aliasinfo_2i32_NA"}
 ; CHECK: [[META4]] = !{[[META5:![0-9]+]]}
 ; CHECK: [[META5]] = distinct !{[[META5]], [[META3]], !"out"}
 ; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
@@ -384,51 +384,40 @@ attributes #2 = { nounwind readnone speculatable }
 ; CHECK: [[META10]] = distinct !{[[META10]], [[META8]], !"alias_scope_1"}
 ; CHECK: [[META11]] = !{[[META7]], [[META12:![0-9]+]]}
 ; CHECK: [[META12]] = distinct !{[[META12]], [[META13:![0-9]+]], !"in"}
-; CHECK: [[META13]] = distinct !{[[META13]], i1 false, !"aliasinfo_2i32_NA_AS"}
+; CHECK: [[META13]] = distinct !{[[META13]], i1 true, !"aliasinfo_2i32_NA_AS"}
 ; CHECK: [[META14]] = !{[[META10]], [[META15:![0-9]+]]}
 ; CHECK: [[META15]] = distinct !{[[META15]], [[META13]], !"out"}
 ; CHECK: [[META16]] = !{[[META17:![0-9]+]]}
 ; CHECK: [[META17]] = distinct !{[[META17]], [[META18:![0-9]+]], !"in"}
-; CHECK: [[META18]] = distinct !{[[META18]], i1 false, !"aliasinfo_v4f32_3v4i8_NA"}
-; CHECK: [[META19]] = !{[[META20:![0-9]+]], [[META21:![0-9]+]], [[META22:![0-9]+]]}
-; CHECK: [[META20]] = distinct !{[[META20]], [[META18]], !"out"}
-; CHECK: [[META21]] = distinct !{[[META21]], [[META18]], !"out1"}
-; CHECK: [[META22]] = distinct !{[[META22]], [[META18]], !"in1"}
-; CHECK: [[META23]] = !{[[META22]]}
-; CHECK: [[META24]] = !{[[META20]], [[META21]], [[META17]]}
-; CHECK: [[META25]] = !{[[META20]]}
-; CHECK: [[META26]] = !{[[META21]], [[META17]], [[META22]]}
-; CHECK: [[META27]] = !{[[META21]]}
-; CHECK: [[META28]] = !{[[META20]], [[META17]], [[META22]]}
-; CHECK: [[META29]] = !{[[META7]], [[META30:![0-9]+]]}
-; CHECK: [[META30]] = distinct !{[[META30]], [[META31:![0-9]+]], !"in"}
-; CHECK: [[META31]] = distinct !{[[META31]], i1 false, !"aliasinfo_v4f32_3v4i8_NA_AS"}
-; CHECK: [[META32]] = !{[[META10]], [[META33:![0-9]+]], [[META34:![0-9]+]], [[META35:![0-9]+]]}
-; CHECK: [[META33]] = distinct !{[[META33]], [[META31]], !"out"}
-; CHECK: [[META34]] = distinct !{[[META34]], [[META31]], !"out1"}
-; CHECK: [[META35]] = distinct !{[[META35]], [[META31]], !"in1"}
-; CHECK: [[META36]] = !{[[META7]], [[META35]]}
-; CHECK: [[META37]] = !{[[META10]], [[META33]], [[META34]], [[META30]]}
-; CHECK: [[META38]] = !{[[META10]], [[META33]]}
-; CHECK: [[META39]] = !{[[META7]], [[META34]], [[META30]], [[META35]]}
-; CHECK: [[META40]] = !{[[META10]], [[META34]]}
-; CHECK: [[META41]] = !{[[META7]], [[META33]], [[META30]], [[META35]]}
-; CHECK: [[META42]] = !{[[META43:![0-9]+]]}
-; CHECK: [[META43]] = distinct !{[[META43]], [[META44:![0-9]+]], !"in"}
-; CHECK: [[META44]] = distinct !{[[META44]], i1 false, !"aliasinfo_mixed_intrinsics_NA"}
-; CHECK: [[META45]] = !{[[META46:![0-9]+]], [[META47:![0-9]+]]}
-; CHECK: [[META46]] = distinct !{[[META46]], [[META44]], !"inout"}
-; CHECK: [[META47]] = distinct !{[[META47]], [[META44]], !"out"}
-; CHECK: [[META48]] = !{[[META46]]}
-; CHECK: [[META49]] = !{[[META43]], [[META47]]}
-; CHECK: [[META50]] = !{[[META7]], [[META51:![0-9]+]]}
-; CHECK: [[META51]] = distinct !{[[META51]], [[META52:![0-9]+]], !"in"}
-; CHECK: [[META52]] = distinct !{[[META52]], i1 false, !"aliasinfo_mixed_intrinsics_NA_AS"}
-; CHECK: [[META53]] = !{[[META10]], [[META54:![0-9]+]], [[META55:![0-9]+]]}
-; CHECK: [[META54]] = distinct !{[[META54]], [[META52]], !"inout"}
-; CHECK: [[META55]] = distinct !{[[META55]], [[META52]], !"out"}
-; CHECK: [[META56]] = !{[[META7]], [[META54]]}
-; CHECK: [[META57]] = !{[[META10]], [[META51]], [[META55]]}
-; CHECK: [[META58]] = !{[[META10]], [[META54]]}
-; CHECK: [[META59]] = !{[[META7]], [[META51]], [[META55]]}
+; CHECK: [[META18]] = distinct !{[[META18]], i1 true, !"aliasinfo_v4f32_3v4i8_NA"}
+; CHECK: [[META19]] = !{[[META20:![0-9]+]]}
+; CHECK: [[META20]] = distinct !{[[META20]], [[META18]], !"in1"}
+; CHECK: [[META21]] = !{[[META22:![0-9]+]]}
+; CHECK: [[META22]] = distinct !{[[META22]], [[META18]], !"out"}
+; CHECK: [[META23]] = !{[[META24:![0-9]+]]}
+; CHECK: [[META24]] = distinct !{[[META24]], [[META18]], !"out1"}
+; CHECK: [[META25]] = !{[[META7]], [[META26:![0-9]+]]}
+; CHECK: [[META26]] = distinct !{[[META26]], [[META27:![0-9]+]], !"in"}
+; CHECK: [[META27]] = distinct !{[[META27]], i1 true, !"aliasinfo_v4f32_3v4i8_NA_AS"}
+; CHECK: [[META28]] = !{[[META7]], [[META29:![0-9]+]]}
+; CHECK: [[META29]] = distinct !{[[META29]], [[META27]], !"in1"}
+; CHECK: [[META30]] = !{[[META10]], [[META31:![0-9]+]]}
+; CHECK: [[META31]] = distinct !{[[META31]], [[META27]], !"out"}
+; CHECK: [[META32]] = !{[[META10]], [[META33:![0-9]+]]}
+; CHECK: [[META33]] = distinct !{[[META33]], [[META27]], !"out1"}
+; CHECK: [[META34]] = !{[[META35:![0-9]+]]}
+; CHECK: [[META35]] = distinct !{[[META35]], [[META36:![0-9]+]], !"in"}
+; CHECK: [[META36]] = distinct !{[[META36]], i1 true, !"aliasinfo_mixed_intrinsics_NA"}
+; CHECK: [[META37]] = !{[[META38:![0-9]+]]}
+; CHECK: [[META38]] = distinct !{[[META38]], [[META36]], !"inout"}
+; CHECK: [[META39]] = !{[[META38]], [[META40:![0-9]+]]}
+; CHECK: [[META40]] = distinct !{[[META40]], [[META36]], !"out"}
+; CHECK: [[META41]] = !{[[META7]], [[META42:![0-9]+]]}
+; CHECK: [[META42]] = distinct !{[[META42]], [[META43:![0-9]+]], !"in"}
+; CHECK: [[META43]] = distinct !{[[META43]], i1 true, !"aliasinfo_mixed_intrinsics_NA_AS"}
+; CHECK: [[META44]] = !{[[META7]], [[META45:![0-9]+]]}
+; CHECK: [[META45]] = distinct !{[[META45]], [[META43]], !"inout"}
+; CHECK: [[META46]] = !{[[META10]], [[META45]], [[META47:![0-9]+]]}
+; CHECK: [[META47]] = distinct !{[[META47]], [[META43]], !"out"}
+; CHECK: [[META48]] = !{[[META10]], [[META45]]}
 ;.
