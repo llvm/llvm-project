@@ -933,10 +933,9 @@ define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY90A-GISEL-NEXT:    v_mfma_f32_4x4x1f32 v[2:5], v6, v7, v[0:3]
 ; GREEDY90A-GISEL-NEXT:    s_nop 1
 ; GREEDY90A-GISEL-NEXT:    v_mfma_f32_4x4x1f32 v[0:3], v6, v7, v[0:3]
-; GREEDY90A-GISEL-NEXT:    s_nop 1
-; GREEDY90A-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GREEDY90A-GISEL-NEXT:    s_nop 1
-; GREEDY90A-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GREEDY90A-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GREEDY90A-GISEL-NEXT:    s_nop 3
+; GREEDY90A-GISEL-NEXT:    global_store_dwordx4 v6, v[0:3], s[6:7]
 ; GREEDY90A-GISEL-NEXT:    s_endpgm
 ;
 ; FAST90A-LABEL: test_mfma_f32_4x4x1f32:
