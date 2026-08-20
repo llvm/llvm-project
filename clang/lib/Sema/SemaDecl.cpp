@@ -10178,8 +10178,6 @@ void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
     return;
   Tags.push_back(Tag);
 
-  // Keep a location on the attribute, so that diagnostics about it still point
-  // at something: the written attribute if there is one, else the function.
   AbiTagAttr *Merged =
       Old ? AbiTagAttr::Create(Context, Tags.data(), Tags.size(), *Old)
           : AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size(),
