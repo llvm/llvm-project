@@ -3548,12 +3548,12 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   bool HasOptionalOperands = Info.hasOptionalOperands();
   bool ReportMultipleNearMisses =
       AsmParser->getValueAsBit("ReportMultipleNearMisses");
-  bool PrioritizeFeatureInMultipleNearMisses =
-      AsmParser->getValueAsBit("PrioritizeFeatureInMultipleNearMisses");
+  bool PrioritizeFeatureInMultiMismatchFallback =
+      AsmParser->getValueAsBit("PrioritizeFeatureInMultiMismatchFallback");
 
-  if (PrioritizeFeatureInMultipleNearMisses && !ReportMultipleNearMisses) {
+  if (PrioritizeFeatureInMultiMismatchFallback && !ReportMultipleNearMisses) {
     PrintFatalError(AsmParser->getLoc(),
-                    "'PrioritizeFeatureInMultipleNearMisses' requires "
+                    "'PrioritizeFeatureInMultiMismatchFallback' requires "
                     "'ReportMultipleNearMisses' to be set");
   }
 
@@ -4148,7 +4148,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "    }\n\n";
   }
 
-  if (ReportMultipleNearMisses && PrioritizeFeatureInMultipleNearMisses) {
+  if (ReportMultipleNearMisses && PrioritizeFeatureInMultiMismatchFallback) {
     emitFeatureCheck(OS, ReportMultipleNearMisses);
   }
 
@@ -4166,7 +4166,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "      // Too many invalid operands to report a single near-miss;\n";
     OS << "      // keep the first one as a fallback in case no opcode\n";
     OS << "      // matches more closely.\n";
-    if (PrioritizeFeatureInMultipleNearMisses) {
+    if (PrioritizeFeatureInMultiMismatchFallback) {
       OS << "      // If the opcode also has missing features, promote the\n";
       OS << "      // feature near-miss instead of the operand near-miss so\n";
       OS << "      // that the diagnostic points to the missing extension.\n";
@@ -4182,7 +4182,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      continue;\n";
   OS << "    }\n";
 
-  if (!PrioritizeFeatureInMultipleNearMisses) {
+  if (!PrioritizeFeatureInMultiMismatchFallback) {
     emitFeatureCheck(OS, ReportMultipleNearMisses);
   }
 
