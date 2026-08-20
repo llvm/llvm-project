@@ -43,7 +43,7 @@ func.func @try_fold_unranked_constant_results() {
   %0 = tosa.equal %lhs, %rhs : (tensor<1xi32>, tensor<1xi32>) -> tensor<*xi1>
   %1 = tosa.greater %lhs, %rhs : (tensor<1xi32>, tensor<1xi32>) -> tensor<*xi1>
   %2 = tosa.greater_equal %lhs, %rhs : (tensor<1xi32>, tensor<1xi32>) -> tensor<*xi1>
-  %3 = tosa.cast %lhs : (tensor<1xi32>) -> tensor<*xf32>
+  %3 = tosa.cast %lhs {input_unsigned = false} : (tensor<1xi32>) -> tensor<*xf32>
   %4 = tosa.reciprocal %f : (tensor<1xf32>) -> tensor<*xf32>
   %5 = tosa.abs %f : (tensor<1xf32>) -> tensor<*xf32>
   return
@@ -889,6 +889,25 @@ func.func @reshape_splat() -> tensor<6x5x4xi32> {
 
 // -----
 
+// CHECK-LABEL: @reshape_dense_resource
+func.func @reshape_dense_resource() -> tensor<4xf32> {
+  // CHECK: %[[RESHAPED:.+]] = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<4xf32>}> : () -> tensor<4xf32>
+  %input = "tosa.const"() <{values = dense_resource<reshape_resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
+  %shape = tosa.const_shape {values = dense<4> : tensor<1xindex>} : () -> !tosa.shape<1>
+  %reshape = tosa.reshape %input, %shape : (tensor<2x2xf32>, !tosa.shape<1>) -> tensor<4xf32>
+  // CHECK: return %[[RESHAPED]]
+  return %reshape : tensor<4xf32>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      reshape_resource: "0x040000003f800000400000004040000040800000"
+    }
+  }
+#-}
+
+// -----
+
 // CHECK-LABEL: @slice_splat
 func.func @slice_splat() -> tensor<1x1x1xi32> {
   // CHECK: %[[SLICE:.+]] = "tosa.const"() <{values = dense<42> : tensor<1x1x1xi32>}
@@ -940,7 +959,7 @@ func.func @test_slice_resource_no_fold() -> tensor<1x1xi32> {
 func.func @cast_float_to_float() -> tensor<f16> {
   %splat = "tosa.const"() {values = dense<42.0> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<4.200000e+01> : tensor<f16>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<f16>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<f16>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<f16>
 }
@@ -951,9 +970,31 @@ func.func @cast_float_to_float() -> tensor<f16> {
 func.func @cast_int_to_float() -> tensor<f16> {
   %splat = "tosa.const"() {values = dense<4> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<4.000000e+00> : tensor<f16>}
-  %cast = tosa.cast %splat : (tensor<i32>) -> tensor<f16>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<i32>) -> tensor<f16>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<f16>
+}
+
+// -----
+
+// CHECK: func.func @cast_signless_to_float_input_unsigned
+func.func @cast_signless_to_float_input_unsigned() -> tensor<f16> {
+  %splat = "tosa.const"() {values = dense<200> : tensor<i8>} : () -> tensor<i8>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<2.000000e+02> : tensor<f16>}
+  %cast = tosa.cast %splat {input_unsigned = true} : (tensor<i8>) -> tensor<f16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<f16>
+}
+
+// -----
+
+// CHECK: func.func @cast_int_to_int_input_unsigned
+func.func @cast_int_to_int_input_unsigned() -> tensor<i32> {
+  %splat = "tosa.const"() {values = dense<200> : tensor<i8>} : () -> tensor<i8>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<200> : tensor<i32>}
+  %cast = tosa.cast %splat {input_unsigned = true} : (tensor<i8>) -> tensor<i32>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i32>
 }
 
 // -----
@@ -962,7 +1003,7 @@ func.func @cast_int_to_float() -> tensor<f16> {
 func.func @cast_float_to_int() -> tensor<i16> {
   %splat = "tosa.const"() {values = dense<-4.0> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-4> : tensor<i16>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i16>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<i16>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i16>
 }
@@ -973,7 +1014,7 @@ func.func @cast_float_to_int() -> tensor<i16> {
 func.func @cast_float_to_int_round() -> tensor<i16> {
   %splat = "tosa.const"() {values = dense<-3.5> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-4> : tensor<i16>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i16>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<i16>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i16>
 }
@@ -984,7 +1025,7 @@ func.func @cast_float_to_int_round() -> tensor<i16> {
 func.func @cast_float_to_int_saturates_high() -> tensor<i8> {
   %splat = "tosa.const"() {values = dense<1.000000e+20> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<127> : tensor<i8>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i8>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<i8>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i8>
 }
@@ -995,7 +1036,7 @@ func.func @cast_float_to_int_saturates_high() -> tensor<i8> {
 func.func @cast_float_to_int_saturates_low() -> tensor<i8> {
   %splat = "tosa.const"() {values = dense<-1.000000e+20> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-128> : tensor<i8>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<i8>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<i8>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i8>
 }
@@ -1006,7 +1047,7 @@ func.func @cast_float_to_int_saturates_low() -> tensor<i8> {
 func.func @cast_float_to_unsigned_int_saturates_low() -> tensor<ui8> {
   %splat = "tosa.const"() {values = dense<-1.000000e+20> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<0> : tensor<ui8>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<ui8>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<ui8>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<ui8>
 }
@@ -1017,7 +1058,7 @@ func.func @cast_float_to_unsigned_int_saturates_low() -> tensor<ui8> {
 func.func @cast_float_to_unsigned_int_saturates_high() -> tensor<ui8> {
   %splat = "tosa.const"() {values = dense<1.000000e+20> : tensor<f32>} : () -> tensor<f32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<255> : tensor<ui8>}
-  %cast = tosa.cast %splat : (tensor<f32>) -> tensor<ui8>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<f32>) -> tensor<ui8>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<ui8>
 }
@@ -1028,7 +1069,7 @@ func.func @cast_float_to_unsigned_int_saturates_high() -> tensor<ui8> {
 func.func @cast_int_to_int_trunc() -> tensor<i16> {
   %splat = "tosa.const"() {values = dense<-1> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-1> : tensor<i16>}
-  %cast = tosa.cast %splat : (tensor<i32>) -> tensor<i16>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<i32>) -> tensor<i16>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i16>
 }
@@ -1039,7 +1080,7 @@ func.func @cast_int_to_int_trunc() -> tensor<i16> {
 func.func @cast_int_to_int_sign() -> tensor<i32> {
   %splat = "tosa.const"() {values = dense<-1> : tensor<i16>} : () -> tensor<i16>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-1> : tensor<i32>}
-  %cast = tosa.cast %splat : (tensor<i16>) -> tensor<i32>
+  %cast = tosa.cast %splat {input_unsigned = false} : (tensor<i16>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %cast : tensor<i32>
 }

@@ -42,9 +42,6 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
 
 } // end namespace llvm
 
-InsertPosition::InsertPosition(Instruction *InsertBefore)
-    : InsertAt(InsertBefore ? InsertBefore->getIterator()
-                            : InstListType::iterator()) {}
 InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
     : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
@@ -934,6 +931,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
            LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
+           SI->isElementwise() == cast<StoreInst>(I2)->isElementwise() &&
            (SI->getAlign() == cast<StoreInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&

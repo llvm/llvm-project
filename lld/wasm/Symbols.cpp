@@ -75,7 +75,7 @@ std::string toString(wasm::Symbol::Kind kind) {
   case wasm::Symbol::SharedDataKind:
     return "SharedDataKind";
   case wasm::Symbol::SharedTagKind:
-    return "SharedTagSymbol";
+    return "SharedTagKind";
   }
   llvm_unreachable("invalid symbol kind");
 }

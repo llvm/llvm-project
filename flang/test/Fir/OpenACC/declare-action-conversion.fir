@@ -171,3 +171,36 @@ module {
   func.func private @_FortranAAllocatableDeallocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
   func.func private @_FortranAAllocatableDeallocatePolymorphic(!fir.ref<!fir.box<none>>, !fir.ref<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 }
+
+// -----
+
+// Test declare_action on CUF allocation and deallocation operations.
+module {
+  func.func private @_QFpre_alloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpost_alloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpre_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+  func.func private @_QFpost_dealloc(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    return
+  }
+
+  func.func @_QPcuf_declare_actions(%box: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    %0 = cuf.allocate %box : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {acc.declare_action = #acc.declare_action<preAlloc = @_QFpre_alloc, postAlloc = @_QFpost_alloc>, data_attr = #cuf.cuda<pinned>} -> i32
+    %1 = cuf.deallocate %box : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {acc.declare_action = #acc.declare_action<preDealloc = @_QFpre_dealloc, postDealloc = @_QFpost_dealloc>, data_attr = #cuf.cuda<pinned>} -> i32
+    return
+  }
+
+// CHECK-LABEL: func.func @_QPcuf_declare_actions(
+// CHECK-SAME: %[[BOX:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+// CHECK: fir.call @_QFpre_alloc(%[[BOX]])
+// CHECK-NEXT: %{{.*}} = cuf.allocate %[[BOX]]
+// CHECK-NEXT: fir.call @_QFpost_alloc(%[[BOX]])
+// CHECK: fir.call @_QFpre_dealloc(%[[BOX]])
+// CHECK-NEXT: %{{.*}} = cuf.deallocate %[[BOX]]
+// CHECK-NEXT: fir.call @_QFpost_dealloc(%[[BOX]])
+}

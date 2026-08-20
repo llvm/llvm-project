@@ -339,7 +339,7 @@ struct AMDGPUMemoryPoolTy {
     // compared with the alignment of the memory allocated using the given pool.
     // If the default alignment is greater than or equal to the alignment
     // requested by the user, it would still meet the user's requirements.
-    if (Alignment > 0 && Alignment >= PoolAllocationAlignment) {
+    if (Alignment > 0 && Alignment > PoolAllocationAlignment) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported pool alignment (%lu)",
@@ -586,7 +586,7 @@ private:
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
-  AMDGPUKernelTy(const char *Name) : GenericKernelTy(Name) {}
+  AMDGPUKernelTy(StringRef Name) : GenericKernelTy(Name) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -648,7 +648,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
+                   KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
@@ -663,7 +663,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Print more elaborate kernel launch info for AMDGPU
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                               KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
+                               const KernelLaunchArgsTy &LaunchArgs,
+                               uint32_t NumThreads[3],
                                uint32_t NumBlocks[3]) const override;
 
   /// Get group and private segment kernel size.
@@ -2636,7 +2637,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin.allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
@@ -2952,6 +2953,33 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           PinnedMemoryManager);
   }
 
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    struct MemcpyArgsTy {
+      void *DstPtr;
+      const void *SrcPtr;
+      int64_t Size;
+    };
+
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    auto Args =
+        std::make_unique<MemcpyArgsTy>(MemcpyArgsTy{DstPtr, SrcPtr, Size});
+    if (auto Err = Stream->pushHostCallback(
+            [](void *Data) {
+              std::unique_ptr<MemcpyArgsTy> Args(
+                  static_cast<MemcpyArgsTy *>(Data));
+              std::memcpy(Args->DstPtr, Args->SrcPtr, Args->Size);
+            },
+            Args.get()))
+      return Err;
+
+    Args.release();
+    return Plugin::success();
+  }
+
   /// Exchange data between two devices within the plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
@@ -3065,12 +3093,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Stream->pushMemoryCopyH2DAsync(TgtPtr, PatternPtr, PinnedPtr,
                                           PatternSize, PinnedMemoryManager,
                                           Size / PatternSize);
-  }
-
-  /// Initialize the async info
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // TODO: Implement this function.
-    return Plugin::success();
   }
 
   interop_spec_t selectInteropPreference(int32_t InteropType,
@@ -3561,11 +3583,11 @@ private:
 
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
-    KernelArgsTy KernelArgs = {};
+    KernelLaunchArgsTy LaunchArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    auto Err = AMDGPUKernel.launchImpl(
-        *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
-        KernelLaunchParamsTy{}, AsyncInfoWrapper);
+    auto Err =
+        AMDGPUKernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads,
+                                0, LaunchArgs, AsyncInfoWrapper);
 
     AsyncInfoWrapper.finalize(Err);
     return Err;
@@ -3920,6 +3942,44 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
 
     return Plugin::success();
   }
+
+protected:
+  /// Kernels are represented by a kernel descriptor, which is an object named
+  /// after the function it describes with a '.kd' suffix.
+  std::optional<StringRef> matchSymbol(const ELFSymbolRef &Symbol,
+                                       StringRef Name,
+                                       SymbolKindTy Kind) override {
+    if (Symbol.getELFType() != ELF::STT_OBJECT)
+      return std::nullopt;
+
+    StringRef Function = Name;
+    bool IsDescriptor =
+        Function.consume_back(".kd") && isFunction(Symbol, Function);
+    if (IsDescriptor != (Kind == SymbolKindTy::Kernel))
+      return std::nullopt;
+
+    return IsDescriptor ? Function : Name;
+  }
+
+private:
+  /// Returns whether \p Name is a function in the image containing \p Symbol.
+  static bool isFunction(const ELFSymbolRef &Symbol, StringRef Name) {
+    auto SymbolOrErr = utils::elf::getSymbol(*Symbol.getObject(), Name);
+    if (!SymbolOrErr) {
+      consumeError(SymbolOrErr.takeError());
+      return false;
+    }
+    return *SymbolOrErr && (*SymbolOrErr)->getELFType() == ELF::STT_FUNC;
+  }
+};
+
+struct AMDGPUPluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    // TODO: Implement this function.
+    return Plugin::success();
+  }
 };
 
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
@@ -4024,6 +4084,11 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
                                 int32_t NumDevices) override {
     return new AMDGPUDeviceTy(Plugin, DeviceId, NumDevices, getHostDevice(),
                               getKernelAgent(DeviceId));
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<AMDGPUPluginContextTy>(*this, Devices);
   }
 
   /// Creates an AMDGPU global handler.
@@ -4227,11 +4292,10 @@ private:
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                  uint32_t DynBlockMemSize,
-                                 KernelArgsTy &KernelArgs,
-                                 KernelLaunchParamsTy LaunchParams,
+                                 KernelLaunchArgsTy &LaunchArgs,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Cooperative kernel launch is not yet supported for AMDGPU
-  if (KernelArgs.Flags.Cooperative)
+  if (LaunchArgs.Flags.Cooperative)
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "cooperative kernel launch not supported for AMDGPU");
 
@@ -4250,9 +4314,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Copy explicit arguments.
   size_t ExplicitEnd = 0;
-  if (LaunchParams.Args) {
+  if (LaunchArgs.Args) {
     const auto &ArgMDs = KernelInfo.ArgMDs;
-    uint32_t NumArgs = LaunchParams.NumArgs;
+    uint32_t NumArgs = LaunchArgs.NumArgs;
 
     if (NumArgs > ArgMDs.size())
       return Plugin::error(
@@ -4263,8 +4327,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
     for (size_t I = 0; I < NumArgs; I++) {
       auto [Offset, Size] = ArgMDs[I];
-      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchParams.Args[I],
-                  Size);
+      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchArgs.Args[I], Size);
     }
 
     auto [Offset, Size] = ArgMDs[NumArgs - 1];
@@ -4309,7 +4372,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                : 1 + (NumBlocks[1] * NumThreads[1] != 1));
 
     hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
-                           KernelArgs.DynCGroupMem);
+                           LaunchArgs.DynCGroupMem);
   }
 
   // HSA requires the group segment size to include both static and dynamic.
@@ -4321,10 +4384,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                   ArgsMemoryManager);
 }
 
-Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                                             KernelArgsTy &KernelArgs,
-                                             uint32_t NumThreads[3],
-                                             uint32_t NumBlocks[3]) const {
+Error AMDGPUKernelTy::printLaunchInfoDetails(
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
+    uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
   // Only do all this when the output is requested
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
@@ -4334,8 +4396,8 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   auto *ThreadsPerGroup = NumThreads;
 
   // Kernel Arguments Info
-  auto ArgNum = KernelArgs.NumArgs;
-  auto LoopTripCount = KernelArgs.Tripcount;
+  auto ArgNum = LaunchArgs.NumArgs;
+  auto LoopTripCount = LaunchArgs.Tripcount;
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata

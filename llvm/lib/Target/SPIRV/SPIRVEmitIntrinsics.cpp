@@ -22,7 +22,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -1034,7 +1033,11 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = BestTy;
   } else if (auto *Ref = dyn_cast<SelectInst>(I)) {
     for (Value *Op : {Ref->getTrueValue(), Ref->getFalseValue()}) {
-      Ty = deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
+      // A function pointer operand carries its function type directly. Other
+      // operands are deduced from their uses.
+      Ty = isa<Function>(Op)
+               ? deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8)
+               : deduceElementTypeByUsersDeep(Op, Visited, UnknownElemTypeI8);
       if (Ty)
         break;
     }
@@ -1544,7 +1547,7 @@ void SPIRVEmitIntrinsicsImpl::deduceOperandElementType(
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
     // Do not let a non-pointer element type clobber an already-deduced pointer
-    // pointee.
+    // element type for the same operand.
     bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
                                      !isPointerTyOrWrapper(KnownElemTy) &&
                                      tracesToPointerAlloca(Op);
@@ -2208,10 +2211,10 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
     }
   }
 
-  // Never replace an already-deduced pointer pointee with a non-pointer one.
-  // The conflicting use comes from a mis-deduced expected type. Leave the
-  // operand untouched rather than emitting a ptrcast that re-introduces
-  // the collapsed type at the use site.
+  // Never replace an already-deduced pointer element type with a non-pointer
+  // one. The conflicting use comes from a mis-deduced expected type. Leave the
+  // operand untouched rather than emitting a ptrcast that re-introduces the
+  // collapsed type at the use site.
   if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
       !isPointerTyOrWrapper(ExpectedElementType) &&
       tracesToPointerAlloca(Pointer))
@@ -2465,12 +2468,31 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
+  // If this aggregate extract feeds another insertvalue, the extracted
+  // composite is used as a SPIR-V value-id by llvm.spv.insertv. Keep the real
+  // aggregate type in metadata, but expose the value itself as i32 so the
+  // intrinsic signature remains valid.
+  if (NewI->getType()->isAggregateType() &&
+      any_of(I.users(), [](User *U) { return isa<InsertValueInst>(U); })) {
+    AggrConstTypes[NewI] = I.getType();
+    NewI->mutateType(B.getInt32Ty());
+    replaceMemInstrUses(&I, NewI, B);
+    return NewI;
+  }
   replaceAllUsesWithAndErase(B, &I, NewI);
-  // If the aggregate result feeds a callsite whose aggregate params were
-  // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
+  // If the aggregate result feeds a return or callsite whose type was rewritten
+  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
   if (NewI->getType()->isAggregateType()) {
     for (const Use &U : NewI->uses()) {
-      auto *CB = dyn_cast<CallBase>(U.getUser());
+      User *Usr = U.getUser();
+      if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
+        if (RI->getFunction()->getReturnType() != NewI->getType()) {
+          NewI->mutateType(B.getInt32Ty());
+          break;
+        }
+        continue;
+      }
+      auto *CB = dyn_cast<CallBase>(Usr);
       if (!CB || !CB->isArgOperand(&U))
         continue;
       unsigned ArgNo = CB->getArgOperandNo(&U);
@@ -2584,18 +2606,21 @@ SPIRVEmitIntrinsicsImpl::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
   SmallVector<Value *> Args(I.operands());
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
+  const Triple &TT = TM.getTargetTriple();
+  Args.push_back(B.getInt32(static_cast<uint32_t>(
+      getMemScope(TT, I.getContext(), I.getSyncScopeID()))));
   // Per SPIR-V spec atomic ops must combine the ordering bits with the
   // storage-class bit.
   const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
   unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
   uint32_t ScSem = static_cast<uint32_t>(
       getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
-  Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())),
+      ScSem)));
+  Args.push_back(B.getInt32(getMemSemanticsWithStorageClass(
+      TT, static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())),
+      ScSem)));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(
       Intrinsic::spv_cmpxchg, {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
@@ -3590,8 +3615,8 @@ void SPIRVEmitIntrinsicsImpl::emitUnstructuredLoopControls(Function &F,
 
   // For non-shader targets without the Intel extension, emit OpLoopMerge
   // using spv_loop_merge intrinsics, mirroring the structurizer approach.
-  DominatorTree DT(F);
-  LoopInfo LI(DT);
+  LoopInfo LI;
+  LI.analyze(&F);
   if (LI.empty())
     return;
 
@@ -3643,6 +3668,13 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   // Data structure for dead instructions that were simplified and replaced.
   SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
+    if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      Type *ElTy = SI->getValueOperand()->getType();
+      if (ElTy->isAggregateType() || ElTy->isVectorTy())
+        AggrStores.insert(&I);
+      continue;
+    }
+
     auto *GEP = dyn_cast<GetElementPtrInst>(&I);
     auto *SGEP = dyn_cast<StructuredGEPInst>(&I);
 
@@ -3668,18 +3700,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   for (auto *I : DeadInsts) {
     assert(I->use_empty() && "Dead instruction should not have any uses left");
     I->eraseFromParent();
-  }
-
-  // StoreInst's operand type can be changed during the next
-  // transformations, so we need to store it in the set. Also store already
-  // transformed types.
-  for (auto &I : instructions(Func)) {
-    StoreInst *SI = dyn_cast<StoreInst>(&I);
-    if (!SI)
-      continue;
-    Type *ElTy = SI->getValueOperand()->getType();
-    if (ElTy->isAggregateType() || ElTy->isVectorTy())
-      AggrStores.insert(&I);
   }
 
   B.SetInsertPoint(&Func.getEntryBlock(), Func.getEntryBlock().begin());

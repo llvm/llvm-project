@@ -41,6 +41,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/UnresolvedSet.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -54,7 +55,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -541,9 +541,9 @@ struct BuiltinDumpStructGenerator {
     S.popCodeSynthesisContext();
     if (!RealCall.isInvalid())
       Actions.push_back(RealCall.get());
-    // Bail out if we've hit any errors, even if we managed to build the
-    // call. We don't want to produce more than one error.
-    return RealCall.isInvalid() || ErrorTracker.hasErrorOccurred();
+    // Bail out if we've hit any unrecoverable errors, even if we managed
+    // to build the call.
+    return RealCall.isInvalid() || ErrorTracker.hasUnrecoverableErrorOccurred();
   }
 
   Expr *getIndentString(unsigned Depth) {
@@ -2352,7 +2352,8 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
 
   switch (ArgTyRestr) {
   case Sema::EltwiseBuiltinArgTyRestriction::None:
-    if (!ArgTy->getAs<VectorType>() && !isValidMathElementType(ArgTy)) {
+    if (!ArgTy->getAs<VectorType>() && !ArgTy->getAs<MatrixType>() &&
+        !isValidMathElementType(ArgTy)) {
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
              << ArgOrdinal << /* vector */ 2 << /* integer */ 1 << /* fp */ 1
              << ArgTy;
@@ -6480,9 +6481,16 @@ bool Sema::BuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs,
 
   // __builtin_isfpclass has integer parameter that specify test mask. It is
   // passed in (...), so it should be analyzed completely here.
-  if (IsFPClass)
+  if (IsFPClass) {
     if (BuiltinConstantArgRange(TheCall, 1, 0, llvm::fcAllFlags))
       return true;
+
+    ExprResult MaskRes = PerformImplicitConversion(
+        TheCall->getArg(NumArgs - 1), Context.IntTy, AssignmentAction::Passing);
+    if (!MaskRes.isUsable())
+      return true;
+    TheCall->setArg(NumArgs - 1, MaskRes.get());
+  }
 
   // TODO: enable this code to all classification functions.
   if (IsFPClass) {
@@ -12254,9 +12262,14 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     }
   }
 
-  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
-    return TryGetExprRange(C, OVE->getSourceExpr(), MaxWidth, InConstantContext,
-                           Approximate);
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E)) {
+    // The source expression is null for the OpaqueValueExpr that stands in for
+    // a non-type template argument of pointer or reference type; fall back to
+    // the range of the type in that case.
+    if (const Expr *SourceExpr = OVE->getSourceExpr())
+      return TryGetExprRange(C, SourceExpr, MaxWidth, InConstantContext,
+                             Approximate);
+  }
 
   if (const auto *BitField = E->getSourceBitField())
     return IntRange(BitField->getBitWidthValue(),

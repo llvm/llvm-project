@@ -858,6 +858,7 @@ static void AddStmtsExprs(llvm::BitstreamWriter &Stream,
   RECORD(EXPR_CXX_PSEUDO_DESTRUCTOR);
   RECORD(EXPR_EXPR_WITH_CLEANUPS);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_MEMBER);
+  RECORD(EXPR_DEPENDENT_TEMPLATE_ID);
   RECORD(EXPR_CXX_DEPENDENT_SCOPE_DECL_REF);
   RECORD(EXPR_CXX_UNRESOLVED_CONSTRUCT);
   RECORD(EXPR_CXX_UNRESOLVED_MEMBER);
@@ -8207,13 +8208,13 @@ void OMPClauseWriter::VisitOMPReadClause(OMPReadClause *) {}
 
 void OMPClauseWriter::VisitOMPWriteClause(OMPWriteClause *) {}
 
-void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *C) {
-  Record.push_back(C->isExtended() ? 1 : 0);
-  if (C->isExtended()) {
-    Record.AddSourceLocation(C->getLParenLoc());
-    Record.AddSourceLocation(C->getArgumentLoc());
-    Record.writeEnum(C->getDependencyKind());
-  }
+void OMPClauseWriter::VisitOMPUpdateClause(OMPUpdateClause *) {}
+
+void OMPClauseWriter::VisitOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getArgumentLoc());
+  Record.writeEnum(C->getDependencyKind());
 }
 
 void OMPClauseWriter::VisitOMPCaptureClause(OMPCaptureClause *) {}

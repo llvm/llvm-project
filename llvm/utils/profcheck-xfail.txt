@@ -4,12 +4,8 @@ CodeGen/WinEH/wineh-scope-statenumbering.ll
 CodeGen/WinEH/wineh-setjmp.ll
 CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
-DebugInfo/AArch64/ir-outliner.ll
 DebugInfo/Generic/block-asan.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
-Transforms/Coroutines/coro-split-00.ll
-Transforms/Coroutines/coro-split-addrspace.ll
-Transforms/Coroutines/coro-split-resume-fallthrough-destroy-slot.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
@@ -129,4 +125,5 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
+Transforms/VectorCombine/deinterleave-interleave-pairs.ll
 tools/opt/mtune.ll

@@ -51,6 +51,7 @@
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/LibcallLoweringInfo.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopCacheAnalysis.h"
@@ -87,6 +88,7 @@
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/CFIFixup.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -100,13 +102,20 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
+#include "llvm/CodeGen/GlobalISel/Localizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InlineAsmPrepare.h"
@@ -130,6 +139,7 @@
 #include "llvm/CodeGen/MachineCFGPrinter.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCheckDebugify.h"
+#include "llvm/CodeGen/MachineCombiner.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
@@ -240,11 +250,9 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/GlobalSplit.h"
 #include "llvm/Transforms/IPO/HotColdSplitting.h"
-#include "llvm/Transforms/IPO/IROutliner.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Instrumentor.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/IPO/LoopExtractor.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
@@ -262,6 +270,7 @@
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -966,10 +975,6 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
 Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "drop-deref",
                                             "DropUnnecessaryAssumes");
-}
-
-Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
 
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {

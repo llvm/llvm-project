@@ -151,9 +151,9 @@ def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
 }
 
 def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
-  let HasModifiers = 0;
   let HasOpSel = 0;
   let HasClamp = 0;
+  let HasNeg = 0;
   let Src0RC64 = VSrc_v2b64;
   let Src1RC64 = VSrc_v2b32;
   let Src2RC64 = VSrc_v2b64;
@@ -184,12 +184,12 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
-let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
 defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
 defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
 }
 
-let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in
 defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
@@ -205,10 +205,10 @@ defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
 
-let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in {
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in {
 defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
 defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
-} // End SubtargetPredicate = HasPackedU64Ops, , SchedRW = [Write64Bit]
+} // End SubtargetPredicate = HasPackedU64SingleSGPROps, , SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
@@ -245,8 +245,9 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                              ValueType VT = f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
+  defvar VOP3PMadMixModsNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsNeg, VOP3PMadMixModsNeg);
+  defvar VOP3PMadMixModsExtNegPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExtNeg, VOP3PMadMixModsExtNeg);
   defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
-  defvar NegOneImm = !if (!eq(VT, bf16), CONST.BF16_NEG_ONE, CONST.FP16_NEG_ONE);
   defvar ImmMods = !if (!eq(VT, bf16), !or(SRCMODS.OP_SEL_0, SRCMODS.OP_SEL_1), SRCMODS.OP_SEL_1);
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
@@ -284,18 +285,18 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 SRCMODS.NEG), (i32 0),
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
     (f32 (fsub (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
-               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+               (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 
-  // (fsub x, y) -> (fma y, -1.0, x)
+  // (fsub x, y) -> (fma (-y), 1.0, x)
   def : GCNPat <
     (f32 (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
-               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
-    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 NegOneImm), $src0_mods, $src0,
+               (f32 (VOP3PMadMixModsExtNegPat VT:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 ImmMods), (i32 OneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 }
 
@@ -329,7 +330,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mixlo_inst $src0_modifiers, $src0,
                 $src1_modifiers, $src1,
-                (i32 SRCMODS.NONE), (i32 0),
+                (i32 SRCMODS.NEG), (i32 0),
                 DSTCLAMP.NONE,
                 (i32 (IMPLICIT_DEF)))
   >;
@@ -339,7 +340,7 @@ multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,
                                           (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
     (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
-                       (i32 SRCMODS.NONE), (i32 0),
+                       (i32 SRCMODS.NEG), (i32 0),
                        DSTCLAMP.NONE,
                        VGPR_32:$elt0))
   >;
@@ -393,7 +394,7 @@ multiclass MadFmaMixFP16Pats_t16<SDPatternOperator fma_like,
                        (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mix_inst_16 $src0_modifiers, $src0,
                  $src1_modifiers, $src1,
-                 (i32 SRCMODS.NONE), (i32 0),
+                 (i32 SRCMODS.NEG), (i32 0),
                  DSTCLAMP.NONE)
   >;
 
@@ -571,15 +572,16 @@ def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
 
-let SubtargetPredicate = HasPackedU64Ops in {
+let SubtargetPredicate = HasPackedU64SingleSGPROps in {
 let AddedComplexity = 5 in
 def : GCNPat<
-  (v2i64 (DivergentBinFrag<shl_0_to_4> v2i64:$src0, v2i64:$src1)),
-  (v2i64 (V_PK_LSHL_ADD_U64 $src0,
-    (v2i32 (REG_SEQUENCE VReg_64,
-      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
-      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
-    (v2i64 (as_i64imm (i32 0)))))
+  (v2i64 (DivergentBinFrag<shl_0_to_4> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                       (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)))),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0_mods, $src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    0, (v2i64 (as_i64imm (i32 0)))))
 >;
 
 def : GCNPat<
@@ -594,14 +596,16 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (ThreeOpFrag<shl_0_to_4, add> v2i64:$src0, v2i64:$src1, v2i64:$src2),
-  (V_PK_LSHL_ADD_U64 VSrc_v2b64:$src0,
-    (v2i32 (REG_SEQUENCE VReg_64,
-      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
-      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
-    VSrc_v2b64:$src2)
+  (ThreeOpFrag<shl_0_to_4, add> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src2, i32:$src2_mods))),
+  (V_PK_LSHL_ADD_U64 $src0_mods, VSrc_v2b64:$src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    $src2_mods, VSrc_v2b64:$src2)
 >;
-} // End SubtargetPredicate = HasPackedU64Ops
+} // End SubtargetPredicate = HasPackedU64SingleSGPROps
 
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
@@ -1100,13 +1104,9 @@ def VOPProfileMAI_I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I3
 
 
 class MFMATable <bit is_mac, string Kind, string Name,
-                 string AGPROpName = NAME> {
+                 string AGPROpName = NAME> : AGPRFormTable<Kind, AGPROpName> {
   bit IsMac = is_mac;
   string FMAOp = Name;
-  string AGPROp = AGPROpName;
-
-  // Does this MFMA use "AGPR" or "VGPR" for srcC/vdst
-  string MFMAKind = Kind;
 }
 
 class MFMA_F8F6F4_WithSizeTable<int A, int B, Instruction ThisVariant, Instruction F8F8Variant> {
@@ -1446,7 +1446,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
     defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
-  } // End SubtargetPredicate = HasPackedFP32Ops
+  }
+  let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+    defm V_PK_FMA_F32_gfx1250 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
+    defm V_PK_MUL_F32_gfx1250 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
+    defm V_PK_ADD_F32_gfx1250 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+  }
 
   let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
@@ -1465,11 +1470,11 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 
-  let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
     defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
     defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
     defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
-  } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
+  } // End SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2099,7 +2104,7 @@ multiclass WMMAInst_SrcFormats_mc<string OpName, string Profile> {
 
 let WaveSizePredicate = isWave32 in {
   let is_wmma_xdl = 1 in {
-    let SubtargetPredicate = isGFX125xOnly in {
+    let SubtargetPredicate = HasWMMAN16Insts in {
       defm V_WMMA_F32_16X16X32_BF16_w32     : WMMAInstGFX12<"v_wmma_f32_16x16x32_bf16",     F32_BF16X32_WMMA_w32, "_w32">;
       defm V_WMMA_BF16_16X16X32_BF16_w32    : WMMAInstGFX12<"v_wmma_bf16_16x16x32_bf16",    BF16_BF16X32_WMMA_w32, "_w32">;
       defm V_WMMA_BF16F32_16X16X32_BF16_w32 : WMMAInstGFX12<"v_wmma_bf16f32_16x16x32_bf16", BF16F32_BF16_WMMA_w32, "_w32", 1>;
@@ -2130,7 +2135,7 @@ let WaveSizePredicate = isWave32 in {
 
       defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : WMMAInstGFX12<"v_wmma_scale_f32_32x16x128_f4",   F32_32X16X128_F4_SCALE_w32, "_w32">;
       defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : WMMAInstGFX12<"v_wmma_scale16_f32_32x16x128_f4", F32_32X16X128_F4_SCALE16_w32, "_w32">;
-    } // End SubtargetPredicate = isGFX125xOnly
+    } // End SubtargetPredicate = HasWMMAN16Insts
 
     let SubtargetPredicate = HasSWMMACGfx1250Insts in {
       defm V_SWMMAC_F32_16X16X64_BF16_w32     : SWMMACInstGFX12<"v_swmmac_f32_16x16x64_bf16",     F32_BF16X64_SWMMAC_w32, "_w32">;
@@ -2296,6 +2301,9 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasSWMMACGfx1200Insts in 
 let WaveSizePredicate = isWave32 in {
 let SubtargetPredicate = isGFX125xOnly in {
   defm : WMMAPat<"V_WMMA_F32_16X16X4_F32_w32",          int_amdgcn_wmma_f32_16x16x4_f32,          F32_F32_WMMA_w32>;
+} // End SubtargetPredicate = isGFX125xOnly
+
+let SubtargetPredicate = HasWMMAN16Insts in {
   defm : WMMAPat<"V_WMMA_F32_16X16X32_BF16_w32",        int_amdgcn_wmma_f32_16x16x32_bf16,        F32_BF16X32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_BF16_16X16X32_BF16_w32",       int_amdgcn_wmma_bf16_16x16x32_bf16,       BF16_BF16X32_WMMA_w32>;
   defm : WMMAPat<"V_WMMA_BF16F32_16X16X32_BF16_w32",    int_amdgcn_wmma_bf16f32_16x16x32_bf16,    BF16F32_BF16_WMMA_w32>;
@@ -2327,7 +2335,9 @@ let SubtargetPredicate = isGFX125xOnly in {
     defm : WMMAPat<"V_WMMA_SCALE_F32_16X16X128_F8F6F4_" # I # "_w32",   int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4,   !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE_" # I # "_w32")>;
     defm : WMMAPat<"V_WMMA_SCALE16_F32_16X16X128_F8F6F4_" # I # "_w32", int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE16_" # I # "_w32")>;
   }
+} // End SubtargetPredicate = HasWMMAN16Insts
 
+let SubtargetPredicate = HasSWMMACGfx1250Insts in {
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_BF16_w32_twoaddr,     int_amdgcn_swmmac_f32_16x16x64_bf16,     F32_BF16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_BF16_16X16X64_BF16_w32_twoaddr,    int_amdgcn_swmmac_bf16_16x16x64_bf16,    BF16_BF16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_BF16F32_16X16X64_BF16_w32_twoaddr, int_amdgcn_swmmac_bf16f32_16x16x64_bf16, F32_BF16X64_SWMMAC_w32>;
@@ -2342,7 +2352,7 @@ let SubtargetPredicate = isGFX125xOnly in {
   def : SWMMACPat<V_SWMMAC_I32_16X16X128_IU8_w32_twoaddr,     int_amdgcn_swmmac_i32_16x16x128_iu8,     I32_IU8X128_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f32_16x16x64_f16,      F32_F16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F16_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f16_16x16x64_f16,      F16_F16X64_SWMMAC_w32>;
-} // End SubtargetPredicate = isGFX125xOnly
+} // End SubtargetPredicate = HasSWMMACGfx1250Insts
 
 let SubtargetPredicate = HasGFX1251GEMMInsts in {
   defm : WMMAPat<"V_WMMA_F64_16X16X4_F64_w32",  int_amdgcn_wmma_f64_16x16x4_f64,  F64_F64X4_WMMA_w32>;
@@ -2638,14 +2648,14 @@ defm V_WMMA_F16_16X16X128_BF8_FP8_w32 : VOP3P_Real_WMMA_gfx1250 <0x086, F16_FP8B
 defm V_WMMA_F16_16X16X128_BF8_BF8_w32 : VOP3P_Real_WMMA_gfx1250 <0x087, F16_FP8BF8X128_WMMA_w32>;
 defm V_WMMA_F32_32X16X128_F4_w32      : VOP3P_Real_WMMA_gfx1250 <0x088, F32_32X16X128_F4_WMMA_w32>;
 
-let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250" in {
+let WaveSizePredicate = isWave32, SubtargetPredicate = HasWMMAN16Insts, DecoderNamespace = "GFX1250" in {
 defm V_WMMA_F32_16X16X128_F8F6F4         : VOP3P_Real_WMMA_SrcFormats <"gfx1250", 0x033, "F32_16X16X128_F8F6F4">;
 defm V_WMMA_SCALE_F32_16X16X128_F8F6F4   : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x35, "F32_16X16X128_F8F6F4_SCALE">;
 defm V_WMMA_SCALE16_F32_16X16X128_F8F6F4 : VOP3PX2_Real_ScaledWMMA_SrcFormats <"gfx1250", 0x033, 0x3a, "F32_16X16X128_F8F6F4_SCALE16">;
 
 defm V_WMMA_SCALE_F32_32X16X128_F4_w32   : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250", 0x088, 0x35, F32_32X16X128_F4_SCALE_w32>;
 defm V_WMMA_SCALE16_F32_32X16X128_F4_w32 : VOP3PX2_Real_ScaledWMMA_F4 <"gfx1250", 0x088, 0x3a, F32_32X16X128_F4_SCALE16_w32>;
-} // End WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus, DecoderNamespace = "GFX1250"
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = HasWMMAN16Insts, DecoderNamespace = "GFX1250"
 
 let SubtargetPredicate = HasSWMMACGfx1250Insts in {
   defm V_SWMMAC_F32_16X16X64_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x065, F32_F16X64_SWMMAC_w32>;
@@ -2737,9 +2747,9 @@ multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
-defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
-defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
-defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+defm V_PK_FMA_F32_gfx1250 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32_gfx1250 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32_gfx1250 : VOP3P_Real_gfx12<0x29>;
 
 defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1250<0x14>;
 defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1250<0x15>;

@@ -166,6 +166,7 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangEdit
   clangOptions
   clangFormat
   clangFrontend
