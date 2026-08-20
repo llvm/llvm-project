@@ -1296,8 +1296,8 @@ void AggExprEmitter::VisitBinCmp(const BinaryOperator *E) {
 }
 
 void AggExprEmitter::VisitTypeTraitExpr(const TypeTraitExpr *E) {
-  assert(!E->isStoredAsBoolean() && E->getAPValue().isInt() &&
-         "expected a non-boolean type trait with a stored value");
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
 
   const ComparisonCategoryInfo &CmpInfo =
       CGF.getContext().CompCategories.getInfoForType(E->getType());

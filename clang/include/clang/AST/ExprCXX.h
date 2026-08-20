@@ -2954,13 +2954,17 @@ public:
     return TypeTraitExprBits.IsBooleanTypeTrait;
   }
 
+  bool isStoredAsComparisonResult() const {
+    return TypeTraitExprBits.IsComparisonResult;
+  }
+
   bool getBoolValue() const {
     assert(!isValueDependent() && TypeTraitExprBits.IsBooleanTypeTrait);
     return TypeTraitExprBits.Value;
   }
 
   const APValue &getAPValue() const {
-    assert(!TypeTraitExprBits.IsBooleanTypeTrait);
+    assert(!isValueDependent() && !TypeTraitExprBits.IsBooleanTypeTrait);
     return *getTrailingObjects<APValue>();
   }
 

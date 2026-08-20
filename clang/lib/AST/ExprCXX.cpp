@@ -1903,6 +1903,8 @@ TypeTraitExpr::TypeTraitExpr(
          "TypeTraitExprBits.Kind overflow!");
 
   TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
+  TypeTraitExprBits.IsComparisonResult =
+      std::holds_alternative<ComparisonCategoryResult>(Value);
   if (TypeTraitExprBits.IsBooleanTypeTrait)
     TypeTraitExprBits.Value = std::get<bool>(Value);
   else {

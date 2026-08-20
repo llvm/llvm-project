@@ -431,8 +431,8 @@ public:
   }
 
   void VisitTypeTraitExpr(const TypeTraitExpr *e) {
-    assert(!e->isStoredAsBoolean() && !e->getType()->isIntegerType() &&
-           "expected a non-boolean type trait with a stored value");
+    assert(e->isStoredAsComparisonResult() &&
+           "expected a strong_ordering type trait with a stored value");
 
     const ComparisonCategoryInfo &cmpInfo =
         cgf.getContext().CompCategories.getInfoForType(e->getType());

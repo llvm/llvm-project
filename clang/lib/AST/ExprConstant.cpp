@@ -19562,8 +19562,8 @@ bool RecordExprEvaluator::VisitTypeTraitExpr(const TypeTraitExpr *E) {
   if (!CheckLiteralType(Info, E))
     return false;
 
-  assert(!E->isStoredAsBoolean() && E->getAPValue().isInt() &&
-         "expected a non-boolean type trait with a stored value");
+  assert(E->isStoredAsComparisonResult() &&
+         "expected a strong_ordering type trait with a stored value");
 
   ComparisonCategoryResult CCR = static_cast<ComparisonCategoryResult>(
       E->getAPValue().getInt().getZExtValue());

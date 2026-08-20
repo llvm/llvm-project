@@ -3681,7 +3681,7 @@ bool Compiler<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
       return this->emitConstBool(E->getBoolValue(), E);
     return this->emitConst(E->getBoolValue(), E);
   }
-  if (!E->getType()->isIntegerType()) {
+  if (E->isStoredAsComparisonResult()) {
     const ComparisonCategoryInfo &CmpInfo =
         Ctx.getASTContext().CompCategories.getInfoForType(E->getType());
     const auto Result =
