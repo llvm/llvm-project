@@ -38,6 +38,14 @@ class StringInit;
 namespace mlir {
 namespace tblgen {
 
+/// The canonical and legacy names of the implicit segment-size properties.
+inline constexpr StringLiteral operandSegmentAttrName = "operandSegmentSizes";
+inline constexpr StringLiteral resultSegmentAttrName = "resultSegmentSizes";
+inline constexpr StringLiteral legacyOperandSegmentAttrName =
+    "operand_segment_sizes";
+inline constexpr StringLiteral legacyResultSegmentAttrName =
+    "result_segment_sizes";
+
 /// This class represents an inferred result type. The result type can be
 /// inferred from an argument or result type. If it is inferred from another
 /// result type, that type must be buildable or inferred from yet another type.
@@ -208,6 +216,13 @@ public:
   property_iterator properties_end() { return properties.end(); }
   llvm::iterator_range<property_iterator> getProperties() { return properties; }
   int getNumCoreAttributes() const { return properties.size(); }
+
+  /// Returns whether this operation has any non-empty properties.
+  bool hasNonEmptyProperties() const;
+
+  /// Returns all accepted attribute spellings for this operation's inherent
+  /// attributes and properties, including legacy segment-size aliases.
+  SmallVector<StringRef> getInherentAttrNames() const;
 
   // Op properties accessors.
   NamedProperty &getProperty(int index) { return properties[index]; }

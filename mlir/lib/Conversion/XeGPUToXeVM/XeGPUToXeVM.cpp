@@ -925,8 +925,8 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
           VectorType::get(valOrResVecTy.getShape(), intElemTy);
 
       if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-        Value loadOp =
-            xevm::BlockLoadOp::create(rewriter, loc, intVecTy, basePtrLLVM);
+        Value loadOp = xevm::BlockLoadOp::create(
+            rewriter, loc, intVecTy, basePtrLLVM, /*cache_control=*/nullptr);
         if (intVecTy != valOrResVecTy) {
           loadOp =
               vector::BitCastOp::create(rewriter, loc, valOrResVecTy, loadOp);

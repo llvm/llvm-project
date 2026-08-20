@@ -43,6 +43,11 @@ unrollByTile(SmallVector<OpFoldResult> mixedOffsets,
              const std::function<Value(SmallVector<OpFoldResult>)> &createOp,
              Location loc, PatternRewriter &rewriter);
 
+static xegpu::DistributeLayoutAttr
+dropInstData(xegpu::DistributeLayoutAttr layout) {
+  return layout ? layout.dropInstData() : nullptr;
+}
+
 template <typename SourceOp>
 struct UnrollPattern : public OpRewritePattern<SourceOp> {
   UnrollPattern(MLIRContext *context, const xegpu::UnrollOptions &options,
@@ -428,9 +433,14 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             if (tmpC)
               operands.push_back(tmpC);
 
+            auto properties = op.getProperties();
+            properties.layout_a = dropInstData(properties.layout_a);
+            properties.layout_b = dropInstData(properties.layout_b);
+            properties.layout_cd = dropInstData(properties.layout_cd);
             tmpC = xegpu::DpasOp::create(
-                rewriter, loc, vecTy, operands,
-                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+                rewriter, loc, TypeRange{vecTy}, operands, properties,
+                xegpu::dropInstDataOnAttrs(
+                    op->getDiscardableAttrDictionary().getValue()));
           }
           newOps.push_back(tmpC);
         }
@@ -530,9 +540,16 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
               operands.push_back(
                   bScaleVals[batch * (kIters * nIters) + k * nIters + j]);
 
+            auto properties = op.getProperties();
+            properties.layout_a = dropInstData(properties.layout_a);
+            properties.layout_b = dropInstData(properties.layout_b);
+            properties.layout_cd = dropInstData(properties.layout_cd);
+            properties.layout_a_scale = dropInstData(properties.layout_a_scale);
+            properties.layout_b_scale = dropInstData(properties.layout_b_scale);
             newDpasMxOp = xegpu::DpasMxOp::create(
-                rewriter, loc, vecTy, operands,
-                xegpu::dropInstDataOnAttrs(op->getAttrs()));
+                rewriter, loc, TypeRange{vecTy}, operands, properties,
+                xegpu::dropInstDataOnAttrs(
+                    op->getDiscardableAttrDictionary().getValue()));
             tmpC = newDpasMxOp.getResult();
           }
           newOps.push_back(newDpasMxOp);

@@ -619,7 +619,8 @@ struct PrepareTransferReadConversion
     Location loc = xferOp.getLoc();
     memref::StoreOp::create(rewriter, loc, newXfer->getResult(0),
                             buffers.dataBuffer);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer,
+                                                ValueRange{});
 
     return success();
   }
@@ -662,7 +663,8 @@ struct PrepareTransferWriteConversion
     auto buffers = allocBuffers(rewriter, xferOp);
     memref::StoreOp::create(rewriter, loc, xferOp.getVector(),
                             buffers.dataBuffer);
-    auto loadedVec = memref::LoadOp::create(rewriter, loc, buffers.dataBuffer);
+    auto loadedVec =
+        memref::LoadOp::create(rewriter, loc, buffers.dataBuffer, ValueRange{});
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getValueToStoreMutable().assign(loadedVec);
       xferOp->setAttr(kPassLabel, rewriter.getUnitAttr());

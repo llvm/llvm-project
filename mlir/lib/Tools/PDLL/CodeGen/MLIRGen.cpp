@@ -441,7 +441,8 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
       if (isa<pdl::ValueType>(mlirType))
         return pdl::ResultOp::create(builder, loc, mlirType, parentExprs[0],
                                      builder.getI32IntegerAttr(0));
-      return pdl::ResultsOp::create(builder, loc, mlirType, parentExprs[0]);
+      return pdl::ResultsOp::create(builder, loc, mlirType, parentExprs[0],
+                                    /*index=*/nullptr);
     }
 
     const ods::Operation *odsOp = opType.getODSOperation();

@@ -1066,10 +1066,42 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitDecorationDeserialization(op, "  ", valueID, attributes, os);
 
   os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
-  os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, {4}); "
-                "(void){1};\n",
-                op.getQualCppClassName(), opVar, resultTypes, operands,
-                attributes);
+  if (!op.hasNonEmptyProperties()) {
+    os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, {4}); "
+                  "(void){1};\n",
+                  op.getQualCppClassName(), opVar, resultTypes, operands,
+                  attributes);
+  } else {
+    os << formatv("  {0}::Properties properties{{};\n",
+                  op.getQualCppClassName());
+    os << formatv("  {0}::populateDefaultProperties(\n"
+                  "      OperationName({0}::getOperationName(), "
+                  "opBuilder.getContext()), properties);\n",
+                  op.getQualCppClassName());
+    os << formatv("  if (failed({0}::setPropertiesFromAttr(\n"
+                  "          properties, opBuilder.getDictionaryAttr({1}),\n"
+                  "          [&]() {{ return emitError(loc); })))\n"
+                  "    return failure();\n",
+                  op.getQualCppClassName(), attributes);
+    os << "  SmallVector<NamedAttribute> discardableAttributes;\n";
+    os << formatv("  for (NamedAttribute attr : {0}) {{\n", attributes);
+    os << "    StringRef name = attr.getName().getValue();\n";
+    os << "    (void)name;\n";
+    os << "    if (";
+    bool emittedName = false;
+    for (StringRef name : op.getInherentAttrNames()) {
+      if (emittedName)
+        os << " && ";
+      os << formatv("name != \"{0}\"", name);
+      emittedName = true;
+    }
+    os << ")\n";
+    os << "      discardableAttributes.push_back(attr);\n";
+    os << "  }\n";
+    os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, "
+                  "properties, discardableAttributes); (void){1};\n",
+                  op.getQualCppClassName(), opVar, resultTypes, operands);
+  }
   if (op.getNumResults() == 1) {
     os << formatv("  valueMap[{0}] = {1}.getResult();\n\n", valueID, opVar);
   }

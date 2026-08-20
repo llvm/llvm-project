@@ -112,7 +112,8 @@ static Value castF32To(Type desType, Value f32, Location loc,
   if (elementType.getIntOrFloatBitWidth() < 32)
     return arith::TruncFOp::create(rewriter, loc, desType, f32);
   if (elementType.getIntOrFloatBitWidth() > 32)
-    return arith::ExtFOp::create(rewriter, loc, desType, f32);
+    return arith::ExtFOp::create(rewriter, loc, TypeRange{desType},
+                                 ValueRange{f32}, arith::ExtFOp::Properties{});
   llvm_unreachable("The only 32-bit float type is f32");
 }
 
@@ -151,8 +152,9 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
         rewriter.createOrFold<vector::BroadcastOp>(loc, outType, zero);
     Value scalarIn =
         vector::ExtractOp::create(rewriter, loc, in, ArrayRef<int64_t>{});
-    Value scalarExt =
-        arith::ExtFOp::create(rewriter, loc, outElemType, scalarIn);
+    Value scalarExt = arith::ExtFOp::create(
+        rewriter, loc, TypeRange{outElemType}, ValueRange{scalarIn},
+        arith::ExtFOp::Properties{});
     Value result = vector::InsertOp::create(rewriter, loc, scalarExt,
                                             zerodSplat, ArrayRef<int64_t>{});
     rewriter.replaceOp(op, result);
@@ -203,7 +205,9 @@ static Value castToF32(Value value, Location loc, PatternRewriter &rewriter) {
   if (type.isF32())
     return value;
   if (type.getIntOrFloatBitWidth() < 32)
-    return arith::ExtFOp::create(rewriter, loc, rewriter.getF32Type(), value);
+    return arith::ExtFOp::create(
+        rewriter, loc, TypeRange{rewriter.getF32Type()}, ValueRange{value},
+        arith::ExtFOp::Properties{});
   if (type.getIntOrFloatBitWidth() > 32)
     return arith::TruncFOp::create(rewriter, loc, rewriter.getF32Type(), value);
   llvm_unreachable("The only 32-bit float type is f32");
@@ -472,7 +476,9 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   Type scaleF32Type =
       scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
   if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
+    scale =
+        arith::ExtFOp::create(rewriter, loc, TypeRange{scaleF32Type},
+                              ValueRange{scale}, arith::ExtFOp::Properties{});
   else if (scaleType.getIntOrFloatBitWidth() > 32)
     scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
 
@@ -590,7 +596,9 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   Type scaleF32Type =
       scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
   if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
+    scale =
+        arith::ExtFOp::create(rewriter, loc, TypeRange{scaleF32Type},
+                              ValueRange{scale}, arith::ExtFOp::Properties{});
   else if (scaleType.getIntOrFloatBitWidth() > 32)
     scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
 

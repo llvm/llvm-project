@@ -26,6 +26,16 @@
 using namespace mlir;
 using namespace mlir::acc;
 
+template <typename OpTy>
+static OpTy createEmptyOp(OpBuilder &builder, Location loc) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, TypeRange{}, ValueRange{}, properties,
+                      /*discardableAttributes=*/{});
+}
+
 //===----------------------------------------------------------------------===//
 // Test Fixture
 //===----------------------------------------------------------------------===//
@@ -635,7 +645,7 @@ TEST_F(OpenACCUtilsLoopTest,
   // only to own the region, then build entry -> then/else -> exit with
   // acc.yield.
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   Block *entry = b.createBlock(&region, region.begin());
   Block *thenBlock = b.createBlock(&region, region.end());
@@ -700,7 +710,7 @@ TEST_F(OpenACCUtilsLoopTest,
   auto [module, funcOp] = createModuleWithFunc();
 
   OwningOpRef<acc::ParallelOp> parallelOp =
-      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+      createEmptyOp<acc::ParallelOp>(b, loc);
   Region &region = parallelOp->getRegion();
   // Block order as in all.mlir: ^bb0 entry, ^bb1 header, ^bb2 exit, ^bb3 body
   Block *entry = b.createBlock(&region, region.begin());

@@ -150,7 +150,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   addOperands(operands, operandSegments, bounds);
   addOperands(operands, operandSegments, async);
 
-  Op op = Op::create(builder, loc, retTy, operands);
+  Op op = Op::create(builder, loc, mlir::TypeRange{retTy}, operands,
+                     typename Op::Properties{});
   op.setNameAttr(builder.getStringAttr(name.str()));
   op.setStructured(structured);
   op.setImplicit(implicit);
@@ -218,8 +219,8 @@ static Op
 createSimpleOp(fir::FirOpBuilder &builder, mlir::Location loc,
                const llvm::SmallVectorImpl<mlir::Value> &operands,
                const llvm::SmallVectorImpl<int32_t> &operandSegments) {
-  llvm::ArrayRef<mlir::Type> argTy;
-  Op op = Op::create(builder, loc, argTy, operands);
+  Op op = Op::create(builder, loc, mlir::TypeRange{}, operands,
+                     typename Op::Properties{});
   op->setAttr(Op::getOperandSegmentSizeAttr(),
               builder.getDenseI32ArrayAttr(operandSegments));
   return op;
@@ -1301,7 +1302,7 @@ createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
                llvm::SmallVector<mlir::Type> retTy = {},
                mlir::Value yieldValue = {}, mlir::TypeRange argsTy = {},
                llvm::SmallVector<mlir::Location> locs = {}) {
-  Op op = Op::create(builder, loc, retTy, operands);
+  Op op = Op::create(builder, loc, retTy, operands, typename Op::Properties{});
   builder.createBlock(&op.getRegion(), op.getRegion().end(), argsTy, locs);
   mlir::Block &block = op.getRegion().back();
   builder.setInsertionPointToStart(&block);

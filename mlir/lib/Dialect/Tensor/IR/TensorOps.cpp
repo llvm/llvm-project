@@ -2055,9 +2055,11 @@ void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
   auto resultType =
       RankedTensorType::get(collapsedType.getShape(), srcType.getElementType(),
                             srcType.getEncoding());
-  result.addAttribute(getReassociationAttrStrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-  build(b, result, resultType, src, attrs);
+  buildPropertiesAndDiscardableAttributes(result, attrs);
+  result.getOrAddProperties<Properties>().reassociation =
+      getReassociationIndicesAttribute(b, reassociation);
+  result.addOperands(src);
+  result.addTypes(resultType);
 }
 
 template <typename TensorReshapeOp, bool isExpansion = std::is_same<

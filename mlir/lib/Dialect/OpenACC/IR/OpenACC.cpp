@@ -225,7 +225,7 @@ struct MemRefPointerLikeModel
     if (memrefTy.getRank() != 0)
       return {};
 
-    return memref::LoadOp::create(builder, loc, memrefValue);
+    return memref::LoadOp::create(builder, loc, memrefValue, ValueRange{});
   }
 
   bool genStore(Type pointer, OpBuilder &builder, Location loc,

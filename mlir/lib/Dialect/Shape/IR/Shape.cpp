@@ -593,8 +593,9 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
 
     // Reduce op to equivalent with unique operands.
     if (unique.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(),
-                                        unique.takeVector(), op->getAttrs());
+      rewriter.replaceOpWithNewOp<OpTy>(
+          op, op->getResultTypes(), unique.takeVector(), op.getProperties(),
+          op->getDiscardableAttrDictionary().getValue());
       return success();
     }
 
@@ -716,8 +717,9 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
 
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands,
-                                        op->getAttrs());
+      rewriter.replaceOpWithNewOp<OpTy>(
+          op, op->getResultTypes(), newOperands, op.getProperties(),
+          op->getDiscardableAttrDictionary().getValue());
       return success();
     }
 
@@ -786,8 +788,9 @@ struct BroadcastFoldConstantOperandsPattern
     newShapeOperands.push_back(
         ConstShapeOp::create(rewriter, op.getLoc(), foldedConstantOperandsTy,
                              rewriter.getIndexTensorAttr(foldedConstantShape)));
-    rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(),
-                                             newShapeOperands);
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        op, TypeRange{op.getType()}, newShapeOperands, op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -819,7 +822,9 @@ struct CanonicalizeCastExtentTensorOperandsPattern
     // Rewrite op if any change required.
     if (!anyChange)
       return failure();
-    rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands);
+    rewriter.replaceOpWithNewOp<OpTy>(
+        op, op->getResultTypes(), newOperands, op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -850,7 +855,7 @@ struct BroadcastConcretizeResultTypePattern
 
     auto newOp = BroadcastOp::create(rewriter, op.getLoc(),
                                      getExtentTensorType(getContext(), maxRank),
-                                     op.getShapes());
+                                     op.getShapes(), /*error=*/nullptr);
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -1343,7 +1348,8 @@ std::optional<int64_t> GetExtentOp::getConstantDim() {
 }
 
 OpFoldResult GetExtentOp::fold(FoldAdaptor adaptor) {
-  auto elements = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
+  auto elements =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!elements)
     return nullptr;
   std::optional<int64_t> dim = getConstantDim();
@@ -1485,7 +1491,8 @@ bool mlir::shape::MeetOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult shape::RankOp::fold(FoldAdaptor adaptor) {
-  auto shape = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
+  auto shape =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!shape)
     return {};
   int64_t rank = shape.getNumElements();
@@ -1727,12 +1734,14 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
 
 // Canonicalize
 //
-// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) ->
+//     tensor<*xf32>
 // %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<?xindex>
 //
 // to
 //
-// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) ->
+//     tensor<*xf32>
 // %1 = %shape
 //
 struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
@@ -1906,8 +1915,9 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
                               SmallVectorImpl<OpFoldResult> &results) {
   if (!adaptor.getOperand() || !adaptor.getIndex())
     return failure();
-  auto shapeVec = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getOperand()).getValues<int64_t>());
+  auto shapeVec =
+      llvm::to_vector<6>(llvm::cast<DenseIntElementsAttr>(adaptor.getOperand())
+                             .getValues<int64_t>());
   auto shape = llvm::ArrayRef(shapeVec);
   auto splitPoint = llvm::cast<IntegerAttr>(adaptor.getIndex()).getInt();
   // Verify that the split point is in the correct range.
@@ -1931,8 +1941,9 @@ OpFoldResult ToExtentTensorOp::fold(FoldAdaptor adaptor) {
   if (!adaptor.getInput())
     return OpFoldResult();
   Builder builder(getContext());
-  auto shape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getInput()).getValues<int64_t>());
+  auto shape =
+      llvm::to_vector<6>(llvm::cast<DenseIntElementsAttr>(adaptor.getInput())
+                             .getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);

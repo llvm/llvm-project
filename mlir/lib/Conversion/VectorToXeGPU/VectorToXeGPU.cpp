@@ -965,9 +965,9 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects operands of rank 4 or less");
 
-    auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
-                                        TypeRange{contractOp.getResultType()},
-                                        ValueRange{lhs, rhs, acc});
+    auto dpasOp = xegpu::DpasOp::create(
+        rewriter, loc, contractOp.getResultType(), lhs, rhs, acc,
+        /*layout_a=*/nullptr, /*layout_b=*/nullptr, /*layout_cd=*/nullptr);
     rewriter.replaceOp(contractOp, dpasOp);
 
     return success();
