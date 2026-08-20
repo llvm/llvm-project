@@ -1171,7 +1171,6 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   const auto *CountAttributedTy =
       ArrayBaseFD->getType()->getAs<CountAttributedType>();
   assert(CountAttributedTy && "the field's type is not a CountAttributedType");
-  const bool CountInBytes = CountAttributedTy->isCountInBytes();
 
   //  count = ptr->count;
   //  index = idx;
@@ -1213,7 +1212,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //      array_size = count;
   //    #endif
   Value *ArraySize;
-  if (!CountInBytes) {
+  if (!CountAttributedTy->isCountInBytes()) {
     // `__counted_by`/`__counted_by_or_null` require a complete pointee at use
     // sites (enforced by Sema) so the element size is computable.
     CharUnits ArrayElementBaseSize = GetPointeeSize(ArrayBaseFD->getType());
