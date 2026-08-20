@@ -1271,7 +1271,7 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
 
     For dynamic shapes, all sizes are assumed to be correct at runtime.
 
-    Example scaled matmul with transposed B:
+    Example scaled matmul with transposed B using semi-affine maps:
     ```mlir
     %D = linalg.scaled_contract
         indexing_maps = [
@@ -1284,6 +1284,22 @@ def ScaledContractOp : LinalgStructuredBase_Op<"scaled_contract", [
           : tensor<200x512xf8E5M2>, tensor<7x4xf8E8M0FNU>,
             tensor<128x512xf8E5M2>, tensor<128xf8E8M0FNU>)
         outs(%C: tensor<200x128xf32>) -> tensor<200x128xf32>
+    ```
+
+    or using expanded dimensions:
+
+    ```mlir
+    %D = linalg.scaled_contract
+        indexing_maps = [
+          affine_map<(m, n, ko, kb) -> (m, ko, kb)>, // A - 32 block dim 'kb'
+          affine_map<(m, n, ko, kb) -> (m, ko)>,
+          affine_map<(m, n, ko, kb) -> (n, ko, kb)>, // B - 32 block dim 'kb'
+          affine_map<(m, n, ko, kb) -> (n, ko)>,
+          affine_map<(m, n, ko, kb) -> (m, n)>]
+        ins(%A, %scale_A, %B, %scale_B
+          : tensor<128x4x32xf4E2M1FN>, tensor<128x4xf8E8M0FNU>,
+            tensor<64x4x32xf4E2M1FN>, tensor<64x4xf8E8M0FNU>)
+        outs(%C : tensor<128x64xf32>) -> tensor<128x64xf32>
     ```
 
     Numeric casting promotes inputs and scales to the accumulator/output type.
