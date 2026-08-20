@@ -49,6 +49,15 @@ static VectorType trimLeadingOneDims(VectorType oldType) {
 static SmallVector<int64_t> splatZero(int64_t rank) {
   return SmallVector<int64_t>(rank, 0);
 }
+
+static Operation *createWithProperties(OpBuilder &builder, Operation *op,
+                                       ValueRange operands,
+                                       TypeRange resultTypes) {
+  OperationState state(op->getLoc(), op->getName(), operands, resultTypes,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return builder.create(state);
+}
 namespace {
 
 // Casts away leading one dimensions in vector.extract_strided_slice's vector
@@ -530,8 +539,7 @@ public:
       }
     }
     Operation *newOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                        newOperands, newVecType, op->getAttrs());
+        createWithProperties(rewriter, op, newOperands, TypeRange{newVecType});
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, vecType,
                                                      newOp->getResult(0));
     return success();
@@ -589,9 +597,8 @@ struct CastAwayLoadLikeLeadingOneDim : public OpRewritePattern<OpTy> {
       }
     }
 
-    Operation *newOp =
-        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
-                        TypeRange{newResultType}, op->getAttrs());
+    Operation *newOp = createWithProperties(rewriter, op, newOperands,
+                                            TypeRange{newResultType});
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, oldResultType,
                                                      newOp->getResult(0));
     return success();
@@ -626,8 +633,7 @@ struct CastAwayStoreLikeLeadingOneDim : public OpRewritePattern<OpTy> {
     }
 
     Operation *newOp =
-        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
-                        op->getResultTypes(), op->getAttrs());
+        createWithProperties(rewriter, op, newOperands, op->getResultTypes());
     rewriter.replaceOp(op, newOp->getResults());
     return success();
   }

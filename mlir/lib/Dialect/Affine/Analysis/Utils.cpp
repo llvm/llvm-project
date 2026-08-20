@@ -1945,7 +1945,8 @@ void mlir::affine::getComputationSliceState(
   for (unsigned i = 0; i < numSliceLoopIVs; ++i) {
     Value iv = getSliceLoop(i).getInductionVar();
     if (sequentialLoops.count(iv) == 0 &&
-        getSliceLoop(i)->getAttr(kSliceFusionBarrierAttrName) == nullptr)
+        getSliceLoop(i)->getDiscardableAttr(kSliceFusionBarrierAttrName) ==
+            nullptr)
       continue;
     // Skip reset of bounds of reduction loop inserted in the destination loop
     // that meets the following conditions:

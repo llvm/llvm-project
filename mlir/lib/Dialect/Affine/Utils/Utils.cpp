@@ -312,7 +312,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   operandMap.clear();
   b.setInsertionPointAfter(hoistOverOp);
   // We'll set an attribute to identify this op in a clone of this sub-tree.
-  ifOp->setAttr(idForIfOp, b.getBoolAttr(true));
+  ifOp->setDiscardableAttr(idForIfOp, b.getBoolAttr(true));
   hoistOverOpClone = b.clone(*hoistOverOp, operandMap);
 
   // Promote the 'then' block of the original affine.if in the then version.
@@ -327,7 +327,7 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   // Find the clone of the original affine.if op in the else version.
   AffineIfOp ifCloneInElse;
   hoistOverOpClone->walk([&](AffineIfOp ifClone) {
-    if (!ifClone->getAttr(idForIfOp))
+    if (!ifClone->getDiscardableAttr(idForIfOp))
       return WalkResult::advance();
     ifCloneInElse = ifClone;
     return WalkResult::interrupt();
@@ -1298,17 +1298,16 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
 
   // Add attribute for 'newMap', other Attributes do not change.
   auto newMapAttr = AffineMapAttr::get(newMap);
-  for (auto namedAttr : op->getAttrs()) {
-    if (affMapAccInterface &&
-        namedAttr.getName() ==
-            affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName())
-      state.attributes.push_back({namedAttr.getName(), newMapAttr});
-    else
-      state.attributes.push_back(namedAttr);
-  }
+  state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
 
   // Create the new operation.
   auto *repOp = builder.create(state);
+  if (affMapAccInterface) {
+    StringAttr mapAttrName =
+        affMapAccInterface.getAffineMapAttrForMemRef(oldMemRef).getName();
+    repOp->setInherentAttr(mapAttrName, newMapAttr);
+  }
   op->replaceAllUsesWith(repOp);
   op->erase();
 

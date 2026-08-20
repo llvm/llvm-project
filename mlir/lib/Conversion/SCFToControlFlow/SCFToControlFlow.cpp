@@ -319,8 +319,8 @@ static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
   // LLVM requires the loop metadata to be attached on the "latch" block. Which
   // is the back-edge to the header block (conditionBlock)
   SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(scfOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
+  llvm::copy_if(scfOp->getDiscardableAttrDictionary().getValue(),
+                std::back_inserter(llvmAttrs), [](auto attr) {
                   return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
                 });
   brOp->setDiscardableAttrs(llvmAttrs);

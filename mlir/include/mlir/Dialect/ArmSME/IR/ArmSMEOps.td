@@ -63,7 +63,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
         if (!tileId)
           return;
         ::mlir::Operation* op = this->getOperation();
-        op->setAttr("tile_id", tileId);
+        op->setDiscardableAttr("tile_id", tileId);
       }]
     >,
     InterfaceMethod<
@@ -77,7 +77,7 @@ def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
       /*methodBody=*/[{}],
       /*defaultImpl=*/ [{
         ::mlir::Operation* op = this->getOperation();
-        return op->getAttrOfType<mlir::IntegerAttr>("tile_id");
+        return op->getDiscardableAttrOfType<mlir::IntegerAttr>("tile_id");
       }]
     >,
     InterfaceMethod<
