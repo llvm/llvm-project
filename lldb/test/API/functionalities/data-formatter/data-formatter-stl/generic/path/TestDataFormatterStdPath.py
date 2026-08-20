@@ -18,6 +18,12 @@ class StdPathTestCase(TestBase):
         p = self.frame().FindVariable("p")
         self.assertSuccess(p.GetError())
         self.assertRegex(p.summary, r'^(L)?"dir/file\.txt"$')
+        self.assertGreater(p.GetNumChildren(), 0)
+        self.expect(
+            "frame variable p",
+            matching=False,
+            substrs=["_Text", "_M_pathname", "_M_cmpts"],
+        )
 
         empty = self.frame().FindVariable("empty")
         self.assertSuccess(empty.GetError())
