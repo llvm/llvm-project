@@ -6680,7 +6680,7 @@ static SDValue combineShiftOfLogicOp(SDNode *N,
   // Collect candidate shifts that share X. Reached through another user of X,
   // the logic result feeds the shift directly or through an optional extend.
   SmallVector<SDNode *, 4> CandidateShifts;
-  for (SDNode *CandidateLogicOp : Root->X->users()) {
+  for (const SDNode *CandidateLogicOp : Root->X->users()) {
     if (CandidateLogicOp == Root->LogicOp.getNode())
       continue;
     for (SDNode *LogicUser : CandidateLogicOp->users()) {
