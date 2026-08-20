@@ -3926,16 +3926,25 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
   return false;
 }
 
-static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
+static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable,
+                         const TargetTransformInfo &TTI) {
   SmallVector<VPValue *> Ops0;
   auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;
   for (VPValue *V : Ops) {
-    if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
+    if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenIntrinsicRecipe>(V))
       return false;
     auto *R = cast<VPRecipeWithIRFlags>(V);
-    if (vputils::getOpcode(R) != vputils::getOpcode(WideMember0))
+    if (auto *IntrinsicR = dyn_cast<VPWidenIntrinsicRecipe>(R)) {
+      if (IntrinsicR->mayReadFromMemory() || IntrinsicR->mayHaveSideEffects() ||
+          R->getScalarType()->isAggregateType() ||
+          any_of(R->operands(), [](VPValue *Op) {
+            return Op->getScalarType()->isAggregateType();
+          }))
+        return false;
+    }
+    if (vputils::getOpcodeOrIntrinsicID(R) != vputils::getOpcodeOrIntrinsicID(WideMember0))
       return false;
     if (R->getScalarType() != WideMember0->getScalarType())
       return false;
@@ -3948,7 +3957,16 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
     for (VPValue *Op : Ops)
       OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
 
-    if (canNarrowOps(OpsI, IsScalable))
+    auto *WideIntrinsic0 = dyn_cast<VPWidenIntrinsicRecipe>(WideMember0);
+    if (WideIntrinsic0 &&
+        isVectorIntrinsicWithScalarOpAtArg(
+            WideIntrinsic0->getVectorIntrinsicID(), Idx, &TTI)) {
+      if (!all_of(OpsI, equal_to(OpsI.front())))
+        return false;
+      continue;
+    }
+
+    if (canNarrowOps(OpsI, IsScalable, TTI))
       continue;
 
     if (any_of(enumerate(OpsI), [WideMember0, Idx, IsScalable](const auto &P) {
@@ -4022,7 +4040,8 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 // Preheader.
 static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
                                         SmallPtrSetImpl<VPValue *> &NarrowedOps,
-                                        VPBasicBlock *Preheader) {
+                                        VPBasicBlock *Preheader,
+                                        const TargetTransformInfo &TTI) {
   VPValue *V = Members.front();
   if (NarrowedOps.contains(V))
     return V;
@@ -4044,7 +4063,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
     return V;
 
   VPRecipeBase *R = V->getDefiningRecipe();
-  if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
+  if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenIntrinsicRecipe>(R)) {
     auto *WideMember0 = cast<VPRecipeWithIRFlags>(R);
     for (VPValue *Member : Members.drop_front())
       WideMember0->intersectFlags(*cast<VPRecipeWithIRFlags>(Member));
@@ -4052,8 +4071,17 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
       SmallVector<VPValue *> OpsI;
       for (VPValue *Member : Members)
         OpsI.push_back(Member->getDefiningRecipe()->getOperand(Idx));
+      auto *WideIntrinsic0 = dyn_cast<VPWidenIntrinsicRecipe>(WideMember0);
+      if (WideIntrinsic0 &&
+          isVectorIntrinsicWithScalarOpAtArg(
+              WideIntrinsic0->getVectorIntrinsicID(), Idx, &TTI)) {
+        assert(all_of(OpsI, equal_to(OpsI.front())) &&
+               "scalar intrinsic operands must match");
+        WideMember0->setOperand(Idx, OpsI.front());
+        continue;
+      }
       WideMember0->setOperand(
-          Idx, narrowInterleaveGroupOp(OpsI, NarrowedOps, Preheader));
+          Idx, narrowInterleaveGroupOp(OpsI, NarrowedOps, Preheader, TTI));
     }
     return V;
   }
@@ -4188,7 +4216,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
     if (!canNarrowOps(InterleaveR->getStoredValues(),
-                      VFToOptimize->isScalable()))
+                      VFToOptimize->isScalable(), TTI))
       return nullptr;
     StoreGroups.push_back(InterleaveR);
   }
@@ -4221,7 +4249,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = narrowInterleaveGroupOp(StoreGroup->getStoredValues(),
-                                           NarrowedOps, Preheader);
+                                           NarrowedOps, Preheader, TTI);
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     VPBuilder(StoreGroup)
