@@ -16,9 +16,10 @@
 #include <__algorithm/transform.h>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
-#include <__locale>
+#include <__locale_dir/ctype_base.h>
 #include <__regex/regex_error.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/to_underlying.h>
 #include <__vector/vector.h>
 #include <stack>
@@ -438,7 +439,6 @@ pair<bool, size_t> __exec_lookahead(
     return __current_pos;
   }
 
-  [[clang::preserve_none]]
   pair<bool, size_t> __execute(const _CharT* __first, const _CharT* __last, __global_state& __gstate) {
     const __interpreter_info<_CharT>* const __code = __gstate.__machine().data();
     auto __current_pos                             = __current_pos_;
@@ -803,12 +803,12 @@ class __interpreter {
     case __marked_subexpression_begin:
     case __marked_subexpression_end: {
       __read_uleb(__m, __pos);
-      [[clang::musttail]] return __get_possibly_matching_characters(__m, __pos);
+      return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __relative_jump: {
       __pos += __read_uleb(__m, __pos);
-      [[clang::musttail]] return __get_possibly_matching_characters(__m, __pos);
+      return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __branch_n_to_m_matcher:
@@ -817,14 +817,14 @@ class __interpreter {
       __read_uleb(__m, __pos);
       if (__initial_loop_values_[__loop_index + 1].__int_ == 0)
         return ~_MatchingSetWithEndT();
-      [[clang::musttail]] return __get_possibly_matching_characters(__m, __pos);
+      return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __start_anchor:
     case __multiline_start_anchor:
     case __match_word_boundary:
     case __match_no_word_boundary: {
-      [[clang::musttail]] return __get_possibly_matching_characters(__m, __pos);
+      return __get_possibly_matching_characters(__m, __pos);
     }
 
     case __end_anchor:
@@ -868,183 +868,6 @@ class __interpreter {
 public:
   __interpreter(const _Traits& __traits, bool __find_longest) : __traits_(__traits), __find_longest_(__find_longest) {
     __machine_.reserve(16);
-  }
-
-  void __fix_jumps(size_t __updated_instruction, ssize_t __offset) {
-    vector<pair<size_t, ssize_t>> __todo;
-    __todo.emplace_back(__updated_instruction, __offset);
-    auto __code = __machine_.data();
-
-    while (!__todo.empty()) {
-      size_t __pos = 0;
-      switch (__code[__pos++].__state_) {
-        using enum __state;
-      case __start_anchor:
-      case __end_anchor:
-      case __multiline_start_anchor:
-      case __multiline_end_anchor:
-      case __match_any:
-      case __match_any_except_newline:
-      case __match_word_boundary:
-      case __match_no_word_boundary:
-        break;
-
-      // Consuming matches
-      case __match_char:
-      case __match_icase_char:
-        ++__pos;
-        break;
-
-      case __match_simple_character_list:
-        __pos += sizeof(_MatchingSetT);
-        break;
-
-      case __match_backref:
-      case __match_icase_backref:
-      case __marked_subexpression_begin:
-      case __marked_subexpression_end:
-        __read_uleb(__code, __pos);
-        break;
-
-      case __match_character_list:
-      case __match_no_character_list: {
-        static constexpr auto __buffer_size =
-            std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1));
-        __pos += 2 * __buffer_size;
-        for (size_t __i = 0; __i != 6; ++__i)
-          __read_uleb(__code, __pos);
-      } break;
-
-      // Lookahead
-      case __positive_lookahead:
-      case __negative_lookahead:
-        std::__libcpp_unreachable();
-
-      // Jumps
-      case __relative_jump: {
-        auto __instr_start = __pos;
-        auto __jump_offset = __read_uleb(__code, __pos);
-        if (__pos < __todo.back().first && __pos + __jump_offset > __todo.back().first)
-          __jump_offset += __todo.back().second;
-        auto __num_size = __pos - __instr_start;
-        vector<__interpreter_info<_CharT>> __buffer;
-        __write_uleb(__buffer, __jump_offset);
-        if (__buffer.size() == __num_size) {
-          std::copy(__buffer.begin(), __buffer.end(), __code + __instr_start);
-        } else {
-
-        }
-      }
-
-      case __conditional_jump_forward:
-      case __conditional_jump_backward:
-
-      // Branches
-      case __branch_n_to_m_matcher:
-      case __branch_nongreedy_n_to_m_matcher:
-      case __branch_alternative:
-
-      // End state
-      case __end_state:
-        return;
-      }
-    }
-  }
-
-  void __optimize() {
-    auto __code  = __machine_.data();
-    size_t __pos = 0;
-    while (__pos != __machine_.size()) {
-      switch (__code[__pos++].__state_) {
-        using enum __state;
-      case __start_anchor:
-      case __end_anchor:
-      case __multiline_start_anchor:
-      case __multiline_end_anchor:
-      case __match_any:
-      case __match_any_except_newline:
-      case __match_word_boundary:
-      case __match_no_word_boundary:
-        break;
-
-      case __match_char:
-      case __match_icase_char:
-        ++__pos;
-        break;
-
-      case __match_simple_character_list:
-        __pos += sizeof(_MatchingSetT);
-        break;
-
-      case __match_backref:
-      case __match_icase_backref:
-      case __marked_subexpression_begin:
-      case __marked_subexpression_end:
-      case __relative_jump:
-        __read_uleb(__code, __pos);
-        break;
-
-      case __match_character_list:
-      case __match_no_character_list: {
-        static constexpr auto __buffer_size =
-            std::max(sizeof(typename _Traits::char_class_type) / sizeof(_CharT), size_t(1));
-        __pos += 2 * __buffer_size;
-        for (size_t __i = 0; __i != 6; ++__i)
-          __read_uleb(__code, __pos);
-      } break;
-
-      // Lookahead
-      case __positive_lookahead:
-      case __negative_lookahead:
-        return;
-
-      // Jumps
-      case __conditional_jump_forward:
-      case __conditional_jump_backward:
-        __pos += sizeof(_MatchingSetT);
-        __read_uleb(__code, __pos);
-        break;
-
-      // Branches
-      case __branch_n_to_m_matcher:
-      case __branch_nongreedy_n_to_m_matcher: {
-        auto __instr_start    = __pos - 1;
-        auto __loop_index     = __read_uleb(__code, __pos);
-        auto __again_pos_base = __pos;
-        auto __again_pos      = __again_pos_base - __read_uleb(__code, __pos);
-        auto __instr_size     = __pos - __instr_start;
-
-        if (__initial_loop_values_[__loop_index + 1].__int_ != 0 ||
-            __initial_loop_values_[__loop_index + 2].__int_ != numeric_limits<size_t>::max())
-          break;
-
-        if constexpr (__is_same(_CharT, char)) {
-          if (auto __expr1_set = __get_possibly_matching_characters(__machine_.data(), __again_pos);
-              (__expr1_set & __get_possibly_matching_characters(__machine_.data(), __pos)) == _MatchingSetT()) {
-            {
-              vector<__interpreter_info<_CharT>> __buffer;
-              __buffer.push_back(__state::__conditional_jump_backward);
-              __interpreter_info<_CharT> __sbuffer[sizeof(_MatchingSetT)];
-              __builtin_memcpy(__sbuffer, &__expr1_set, sizeof(_MatchingSetT));
-              __buffer.append_range(__sbuffer);
-              __write_uleb(__buffer, __instr_start - __again_pos);
-              __machine_.erase(__machine_.begin() + __instr_start, __machine_.begin() + __instr_start + __instr_size);
-              __machine_.insert(__machine_.begin() + __instr_start, __buffer.begin(), __buffer.end());
-              __fix_jumps(__instr_start, __buffer.size() - __instr_size);
-            }
-            [[clang::musttail]] return __optimize();
-          }
-        }
-        break;
-      }
-
-      case __branch_alternative:
-
-      // End state
-      case __end_state:
-        return;
-      }
-    }
   }
 
   void __push_any_matcher() { push_back(__state::__match_any); }
@@ -1228,7 +1051,6 @@ public:
 
   size_t size() const { return __machine_.size(); }
 
-  // [[clang::preserve_none]]
   pair<bool, const _CharT*>
   __execute(__global_execution_state<_CharT, _Traits>& __gexec_state,
             const _CharT* __first,
