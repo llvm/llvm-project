@@ -183,7 +183,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP36:%[0-9]+]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 12 for VF 2: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 7 for VF 2: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP37:%[0-9]+]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 4 for VF 2: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -242,7 +242,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 24 for VF 4: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 13 for VF 4: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 2 for VF 4: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -301,7 +301,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 2 for VF 8: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 16 for VF 8: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 10 for VF 8: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 8: WIDEN store vp<[[VP37]]>, ir<%l>
@@ -360,7 +360,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP36]]> = or vp<[[VP35]]>, vp<[[VP21]]>
 ; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.4> = add ir<%c>, ir<4>
 ; CHECK:  Cost of 4 for VF 16: WIDEN ir<%c.1> = add ir<%c>, ir<1>
-; CHECK:  Cost of 32 for VF 16: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
+; CHECK:  Cost of 20 for VF 16: BLEND ir<%c.next> = ir<%c> ir<%c.4>/vp<[[VP22]]> ir<%c.1>/vp<[[VP36]]>
 ; CHECK:  Cost of 0 for VF 16: CLONE ir<%dst.gep> = getelementptr ir<%dst>, vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP37]]> = vector-pointer i8, ir<%dst.gep>, ir<1>
 ; CHECK:  Cost of 1 for VF 16: WIDEN store vp<[[VP37]]>, ir<%l>
