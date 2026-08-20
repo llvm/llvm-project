@@ -22,7 +22,6 @@ class ChangeValueAPITestCase(TestBase):
         self.end_line = line_number("main.c", "// Set a breakpoint here at the end")
 
     @expectedFlakeyLinux("llvm.org/pr25652")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     @skipIfWasm  # Wasm exposes no stack pointer register
     def test_change_value(self):
         """Exercise the SBValue::SetValueFromCString API."""

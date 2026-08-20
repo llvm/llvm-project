@@ -147,15 +147,11 @@ public:
   /// \param bigVal a sequence of words to form the initial value of the APInt
   LLVM_ABI APInt(unsigned numBits, ArrayRef<uint64_t> bigVal);
 
-  /// Equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords)), but
-  /// deprecated because this constructor is prone to ambiguity with the
-  /// APInt(unsigned, uint64_t, bool) constructor.
-  ///
-  /// Once all uses of this constructor are migrated to other constructors,
-  /// consider marking this overload ""= delete" to prevent calls from being
-  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
-  [[deprecated("Use other constructors of APInt")]]
-  LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
+  /// Was equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords))
+  /// historically, but is now deleted because this constructor is prone to
+  /// ambiguity with the APInt(unsigned, uint64_t, bool) constructor.
+  LLVM_ABI APInt(unsigned numBits, unsigned numWords,
+                 const uint64_t bigVal[]) = delete;
 
   /// Construct an APInt from a string representation.
   ///

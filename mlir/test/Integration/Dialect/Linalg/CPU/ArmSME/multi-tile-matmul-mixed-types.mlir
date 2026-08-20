@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
@@ -82,8 +84,12 @@ module attributes {transform.with_named_sequence} {
       : !transform.any_op
 
     // Step 3: Bufferize ahead of TransferReadDropUnitDimsPattern, which
-    // currently only supports memrefs.
-    %bufferize = transform.bufferization.one_shot_bufferize %module
+    // currently only supports memrefs. Force an identity (contiguous) layout
+    // map at function boundaries: the default inferred layout is fully
+    // dynamic for function arguments, which later fails vector-to-ArmSME
+    // lowering's requirement that the tile memref have unit stride on its
+    // most minor dimension.
+    %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
       {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
     %func = transform.structured.match ops{["func.func"]} in %bufferize

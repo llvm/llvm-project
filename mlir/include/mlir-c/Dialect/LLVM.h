@@ -376,6 +376,16 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirAttribute splitDebugFilename, intptr_t nImportedEntities,
     MlirAttribute const *importedEntities);
 
+/// Creates a LLVM DICompileUnit attribute with a source language dialect.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMDICompileUnitAttrGetWithSourceLanguageDialect(
+    MlirContext ctx, MlirAttribute recId, bool isRecSelf, MlirAttribute id,
+    unsigned int sourceLanguage, unsigned int sourceLanguageDialect,
+    MlirAttribute file, MlirAttribute producer, bool isOptimized,
+    MlirLLVMDIEmissionKind emissionKind, bool isDebugInfoForProfiling,
+    MlirLLVMDINameTableKind nameTableKind, MlirAttribute splitDebugFilename,
+    intptr_t nImportedEntities, MlirAttribute const *importedEntities);
+
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompileUnitAttrGetName(void);
 
 /// Creates a LLVM DIFlags attribute.

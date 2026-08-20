@@ -18,8 +18,10 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-fold-operands"
 using namespace llvm;
@@ -180,6 +182,7 @@ public:
   const SIRegisterInfo *TRI;
   const GCNSubtarget *ST;
   const SIMachineFunctionInfo *MFI;
+  const MachineLoopInfo *MLI;
 
   bool frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
                          const FoldableDef &OpToFold) const;
@@ -220,6 +223,8 @@ public:
                         const FoldableDef &OpToFold) const;
   bool isUseSafeToFold(const MachineInstr &MI,
                        const MachineOperand &UseMO) const;
+  bool isTemporallyDivergentUse(const FoldableDef &OpToFold,
+                                const MachineInstr &UseMI) const;
 
   const TargetRegisterClass *getRegSeqInit(
       MachineInstr &RegSeq,
@@ -243,9 +248,17 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
+  struct ANDMaskResult {
+    int64_t Mask;
+    Register Reg;
+    unsigned RegIdx;
+  };
+
+  std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
+
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
-  bool tryFoldZeroHighBits(MachineInstr &MI) const;
+  bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -257,6 +270,7 @@ public:
 
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
+  bool tryFoldSGPRSplatRegSequence(MachineInstr &MI);
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
@@ -266,7 +280,7 @@ public:
 public:
   SIFoldOperandsImpl() = default;
 
-  bool run(MachineFunction &MF);
+  bool run(MachineFunction &MF, const MachineLoopInfo *MLI);
 };
 
 class SIFoldOperandsLegacy : public MachineFunctionPass {
@@ -278,13 +292,17 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
-    return SIFoldOperandsImpl().run(MF);
+    const MachineLoopInfo *MLI =
+        &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    return SIFoldOperandsImpl().run(MF, MLI);
   }
 
   StringRef getPassName() const override { return "SI Fold Operands"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -295,8 +313,11 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIFoldOperandsLegacy, DEBUG_TYPE, "SI Fold Operands", false,
-                false)
+INITIALIZE_PASS_BEGIN(SIFoldOperandsLegacy, DEBUG_TYPE, "SI Fold Operands",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_END(SIFoldOperandsLegacy, DEBUG_TYPE, "SI Fold Operands", false,
+                    false)
 
 char SIFoldOperandsLegacy::ID = 0;
 
@@ -379,6 +400,9 @@ bool SIFoldOperandsImpl::frameIndexMayFold(const MachineInstr &UseMI, int OpNo,
 ///   => %vgpr = V_ADD_U32 x, frameindex
 bool SIFoldOperandsImpl::foldCopyToVGPROfScalarAddOfFrameIndex(
     Register DstReg, Register SrcReg, MachineInstr &MI) const {
+  if (!SrcReg.isVirtual())
+    return false;
+
   if (TRI->isVGPR(*MRI, DstReg) && TRI->isSGPRReg(*MRI, SrcReg) &&
       MRI->hasOneNonDBGUse(SrcReg)) {
     MachineInstr *Def = MRI->getVRegDef(SrcReg);
@@ -698,6 +722,26 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
     if (!TII->isOperandLegal(*MI, OpNo, &New))
       return false;
 
+    if (ST->hasBF16InlineConstFromUpperFP32() &&
+        OpNo ==
+            AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::src0)) {
+      unsigned Opcode = MI->getOpcode();
+      uint8_t OpType = TII->get(Opcode).operands()[OpNo].OperandType;
+      if ((OpType == AMDGPU::OPERAND_REG_IMM_BF16 ||
+           OpType == AMDGPU::OPERAND_REG_INLINE_C_BF16) &&
+          TII->isInlineConstant(*ImmVal, OpType)) {
+        // We can fold it, but we need to set OPSEL
+        int Mod0 =
+            AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0_modifiers);
+        if (Mod0 == -1)
+          return false;
+        MachineOperand &ModOp = MI->getOperand(Mod0);
+        if (ModOp.getImm())
+          return false;
+        ModOp.setImm(SISrcMods::OP_SEL_0);
+      }
+    }
+
     Old.ChangeToImmediate(*ImmVal);
     return true;
   }
@@ -976,6 +1020,32 @@ bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
   return !TII->isSDWA(MI);
 }
 
+// Returns true if any instruction in \p L modifies EXEC.
+static bool loopModifiesExec(const MachineLoop &L, const SIRegisterInfo &TRI) {
+  for (const MachineBasicBlock *MBB : L.getBlocks())
+    for (const MachineInstr &MI : *MBB)
+      if (MI.modifiesRegister(TRI.getExec(), &TRI))
+        return true;
+  return false;
+}
+
+// An SGPR->VGPR copy inside a divergent loop latches each lane value as it
+// exits. Folding its scalar source into a use after the loop would make every
+// lane read the same reconverged value, so do not fold across the loop exit.
+bool SIFoldOperandsImpl::isTemporallyDivergentUse(
+    const FoldableDef &OpToFold, const MachineInstr &UseMI) const {
+  if (!OpToFold.isReg())
+    return false;
+  const MachineInstr *DefMI = OpToFold.DefMI;
+  if (!DefMI || !DefMI->isCopy() ||
+      TRI->isSGPRReg(*MRI, DefMI->getOperand(0).getReg()) ||
+      !TRI->isSGPRReg(*MRI, OpToFold.getReg()))
+    return false;
+  const MachineLoop *DefLoop = MLI->getLoopFor(DefMI->getParent());
+  return DefLoop && !DefLoop->contains(UseMI.getParent()) &&
+         loopModifiesExec(*DefLoop, *TRI);
+}
+
 static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
                                        const MachineRegisterInfo &MRI,
                                        Register SrcReg) {
@@ -1216,6 +1286,9 @@ bool SIFoldOperandsImpl::foldOperand(
   const MachineOperand *UseOp = &UseMI->getOperand(UseOpIdx);
 
   if (!isUseSafeToFold(*UseMI, *UseOp))
+    return Changed;
+
+  if (isTemporallyDivergentUse(OpToFold, *UseMI))
     return Changed;
 
   // FIXME: Fold operands with subregs.
@@ -1791,26 +1864,74 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
-bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
-  if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
-      MI.getOpcode() != AMDGPU::V_AND_B32_e32)
+// Extract mask, register, and register operand index from an AND instruction.
+// Immediate can be in operand 1 or 2.
+std::optional<SIFoldOperandsImpl::ANDMaskResult>
+SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
+  unsigned Opc = AndMI.getOpcode();
+  if (Opc != AMDGPU::V_AND_B32_e64 && Opc != AMDGPU::V_AND_B32_e32 &&
+      Opc != AMDGPU::S_AND_B32)
+    return std::nullopt;
+
+  std::optional<int64_t> MaskImm =
+      TII->getImmOrMaterializedImm(AndMI.getOperand(1));
+  if (MaskImm && AndMI.getOperand(2).isReg())
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+
+  MaskImm = TII->getImmOrMaterializedImm(AndMI.getOperand(2));
+  if (MaskImm && AndMI.getOperand(1).isReg())
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+
+  return std::nullopt;
+}
+
+// Eliminate redundant 32-bit AND operations by detecting when ChildMI's mask
+// contains ParentMI's mask.
+//
+// For example:
+//   ParentMI: %1 = AND %0, 0x7fff
+//   ChildMI:  %2 = AND %1, 0xffff
+//
+// This also handles cases where ParentMI implicitly zeros high bits (e.g., f16
+// operations that write 16-bit results into 32-bit registers), making a
+// subsequent AND with 0xffff redundant.
+bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
+  // Ensure implicit defs (e.g., $scc) are not live.
+  if (!ChildMI.allImplicitDefsAreDead())
     return false;
 
-  std::optional<int64_t> Src0Imm =
-      TII->getImmOrMaterializedImm(MI.getOperand(1));
-  if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
+  std::optional<ANDMaskResult> ChildResult = getANDMaskRegOperand(ChildMI);
+  if (!ChildResult)
     return false;
 
-  Register Src1 = MI.getOperand(2).getReg();
-  MachineInstr *SrcDef = MRI->getVRegDef(Src1);
-  if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
+  MachineInstr *ParentMI = MRI->getVRegDef(ChildResult->Reg);
+  if (!ParentMI)
     return false;
 
-  Register Dst = MI.getOperand(0).getReg();
-  MRI->replaceRegWith(Dst, Src1);
-  if (!MI.getOperand(2).isKill())
-    MRI->clearKillFlags(Src1);
-  MI.eraseFromParent();
+  int64_t ParentMask = 0;
+  std::optional<ANDMaskResult> ParentResult = getANDMaskRegOperand(*ParentMI);
+  if (ParentResult) {
+    // Parent is an AND - extract its mask.
+    ParentMask = ParentResult->Mask;
+  } else if (ST->zeroesHigh16BitsOfDest(ParentMI->getOpcode())) {
+    // Parent instruction implicitly zeros high 16 bits.
+    ParentMask = 0xffff;
+  } else {
+    return false;
+  }
+
+  // Check if ChildMI is not redundant.
+  if ((ParentMask & ChildResult->Mask) != ParentMask)
+    return false;
+
+  Register Dst = ChildMI.getOperand(0).getReg();
+  MRI->replaceRegWith(Dst, ChildResult->Reg);
+
+  // Clear kill flags if the register operand is not marked as kill.
+  if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
+    MRI->clearKillFlags(ChildResult->Reg);
+
+  ChildMI.eraseFromParent();
   return true;
 }
 
@@ -2409,10 +2530,91 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
   return true;
 }
 
+// Try to optimize SGPR reg sequences that are splat <s, s> or <s, s, s, s>
+// where all uses are PackedSingleSGPR64BitInst, replacing with <s, undef, ...>
+bool SIFoldOperandsImpl::tryFoldSGPRSplatRegSequence(MachineInstr &MI) {
+  assert(MI.isRegSequence());
+
+  if (!ST->hasPackedFP64SingleSGPROps() && !ST->hasPackedU64SingleSGPROps())
+    return false;
+
+  Register Reg = MI.getOperand(0).getReg();
+
+  // Only optimize 128-bit SGPR register sequences
+  const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
+  if (!TRI->isSGPRClass(RegClass) || TRI->getRegSizeInBits(*RegClass) != 128)
+    return false;
+
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
+  if (!getRegSeqInit(Defs, Reg))
+    return false;
+
+  // Check if this is a splat pattern
+  if (Defs.size() <= 1)
+    return false;
+
+  const auto &[FirstOp, _] = Defs.front();
+  if (!FirstOp->isReg())
+    return false;
+
+  Register FirstReg = FirstOp->getReg();
+  unsigned FirstSubReg = FirstOp->getSubReg();
+
+  const TargetRegisterClass *FirstRegClass = MRI->getRegClass(FirstReg);
+  if (!TRI->isSGPRClass(FirstRegClass))
+    return false;
+
+  // Check remaining elements match first
+  if (!llvm::all_of(llvm::drop_begin(Defs), [&](const auto &Def) {
+        const auto &[Op, _] = Def;
+        return Op->isReg() && Op->getReg() == FirstReg &&
+               Op->getSubReg() == FirstSubReg;
+      }))
+    return false;
+
+  // Check if all uses are isSingleSGPRReadInst
+  for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+    if (!AMDGPU::isPackedSingleSGPR64BitInst(UseMI.getOpcode()))
+      return false;
+  }
+
+  // Create new reg sequence with <s, undef, undef, ...>
+  Register NewDst = MRI->createVirtualRegister(RegClass);
+  MachineInstrBuilder RS = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                   TII->get(AMDGPU::REG_SEQUENCE), NewDst);
+
+  // Add the first operand
+  FirstOp->setIsKill(false);
+  RS.add(*FirstOp);
+  RS.addImm(Defs[0].second);
+
+  // Add undef for remaining lanes
+  // Create an undef virtual register for the same register class
+  Register UndefReg = MRI->createVirtualRegister(FirstRegClass);
+  for (unsigned i = 1; i < Defs.size(); ++i) {
+    RS.addReg(UndefReg, RegState::Undef);
+    RS.addImm(Defs[i].second);
+  }
+
+  // Replace all uses
+  MRI->replaceRegWith(Reg, NewDst);
+
+  LLVM_DEBUG(dbgs() << "Folded splat SGPR reg_sequence: " << MI << " into "
+                    << *RS);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // Try to fold a reg_sequence with vgpr output and agpr inputs into an
 // instruction which can take an agpr. So far that means a store.
 bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
   assert(MI.isRegSequence());
+
+  // Try to optimize SGPR splat sequences first
+  if (tryFoldSGPRSplatRegSequence(MI))
+    return true;
+
   auto Reg = MI.getOperand(0).getReg();
 
   if (!ST->hasGFX90AInsts() || !TRI->isVGPR(*MRI, Reg) ||
@@ -2812,13 +3014,14 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool SIFoldOperandsImpl::run(MachineFunction &MF) {
+bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MFI = MF.getInfo<SIMachineFunctionInfo>();
+  this->MLI = MLI;
 
   // omod is ignored by hardware if IEEE bit is enabled. omod also does not
   // correctly handle signed zeros.
@@ -2841,7 +3044,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
         continue;
       }
 
-      if (tryFoldZeroHighBits(MI)) {
+      if (tryFoldRedundantAND(MI)) {
         Changed = true;
         continue;
       }
@@ -2882,15 +3085,18 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
-PreservedAnalyses SIFoldOperandsPass::run(MachineFunction &MF,
-                                          MachineFunctionAnalysisManager &) {
+PreservedAnalyses
+SIFoldOperandsPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
 
-  bool Changed = SIFoldOperandsImpl().run(MF);
+  const MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  bool Changed = SIFoldOperandsImpl().run(MF, MLI);
   if (!Changed) {
     return PreservedAnalyses::all();
   }
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
