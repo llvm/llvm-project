@@ -4083,6 +4083,7 @@ Darwin::getSupportedSanitizers(BoundArch BA,
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+  Res |= SanitizerKind::ThreadDeadlock;
 
   if ((IsX86_64 || IsAArch64) && isTargetMacOSBased()) {
     Res |= SanitizerKind::Type;
