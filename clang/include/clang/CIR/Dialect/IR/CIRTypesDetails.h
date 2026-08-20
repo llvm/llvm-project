@@ -233,7 +233,7 @@ struct AttrTypeSubElementHandler<cir::detail::StructTypeStorage::KeyTy> {
 
     return cir::detail::StructTypeStorage::KeyTy(
         typeRepls.take_front(param.members.size()), param.name,
-        param.incomplete, param.packed, param.padded, param.is_class);
+        param.incomplete, param.packed, param.member_kinds, param.is_class);
   }
 };
 
@@ -256,8 +256,9 @@ struct AttrTypeSubElementHandler<cir::detail::UnionTypeStorage::KeyTy> {
 
     llvm::ArrayRef<Type> members = typeRepls.take_front(param.members.size());
     Type padding = param.padding ? typeRepls.take_front(1)[0] : Type();
-    return cir::detail::UnionTypeStorage::KeyTy(
-        members, param.name, param.incomplete, param.packed, padding);
+    return cir::detail::UnionTypeStorage::KeyTy(members, param.name,
+                                                param.incomplete, param.packed,
+                                                padding, param.member_kinds);
   }
 };
 
