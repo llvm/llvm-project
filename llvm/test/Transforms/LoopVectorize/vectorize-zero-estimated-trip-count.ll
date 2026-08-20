@@ -3,6 +3,7 @@
 ; an outer loop.
 
 ; REQUIRES: x86-registered-target
+; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -S %s | FileCheck %s
 
 ; A zero estimated trip count means the outer loop is estimated not to be
@@ -11,7 +12,6 @@
 ; is used instead.
 ; RUN: opt -passes=loop-vectorize -disable-output -debug-only=loop-vectorize %s \
 ; RUN:   2>&1 | FileCheck %s -check-prefix=COST
-; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

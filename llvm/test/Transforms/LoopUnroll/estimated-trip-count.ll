@@ -106,12 +106,69 @@ exit:
   ret void
 }
 
+; Loop with a high estimated trip count, but branch weights that almost always
+; exit the loop.
+define void @high_estimated_trip_count_low_branch_weights(ptr %p, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @high_estimated_trip_count_low_branch_weights(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK:  [[ENTRY:.*:]]
+; CHECK:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF12:![0-9]+]]
+; CHECK:  [[ENTRY_NEW]]:
+; CHECK:    br label %[[LOOP:.*]]
+; CHECK:  [[LOOP]]:
+; CHECK:    br i1 [[NITER_NCMP_7:%.*]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !prof [[PROF12]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:  [[EXIT_UNR_LCSSA]]:
+; CHECK:    br i1 [[LCMP_MOD:%.*]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]], !prof [[PROF14:![0-9]+]]
+; CHECK:  [[LOOP_EPIL_PREHEADER]]:
+; CHECK:    br label %[[LOOP_EPIL:.*]]
+; CHECK:  [[LOOP_EPIL]]:
+; CHECK:    br i1 [[EPIL_ITER_CMP:%.*]], label %[[LOOP_EPIL]], label %[[EXIT_EPILOG_LCSSA:.*]], !prof [[PROF14]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:  [[EXIT_EPILOG_LCSSA]]:
+; CHECK:    br label %[[EXIT]]
+; CHECK:  [[EXIT]]:
+;
+; FORCED-LABEL: define void @high_estimated_trip_count_low_branch_weights(
+; FORCED-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; FORCED:  [[ENTRY:.*:]]
+; FORCED:    br i1 [[TMP1:%.*]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]], !prof [[PROF12:![0-9]+]]
+; FORCED:  [[ENTRY_NEW]]:
+; FORCED:    br label %[[LOOP:.*]]
+; FORCED:  [[LOOP]]:
+; FORCED:    br i1 [[NITER_NCMP_3:%.*]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !prof [[PROF13:![0-9]+]], !llvm.loop [[LOOP14:![0-9]+]]
+; FORCED:  [[EXIT_UNR_LCSSA]]:
+; FORCED:    br i1 [[LCMP_MOD:%.*]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]], !prof [[PROF15:![0-9]+]]
+; FORCED:  [[LOOP_EPIL_PREHEADER]]:
+; FORCED:    br label %[[LOOP_EPIL:.*]]
+; FORCED:  [[LOOP_EPIL]]:
+; FORCED:    br i1 [[EPIL_ITER_CMP:%.*]], label %[[LOOP_EPIL]], label %[[EXIT_EPILOG_LCSSA:.*]], !prof [[PROF16:![0-9]+]], !llvm.loop [[LOOP17:![0-9]+]]
+; FORCED:  [[EXIT_EPILOG_LCSSA]]:
+; FORCED:    br label %[[EXIT]]
+; FORCED:  [[EXIT]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr = getelementptr inbounds i32, ptr %p, i64 %iv
+  %v = load i32, ptr %ptr
+  %add = add i32 %v, 1
+  store i32 %add, ptr %ptr
+  %iv.next = add i64 %iv, 1
+  %cmp.loop = icmp eq i64 %iv.next, %n
+  br i1 %cmp.loop, label %exit, label %loop, !prof !6, !llvm.loop !3
+
+exit:
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 1, i32 1023}
 !2 = distinct !{!2, !4}
 !3 = distinct !{!3, !5}
 !4 = !{!"llvm.loop.estimated_trip_count", i32 0}
 !5 = !{!"llvm.loop.estimated_trip_count", i32 1024}
+!6 = !{!"branch_weights", i32 1023, i32 1}
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1023}
@@ -125,6 +182,10 @@ exit:
 ; CHECK: [[PROF9]] = !{!"branch_weights", i32 1610087680, i32 537395968}
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META3]], [[META11:![0-9]+]]}
 ; CHECK: [[META11]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[PROF12]] = !{!"branch_weights", i32 -2147483648, i32 0}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META7]]}
+; CHECK: [[PROF14]] = !{!"branch_weights", i32 2097152, i32 2145386496}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META11]]}
 ;.
 ; FORCED: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; FORCED: [[PROF1]] = !{!"branch_weights", i32 6285314, i32 2141198334}
@@ -138,4 +199,10 @@ exit:
 ; FORCED: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META5]]}
 ; FORCED: [[META10]] = !{!"llvm.loop.estimated_trip_count", i32 256}
 ; FORCED: [[LOOP11]] = distinct !{[[LOOP11]], [[META4]], [[META5]]}
+; FORCED: [[PROF12]] = !{!"branch_weights", i32 2147483646, i32 2}
+; FORCED: [[PROF13]] = !{!"branch_weights", i32 -2147483648, i32 0}
+; FORCED: [[LOOP14]] = distinct !{[[LOOP14]], [[META10]], [[META5]]}
+; FORCED: [[PROF15]] = !{!"branch_weights", i32 2097152, i32 2145386496}
+; FORCED: [[PROF16]] = !{!"branch_weights", i32 2097146, i32 2145386502}
+; FORCED: [[LOOP17]] = distinct !{[[LOOP17]], [[META4]], [[META5]]}
 ;.
