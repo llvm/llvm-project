@@ -535,10 +535,10 @@ public:
 
 private:
   /// Verify one root, first asking the cache whether it is symbol-ref-free. A
-  /// clean top-level root is skipped outright -- kept out of the walk and out
-  /// of the walker's visited memo, unlike the clean interior elements the walk
+  /// root proven free is skipped outright -- kept out of the walk and out of
+  /// the walker's visited memo, unlike the free interior elements the walk
   /// memoizes as it descends. A root that may contain one is walked and
-  /// reprobed by the walker's root callback, so this spares only the clean
+  /// reprobed by the walker's root callback, so this spares only the free
   /// roots, which dominate.
   template <typename T>
   WalkResult visit(T root) {

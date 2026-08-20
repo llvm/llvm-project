@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A context-owned cache answering, for a uniqued type or attribute, whether it
-// may transitively contain a SymbolRefAttr. Symbol-table verification consults
-// it to prune its symbol-use walk to the subtrees that can carry a symbol use.
+// A context-owned record of the uniqued types and attributes proven free of any
+// transitive SymbolRefAttr. Symbol-table verification consults it to prune its
+// symbol-use walk to the subtrees that can carry a symbol use.
 //
 // A recorded answer is a pure function of immutable structure --
 // mutable-storage kinds are never read or recorded -- so it never goes stale.
@@ -59,10 +59,10 @@ public:
 
   /// Return whether `type`/`attr` is provably free of any transitive
   /// SymbolRefAttr -- true is safe to prune, false is walked conservatively.
-  bool isSymbolRefFree(Type type) { return !compute(type); }
-  bool isSymbolRefFree(Attribute attr) { return !compute(attr); }
+  bool isSymbolRefFree(Type type) { return !mayContainSymbolRef(type); }
+  bool isSymbolRefFree(Attribute attr) { return !mayContainSymbolRef(attr); }
 
-  /// Drop every recorded fact. The cache is a pure memo of proven-clear
+  /// Drop every recorded fact. The cache is a pure memo of proven-free
   /// objects, so forgetting them all is always correct and only costs a
   /// recomputation on next encounter. The context calls this when a transient
   /// scope ends and its transiently allocated storage is freed, before any
@@ -72,7 +72,7 @@ public:
     std::optional<llvm::sys::SmartScopedWriter<true>> guard;
     if (shouldLock())
       guard.emplace(mutex);
-    clearSet.clear();
+    knownFree.clear();
   }
 
 private:
@@ -84,7 +84,7 @@ private:
   }
 
   /// Return whether `obj` may transitively contain a SymbolRefAttr, recording a
-  /// proven-clear result so it need never recompute. The recursion needs no
+  /// proven-free result so it need never recompute. The recursion needs no
   /// in-progress guard: immutable objects form a DAG (sub-elements are interned
   /// before their parents), so every cycle passes through a mutable kind, where
   /// the descent stops above before reading contents. Once one sub-element
@@ -92,35 +92,35 @@ private:
   /// cannot be interrupted, but the callback is a no-op once `mayContain`
   /// holds.
   template <typename T>
-  bool compute(T obj) {
+  bool mayContainSymbolRef(T obj) {
     const void *key = obj.getAsOpaquePointer();
-    if (isKnownClear(key))
+    if (isKnownFree(key))
       return false;
     bool mayContain = isSelfSymbolRef(obj) ||
                       obj.template hasTrait<StorageUserTrait::IsMutable>();
     if (!mayContain) {
       auto walkSub = [&](auto sub) {
         if (!mayContain && sub)
-          mayContain = compute(sub);
+          mayContain = mayContainSymbolRef(sub);
       };
       obj.walkImmediateSubElements(walkSub, walkSub);
     }
     if (!mayContain)
-      markClear(key);
+      markFree(key);
     return mayContain;
   }
 
-  bool isKnownClear(const void *key) const {
+  bool isKnownFree(const void *key) const {
     std::optional<llvm::sys::SmartScopedReader<true>> guard;
     if (shouldLock())
       guard.emplace(mutex);
-    return clearSet.contains(key);
+    return knownFree.contains(key);
   }
-  void markClear(const void *key) {
+  void markFree(const void *key) {
     std::optional<llvm::sys::SmartScopedWriter<true>> guard;
     if (shouldLock())
       guard.emplace(mutex);
-    clearSet.insert(key);
+    knownFree.insert(key);
   }
 
   /// The set is serialized only while the context runs multithreaded;
@@ -134,11 +134,11 @@ private:
   // write lock the insert and any growth it triggers, and neither is ever held
   // across the recursion.
   mutable llvm::sys::SmartRWMutex<true> mutex;
-  // Only the proven-clear opaque pointers are recorded; a may-contain object --
+  // Only the proven-free opaque pointers are recorded; a may-contain object --
   // including every mutable-storage kind, whose contents are never read -- is
   // left out and recomputed on each encounter, so no fact that could later go
   // stale is ever stored.
-  llvm::DenseSet<const void *> clearSet;
+  llvm::DenseSet<const void *> knownFree;
 };
 
 /// Return the given context's symbol-reference containment cache. Defined in
