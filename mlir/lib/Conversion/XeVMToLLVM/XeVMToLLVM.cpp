@@ -257,8 +257,9 @@ static std::optional<StoreCacheControl> getCacheControl(BlockStoreOp op) {
 }
 
 static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
-  if (op->hasAttr("cache_control")) {
-    auto attr = op->getAttrOfType<xevm::LoadCacheControlAttr>("cache_control");
+  if (op->hasDiscardableAttr("cache_control")) {
+    auto attr = op->getDiscardableAttrOfType<xevm::LoadCacheControlAttr>(
+        "cache_control");
     if (!attr)
       return std::nullopt;
     return std::optional<LoadCacheControl>(attr.getValue());
@@ -267,8 +268,9 @@ static std::optional<LoadCacheControl> getCacheControl(LLVM::LoadOp op) {
 }
 
 static std::optional<StoreCacheControl> getCacheControl(LLVM::StoreOp op) {
-  if (op->hasAttr("cache_control")) {
-    auto attr = op->getAttrOfType<xevm::StoreCacheControlAttr>("cache_control");
+  if (op->hasDiscardableAttr("cache_control")) {
+    auto attr = op->getDiscardableAttrOfType<xevm::StoreCacheControlAttr>(
+        "cache_control");
     if (!attr)
       return std::nullopt;
     return std::optional<StoreCacheControl>(attr.getValue());
@@ -549,7 +551,18 @@ static LLVM::CallOp createDeviceFunctionCall(
     funcOp.setArgAttr(idx, attrName, rewriter.getUnitAttr());
 
   auto callOp = LLVM::CallOp::create(rewriter, loc, funcOp, args);
-  callOp->setAttrs(funcOp->getAttrs());
+  auto copyAttr = [&](StringAttr name, Attribute attr) {
+    if (callOp->getInherentAttr(name).has_value())
+      callOp->setInherentAttr(name, attr);
+    else
+      callOp->setDiscardableAttr(name, attr);
+  };
+  for (NamedAttribute attr : funcOp->getDiscardableAttrDictionary())
+    copyAttr(attr.getName(), attr.getValue());
+  funcOp->getName().walkInherentAttrs(
+      funcOp, [&](StringRef name, Attribute &attr) {
+        copyAttr(rewriter.getStringAttr(name), attr);
+      });
 
   return callOp;
 }
@@ -984,14 +997,15 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!op->hasAttr("cache_control"))
+    if (!op->hasDiscardableAttr("cache_control"))
       return failure();
 
     auto *moduleOp = op->template getParentWithTrait<OpTrait::SymbolTable>();
     std::optional<ArrayAttr> optCacheControls =
         getCacheControlMetadata(rewriter, op);
     if (!optCacheControls) {
-      rewriter.modifyOpInPlace(op, [&]() { op->removeAttr("cache_control"); });
+      rewriter.modifyOpInPlace(
+          op, [&]() { op->removeDiscardableAttr("cache_control"); });
       return success();
     }
 
@@ -1007,7 +1021,7 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     // Replace the pointer operand with the annotated one.
     rewriter.modifyOpInPlace(op, [&]() {
       op->setOperand(ptrIdx, annotatedPtr);
-      op->removeAttr("cache_control");
+      op->removeDiscardableAttr("cache_control");
     });
     return success();
   }
@@ -1831,7 +1845,7 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
       return addrSpace != 3;
     }
     // cache_control attribute should be converted.
-    return !op->hasAttr("cache_control");
+    return !op->hasDiscardableAttr("cache_control");
   });
   target.addIllegalDialect<XeVMDialect>();
   patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,

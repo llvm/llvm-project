@@ -266,7 +266,7 @@ bool GPUDialect::isKernel(Operation *op) {
   if (auto gpuFunc = dyn_cast<GPUFuncOp>(op))
     return gpuFunc.isKernel();
   return static_cast<bool>(
-      op->getAttrOfType<UnitAttr>(getKernelFuncAttrName()));
+      op->getDiscardableAttrOfType<UnitAttr>(getKernelFuncAttrName()));
 }
 
 namespace {
@@ -695,7 +695,8 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
     return;
   auto attrName =
       OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr();
-  auto sizeAttr = op->template getAttrOfType<DenseI32ArrayAttr>(attrName);
+  auto sizeAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(attrName).value_or(Attribute{}));
 
   // Async dependencies is the only variadic operand.
   if (!sizeAttr)
@@ -703,7 +704,8 @@ void gpu::addAsyncDependency(Operation *op, Value token) {
 
   SmallVector<int32_t, 8> sizes(sizeAttr.asArrayRef());
   ++sizes.front();
-  op->setAttr(attrName, Builder(op->getContext()).getDenseI32ArrayAttr(sizes));
+  op->setInherentAttr(StringAttr::get(op->getContext(), attrName),
+                      Builder(op->getContext()).getDenseI32ArrayAttr(sizes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -961,11 +963,11 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p << ' ';
 
   p.printRegion(getBody(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
-                              LaunchOp::getOperandSegmentSizeAttr(),
-                              getWorkgroupAttributionsAttrName(),
-                              getCooperativeAttrName(), moduleAttrName,
-                              functionAttrName});
+  p.printOptionalAttrDict(
+      (*this)->getDiscardableAttrDictionary().getValue(), /*elidedAttrs=*/{
+          LaunchOp::getOperandSegmentSizeAttr(),
+          getWorkgroupAttributionsAttrName(), getCooperativeAttrName(),
+          moduleAttrName, functionAttrName});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -1346,7 +1348,7 @@ LogicalResult LaunchFuncOp::verify() {
   if (!module)
     return emitOpError("expected to belong to a module");
 
-  if (!module->getAttrOfType<UnitAttr>(
+  if (!module->getDiscardableAttrOfType<UnitAttr>(
           GPUDialect::getContainerModuleAttrName()))
     return emitOpError("expected the closest surrounding module to have the '" +
                        GPUDialect::getContainerModuleAttrName() +
@@ -1378,8 +1380,7 @@ LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // Ignore launch ops with missing attributes here. The errors will be
   // reported by the verifiers of those ops.
-  if (!launchOp->getAttrOfType<SymbolRefAttr>(
-          LaunchFuncOp::getKernelAttrName(launchOp->getName())))
+  if (!launchOp.getKernelAttr())
     return success();
 
   // Check that `launch_func` refers to a well-formed GPU kernel container.
@@ -1813,7 +1814,9 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
 
 static DictionaryAttr getAttributionAttrs(GPUFuncOp op, unsigned index,
                                           StringAttr attrName) {
-  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
+  ArrayAttr allAttrs = attrName == op.getWorkgroupAttribAttrsAttrName()
+                           ? op.getWorkgroupAttribAttrsAttr()
+                           : op.getPrivateAttribAttrsAttr();
   if (!allAttrs || index >= allAttrs.size())
     return DictionaryAttr();
   return llvm::cast<DictionaryAttr>(allAttrs[index]);
@@ -1830,7 +1833,9 @@ DictionaryAttr GPUFuncOp::getPrivateAttributionAttrs(unsigned index) {
 static void setAttributionAttrs(GPUFuncOp op, unsigned index,
                                 DictionaryAttr value, StringAttr attrName) {
   MLIRContext *ctx = op.getContext();
-  auto allAttrs = llvm::dyn_cast_or_null<ArrayAttr>(op->getAttr(attrName));
+  ArrayAttr allAttrs = attrName == op.getWorkgroupAttribAttrsAttrName()
+                           ? op.getWorkgroupAttribAttrsAttr()
+                           : op.getPrivateAttribAttrsAttr();
   SmallVector<Attribute> elements;
   if (allAttrs)
     elements.append(allAttrs.begin(), allAttrs.end());
@@ -1841,7 +1846,10 @@ static void setAttributionAttrs(GPUFuncOp op, unsigned index,
   else
     elements[index] = value;
   ArrayAttr newValue = ArrayAttr::get(ctx, elements);
-  op->setAttr(attrName, newValue);
+  if (attrName == op.getWorkgroupAttribAttrsAttrName())
+    op.setWorkgroupAttribAttrsAttr(newValue);
+  else
+    op.setPrivateAttribAttrsAttr(newValue);
 }
 
 void GPUFuncOp::setworkgroupAttributionAttrs(unsigned index,
@@ -2027,7 +2035,7 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
 }
 
 LogicalResult GPUModuleOp::verify() {
-  auto targets = getOperation()->getAttrOfType<ArrayAttr>("targets");
+  auto targets = getTargetsAttr();
 
   if (!targets)
     return success();
@@ -2453,8 +2461,7 @@ void WarpExecuteOnLane0Op::print(OpAsmPrinter &p) {
   p << "(" << getLaneid() << ")";
 
   SmallVector<StringRef> coreAttr = {getWarpSizeAttrName()};
-  auto warpSizeAttr = getOperation()->getAttr(getWarpSizeAttrName());
-  p << "[" << llvm::cast<IntegerAttr>(warpSizeAttr).getInt() << "]";
+  p << "[" << getWarpSize() << "]";
 
   if (!getArgs().empty())
     p << " args(" << getArgs() << " : " << getArgs().getTypes() << ")";
@@ -2464,7 +2471,8 @@ void WarpExecuteOnLane0Op::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/true,
                 /*printBlockTerminators=*/!getResults().empty());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), coreAttr);
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(), coreAttr);
 }
 
 ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,

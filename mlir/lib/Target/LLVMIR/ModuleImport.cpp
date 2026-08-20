@@ -1025,8 +1025,9 @@ LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
           libraries.push_back(mdString->getString());
     }
     if (!libraries.empty())
-      mlirModule->setAttr(LLVM::LLVMDialect::getDependentLibrariesAttrName(),
-                          builder.getStrArrayAttr(libraries));
+      mlirModule->setDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName(),
+          builder.getStrArrayAttr(libraries));
   }
   return success();
 }
@@ -1042,8 +1043,9 @@ LogicalResult ModuleImport::convertIdentMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getIdentAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1059,8 +1061,9 @@ LogicalResult ModuleImport::convertCommandlineMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getCommandlineAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1180,13 +1183,13 @@ LogicalResult ModuleImport::convertDataLayout() {
   for (StringRef token : dataLayoutImporter.getUnhandledTokens())
     emitWarning(loc, "unhandled data layout token: ") << token;
 
-  mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayoutSpec());
+  mlirModule->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName,
+                                 dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(
+  mlirModule->setDiscardableAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
@@ -1202,8 +1205,8 @@ void ModuleImport::convertModuleLevelAsm() {
         asmArrayAttr.push_back(builder.getStringAttr(line));
   }
 
-  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
-                      builder.getArrayAttr(asmArrayAttr));
+  mlirModule->setDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                                 builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -1285,7 +1288,7 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   value = bitEnumSet(value, FastmathFlags::afn, flags.approxFunc());
   value = bitEnumSet(value, FastmathFlags::reassoc, flags.allowReassoc());
   FastmathFlagsAttr attr = FastmathFlagsAttr::get(builder.getContext(), value);
-  iface->setAttr(iface.getFastmathAttrName(), attr);
+  iface.setFastmathAttr(attr);
 }
 
 /// Returns `type` if it is a builtin integer or floating-point vector type that

@@ -1009,7 +1009,8 @@ void MmaOp::print(OpAsmPrinter &p) {
                                          getLayoutBAttrName(),
                                          getMultiplicandAPtxTypeAttrName(),
                                          getMultiplicandBPtxTypeAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print the types of the operands and result.
   p << " : " << "(";
@@ -1502,7 +1503,8 @@ void MmaSpOp::print(OpAsmPrinter &p) {
                           getMultiplicandAPtxTypeAttrName(),
                           getMultiplicandBPtxTypeAttrName(),
                           getOrderedMetadataAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
   p << " : ";
   p << "(";
   for (int i = 0; i < 3; ++i) {
@@ -2092,7 +2094,8 @@ void MmaBlockScaleOp::print(OpAsmPrinter &p) {
                           getMultiplicandBPtxTypeAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -2350,7 +2353,8 @@ void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
                           getOrderedMetadataAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -5600,12 +5604,13 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(Operation *op, Value result,
+static void nvvmInferResultRanges(std::optional<LLVM::ConstantRangeAttr> range,
+                                  Value result,
                                   ArrayRef<::mlir::ConstantIntRanges> argRanges,
                                   SetIntRangeFn setResultRanges) {
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
-                             rangeAttr.getLower(), rangeAttr.getUpper()});
+  if (range) {
+    setResultRanges(result, {range->getLower(), range->getUpper(),
+                             range->getLower(), range->getUpper()});
   } else {
     setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
@@ -6666,8 +6671,8 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   }
   // blocksareclusters must be used along with reqntid and cluster_dim
   if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
-    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
-        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+    if (!op->hasDiscardableAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasDiscardableAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be used along with " << "'"
              << NVVMDialect::getReqntidAttrName() << "' and " << "'"
@@ -6686,7 +6691,7 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
-  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  bool isKernel = op->hasDiscardableAttr(NVVMDialect::getKernelFuncAttrName());
   StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
     if (!isKernel) {

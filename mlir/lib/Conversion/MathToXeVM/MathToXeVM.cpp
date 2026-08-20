@@ -145,7 +145,8 @@ struct ConvertNativeFuncPattern final : public OpConversionPattern<Op> {
     // convert arith fastmath attrs into attrs recognized by llvm.
     arith::AttrConvertFastMathToLLVM<Op, LLVM::CallOp> fastAttrConverter(op);
     mlir::NamedAttribute fastAttr = fastAttrConverter.getAttrs()[0];
-    callOp->setAttr(fastAttr.getName(), fastAttr.getValue());
+    callOp.setFastmathFlagsAttr(
+        cast<LLVM::FastmathFlagsAttr>(fastAttr.getValue()));
 
     if (unwrapSizeOneVec) {
       // Re-wrap the scalar result back into a size-1 vector to preserve types.

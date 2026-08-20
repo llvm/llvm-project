@@ -195,8 +195,8 @@ public:
 
       StringRef flatAttrName =
           dialect->getFlatWorkGroupSizeAttrHelper().getName();
-      if (auto flatAttr =
-              dyn_cast_if_present<StringAttr>(op->getAttr(flatAttrName))) {
+      if (auto flatAttr = dyn_cast_if_present<StringAttr>(
+              op->getDiscardableAttr(flatAttrName))) {
         if (flatAttr.getValue() != expectedFlatWorkGroupSize)
           return op->emitOpError(Twine(flatAttrName) +
                                  " must match rocdl.reqd_work_group_size");
@@ -204,8 +204,8 @@ public:
 
       StringRef maxFlatAttrName =
           dialect->getMaxFlatWorkGroupSizeAttrHelper().getName();
-      if (auto maxFlatAttr =
-              dyn_cast_if_present<IntegerAttr>(op->getAttr(maxFlatAttrName))) {
+      if (auto maxFlatAttr = dyn_cast_if_present<IntegerAttr>(
+              op->getDiscardableAttr(maxFlatAttrName))) {
         llvm::SmallString<16> expectedMaxFlatWorkGroupSize;
         llvm::raw_svector_ostream maxAttrValueStream(
             expectedMaxFlatWorkGroupSize);

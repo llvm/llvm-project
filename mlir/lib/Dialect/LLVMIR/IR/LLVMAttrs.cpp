@@ -620,8 +620,8 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   auto parentFunction = op->getParentOfType<FunctionOpInterface>();
   if (!parentFunction)
     return {};
-  return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
-      getAttributeName());
+  return parentFunction.getOperation()
+      ->getDiscardableAttrOfType<TargetFeaturesAttr>(getAttributeName());
 }
 
 FailureOr<Attribute> TargetFeaturesAttr::query(DataLayoutEntryKey key) {

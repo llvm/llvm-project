@@ -804,7 +804,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       Value loaded =
           LLVM::LoadOp::create(rewriter, loc, valOrResTy, basePtrLLVM);
       // Set cache control attribute on the load operation.
-      loaded.getDefiningOp()->setAttr(
+      loaded.getDefiningOp()->setDiscardableAttr(
           "cache_control", xevm::LoadCacheControlAttr::get(
                                ctxt, translateLoadXeGPUCacheHint(
                                          op.getL1Hint(), op.getL3Hint())));
@@ -832,7 +832,7 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       auto storeOp =
           LLVM::StoreOp::create(rewriter, loc, adaptor.getValue(), basePtrLLVM);
       // Set cache control attribute on the store operation.
-      storeOp.getOperation()->setAttr(
+      storeOp.getOperation()->setDiscardableAttr(
           "cache_control", xevm::StoreCacheControlAttr::get(
                                ctxt, translateStoreXeGPUCacheHint(
                                          op.getL1Hint(), op.getL3Hint())));
