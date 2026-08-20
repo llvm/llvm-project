@@ -3910,6 +3910,11 @@ struct OmpAccessGroup {
   WRAPPER_CLASS_BOILERPLATE(OmpAccessGroup, Value);
 };
 
+// Ref: [5.1:63-68], [5.2:195-196], [6.0:331-333]
+//
+// adjust-op ->
+//    NOTHING |                                     // since 5.1
+//    NEED_DEVICE_PTR                               // since 5.1
 struct OmpAdjustOp {
   ENUM_CLASS(Value, Nothing, Need_Device_Ptr)
   WRAPPER_CLASS_BOILERPLATE(OmpAdjustOp, Value);
