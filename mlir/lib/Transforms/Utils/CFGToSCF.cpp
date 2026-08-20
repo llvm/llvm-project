@@ -121,6 +121,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include <map>
 
 using namespace mlir;
 
@@ -226,28 +227,43 @@ public:
                                 function_ref<Value(unsigned)> getSwitchValue,
                                 function_ref<Value(Type)> getUndefValue,
                                 TypeRange extraArgs = {}) {
+    llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> emptyMappings;
+    llvm::SmallMapVector<Block *, SmallVector<Type>, 4> emptyNewArgTypes;
+    return create(loc, entryBlocks, getSwitchValue, getUndefValue,
+                  emptyMappings, emptyNewArgTypes, extraArgs);
+  }
+
+  static EdgeMultiplexer
+  create(Location loc, ArrayRef<Block *> entryBlocks,
+         function_ref<Value(unsigned)> getSwitchValue,
+         function_ref<Value(Type)> getUndefValue,
+         const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4>
+             &argMappings,
+         const llvm::SmallMapVector<Block *, SmallVector<Type>, 4> &newArgTypes,
+         TypeRange extraArgs = {}) {
     assert(!entryBlocks.empty() && "Require at least one entry block");
 
     auto *multiplexerBlock = new Block;
     multiplexerBlock->insertAfter(entryBlocks.front());
 
-    // To implement the multiplexer block, we have to add the block arguments of
-    // every distinct successor block to the multiplexer block. When redirecting
-    // edges, block arguments designated for blocks that aren't branched to will
-    // be assigned the `getUndefValue`. The amount of block arguments and their
-    // offset is saved in the map for `redirectEdge` to transform the edges.
     llvm::SmallMapVector<Block *, unsigned, 4> blockArgMapping;
+    llvm::SmallMapVector<Block *, unsigned, 4> blockArgCounts;
     for (Block *entryBlock : entryBlocks) {
       auto [iter, inserted] = blockArgMapping.insert(
           {entryBlock, multiplexerBlock->getNumArguments()});
-      if (inserted)
-        addBlockArgumentsFromOther(multiplexerBlock, entryBlock);
+      if (inserted) {
+        auto it = newArgTypes.find(entryBlock);
+        if (it != newArgTypes.end()) {
+          blockArgCounts[entryBlock] = it->second.size();
+          multiplexerBlock->addArguments(
+              it->second, SmallVector<Location>(it->second.size(), loc));
+        } else {
+          blockArgCounts[entryBlock] = entryBlock->getNumArguments();
+          addBlockArgumentsFromOther(multiplexerBlock, entryBlock);
+        }
+      }
     }
 
-    // If we have more than one successor, we have to additionally add a
-    // discriminator value, denoting which successor to jump to.
-    // When redirecting edges, an appropriate value will be passed using
-    // `getSwitchValue`.
     Value discriminator;
     if (blockArgMapping.size() > 1)
       discriminator =
@@ -257,7 +273,9 @@ public:
         extraArgs, SmallVector<Location>(extraArgs.size(), loc));
 
     return EdgeMultiplexer(multiplexerBlock, getSwitchValue, getUndefValue,
-                           std::move(blockArgMapping), discriminator);
+                           std::move(blockArgMapping),
+                           std::move(blockArgCounts), argMappings,
+                           discriminator);
   }
 
   /// Returns the created multiplexer block.
@@ -283,32 +301,30 @@ public:
         discriminator ? extraArgsBeginIndex - 1 : std::optional<unsigned>{};
 
     SmallVector<Value> newSuccOperands(multiplexerBlock->getNumArguments());
-    for (BlockArgument argument : multiplexerBlock->getArguments()) {
-      unsigned index = argument.getArgNumber();
-      if (index >= result->second &&
-          index < result->second + edge.getSuccessor()->getNumArguments()) {
-        // Original block arguments to the entry block.
-        newSuccOperands[index] =
-            successorOperands[index - result->second].get();
-        continue;
-      }
+    for (unsigned i = 0; i < newSuccOperands.size(); ++i)
+      newSuccOperands[i] =
+          getUndefValue(multiplexerBlock->getArgument(i).getType());
 
-      // Discriminator value if it exists.
-      if (index == discriminatorIndex) {
-        newSuccOperands[index] =
-            getSwitchValue(result - blockArgMapping.begin());
-        continue;
+    auto it = argMappings.find(edge.getSuccessor());
+    if (it != argMappings.end()) {
+      const auto &mapping = it->second;
+      for (unsigned i = 0; i < mapping.size(); ++i) {
+        unsigned newIndex = result->second + mapping[i];
+        newSuccOperands[newIndex] = successorOperands[i].get();
       }
-
-      // Followed by the extra arguments.
-      if (index >= extraArgsBeginIndex) {
-        newSuccOperands[index] = extraArgs[index - extraArgsBeginIndex];
-        continue;
+    } else {
+      for (unsigned i = 0; i < edge.getSuccessor()->getNumArguments(); ++i) {
+        newSuccOperands[result->second + i] = successorOperands[i].get();
       }
+    }
 
-      // Otherwise undef values for any unused block arguments used by other
-      // entry blocks.
-      newSuccOperands[index] = getUndefValue(argument.getType());
+    if (discriminatorIndex) {
+      newSuccOperands[*discriminatorIndex] =
+          getSwitchValue(result - blockArgMapping.begin());
+    }
+
+    for (unsigned i = 0; i < extraArgs.size(); ++i) {
+      newSuccOperands[extraArgsBeginIndex + i] = extraArgs[i];
     }
 
     edge.setSuccessor(multiplexerBlock);
@@ -329,14 +345,33 @@ public:
     SmallVector<ValueRange> caseArguments;
     SmallVector<unsigned> caseValues;
     SmallVector<Block *> caseDestinations;
+    SmallVector<SmallVector<Value>> reconstructedArgsStorage;
+
     for (auto &&[index, pair] : llvm::enumerate(blockArgMapping)) {
       auto &&[succ, offset] = pair;
       if (excluded.contains(succ))
         continue;
 
       caseValues.push_back(index);
-      caseArguments.push_back(multiplexerBlock->getArguments().slice(
-          offset, succ->getNumArguments()));
+      auto countIt = blockArgCounts.find(succ);
+      unsigned count = countIt != blockArgCounts.end()
+                           ? countIt->second
+                           : succ->getNumArguments();
+
+      auto it = argMappings.find(succ);
+      if (it != argMappings.end()) {
+        const auto &mapping = it->second;
+        reconstructedArgsStorage.emplace_back(mapping.size());
+        auto &reconstructedArgs = reconstructedArgsStorage.back();
+        for (unsigned i = 0; i < mapping.size(); ++i) {
+          reconstructedArgs[i] =
+              multiplexerBlock->getArgument(offset + mapping[i]);
+        }
+        caseArguments.push_back(reconstructedArgs);
+      } else {
+        caseArguments.push_back(
+            multiplexerBlock->getArguments().slice(offset, count));
+      }
       caseDestinations.push_back(succ);
     }
 
@@ -371,18 +406,23 @@ private:
   /// block are simply appended ot the multiplexer block. This map simply
   /// contains the offset to the range in the multiplexer block.
   llvm::SmallMapVector<Block *, unsigned, 4> blockArgMapping;
+  llvm::SmallMapVector<Block *, unsigned, 4> blockArgCounts;
+  llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> argMappings;
   /// Discriminator value used in the multiplexer block to dispatch to the
   /// correct entry block. Null value if not required due to only having one
   /// entry block.
   Value discriminator;
 
-  EdgeMultiplexer(Block *multiplexerBlock,
-                  function_ref<Value(unsigned)> getSwitchValue,
-                  function_ref<Value(Type)> getUndefValue,
-                  llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
-                  Value dispatchFlag)
+  EdgeMultiplexer(
+      Block *multiplexerBlock, function_ref<Value(unsigned)> getSwitchValue,
+      function_ref<Value(Type)> getUndefValue,
+      llvm::SmallMapVector<Block *, unsigned, 4> &&entries,
+      llvm::SmallMapVector<Block *, unsigned, 4> &&counts,
+      const llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> &mappings,
+      Value dispatchFlag)
       : multiplexerBlock(multiplexerBlock), getSwitchValue(getSwitchValue),
         getUndefValue(getUndefValue), blockArgMapping(std::move(entries)),
+        blockArgCounts(std::move(counts)), argMappings(mappings),
         discriminator(dispatchFlag) {}
 };
 
@@ -461,6 +501,53 @@ private:
   CFGToSCFInterface &interface;
 };
 
+static void findDuplicateArguments(ArrayRef<Edge> edges, Block *block,
+                                   SmallVectorImpl<unsigned> &argMapping,
+                                   SmallVectorImpl<Type> &newArgTypes) {
+  unsigned numArgs = block->getNumArguments();
+  argMapping.resize(numArgs);
+  for (unsigned i = 0; i < numArgs; ++i)
+    argMapping[i] = i;
+
+  SmallVector<SmallVector<Value>> matrix;
+  for (Edge edge : edges) {
+    if (edge.getSuccessor() != block)
+      continue;
+    matrix.push_back(llvm::to_vector(edge.getSuccessorOperands()));
+  }
+
+  if (matrix.empty())
+    return;
+
+  using ColumnSig = SmallVector<Value>;
+  struct ColumnSigLess {
+    bool operator()(const ColumnSig &a, const ColumnSig &b) const {
+      if (a.size() != b.size())
+        return a.size() < b.size();
+      for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i].getAsOpaquePointer() != b[i].getAsOpaquePointer())
+          return a[i].getAsOpaquePointer() < b[i].getAsOpaquePointer();
+      }
+      return false;
+    }
+  };
+  std::map<ColumnSig, unsigned, ColumnSigLess> sigToNewIndex;
+
+  newArgTypes.clear();
+
+  for (unsigned col = 0; col < numArgs; ++col) {
+    ColumnSig sig;
+    for (const auto &row : matrix)
+      sig.push_back(row[col]);
+
+    auto [it, inserted] = sigToNewIndex.try_emplace(sig, newArgTypes.size());
+    if (inserted) {
+      newArgTypes.push_back(block->getArgument(col).getType());
+    }
+    argMapping[col] = it->second;
+  }
+}
+
 } // namespace
 
 /// Returns a range of all edges from `block` to each of its successors.
@@ -514,9 +601,28 @@ createSingleEntryBlock(Location loc, ArrayRef<Edge> entryEdges,
                        function_ref<Value(unsigned)> getSwitchValue,
                        function_ref<Value(Type)> getUndefValue,
                        CFGToSCFInterface &interface) {
+  llvm::SmallMapVector<Block *, SmallVector<unsigned>, 4> argMappings;
+  llvm::SmallMapVector<Block *, SmallVector<Type>, 4> newArgTypes;
+
+  SmallVector<Block *> uniqueSuccessors;
+  for (Edge edge : entryEdges) {
+    Block *succ = edge.getSuccessor();
+    if (std::find(uniqueSuccessors.begin(), uniqueSuccessors.end(), succ) ==
+        uniqueSuccessors.end())
+      uniqueSuccessors.push_back(succ);
+  }
+
+  for (Block *succ : uniqueSuccessors) {
+    SmallVector<unsigned> argMapping;
+    SmallVector<Type> argTypes;
+    findDuplicateArguments(entryEdges, succ, argMapping, argTypes);
+    argMappings[succ] = std::move(argMapping);
+    newArgTypes[succ] = std::move(argTypes);
+  }
+
   auto result = EdgeMultiplexer::create(
       loc, llvm::map_to_vector(entryEdges, std::mem_fn(&Edge::getSuccessor)),
-      getSwitchValue, getUndefValue);
+      getSwitchValue, getUndefValue, argMappings, newArgTypes);
 
   // Redirect the edges prior to creating the switch op.
   // We guarantee that predecessors are up to date.
@@ -1125,8 +1231,13 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     if (branchRegion.empty()) {
       // If no block is part of the branch region, we create a dummy block to
       // place the region terminator into.
-      createdEmptyBlocks.emplace_back(
-          new Block, llvm::to_vector(entryEdge.getSuccessorOperands()));
+      SmallVector<Value> yieldValues =
+          llvm::to_vector(entryEdge.getSuccessorOperands());
+      while (yieldValues.size() < continuation->getNumArguments()) {
+        yieldValues.push_back(getUndefValue(
+            continuation->getArgument(yieldValues.size()).getType()));
+      }
+      createdEmptyBlocks.emplace_back(new Block, yieldValues);
       conditionalRegion.push_back(createdEmptyBlocks.back().first);
       continue;
     }
@@ -1187,9 +1298,14 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
   for (Operation *user : llvm::make_early_inc_range(continuation->getUsers())) {
     assert(user->getNumSuccessors() == 1);
     auto builder = OpBuilder::atBlockTerminator(user->getBlock());
-    LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
-        user->getLoc(), builder, structuredCondOp, user,
+    SmallVector<Value> yieldValues = llvm::to_vector(
         getMutableSuccessorOperands(user->getBlock(), 0).getAsOperandRange());
+    while (yieldValues.size() < continuation->getNumArguments()) {
+      yieldValues.push_back(getUndefValue(
+          continuation->getArgument(yieldValues.size()).getType()));
+    }
+    LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
+        user->getLoc(), builder, structuredCondOp, user, yieldValues);
     if (failed(result))
       return failure();
     user->erase();
@@ -1305,9 +1421,6 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
   if (region.empty() || region.hasOneBlock())
     return false;
 
-  if (failed(checkTransformationPreconditions(region, interface)))
-    return failure();
-
   DenseMap<Type, Value> typedUndefCache;
   auto getUndefValue = [&](Type type) {
     auto [iter, inserted] = typedUndefCache.try_emplace(type);
@@ -1320,6 +1433,9 @@ FailureOr<bool> mlir::transformCFGToSCF(Region &region,
         interface.getUndefValue(region.getLoc(), constantBuilder, type);
     return iter->second;
   };
+
+  if (failed(checkTransformationPreconditions(region, interface)))
+    return failure();
 
   // The transformation only creates all values in the range of 0 to
   // max(#numSuccessors). Therefore using a vector instead of a map.
