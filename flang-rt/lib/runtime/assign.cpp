@@ -879,6 +879,9 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
   if (to.type().IsDerived()) {
     terminator.Crash("AssignSimple: Cannot assign to derived type");
   }
+  if (to.type().IsCharacter()) {
+    terminator.Crash("AssignSimple: Cannot assign to character type");
+  }
 
   std::size_t elementBytes{to.ElementBytes()};
   std::size_t elements{from.Elements()};

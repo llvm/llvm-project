@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/assign.h"
+#include "CrashHandlerFixture.h"
 #include "tools.h"
 #include "gtest/gtest.h"
 #include <vector>
@@ -369,4 +370,80 @@ TEST(AssignSimple, AliasedNonContiguousToNonContiguous) {
   // Result: [1, 5, 3, 3, 5, 1, 7, 8]
   int expected[8] = {1, 5, 3, 3, 5, 1, 7, 8};
   EXPECT_EQ(std::memcmp(data, expected, 8 * sizeof(int)), 0);
+}
+
+//------------------------------------------------------------------------------
+// Death tests for AssignSimple: verify that invalid inputs crash as expected.
+//------------------------------------------------------------------------------
+struct AssignSimpleCrash : CrashHandlerFixture {};
+
+TEST(AssignSimpleCrash, RankMismatch) {
+  auto dest{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{3}, std::vector<int>{1, 2, 3}, sizeof(int))};
+  auto source{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 2}, std::vector<int>{1, 2, 3, 4}, sizeof(int))};
+  ASSERT_DEATH(RTNAME(AssignSimple)(*dest, *source, __FILE__, __LINE__),
+      "AssignSimple: rank mismatch");
+}
+
+TEST(AssignSimpleCrash, ElementBytesMismatch) {
+  // 4-byte integers vs 8-byte integers
+  auto dest{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{3}, std::vector<int>{1, 2, 3}, sizeof(int))};
+  auto source{MakeArray<TypeCategory::Integer, 8>(
+      std::vector<int>{3}, std::vector<std::int64_t>{1, 2, 3},
+      sizeof(std::int64_t))};
+  ASSERT_DEATH(RTNAME(AssignSimple)(*dest, *source, __FILE__, __LINE__),
+      "AssignSimple: ElementBytes mismatch");
+}
+
+TEST(AssignSimpleCrash, DerivedType) {
+  TypeCode structType{static_cast<Fortran::ISO::CFI_type_t>(CFI_type_struct)};
+  SubscriptValue extent[1]{2};
+  int destData[2] = {1, 2};
+  int srcData[2] = {3, 4};
+
+  StaticDescriptor<1> staticDest;
+  Descriptor &dest{staticDest.descriptor()};
+  dest.Establish(structType, sizeof(int), destData, 1, extent);
+  dest.GetDimension(0).SetLowerBound(1);
+
+  StaticDescriptor<1> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  source.Establish(structType, sizeof(int), srcData, 1, extent);
+  source.GetDimension(0).SetLowerBound(1);
+
+  ASSERT_DEATH(RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__),
+      "AssignSimple: Cannot assign to derived type");
+}
+
+TEST(AssignSimpleCrash, CharacterType) {
+  auto dest{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{3}, std::vector<char>{'a', 'b', 'c'}, sizeof(char))};
+  auto source{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{3}, std::vector<char>{'x', 'y', 'z'}, sizeof(char))};
+  ASSERT_DEATH(RTNAME(AssignSimple)(*dest, *source, __FILE__, __LINE__),
+      "AssignSimple: Cannot assign to character type");
+}
+
+TEST(AssignSimpleCrash, NonAllocatableElementCountMismatch) {
+  // Non-allocatable arrays with different element counts
+  int destData[3] = {1, 2, 3};
+  int srcData[5] = {10, 20, 30, 40, 50};
+  TypeCode intType{TypeCategory::Integer, 4};
+
+  StaticDescriptor<1> staticDest;
+  Descriptor &dest{staticDest.descriptor()};
+  SubscriptValue destExtent[1]{3};
+  dest.Establish(intType, sizeof(int), destData, 1, destExtent);
+  dest.GetDimension(0).SetLowerBound(1);
+
+  StaticDescriptor<1> staticSource;
+  Descriptor &source{staticSource.descriptor()};
+  SubscriptValue srcExtent[1]{5};
+  source.Establish(intType, sizeof(int), srcData, 1, srcExtent);
+  source.GetDimension(0).SetLowerBound(1);
+
+  ASSERT_DEATH(RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__),
+      "AssignSimple: mismatching element counts");
 }
