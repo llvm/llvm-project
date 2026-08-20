@@ -1,0 +1,80 @@
+//===-- FastAOCLFuncs.def - AMD fast math library mappings ----*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This .def file creates a mapping from standard math functions to their
+// corresponding fast entry points in the AMD AOCL fast math library. The
+// lowering is only legal under fast-math semantics.
+//
+//===----------------------------------------------------------------------===//
+
+#if defined(TLI_DEFINE_FAST_AOCL_FUNCS)
+#define TLI_DEFINE_FAST_AOCL_FUNC(SCAL, AOCLENTRY) {SCAL, AOCLENTRY},
+
+TLI_DEFINE_FAST_AOCL_FUNC("acosf", "amd_fastacosf")
+TLI_DEFINE_FAST_AOCL_FUNC("__acosf_finite", "amd_fastacosf")
+TLI_DEFINE_FAST_AOCL_FUNC("acos", "amd_fastacos")
+TLI_DEFINE_FAST_AOCL_FUNC("__acos_finite", "amd_fastacos")
+
+TLI_DEFINE_FAST_AOCL_FUNC("asinf", "amd_fastasinf")
+TLI_DEFINE_FAST_AOCL_FUNC("__asinf_finite", "amd_fastasinf")
+TLI_DEFINE_FAST_AOCL_FUNC("asin", "amd_fastasin")
+TLI_DEFINE_FAST_AOCL_FUNC("__asin_finite", "amd_fastasin")
+
+TLI_DEFINE_FAST_AOCL_FUNC("atanf", "amd_fastatanf")
+TLI_DEFINE_FAST_AOCL_FUNC("__atanf_finite", "amd_fastatanf")
+TLI_DEFINE_FAST_AOCL_FUNC("atan", "amd_fastatan")
+TLI_DEFINE_FAST_AOCL_FUNC("__atan_finite", "amd_fastatan")
+
+TLI_DEFINE_FAST_AOCL_FUNC("cosf", "amd_fastcosf")
+TLI_DEFINE_FAST_AOCL_FUNC("__cosf_finite", "amd_fastcosf")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.cos.f32", "amd_fastcosf")
+TLI_DEFINE_FAST_AOCL_FUNC("cos", "amd_fastcos")
+TLI_DEFINE_FAST_AOCL_FUNC("__cos_finite", "amd_fastcos")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.cos.f64", "amd_fastcos")
+
+TLI_DEFINE_FAST_AOCL_FUNC("erff", "amd_fasterff")
+TLI_DEFINE_FAST_AOCL_FUNC("__erff_finite", "amd_fasterff")
+TLI_DEFINE_FAST_AOCL_FUNC("erf", "amd_fasterf")
+TLI_DEFINE_FAST_AOCL_FUNC("__erf_finite", "amd_fasterf")
+
+TLI_DEFINE_FAST_AOCL_FUNC("expf", "amd_fastexpf")
+TLI_DEFINE_FAST_AOCL_FUNC("__expf_finite", "amd_fastexpf")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.exp.f32", "amd_fastexpf")
+TLI_DEFINE_FAST_AOCL_FUNC("exp", "amd_fastexp")
+TLI_DEFINE_FAST_AOCL_FUNC("__exp_finite", "amd_fastexp")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.exp.f64", "amd_fastexp")
+
+TLI_DEFINE_FAST_AOCL_FUNC("logf", "amd_fastlogf")
+TLI_DEFINE_FAST_AOCL_FUNC("__logf_finite", "amd_fastlogf")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.log.f32", "amd_fastlogf")
+TLI_DEFINE_FAST_AOCL_FUNC("log", "amd_fastlog")
+TLI_DEFINE_FAST_AOCL_FUNC("__log_finite", "amd_fastlog")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.log.f64", "amd_fastlog")
+
+TLI_DEFINE_FAST_AOCL_FUNC("powf", "amd_fastpowf")
+TLI_DEFINE_FAST_AOCL_FUNC("__powf_finite", "amd_fastpowf")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.pow.f32", "amd_fastpowf")
+TLI_DEFINE_FAST_AOCL_FUNC("pow", "amd_fastpow")
+TLI_DEFINE_FAST_AOCL_FUNC("__pow_finite", "amd_fastpow")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.pow.f64", "amd_fastpow")
+
+TLI_DEFINE_FAST_AOCL_FUNC("sinf", "amd_fastsinf")
+TLI_DEFINE_FAST_AOCL_FUNC("__sinf_finite", "amd_fastsinf")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.sin.f32", "amd_fastsinf")
+TLI_DEFINE_FAST_AOCL_FUNC("sin", "amd_fastsin")
+TLI_DEFINE_FAST_AOCL_FUNC("__sin_finite", "amd_fastsin")
+TLI_DEFINE_FAST_AOCL_FUNC("llvm.sin.f64", "amd_fastsin")
+
+TLI_DEFINE_FAST_AOCL_FUNC("tanf", "amd_fasttanf")
+TLI_DEFINE_FAST_AOCL_FUNC("__tanf_finite", "amd_fasttanf")
+TLI_DEFINE_FAST_AOCL_FUNC("tan", "amd_fasttan")
+TLI_DEFINE_FAST_AOCL_FUNC("__tan_finite", "amd_fasttan")
+#endif
+
+#undef TLI_DEFINE_FAST_AOCL_FUNCS
+#undef TLI_DEFINE_FAST_AOCL_FUNC

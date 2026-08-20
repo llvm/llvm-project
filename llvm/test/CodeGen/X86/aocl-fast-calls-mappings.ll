@@ -1,5 +1,5 @@
-; Exercises the scalar->AOCL fast-call name mapping under fast-math at -O3 with
-; -fast-library=AMDLIBM on X86: float variants, *_finite aliases and
+; Exercises the fast math->AOCL fast-call name mapping under fast-math at -O3
+; with -fast-library=AMDLIBM on X86: float variants, *_finite aliases and
 ; inverse-trig functions are rewritten, while math calls with no AOCL mapping
 ; (e.g. cbrt) are left untouched.
 

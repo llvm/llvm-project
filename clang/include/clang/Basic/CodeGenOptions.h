@@ -111,9 +111,9 @@ public:
   };
 
   /// Fast math functions library to use with -ffastlib=.
-  enum ScalarLibrary {
-    Default_Scalar_Library, // Use default library.
-    SCALAR_AMDLIBM          // AMD scalar math library.
+  enum FastLibrary {
+    NoFastLibrary, // Use default library.
+    FAST_AMDLIBM   // AMD fast math library.
   };
 
   enum ObjCDispatchMethodKind {
