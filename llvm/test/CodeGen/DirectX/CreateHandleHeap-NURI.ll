@@ -7,7 +7,6 @@ declare i32 @some_val();
 define void @test_with_nuri() {
 
   %val = call i32 @some_val()
-  %foo = alloca i32, align 4
 
   ; int val = some_val();
   ; RWBuffer<float4> Buf = ResourceDescriptorHeap[NonUniformResourceIndex(val)]

@@ -2,7 +2,7 @@
 
 target triple = "dxil-pc-shadermodel6.6-compute"
 
-; CHECK; immarg operand has non-immediate parameter
+; CHECK: immarg operand has non-immediate parameter
 ; CHECK: error: input module is broken!
 
 declare i1 @some_val();
