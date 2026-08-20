@@ -80,6 +80,10 @@
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
@@ -142,6 +146,10 @@
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 17
 
 #  ifdef __cpp_lib_default_template_type_for_algorithm_values
@@ -202,6 +210,10 @@
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 20
@@ -267,6 +279,10 @@
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 23
@@ -383,6 +399,10 @@
 #  endif
 #  if __cpp_lib_ranges_zip != 202110L
 #    error "__cpp_lib_ranges_zip should have the value 202110L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 26
@@ -516,6 +536,10 @@
 #    error "__cpp_lib_ranges_zip should have the value 202110L in c++26"
 #  endif
 
+#  ifdef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER > 26
 
 #  if !defined(_LIBCPP_VERSION)
@@ -645,6 +669,19 @@
 #  endif
 #  if __cpp_lib_ranges_zip != 202110L
 #    error "__cpp_lib_ranges_zip should have the value 202110L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_view_interface
+#      error "__cpp_lib_view_interface should be defined in c++29"
+#    endif
+#    if __cpp_lib_view_interface != 202606L
+#      error "__cpp_lib_view_interface should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_view_interface
+#      error "__cpp_lib_view_interface should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #endif // TEST_STD_VER > 26
