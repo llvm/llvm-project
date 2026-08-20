@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(ObjectYAMLTests
+  ContiguousBlobAccumulatorTest.cpp
   DWARFYAMLTest.cpp
   DXContainerYAMLTest.cpp
   ELFYAMLTest.cpp
