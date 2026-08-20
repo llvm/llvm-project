@@ -12,6 +12,8 @@
 namespace llvm {
 
 namespace PISAAS {
+// See the PISA address-space specification:
+// https://intel.github.io/pisa/spaces_types.html#address-spaces
 enum class AddressSpace : unsigned {
   GENERIC = 0,
   GLOBAL = 1,
