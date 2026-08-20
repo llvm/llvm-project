@@ -11,10 +11,11 @@ on:
   # Allow manual on-demand execution from GitHub Actions UI
   workflow_dispatch:
 
-  # Trigger on pushes to main / post-commit-bot
+  # Trigger on pushes to main / libc-coverage-ci-bots / post-commit-bot
   push:
     branches:
       - main
+      - libc-coverage-ci-bots
       - post-commit-bot
     paths:
       - 'libc/**'
@@ -127,7 +128,16 @@ jobs:
         python3 libc/utils/coverage/full_report.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
 
+    - name: Upload HTML Coverage Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: libc-coverage-html-report
+        path: ./coverage_html
+        retention-days: 14
+
     - name: Deploy Coverage Dashboard to GitHub Pages
+      if: github.repository != 'llvm/llvm-project'
+      continue-on-error: true
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
