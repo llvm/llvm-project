@@ -2754,13 +2754,17 @@ func.func @test_cheap_nested_global_scalar_load(%arg0: !fir.ref<f32>) {
 
 // -----
 // Test that a descriptor load inside scf.if is hoisted in the default "cheap"
-// nested hoisting mode. A descriptor load is a fixed-size copy.
+// nested hoisting mode. A descriptor load is a fixed-size copy. The element
+// load must stay inside the guard.
 // CHECK-LABEL:   func.func @test_cheap_nested_descriptor_load(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 // CHECK:           %[[BOX:.*]] = fir.load %[[ARG0]]
 // CHECK:           scf.for
 // CHECK:             scf.if
 // CHECK-NOT:           fir.load %[[ARG0]]
+// CHECK:               %[[ADDR:.*]] = fir.box_addr %[[BOX]]
+// CHECK:               %[[ELT:.*]] = fir.coordinate_of %[[ADDR]]
+// CHECK:               fir.load %[[ELT]]
 func.func @test_cheap_nested_descriptor_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %arg1: !fir.ref<f32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
