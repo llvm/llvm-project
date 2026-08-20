@@ -79,8 +79,8 @@ define <4 x i32> @no_fold_vector_constant_zero(<4 x i32> %x) {
   ret <4 x i32> %res
 }
 
-define <4 x i32> @no_fold_vector_multiuse(<4 x i32> %x, ptr %p) {
-; CHECK-LABEL: define <4 x i32> @no_fold_vector_multiuse(
+define <4 x i32> @no_fold_vector_multiuse_fdiv(<4 x i32> %x, ptr %p) {
+; CHECK-LABEL: define <4 x i32> @no_fold_vector_multiuse_fdiv(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
 ; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
@@ -93,6 +93,24 @@ define <4 x i32> @no_fold_vector_multiuse(<4 x i32> %x, ptr %p) {
   %b = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
   %r = fdiv <4 x double> %a, %b
   store <4 x double> %r, ptr %p
+  %res = fptoui <4 x double> %r to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @no_fold_vector_multiuse_uitofp(<4 x i32> %x, ptr %p) {
+; CHECK-LABEL: define <4 x i32> @no_fold_vector_multiuse_uitofp(
+; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = uitofp <4 x i32> [[X]] to <4 x double>
+; CHECK-NEXT:    [[B:%.*]] = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
+; CHECK-NEXT:    store <4 x double> [[B]], ptr [[P]], align 32
+; CHECK-NEXT:    [[R:%.*]] = fdiv <4 x double> [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = fptoui <4 x double> [[R]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[RES]]
+;
+  %a = uitofp <4 x i32> %x to <4 x double>
+  %b = uitofp <4 x i32> <i32 1, i32 2, i32 3, i32 4> to <4 x double>
+  store <4 x double> %b, ptr %p
+  %r = fdiv <4 x double> %a, %b
   %res = fptoui <4 x double> %r to <4 x i32>
   ret <4 x i32> %res
 }
