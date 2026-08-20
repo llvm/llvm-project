@@ -139,13 +139,54 @@ TEST(FileRename, RewritesIncludesRelativeToAMovedIncluder) {
   EXPECT_EQ(Result->front().newText, "\"../old/header.h\"");
 }
 
-TEST(FileRename, RejectsUnresolvedIncludesAtomically) {
+TEST(FileRename, RejectsUnresolvedIncludeInMovedFile) {
   TestTU TU;
+  TU.Filename = "old/main.cpp";
   TU.Code = "#include \"missing.h\" // error-ok\n";
-  TU.AdditionalFiles["old.h"] = "";
-  auto Result = editsFor(TU, testPath("old.h"), testPath("new.h"));
+  auto Result =
+      editsFor(TU, testPath("old/main.cpp"), testPath("new/main.cpp"));
   EXPECT_THAT_EXPECTED(
       Result, llvm::FailedWithMessage(HasSubstr("unresolved include")));
+}
+
+TEST(FileRename, IgnoresUnresolvedIncludeOutsideRename) {
+  TestTU TU;
+  TU.Code = R"cpp(
+#include "missing.h" // error-ok
+#include "old.h"
+)cpp";
+  TU.AdditionalFiles["old.h"] = "";
+  auto Result = editsFor(TU, testPath("old.h"), testPath("new.h"));
+  ASSERT_THAT_EXPECTED(Result, llvm::Succeeded());
+  ASSERT_EQ(Result->size(), 1u);
+  EXPECT_EQ(Result->front().newText, "\"new.h\"");
+}
+
+TEST(FileRename, DirectoryRenameDelegatesToFileBatch) {
+  TestTU TU;
+  TU.Filename = "src/main.cpp";
+  TU.Code = "#include \"../old/old.h\"\n";
+  TU.AdditionalFiles["old/old.h"] = "";
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto VFS = FS.view(std::nullopt);
+  auto Mappings = expandFileRenames({{testPath("old"), testPath("renamed")}},
+                                    testRoot(), *VFS);
+  ASSERT_THAT_EXPECTED(Mappings, llvm::Succeeded());
+
+  StoreDiags Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto AST = ParsedAST::build(testPath(TU.Filename), Inputs, std::move(CI),
+                              Diags.take(), /*Preamble=*/nullptr);
+  ASSERT_TRUE(AST);
+  auto Result = renameIncludeDirectives(
+      testPath(TU.Filename), TU.Code, AST->getIncludeStructure(),
+      AST->getPreprocessor().getHeaderSearchInfo(),
+      Inputs.CompileCommand.Directory, *Mappings, format::getLLVMStyle(), *VFS);
+  ASSERT_THAT_EXPECTED(Result, llvm::Succeeded());
+  ASSERT_EQ(Result->size(), 1u);
+  EXPECT_EQ(Result->front().newText, "\"../renamed/old.h\"");
 }
 
 TEST(FileRename, ExpandsDirectoriesAndRejectsConflictingMappings) {

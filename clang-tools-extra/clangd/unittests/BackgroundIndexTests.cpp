@@ -198,8 +198,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -265,7 +264,8 @@ TEST_F(BackgroundIndexTest, ConstructorForwarding) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   FS.Files[testPath("root/header.hpp")] = Header.code();
   FS.Files[testPath("root/test.cpp")] = Main.code();
@@ -325,7 +325,8 @@ TEST_F(BackgroundIndexTest, ConstructorForwardingMultiFile) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   FS.Files[testPath("root/header.hpp")] = Header.code();
   FS.Files[testPath("root/first.cpp")] = First.code();
@@ -373,8 +374,7 @@ TEST_F(BackgroundIndexTest, MainFileRefs) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -511,12 +511,14 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
               emptyIncludeNode());
 }
 
-TEST_F(BackgroundIndexTest, FileRenameMigratesIncludeGraphAndShard) {
+TEST_F(BackgroundIndexTest, FileRenameInvalidatesAndReindexes) {
   MockFS FS;
   const Path Main = testPath("root/main.cpp");
+  const Path Middle = testPath("root/middle.h");
   const Path Old = testPath("root/old.h");
   const Path New = testPath("root/new.h");
-  FS.Files[Main] = "#include \"old.h\"\n";
+  FS.Files[Main] = "#include \"middle.h\"\n";
+  FS.Files[Middle] = "#include \"old.h\"\n";
   FS.Files[Old] = "inline int value() { return 1; }\n";
 
   llvm::StringMap<std::string> Storage;
@@ -535,7 +537,7 @@ TEST_F(BackgroundIndexTest, FileRenameMigratesIncludeGraphAndShard) {
   auto Before = Idx.includeGraphSnapshot();
   ASSERT_THAT_EXPECTED(Before, llvm::Succeeded());
   ASSERT_TRUE(llvm::any_of(*Before, [&](const auto &File) {
-    return pathEqual(File.File, Main) &&
+    return pathEqual(File.File, Middle) &&
            llvm::any_of(File.DirectIncludes, [&](PathRef Include) {
              return pathEqual(Include, Old);
            });
@@ -543,14 +545,15 @@ TEST_F(BackgroundIndexTest, FileRenameMigratesIncludeGraphAndShard) {
 
   FS.Files[New] = FS.Files[Old];
   FS.Files.erase(Old);
-  FS.Files[Main] = "#include \"new.h\"\n";
-  ASSERT_THAT_ERROR(Idx.filesRenamed({{Old, New}}), llvm::Succeeded());
+  FS.Files[Middle] = "#include \"new.h\"\n";
+  ASSERT_THAT_ERROR(Idx.invalidateAfterFileRenames({{Old, New}}),
+                    llvm::Succeeded());
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
   auto After = Idx.includeGraphSnapshot();
   ASSERT_THAT_EXPECTED(After, llvm::Succeeded());
   EXPECT_TRUE(llvm::any_of(*After, [&](const auto &File) {
-    return pathEqual(File.File, Main) &&
+    return pathEqual(File.File, Middle) &&
            llvm::any_of(File.DirectIncludes, [&](PathRef Include) {
              return pathEqual(Include, New);
            });

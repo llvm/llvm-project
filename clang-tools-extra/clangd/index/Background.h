@@ -201,8 +201,10 @@ public:
   /// Paths are absolute and direct includes are resolved file identities.
   llvm::Expected<std::vector<IndexedFile>> includeGraphSnapshot() const;
 
-  /// Migrates in-memory include-graph state and removes old persisted shards.
-  llvm::Error filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames);
+  /// Invalidates include-graph and shard state affected by file renames, then
+  /// queues affected translation units for ordinary indexing.
+  llvm::Error
+  invalidateAfterFileRenames(llvm::ArrayRef<std::pair<Path, Path>> Renames);
 
   void profile(MemoryTree &MT) const;
 

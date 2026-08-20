@@ -38,6 +38,7 @@ add_unittest(ClangdUnitTests ClangdTests
   CallHierarchyTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
+  ClangdServerFileRenameTests.cpp
   ClangdLSPServerTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp

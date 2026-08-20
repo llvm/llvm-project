@@ -350,9 +350,11 @@ llvm::Expected<std::vector<TextEdit>> renameIncludeDirectives(
   bool IncluderMoved = EffectiveFile != File;
   std::vector<TextEdit> Result;
   for (const Inclusion &Inc : Includes.MainFileIncludes) {
-    if (Inc.Resolved.empty())
+    if (Inc.Resolved.empty() && IncluderMoved)
       return error("cannot prove unresolved include {0} in {1}", Inc.Written,
                    File);
+    if (Inc.Resolved.empty())
+      continue;
     auto IncludedStatus = FS.status(Inc.Resolved);
     if (!IncludedStatus)
       return error("cannot inspect resolved include {0} in {1}: {2}",

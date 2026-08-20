@@ -170,71 +170,115 @@ BackgroundIndex::includeGraphSnapshot() const {
   return Result;
 }
 
-llvm::Error
-BackgroundIndex::filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) {
-  llvm::StringMap<IndexedFile> NewFiles;
-  llvm::StringMap<ShardVersion> NewVersions;
+llvm::Error BackgroundIndex::invalidateAfterFileRenames(
+    llvm::ArrayRef<std::pair<Path, Path>> Renames) {
+  for (const auto &Rename : Renames)
+    if (!llvm::sys::path::is_absolute(Rename.first) ||
+        !llvm::sys::path::is_absolute(Rename.second))
+      return error("file rename paths must be absolute: {0} -> {1}",
+                   Rename.first, Rename.second);
+  auto AffectedByRename = [&](PathRef File) {
+    return llvm::any_of(Renames, [&](const auto &Rename) {
+      return pathEqual(Rename.first, File) ||
+             pathStartsWith(Rename.first, File) ||
+             pathEqual(Rename.second, File) ||
+             pathStartsWith(Rename.second, File);
+    });
+  };
+
   llvm::StringSet<> NewKnownTUs;
-  llvm::StringMap<std::string> NewFailures;
   llvm::StringSet<> InvalidatedFiles;
   std::vector<Path> RemovedPaths;
-  std::vector<std::string> TranslationUnits;
+  llvm::StringSet<> TranslationUnits;
   {
     std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+
+    // Validate every path projection before changing any state.
+    auto ValidatePath = [&](PathRef File) -> llvm::Error {
+      auto Projected = mapPathAfterRenames(File, Renames);
+      if (!Projected)
+        return Projected.takeError();
+      return llvm::Error::success();
+    };
     for (const auto &Entry : IndexedFiles) {
-      IndexedFile File = Entry.getValue();
-      bool Invalidated = false;
-      auto NewFile = mapPathAfterRenames(File.File, Renames);
-      if (!NewFile)
-        return NewFile.takeError();
-      Invalidated |= File.File != *NewFile;
-      Path Destination = std::move(*NewFile);
-      File.File = Destination;
-      for (Path &Included : File.DirectIncludes) {
-        auto NewInclude = mapPathAfterRenames(Included, Renames);
-        if (!NewInclude)
-          return NewInclude.takeError();
-        Invalidated |= Included != *NewInclude;
-        Included = std::move(*NewInclude);
-      }
-      if (Invalidated) {
-        RemovedPaths.push_back(Entry.first().str());
-        InvalidatedFiles.insert(Destination);
-      }
-      if (!NewFiles.try_emplace(File.File, std::move(File)).second)
-        return error("file rename collides at indexed path {0}", Destination);
+      if (auto Err = ValidatePath(Entry.getValue().File))
+        return Err;
+      for (PathRef Included : Entry.getValue().DirectIncludes)
+        if (auto Err = ValidatePath(Included))
+          return Err;
     }
-    for (const auto &Entry : ShardVersions) {
-      auto NewFile = mapPathAfterRenames(Entry.first(), Renames);
-      if (!NewFile)
-        return NewFile.takeError();
-      if (InvalidatedFiles.contains(*NewFile))
-        continue;
-      if (!NewVersions.try_emplace(*NewFile, Entry.getValue()).second)
-        return error("file rename collides at shard path {0}", *NewFile);
-    }
+    for (const auto &Entry : ShardVersions)
+      if (auto Err = ValidatePath(Entry.first()))
+        return Err;
+    for (const auto &Entry : IndexFailures)
+      if (auto Err = ValidatePath(Entry.first()))
+        return Err;
+
+    llvm::StringMap<Path> ProjectedTUs;
     for (llvm::StringRef TU : KnownTUs.keys()) {
       auto NewTU = mapPathAfterRenames(TU, Renames);
       if (!NewTU)
         return NewTU.takeError();
-      if (!NewKnownTUs.insert(*NewTU).second)
-        return error("file rename collides at translation unit {0}", *NewTU);
+      ProjectedTUs.try_emplace(TU, std::move(*NewTU));
     }
-    for (const auto &Entry : IndexFailures) {
-      auto NewTU = mapPathAfterRenames(Entry.first(), Renames);
-      if (!NewTU)
-        return NewTU.takeError();
-      if (!NewFailures.try_emplace(*NewTU, Entry.getValue()).second)
-        return error("file rename collides at failed translation unit {0}",
-                     *NewTU);
+
+    // Seed invalidation with files and include edges in either renamed
+    // namespace. Destination entries are stale when a rename overwrites them.
+    for (const auto &Entry : IndexedFiles) {
+      const IndexedFile &File = Entry.getValue();
+      if (AffectedByRename(File.File) ||
+          llvm::any_of(File.DirectIncludes, AffectedByRename))
+        InvalidatedFiles.insert(File.File);
     }
-    IndexedFiles = std::move(NewFiles);
-    ShardVersions = std::move(NewVersions);
+
+    // A TU must be reindexed if any file in its transitive include graph was
+    // invalidated. Compute that reverse closure from the persisted graph.
+    bool Changed;
+    do {
+      Changed = false;
+      for (const auto &Entry : IndexedFiles) {
+        const IndexedFile &File = Entry.getValue();
+        if (InvalidatedFiles.contains(File.File))
+          continue;
+        if (llvm::any_of(File.DirectIncludes, [&](PathRef Included) {
+              return InvalidatedFiles.contains(Included);
+            })) {
+          InvalidatedFiles.insert(File.File);
+          Changed = true;
+        }
+      }
+    } while (Changed);
+
+    for (const auto &Entry : ShardVersions)
+      if (AffectedByRename(Entry.first()) ||
+          InvalidatedFiles.contains(Entry.first()))
+        InvalidatedFiles.insert(Entry.first());
+
+    for (llvm::StringRef File : InvalidatedFiles.keys()) {
+      RemovedPaths.push_back(File.str());
+      IndexedFiles.erase(File);
+      ShardVersions.erase(File);
+      IndexFailures.erase(File);
+    }
+
+    std::vector<Path> InvalidatedFailures;
+    for (const auto &Entry : IndexFailures)
+      if (AffectedByRename(Entry.first()) ||
+          InvalidatedFiles.contains(Entry.first()))
+        InvalidatedFailures.push_back(Entry.first().str());
+    for (PathRef File : InvalidatedFailures)
+      IndexFailures.erase(File);
+
+    for (llvm::StringRef TU : KnownTUs.keys()) {
+      const Path &NewTU = ProjectedTUs.find(TU)->getValue();
+      NewKnownTUs.insert(NewTU);
+      if (AffectedByRename(TU) || InvalidatedFiles.contains(TU))
+        TranslationUnits.insert(NewTU);
+    }
+
     KnownTUs = std::move(NewKnownTUs);
-    IndexFailures = std::move(NewFailures);
-    for (const auto &Entry : IndexedFiles)
-      if (Entry.getValue().Flags & IncludeGraphNode::SourceFlag::IsTU)
-        TranslationUnits.push_back(Entry.getValue().File);
+    if (!InvalidatedFiles.empty() || !TranslationUnits.empty())
+      IncludeGraphError.reset();
   }
 
   llvm::Error RemoveErrors = llvm::Error::success();
@@ -249,8 +293,8 @@ BackgroundIndex::filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) {
   }
   std::vector<BackgroundQueue::Task> Tasks;
   Tasks.reserve(TranslationUnits.size());
-  for (std::string &TU : TranslationUnits)
-    Tasks.push_back(indexFileTask(std::move(TU),
+  for (llvm::StringRef TU : TranslationUnits.keys())
+    Tasks.push_back(indexFileTask(TU.str(),
                                   /*BypassDuplicateSuppression=*/true));
   Queue.append(std::move(Tasks));
   return RemoveErrors;

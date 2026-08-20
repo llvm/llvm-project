@@ -6,6 +6,8 @@
 # RUN:   > %t/requests.jsonrpc
 # RUN: clangd -background-index -lit-test < %t/requests.jsonrpc \
 # RUN:   | FileCheck %t/requests.jsonrpc
+# RUN: clangd -lit-test < %t/requests-no-document-changes.jsonrpc \
+# RUN:   | FileCheck --check-prefix=NODOC %t/requests-no-document-changes.jsonrpc
 
 #--- compile_commands.json.in
 [
@@ -18,6 +20,11 @@
     "directory": "DIRECTORY",
     "command": "CLANG -I DIRECTORY -c DIRECTORY/open.cpp",
     "file": "DIRECTORY/open.cpp"
+  },
+  {
+    "directory": "DIRECTORY",
+    "command": "CLANG -I DIRECTORY -c DIRECTORY/directory.cpp",
+    "file": "DIRECTORY/directory.cpp"
   }
 ]
 
@@ -25,14 +32,22 @@
 inline int answer() { return 42; }
 
 #--- main.cpp
+#include "missing.h" // error-ok
 #include "old.h"
 int main() { return answer(); }
 
 #--- open.cpp
 int open_file() { return 0; }
 
+#--- old/header.h
+inline int directory_answer() { return 7; }
+
+#--- directory.cpp
+#include "old/header.h"
+int directory_file() { return directory_answer(); }
+
 #--- requests.jsonrpc.in
-{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file://DIRECTORY","capabilities":{"workspace":{"fileOperations":{"willRename":true,"didRename":true}}},"trace":"off"}}
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file://DIRECTORY","capabilities":{"workspace":{"workspaceEdit":{"documentChanges":true},"fileOperations":{"willRename":true,"didRename":true}}},"trace":"off"}}
 # CHECK:      "fileOperations": {
 # CHECK:        "didRename": {
 # CHECK:        "willRename": {
@@ -43,11 +58,33 @@ int open_file() { return 0; }
 # CHECK:      "id": 1,
 # CHECK-NEXT: "jsonrpc": "2.0",
 # CHECK-NEXT: "result": {
-# CHECK-NEXT:   "changes": {
-# CHECK-DAG:      "file://DIRECTORY/main.cpp": [
-# CHECK-DAG:      "file://DIRECTORY/open.cpp": [
+# CHECK-NEXT:   "documentChanges": [
 # CHECK:            "newText": "\"new.h\"",
+# CHECK:            "uri": "file://DIRECTORY/main.cpp",
+# CHECK-NEXT:       "version": null
+# CHECK:            "newText": "\"new.h\"",
+# CHECK:            "uri": "file://DIRECTORY/open.cpp",
+# CHECK-NEXT:       "version": 1
 ---
-{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+{"jsonrpc":"2.0","id":2,"method":"workspace/willRenameFiles","params":{"files":[{"oldUri":"file://DIRECTORY/old","newUri":"file://DIRECTORY/renamed"}]}}
+# CHECK:      "id": 2,
+# CHECK-NEXT: "jsonrpc": "2.0",
+# CHECK-NEXT: "result": {
+# CHECK-NEXT:   "documentChanges": [
+# CHECK:          "newText": "\"renamed/header.h\"",
+# CHECK:          "uri": "file://DIRECTORY/directory.cpp",
+# CHECK:          "version": null
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+
+#--- requests-no-document-changes.jsonrpc
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file:///clangd-test","capabilities":{"workspace":{"fileOperations":{"willRename":true}}},"trace":"off"}}
+# NODOC:      "id": 0,
+# NODOC-NOT:  "fileOperations"
+# NODOC:      "id": 1,
+---
+{"jsonrpc":"2.0","id":1,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
