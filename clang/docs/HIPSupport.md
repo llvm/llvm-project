@@ -430,8 +430,7 @@ module init functions.
 
   ```
 
-- The address of a managed variable is not a constant expression, because
-  the runtime allocates the storage and defines the symbol at load time:
+- The address of a managed variable is not a constant expression:
 
   ```c++
   __managed__ int x;
