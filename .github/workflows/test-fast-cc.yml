@@ -5,9 +5,9 @@ on:
 jobs:
   test:
     runs-on: windows-11-arm
-  env:
-    LLVM_VERSION: 22.1.8
-  steps:
+    env:
+      LLVM_VERSION: 22.1.8
+    steps:
     - run: |
         New-Item -Path "C:\temp-download" -ItemType "Directory" -Force ;
         New-Item -Path "C:\clang" -ItemType "Directory" -Force ;
