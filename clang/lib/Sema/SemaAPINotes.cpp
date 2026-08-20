@@ -1532,7 +1532,7 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
       continue;
 
     std::optional<SmallVector<std::string, 4>> ParameterSpellings;
-    if (Selector.first.Key.parameterTypeIDs) {
+    if (Selector.first.Key.Selector.Parameters) {
       ParameterSpellings =
           Reader.getParameterSelectorSpellingsForDiagnostics(Selector.first);
       if (!ParameterSpellings)
@@ -1542,7 +1542,7 @@ void APINotesSelectorDiagnosticReaderState::diagnoseUnused(
     api_notes::FunctionSelector FunctionSelector;
     if (ParameterSpellings)
       FunctionSelector.Parameters = *ParameterSpellings;
-    FunctionSelector.Object = Selector.first.Key.objectSelector;
+    FunctionSelector.Object = Selector.first.Key.Selector.Object;
 
     S.Diag(SeenName->second.Loc, diag::warn_apinotes_message)
         << (llvm::Twine("API notes entry for '") + SeenName->second.Name +

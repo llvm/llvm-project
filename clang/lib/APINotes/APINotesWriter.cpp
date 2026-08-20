@@ -486,28 +486,29 @@ void emitVersionedInfo(
 
 static unsigned getFunctionTableKeyLength(const FunctionTableKey &Key) {
   return FunctionTableKeyBaseLength +
-         (Key.parameterTypeIDs ? Key.parameterTypeIDs->size() * sizeof(uint32_t)
-                               : 0);
+         (Key.Selector.Parameters
+              ? Key.Selector.Parameters->size() * sizeof(uint32_t)
+              : 0);
 }
 
 static uint8_t getFunctionTableKeyFlags(const FunctionTableKey &Key) {
-  uint8_t Flags = Key.parameterTypeIDs ? FunctionKeyHasParameterSelector : 0;
-  if (!Key.objectSelector)
+  uint8_t Flags = Key.Selector.Parameters ? FunctionKeyHasParameterSelector : 0;
+  if (!Key.Selector.Object)
     return Flags;
 
-  if (Key.objectSelector->Const) {
+  if (Key.Selector.Object->Const) {
     Flags |= FunctionKeyObjectConstPresent;
-    if (*Key.objectSelector->Const)
+    if (*Key.Selector.Object->Const)
       Flags |= FunctionKeyObjectConstValue;
   }
-  if (Key.objectSelector->Volatile) {
+  if (Key.Selector.Object->Volatile) {
     Flags |= FunctionKeyObjectVolatilePresent;
-    if (*Key.objectSelector->Volatile)
+    if (*Key.Selector.Object->Volatile)
       Flags |= FunctionKeyObjectVolatileValue;
   }
-  if (Key.objectSelector->Ref) {
+  if (Key.Selector.Object->Ref) {
     Flags |= FunctionKeyObjectRefPresent;
-    switch (*Key.objectSelector->Ref) {
+    switch (*Key.Selector.Object->Ref) {
     case RQ_None:
       break;
     case RQ_LValue:
@@ -526,10 +527,10 @@ static void emitFunctionTableKey(raw_ostream &OS, const FunctionTableKey &Key) {
   writer.write<uint32_t>(Key.parentContextID);
   writer.write<uint32_t>(Key.nameID);
   writer.write<uint8_t>(getFunctionTableKeyFlags(Key));
-  writer.write<uint16_t>(Key.parameterTypeIDs ? Key.parameterTypeIDs->size()
-                                              : 0);
-  if (Key.parameterTypeIDs)
-    for (IdentifierID TypeID : *Key.parameterTypeIDs)
+  writer.write<uint16_t>(
+      Key.Selector.Parameters ? Key.Selector.Parameters->size() : 0);
+  if (Key.Selector.Parameters)
+    for (IdentifierID TypeID : *Key.Selector.Parameters)
       writer.write<uint32_t>(TypeID);
 }
 
