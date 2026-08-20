@@ -270,23 +270,33 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   // Fail if we couldn't find a suitable free register
   if (I == DefinedRegClass.getRegisters().size())
     return false;
-  
+
+  bitset<AMDGPU::NUM_TARGET_REGS> RedefinedRegs;
   // Actually rename the register
   for (unsigned Op = 0; Op < DefToRename->getNumExplicitOperands(); Op++)
-    if (DefToRename->getOperand(Op).isReg() && DefToRename->getOperand(Op).isDef() &&
-        TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg))
+    if (DefToRename->getOperand(Op).isReg() &&
+        DefToRename->getOperand(Op).isDef() &&
+        TRI->regsOverlap(DefToRename->getOperand(Op).getReg(), OldReg)) {
       DefToRename->getOperand(Op).setReg(
-        renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                       DefToRename->getOperand(Op).getReg()));
+          renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                         DefToRename->getOperand(Op).getReg()));
+      RedefinedRegs |= getVGPR32Lanes(DefToRename->getOperand(Op).getReg());
+    }
   for (MachineBasicBlock::iterator RenameIt =
          std::next(DefToRename->getIterator());
        RenameIt != KillerIns; ++RenameIt)
     for (unsigned Op = 0; Op < RenameIt->getNumExplicitOperands(); Op++)
       if (RenameIt->getOperand(Op).isReg() &&
-          TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg))
+          TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
+          (RenameIt->getOperand(Op).isDef() ||
+           (RedefinedRegs & getVGPR32Lanes(RenameIt->getOperand(Op).getReg()))
+               .any())) {
         RenameIt->getOperand(Op).setReg(
-          renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
-                         RenameIt->getOperand(Op).getReg()));
+            renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                           RenameIt->getOperand(Op).getReg()));
+        if (RenameIt->getOperand(Op).isDef())
+          RedefinedRegs |= getVGPR32Lanes(RenameIt->getOperand(Op).getReg());
+      }
   for (unsigned Op = 0; Op < KillerIns->getNumExplicitOperands(); Op++)
     if (KillerIns->getOperand(Op).isReg() &&
         KillerIns->getOperand(Op).isUse() &&
