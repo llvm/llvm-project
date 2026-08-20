@@ -759,6 +759,14 @@ static void setConfigs() {
     if (ctx.arg.sharedMemory)
       error("--cooperative-threading is incompatible with --shared-memory");
     ctx.arg.libcallThreadContext = true;
+
+    // Cooperative threading requires the table is either imported or exported
+    // or otherwise there's no way for embedders to read spawned functions from
+    // the table. If we've gotten this far and the table isn't otherwise
+    // imported (e.g in `isPic` mode) then export the table instead to ensure
+    // that it's visible to the outside world.
+    if (!ctx.arg.importTable)
+      ctx.arg.exportTable = true;
   }
 }
 
