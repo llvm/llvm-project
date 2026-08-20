@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidDefaultLambdaCaptureCheck.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/Lambda.h"
-#include "clang/Lex/Lexer.h"
+#include "llvm/ADT/StringExtras.h"
+#include <cassert>
+#include <string>
+#include <vector>
 
 using namespace clang::ast_matchers;
 
@@ -21,6 +25,18 @@ AST_MATCHER(LambdaExpr, hasDefaultCapture) {
   return Node.getCaptureDefault() != LCD_None;
 }
 
+// `isInStdNamespace()` only matches declarations whose immediate enclosing
+// namespace is `std`, so it misses niebloids like `std::ranges::all_of` that
+// live in a namespace nested inside `std`.
+AST_MATCHER(Decl, isInStdNamespaceOrNested) {
+  for (const DeclContext *DC = Node.getDeclContext(); DC != nullptr;
+       DC = DC->getParent()) {
+    if (DC->isStdNamespace())
+      return true;
+  }
+  return false;
+}
+
 } // namespace
 
 static std::string generateCaptureText(const LambdaCapture &Capture) {
@@ -29,7 +45,7 @@ static std::string generateCaptureText(const LambdaCapture &Capture) {
 
   std::string Result;
   if (Capture.getCaptureKind() == LCK_ByRef)
-    Result += "&";
+    Result += '&';
 
   Result += Capture.getCapturedVar()->getName().str();
   return Result;
@@ -47,14 +63,16 @@ void AvoidDefaultLambdaCaptureCheck::storeOptions(
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
   if (IgnoreInSTL) {
-    auto StdFunctionCall = callExpr(callee(functionDecl(isInStdNamespace())));
+    auto StdFunctionCall =
+        callExpr(callee(functionDecl(isInStdNamespaceOrNested())));
     auto StdNiebloidCall = cxxOperatorCallExpr(
         hasOverloadedOperatorName("()"),
-        hasArgument(0, declRefExpr(to(varDecl(isInStdNamespace())))));
+        hasArgument(0, declRefExpr(to(varDecl(isInStdNamespaceOrNested())))));
 
     Finder->addMatcher(
-        lambdaExpr(hasDefaultCapture(),
-                   unless(hasAncestor(anyOf(StdFunctionCall, StdNiebloidCall))))
+        lambdaExpr(
+            hasDefaultCapture(),
+            unless(hasAncestor(stmt(anyOf(StdFunctionCall, StdNiebloidCall)))))
             .bind("lambda"),
         this);
   } else {
@@ -80,9 +98,9 @@ void AvoidDefaultLambdaCaptureCheck::check(
     ImplicitCaptures.push_back(generateCaptureText(Capture));
   }
 
-  auto Diag = diag(DefaultCaptureLoc,
-                   "lambda uses default capture mode; explicitly capture "
-                   "variables instead");
+  const auto Diag = diag(DefaultCaptureLoc,
+                         "lambda uses default capture mode; explicitly capture "
+                         "variables instead");
 
   // For template-dependent lambdas, the list of captures hasn't been created
   // yet, so the list of implicit captures is empty.

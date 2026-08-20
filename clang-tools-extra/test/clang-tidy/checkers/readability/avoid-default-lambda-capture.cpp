@@ -24,6 +24,17 @@ void test_default_captures() {
   // CHECK-FIXES: auto lambda4 = [&another, value](int x) { return value + another + x; };
 }
 
+// A default capture that captures nothing is removed entirely.
+void test_unused_default_captures() {
+  auto lambda1 = [&]() {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda1 = []() {};
+
+  auto lambda2 = [=]() {};
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES: auto lambda2 = []() {};
+}
+
 #if __cplusplus >= 202002L
 template<typename... Args>
 void test_pack_expansion_captures(Args... args) {
@@ -236,15 +247,15 @@ void test_stl_ranges_captures() {
   int arr[] = {1, 2, 3};
 
   std::ranges::all_of(arr, [=](int i) { return i > x; });
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:28: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:29: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES-DEFAULT: std::ranges::all_of(arr, [x](int i) { return i > x; });
 
   std::ranges::any_of(arr, [&](int i) { return i > x; });
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:28: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:29: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES-DEFAULT: std::ranges::any_of(arr, [&x](int i) { return i > x; });
 
   std::ranges::none_of(arr, [=](int i) { return i < 0; });
-  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:29: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:30: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES-DEFAULT: std::ranges::none_of(arr, [](int i) { return i < 0; });
 }
 
@@ -263,14 +274,14 @@ void test_stl_nested_lambda() {
     // With IgnoreInSTL=true, this also doesn't warn because
     // it has an ancestor in std namespace.
     auto nested = [&]() { return i; };
-    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:20: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES-DEFAULT: auto nested = [&i]() { return i; };
     (void)nested;
   });
 
   std::ranges::all_of(arr, [](int i) {
     auto nested = [=]() { return i * 2; };
-    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:20: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
     // CHECK-FIXES-DEFAULT: auto nested = [i]() { return i * 2; };
     (void)nested;
     return true;
