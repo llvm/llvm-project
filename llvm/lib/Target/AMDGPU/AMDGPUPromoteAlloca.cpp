@@ -40,7 +40,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
@@ -52,60 +51,6 @@
 using namespace llvm;
 
 namespace {
-
-/// Wrapper around SSAUpdater that uses TrackingVH to keep available values
-/// up-to-date when the original values are RAUW'd or deleted.  The plain
-/// SSAUpdater stores raw Value* pointers that become dangling when a value it
-/// holds is replaced and erased.
-class TrackingSSAUpdater {
-  SSAUpdater Updater;
-  DenseMap<BasicBlock *, TrackingVH<Value>> TrackedVals;
-
-public:
-  explicit TrackingSSAUpdater(
-      SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr)
-      : Updater(InsertedPHIs) {}
-
-  void Initialize(Type *Ty, StringRef Name) {
-    Updater.Initialize(Ty, Name);
-    TrackedVals.clear();
-  }
-
-  void AddAvailableValue(BasicBlock *BB, Value *V) {
-    TrackedVals[BB] = TrackingVH<Value>(V);
-    Updater.AddAvailableValue(BB, V);
-  }
-
-  Value *FindValueForBlock(BasicBlock *BB) const {
-    auto It = TrackedVals.find(BB);
-    if (It == TrackedVals.end())
-      return nullptr;
-    Value *Tracked = It->second;
-    Value *Raw = Updater.FindValueForBlock(BB);
-    if (Raw && Raw != Tracked) {
-      // The tracked value was RAUW'd; update the inner SSAUpdater.
-      const_cast<TrackingSSAUpdater *>(this)->Updater.AddAvailableValue(
-          BB, Tracked);
-    }
-    return Tracked;
-  }
-
-  Value *GetValueInMiddleOfBlock(BasicBlock *BB) {
-    syncAll();
-    return Updater.GetValueInMiddleOfBlock(BB);
-  }
-
-  Value *GetValueAtEndOfBlock(BasicBlock *BB) {
-    syncAll();
-    return Updater.GetValueAtEndOfBlock(BB);
-  }
-
-private:
-  void syncAll() {
-    for (auto &[BB, VH] : TrackedVals)
-      Updater.AddAvailableValue(BB, VH);
-  }
-};
 
 static cl::opt<bool>
     DisablePromoteAllocaToVector("disable-promote-alloca-to-vector",
@@ -1171,7 +1116,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   const unsigned ElementSize = DL.getTypeSizeInBits(VecEltTy) / 8;
 
   // Alloca is uninitialized memory. Imitate that by making the first value
-  // undef.  Use TrackingSSAUpdater so that values RAUW'd after being
+  // undef. Use TrackingSSAUpdater so that values RAUW'd after being
   // registered (e.g. a forwarded load) are automatically kept up-to-date.
   TrackingSSAUpdater Updater;
   Updater.Initialize(AA.Vector.Ty, "promotealloca");

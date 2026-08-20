@@ -14,7 +14,9 @@
 #define LLVM_TRANSFORMS_UTILS_SSAUPDATER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/ValueHandle.h"
 #include <string>
 
 namespace llvm {
@@ -136,6 +138,59 @@ public:
 private:
   Value *GetValueAtEndOfBlockInternal(BasicBlock *BB);
   void UpdateDebugValue(Instruction *I, DbgVariableRecord *DbgValue);
+};
+
+/// Wrapper around SSAUpdater that uses TrackingVH to keep available values
+/// up-to-date when the original values are RAUW'd or deleted.  The plain
+/// SSAUpdater stores raw Value* pointers that become dangling when a value it
+/// holds is replaced and erased.
+class TrackingSSAUpdater {
+  SSAUpdater Updater;
+  DenseMap<BasicBlock *, TrackingVH<Value>> TrackedVals;
+
+public:
+  explicit TrackingSSAUpdater(
+      SmallVectorImpl<PHINode *> *InsertedPHIs = nullptr)
+      : Updater(InsertedPHIs) {}
+
+  void Initialize(Type *Ty, StringRef Name) {
+    Updater.Initialize(Ty, Name);
+    TrackedVals.clear();
+  }
+
+  void AddAvailableValue(BasicBlock *BB, Value *V) {
+    TrackedVals[BB] = TrackingVH<Value>(V);
+    Updater.AddAvailableValue(BB, V);
+  }
+
+  Value *FindValueForBlock(BasicBlock *BB) const {
+    auto It = TrackedVals.find(BB);
+    if (It == TrackedVals.end())
+      return nullptr;
+    Value *Tracked = It->second;
+    Value *Raw = Updater.FindValueForBlock(BB);
+    if (Raw && Raw != Tracked) {
+      const_cast<TrackingSSAUpdater *>(this)->Updater.AddAvailableValue(
+          BB, Tracked);
+    }
+    return Tracked;
+  }
+
+  Value *GetValueInMiddleOfBlock(BasicBlock *BB) {
+    syncAll();
+    return Updater.GetValueInMiddleOfBlock(BB);
+  }
+
+  Value *GetValueAtEndOfBlock(BasicBlock *BB) {
+    syncAll();
+    return Updater.GetValueAtEndOfBlock(BB);
+  }
+
+private:
+  void syncAll() {
+    for (auto &[BB, VH] : TrackedVals)
+      Updater.AddAvailableValue(BB, VH);
+  }
 };
 
 /// Helper class for promoting a collection of loads and stores into SSA
