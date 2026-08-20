@@ -37,7 +37,7 @@ public:
 
   llvm::StringRef GetPluginName() override;
 
-  size_t ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+  size_t ReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
                     Status &error) override;
 
   bool CanDebug(lldb::TargetSP target_sp,

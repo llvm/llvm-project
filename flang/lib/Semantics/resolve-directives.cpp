@@ -1774,6 +1774,11 @@ void AccAttributeVisitor::EnsureAllocatableOrPointer(
         common::visitors{
             [&](const parser::Designator &designator) {
               const auto &lastName{GetLastName(designator)};
+              if (!lastName.symbol) {
+                // Name resolution failed for this designator and has already
+                // emitted an error; there is nothing left to check.
+                return;
+              }
               if (!IsAllocatableOrObjectPointer(lastName.symbol)) {
                 context_.Say(designator.source,
                     "Argument `%s` on the %s clause must be a variable or "

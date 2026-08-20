@@ -400,8 +400,6 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
   }
 
   return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
-                                          /*packed=*/recordTy.getPacked(),
-                                          /*padded=*/recordTy.getPadded(),
                                           recordTy);
 }
 

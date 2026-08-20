@@ -17,6 +17,8 @@
 #include "orc-rt/Service.h"
 #include "orc-rt/sps-ci/NativeDylibManagerSPSCI.h"
 
+#include <optional>
+
 namespace orc_rt {
 
 class Session;

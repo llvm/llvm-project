@@ -382,8 +382,8 @@ static bool shouldIgnoreUnsupportedTargetFeature(const Arg &TargetFeatureArg,
   if (!T.isAMDGCN())
     return false;
   llvm::AMDGPU::GPUKind GPUKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
-  unsigned GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-  if (GPUFeatures & llvm::AMDGPU::FEATURE_WGP)
+  if (llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+          llvm::AMDGPU::FEAT_SUPPORTS_WGP))
     return false;
   return TargetFeatureArg.getOption().matches(options::OPT_mno_cumode);
 }
@@ -3084,6 +3084,23 @@ void tools::addMachineOutlinerArgs(const Driver &D,
   // For codegen data use, the input file is passed to the LLVM backend.
   if (CodeGenDataUseArg)
     addArg(Twine("-codegen-data-use-path=") + CodeGenDataUseArg->getValue());
+}
+
+void tools::addSplitMachineFunctionsArgs(const Driver &D,
+                                         const llvm::opt::ArgList &Args,
+                                         llvm::opt::ArgStringList &CmdArgs,
+                                         const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
+                               options::OPT_fno_split_machine_functions)) {
+    if (!A->getOption().matches(options::OPT_fno_split_machine_functions)) {
+      // This codegen pass is only available on x86 and AArch64 ELF targets.
+      if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF())
+        A->render(Args, CmdArgs);
+      else
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << A->getAsString(Args) << Triple.getTriple();
+    }
+  }
 }
 
 void tools::addOpenMPDeviceRTL(const Driver &D,

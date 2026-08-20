@@ -68,7 +68,7 @@ public:
   virtual InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const {
+                       const TTI::TargetCostKind CostKind) const {
     llvm_unreachable("Not implemented");
   }
 

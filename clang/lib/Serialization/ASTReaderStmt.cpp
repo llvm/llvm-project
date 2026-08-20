@@ -2095,6 +2095,17 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
   E->SubExpr = Record.readSubExpr();
 }
 
+void ASTStmtReader::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  unsigned NumTemplateArgs = Record.readInt();
+  assert(NumTemplateArgs == E->getNumTemplateArgs() &&
+         "Wrong NumTemplateArgs!");
+  ReadTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects(),
+                            NumTemplateArgs);
+  E->NameInfo = Record.readDeclarationNameInfo();
+  E->Name = Record.readTemplateName();
+}
+
 void ASTStmtReader::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
@@ -4408,6 +4419,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           HasFirstQualifierFoundInScope);
       break;
     }
+
+    case EXPR_DEPENDENT_TEMPLATE_ID:
+      S = DependentTemplateIdExpr::CreateEmpty(
+          Context, /*NumTemplateArgs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
 
     case EXPR_CXX_DEPENDENT_SCOPE_DECL_REF: {
       BitsUnpacker DependentScopeDeclRefBits(

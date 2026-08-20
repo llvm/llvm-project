@@ -16,6 +16,8 @@
 
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
+#include "llvm/ExecutionEngine/Orc/RecordProxy.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Testing/Support/Error.h"
@@ -88,7 +90,7 @@ static_assert(
     std::is_same_v<Proxy<Expected<int>(int)>::ErrorRetT, Expected<int>>);
 
 // A minimal ProxySpec-shaped type (static dispatch + Name) for exercising the
-// proxyInit / buildProxies client path without depending on a protocol.
+// recordProxy client path without depending on a protocol.
 struct AddOneSpec {
   static constexpr const char *Name = "add_one";
   static void dispatch(unique_function<void(Expected<int32_t>)> OnComplete,
@@ -138,58 +140,22 @@ TEST(ProxyTest, OperatorBoolAndAccessors) {
   cantFail(ES.endSession());
 }
 
-// Create looks the callee up by name in the bootstrap JITDylib and binds a
-// usable proxy to it (required-symbol, present).
-TEST(ProxyTest, CreateRequiredPresent) {
+// A required (default) recordProxy against a missing symbol fails the whole
+// lookup, rather than yielding a null proxy as the weakly-referenced form does.
+TEST(ProxyTest, RecordProxyRequiredAbsentFails) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
-  auto &JD = ES.getBootstrapJITDylib();
-  cantFail(JD.define(absoluteSymbols(
-      {{ES.intern(AddOneSpec::Name),
-        {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
-
-  Expected<AddOneProxy> Call = AddOneProxy::Create(
-      AddOneDispatch, ES, AddOneSpec::Name, SymbolLookupFlags::RequiredSymbol);
-  ASSERT_THAT_EXPECTED(Call, Succeeded());
-  EXPECT_TRUE(static_cast<bool>(*Call));
-
-  Expected<int32_t> R = (*Call)(ES, 41);
-  ASSERT_THAT_EXPECTED(R, Succeeded());
-  EXPECT_EQ(*R, 42);
+  AddOneProxy Call;
+  EXPECT_THAT_ERROR(lookupAndApply(ES.getBootstrapJITDylib(),
+                                   {recordProxy<AddOneSpec>(&Call)}),
+                    Failed());
 
   cantFail(ES.endSession());
 }
 
-// A required (default) Create against a missing symbol fails, rather than
-// yielding a null proxy as the weakly-referenced form does.
-TEST(ProxyTest, CreateRequiredAbsentFails) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
-
-  Expected<AddOneProxy> Call = AddOneProxy::Create(
-      AddOneDispatch, ES, AddOneSpec::Name, SymbolLookupFlags::RequiredSymbol);
-  EXPECT_THAT_EXPECTED(Call, Failed());
-
-  cantFail(ES.endSession());
-}
-
-// A weakly-referenced Create against a missing symbol succeeds, yielding a
-// proxy with a null callee (falsey) rather than an error.
-TEST(ProxyTest, CreateWeaklyReferencedAbsent) {
-  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
-
-  Expected<AddOneProxy> Call =
-      AddOneProxy::Create(AddOneDispatch, ES, AddOneSpec::Name,
-                          SymbolLookupFlags::WeaklyReferencedSymbol);
-  ASSERT_THAT_EXPECTED(Call, Succeeded());
-  EXPECT_FALSE(static_cast<bool>(*Call));
-  EXPECT_EQ(Call->calleeAddr(), ExecutorAddr());
-
-  cantFail(ES.endSession());
-}
-
-// A weakly-referenced Create against a present symbol resolves it, yielding a
-// usable proxy (truthy) bound to the registered address.
-TEST(ProxyTest, CreateWeaklyReferencedPresent) {
+// A weakly-referenced recordProxy against a present symbol resolves it,
+// yielding a usable proxy (truthy) bound to the registered address.
+TEST(ProxyTest, RecordProxyWeaklyReferencedPresent) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   auto &JD = ES.getBootstrapJITDylib();
@@ -198,19 +164,19 @@ TEST(ProxyTest, CreateWeaklyReferencedPresent) {
       JD.define(absoluteSymbols({{ES.intern(AddOneSpec::Name),
                                   {CalleeAddr, JITSymbolFlags::Exported}}})));
 
-  Expected<AddOneProxy> Call =
-      AddOneProxy::Create(AddOneDispatch, ES, AddOneSpec::Name,
-                          SymbolLookupFlags::WeaklyReferencedSymbol);
-  ASSERT_THAT_EXPECTED(Call, Succeeded());
-  EXPECT_TRUE(static_cast<bool>(*Call));
-  EXPECT_EQ(Call->calleeAddr(), CalleeAddr);
+  AddOneProxy Call;
+  cantFail(lookupAndApply(
+      JD, {recordProxy<AddOneSpec>(
+              &Call, SymbolLookupFlags::WeaklyReferencedSymbol)}));
+  EXPECT_TRUE(static_cast<bool>(Call));
+  EXPECT_EQ(Call.calleeAddr(), CalleeAddr);
 
   cantFail(ES.endSession());
 }
 
-// buildProxies resolves a set of proxies from the bootstrap JITDylib via their
-// specs, exercising the proxyInit / buildProxies client entry point.
-TEST(ProxyTest, BuildProxies) {
+// recordProxy resolves a proxy from the bootstrap JITDylib via its spec,
+// exercising the recordProxy / lookupAndApply client entry point.
+TEST(ProxyTest, RecordProxy) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   auto &JD = ES.getBootstrapJITDylib();
@@ -219,7 +185,7 @@ TEST(ProxyTest, BuildProxies) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(buildProxies(ES, proxyInit<AddOneSpec>(&Call)));
+  cantFail(lookupAndApply(JD, {recordProxy<AddOneSpec>(&Call)}));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -229,9 +195,9 @@ TEST(ProxyTest, BuildProxies) {
   cantFail(ES.endSession());
 }
 
-// buildProxies with an explicitly-supplied dispatch function and name -- the
-// proxyInit overload that takes no spec type.
-TEST(ProxyTest, BuildProxiesExplicitDispatch) {
+// recordProxy with an explicitly-supplied dispatch function and name -- the
+// overload that takes no spec type.
+TEST(ProxyTest, RecordProxyExplicitDispatch) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   auto &JD = ES.getBootstrapJITDylib();
@@ -240,8 +206,8 @@ TEST(ProxyTest, BuildProxiesExplicitDispatch) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(
-      buildProxies(ES, proxyInit(&Call, AddOneDispatch, AddOneSpec::Name)));
+  cantFail(lookupAndApply(
+      JD, {recordProxy(&Call, AddOneDispatch, AddOneSpec::Name)}));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -251,11 +217,11 @@ TEST(ProxyTest, BuildProxiesExplicitDispatch) {
   cantFail(ES.endSession());
 }
 
-// buildProxies with a spec but an overridden lookup name -- the proxyInit
-// overload that takes a spec type plus an explicit name. The symbol is defined
-// only under the override name, so resolving against the spec's default Name
-// would fail; success proves the override is used.
-TEST(ProxyTest, BuildProxiesSpecNameOverride) {
+// recordProxy with a spec but an overridden lookup name -- the overload that
+// takes a spec type plus an explicit name. The symbol is defined only under the
+// override name, so resolving against the spec's default Name would fail;
+// success proves the override is used.
+TEST(ProxyTest, RecordProxySpecNameOverride) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   auto &JD = ES.getBootstrapJITDylib();
@@ -264,7 +230,8 @@ TEST(ProxyTest, BuildProxiesSpecNameOverride) {
         {ExecutorAddr::fromPtr(addOne), JITSymbolFlags::Exported}}})));
 
   AddOneProxy Call;
-  cantFail(buildProxies(ES, proxyInit<AddOneSpec>(&Call, "add_one_alias")));
+  cantFail(
+      lookupAndApply(JD, {recordProxy<AddOneSpec>(&Call, "add_one_alias")}));
   ASSERT_TRUE(static_cast<bool>(Call));
 
   Expected<int32_t> R = Call(ES, 41);
@@ -274,15 +241,16 @@ TEST(ProxyTest, BuildProxiesSpecNameOverride) {
   cantFail(ES.endSession());
 }
 
-// buildProxies propagates the lookup flags: a weakly-referenced proxyInit for a
-// missing symbol yields a null proxy rather than failing the whole build.
-TEST(ProxyTest, BuildProxiesWeaklyReferencedAbsent) {
+// lookupAndApply propagates the lookup flags: a weakly-referenced recordProxy
+// for a missing symbol yields a null proxy rather than failing the lookup.
+TEST(ProxyTest, RecordProxyWeaklyReferencedAbsent) {
   ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
 
   AddOneProxy Call;
-  cantFail(buildProxies(
-      ES,
-      proxyInit<AddOneSpec>(&Call, SymbolLookupFlags::WeaklyReferencedSymbol)));
+  cantFail(
+      lookupAndApply(ES.getBootstrapJITDylib(),
+                     {recordProxy<AddOneSpec>(
+                         &Call, SymbolLookupFlags::WeaklyReferencedSymbol)}));
   EXPECT_FALSE(static_cast<bool>(Call));
 
   cantFail(ES.endSession());

@@ -44,11 +44,12 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
     : ABIVer(DeviceLibABIVersion::fromCodeObjectVersion(
           tools::getAMDGPUCodeObjectVersion(D, DriverArgs))) {
   const auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(Kind);
 
   IsOpenMP = DeviceOffloadingKind == Action::OFK_OpenMP;
 
-  const bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  const bool HasWave32 = Features.test(llvm::AMDGPU::FEAT_SUPPORTS_WAVE32);
   Wave64 =
       !HasWave32 || DriverArgs.hasFlag(options::OPT_mwavefrontsize64,
                                        options::OPT_mno_wavefrontsize64, false);
@@ -61,8 +62,8 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
   const bool DefaultDAZ =
       (Kind == llvm::AMDGPU::GK_NONE)
           ? false
-          : !((ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
-              (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32));
+          : !(Features.test(llvm::AMDGPU::FEAT_FAST_FMAF) &&
+              Features.test(llvm::AMDGPU::FEAT_FAST_DENORMAL_F32));
   // TODO: There are way too many flags that change this. Do we need to
   // check them all?
   DAZ = IsKnownOffloading
@@ -861,13 +862,14 @@ bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
   if (Kind == llvm::AMDGPU::GK_NONE)
     return false;
 
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(Kind);
 
   // Default to enabling f32 denormals by default on subtargets where fma is
   // fast with denormals
   const bool BothDenormAndFMAFast =
-      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
-      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+      Features.test(llvm::AMDGPU::FEAT_FAST_FMAF) &&
+      Features.test(llvm::AMDGPU::FEAT_FAST_DENORMAL_F32);
   return !BothDenormAndFMAFast;
 }
 
@@ -909,8 +911,8 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
 
 bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
                                llvm::AMDGPU::GPUKind Kind) {
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
-  bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  bool HasWave32 = llvm::AMDGPU::getFeatureBitset(Kind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32);
 
   return !HasWave32 || DriverArgs.hasFlag(
     options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
