@@ -2575,6 +2575,40 @@ public:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
                                      cast<VectorType>(ICA.getArgTypes()[0]),
                                      CostKind, {}, 0, cast<VectorType>(RetTy));
+    case Intrinsic::vector_shuffle: {
+      auto *VecTy = cast<VectorType>(RetTy);
+      auto *MaskTy = cast<VectorType>(ICA.getArgTypes()[1]);
+      std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
+
+      // On a target that lowers the run-time-mask shuffle natively, each legal
+      // part of the result is one permute of every legal part of the source,
+      // with a select to merge each extra source part in, plus the fixup that
+      // turns the indices into whatever form the permute wants.
+      if (getTLI()->isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE_VAR,
+                                             LT.second)) {
+        InstructionCost Parts = LT.first;
+        return Parts * Parts + Parts * (Parts - 1) +
+               getTypeLegalizationCost(MaskTy).first;
+      }
+
+      // Otherwise it expands to a stack round-trip: the source is spilled once
+      // and every result lane is reloaded through its own variable index.
+      auto *FixedVecTy = dyn_cast<FixedVectorType>(VecTy);
+      if (!FixedVecTy)
+        return InstructionCost::getInvalid();
+
+      Type *EltTy = FixedVecTy->getElementType();
+      InstructionCost Cost = thisT()->getMemoryOpCost(
+          Instruction::Store, VecTy, DL.getABITypeAlign(VecTy), 0, CostKind);
+      Cost += getScalarizationOverhead(MaskTy, /*Insert=*/false,
+                                       /*Extract=*/true, CostKind);
+      Cost += FixedVecTy->getNumElements() *
+              thisT()->getMemoryOpCost(Instruction::Load, EltTy,
+                                       DL.getABITypeAlign(EltTy), 0, CostKind);
+      Cost += getScalarizationOverhead(VecTy, /*Insert=*/true,
+                                       /*Extract=*/false, CostKind);
+      return Cost;
+    }
     case Intrinsic::experimental_vector_histogram_add:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
