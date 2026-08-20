@@ -16,6 +16,7 @@ define i32 @f0(i32 %a) "sign-return-address"="all" "sign-return-address-harden"=
 ; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-NO-PAUTH-NEXT:    hint #29
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -44,6 +45,7 @@ define i32 @f1(i32 %a) "sign-return-address"="all" "sign-return-address-harden"=
 ; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-NO-PAUTH-NEXT:    hint #31
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -76,6 +78,7 @@ define i32 @f2(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-har
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NO-PAUTH-NEXT:    hint #29
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -112,6 +115,7 @@ define i32 @f3(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-har
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NO-PAUTH-NEXT:    hint #31
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -255,6 +259,7 @@ define void @stackprotector() sspreq "sign-return-address"="all" "sign-return-ad
 ; CHECK-NO-PAUTH-NEXT:    add sp, sp, #32
 ; CHECK-NO-PAUTH-NEXT:    hint #29
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -301,6 +306,7 @@ define i32 @f8(i32 %a) "ptrauth-returns" "sign-return-address-harden"="load-retu
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NO-PAUTH-NEXT:    hint #31
 ; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
 ; CHECK-NO-PAUTH-NEXT:    ret x8
@@ -368,4 +374,70 @@ define i32 @f10(i32 %a) "sign-return-address"="non-leaf" "sign-return-address-ha
 entry:
   %add = add nsw i32 %a, 1
   ret i32 %add
+}
+
+; Check multiple return blocks case
+define i32 @f11(i32 %a) noinline optnone "sign-return-address"="non-leaf" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" {
+; CHECK-NO-PAUTH-LABEL: f11:
+; CHECK-NO-PAUTH:       // %bb.0: // %entry
+; CHECK-NO-PAUTH-NEXT:    hint #25
+; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-NO-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NO-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NO-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-NO-PAUTH-NEXT:    bl foo
+; CHECK-NO-PAUTH-NEXT:    cbz w0, .LBB12_2
+; CHECK-NO-PAUTH-NEXT:    b .LBB12_1
+; CHECK-NO-PAUTH-NEXT:  .LBB12_1: // %bb2
+; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NO-PAUTH-NEXT:    hint #29
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
+; CHECK-NO-PAUTH-NEXT:    hint #7
+; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
+; CHECK-NO-PAUTH-NEXT:    ret x8
+; CHECK-NO-PAUTH-NEXT:  .LBB12_2: // %bb1
+; CHECK-NO-PAUTH-NEXT:    subs w0, w0, #1
+; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NO-PAUTH-NEXT:    hint #29
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    .cfi_register w30, w8
+; CHECK-NO-PAUTH-NEXT:    hint #7
+; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
+; CHECK-NO-PAUTH-NEXT:    ret x8
+;
+; CHECK-PAUTH-LABEL: f11:
+; CHECK-PAUTH:       // %bb.0: // %entry
+; CHECK-PAUTH-NEXT:    paciasp
+; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-PAUTH-NEXT:    bl foo
+; CHECK-PAUTH-NEXT:    cbz w0, .LBB12_2
+; CHECK-PAUTH-NEXT:    b .LBB12_1
+; CHECK-PAUTH-NEXT:  .LBB12_1: // %bb2
+; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-PAUTH-NEXT:    autiasp
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
+; CHECK-PAUTH-NEXT:    ret{{$}}
+; CHECK-PAUTH-NEXT:  .LBB12_2: // %bb1
+; CHECK-PAUTH-NEXT:    subs w0, w0, #1
+; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-PAUTH-NEXT:    autiasp
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
+; CHECK-PAUTH-NEXT:    ret{{$}}
+entry:
+  %call = call i32 @foo(i32 %a)
+  %b = icmp eq i32 %call, 0
+  br i1 %b, label %bb1, label %bb2
+bb2:
+  ret i32 %call
+bb1:
+  %c = sub i32 %call, 1
+  ret i32 %c
 }

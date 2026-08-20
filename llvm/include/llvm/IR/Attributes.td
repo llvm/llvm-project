@@ -475,6 +475,7 @@ def : CompatRule<"checkDenormMode">;
 def : CompatRule<"checkStrictFP">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address">;
 def : CompatRuleStrAttr<"isEqual", "sign-return-address-key">;
+def : CompatRuleStrAttr<"isEqual", "sign-return-address-harden">;
 def : CompatRuleStrAttr<"isEqual", "branch-protection-pauth-lr">;
 
 class MergeRule<string F> {

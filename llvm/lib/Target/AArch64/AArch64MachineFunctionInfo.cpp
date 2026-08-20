@@ -136,7 +136,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
             .Case("none", SignReturnAddressHardeningKind::None)
             .Case("load-return-address",
                   SignReturnAddressHardeningKind::LoadReturnAddress)
-            .Default(SignReturnAddressHardeningKind::None);
+            .DefaultUnreachable();
   }
 
   // BTI/PAuthLR are set on the function attribute.

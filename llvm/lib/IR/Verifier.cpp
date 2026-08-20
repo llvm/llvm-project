@@ -2674,6 +2674,18 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     }
   }
 
+  if (auto A = Attrs.getFnAttr("sign-return-address-harden"); A.isValid()) {
+    StringRef S = A.getValueAsString();
+    if (S != "load-return-address" && S != "none")
+      CheckFailed(
+          "invalid value for 'sign-return-address-harden' attribute: " + S, V);
+    if (auto SignRetA = Attrs.getFnAttr("sign-return-address"),
+        PAuthRetA = Attrs.getFnAttr("ptrauth-returns");
+        !SignRetA.isValid() && !PAuthRetA.isValid())
+      CheckFailed("'sign-return-address-harden' present without "
+                  "`sign-return-address` or `ptrauth-returns`");
+  }
+
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
     if (S != "" && S != "true" && S != "false")

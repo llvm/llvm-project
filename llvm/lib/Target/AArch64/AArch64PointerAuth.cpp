@@ -238,6 +238,18 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   }
 }
 
+static inline void emitMOV(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator &MBBI, DebugLoc DL,
+                           const AArch64InstrInfo *TII, Register Dst,
+                           Register Src) {
+  assert(&MBB == MBBI->getParent());
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Dst)
+      .addReg(AArch64::XZR)
+      .addReg(Src)
+      .addImm(0)
+      .setMIFlag(MachineInstr::FrameDestroy);
+}
+
 void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
                                     MachineBasicBlock::iterator MBBI) const {
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
@@ -439,16 +451,8 @@ void AArch64PointerAuthImpl::authenticateLR(
                   StackOffset::getFixed(Offset), TII,
                   MachineInstr::FrameDestroy);
 
-  auto emitMOV = [&](Register Dst, Register Src) {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), Dst)
-        .addReg(AArch64::XZR)
-        .addReg(Src)
-        .addImm(0)
-        .setMIFlag(MachineInstr::FrameDestroy);
-  };
-
   if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
-    emitMOV(AArch64::X17, AArch64::LR);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
@@ -458,9 +462,9 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
-    emitMOV(AArch64::LR, AArch64::X17);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   } else if (MFnI->branchProtectionPAuthLR()) {
-    emitMOV(AArch64::X17, AArch64::LR);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     assert(PACSym && "No PAC instruction to refer to");
     emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
@@ -478,7 +482,7 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
-    emitMOV(AArch64::LR, AArch64::X17);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   } else if (Subtarget->hasPAuth()) {
     BuildMI(MBB, MBBI, DL, TII->get(UseBKey ? AArch64::AUTIB : AArch64::AUTIA),
             AArch64::LR)
@@ -487,14 +491,14 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
   } else {
-    emitMOV(AArch64::X17, AArch64::LR);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::X17, AArch64::LR);
 
     unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
     BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
         .setMIFlag(MachineInstr::FrameDestroy);
     emitAUTCFI(MBB, MBBI, EmitAsyncCFI);
 
-    emitMOV(AArch64::LR, AArch64::X17);
+    emitMOV(MBB, MBBI, DL, TII, AArch64::LR, AArch64::X17);
   }
 
   if (NeedsWinCFI) {
@@ -575,64 +579,79 @@ bool AArch64PointerAuthImpl::emitSignReturnAddressHardening(
   RegScavenger RS;
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF) {
-    if (!MBB.isReturnBlock())
+    MachineBasicBlock::iterator RetInstIter = MBB.getFirstTerminator();
+
+    if (RetInstIter == MBB.end() || RetInstIter->getOpcode() != AArch64::RET)
       continue;
 
-    MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
-
-    if (MBBI == MBB.end() || MBBI->getOpcode() != AArch64::RET)
-      continue;
-
-    assert(MBBI->getOperand(0).getReg() == AArch64::LR &&
+    assert(RetInstIter->getOperand(0).getReg() == AArch64::LR &&
            "Return instruction must be returning via LR");
+
+    MachineBasicBlock::iterator InsertionPoint = RetInstIter;
+    // In the case of Windows SEH, the hardening sequence does not immediately
+    // precede the return instruction. Instead, it precedes the SEH_EpilogEnd
+    // pseudo-instruction, which itself is expected to be the predecessor of
+    // the return. Plus, each instruction in the sequence needs one SEH_Nop.
+    const bool NeedsWinCFI = MF.hasWinCFI();
+    if (NeedsWinCFI) {
+      --InsertionPoint;
+      assert(InsertionPoint->getOpcode() == AArch64::SEH_EpilogEnd);
+    }
+    DebugLoc DL = InsertionPoint->getDebugLoc();
+    const auto emitSEHNopIfRequired = [&, NeedsWinCFI]() {
+      if (NeedsWinCFI)
+        BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::SEH_Nop))
+            .setMIFlag(MachineInstr::FrameDestroy);
+    };
 
     RS.enterBasicBlockEnd(MBB);
     Register XReg = RS.scavengeRegisterBackwards(
-        AArch64::GPR64RegClass, MBBI,
+        AArch64::GPR64RegClass, InsertionPoint,
         /*RestoreAfter=*/false, /*SPAdj=*/0, /*AllowSpill=*/false);
     if (XReg == AArch64::NoRegister)
       // Couldn't find a free register to use for the hardening. Skip.
       continue;
 
-    DebugLoc DL = MBBI->getDebugLoc();
-
     // Register copies are done using ORRXrs directly instead of using the
     // pseudo-instruction COPY because this function can be called after
     // pseudo-instruction expansion takes place, for example via the machine
     // outliner pass.
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), XReg)
-        .addUse(AArch64::XZR)
-        .addUse(AArch64::LR)
-        .addImm(0)
-        .setMIFlag(MachineInstr::FrameDestroy);
+    emitMOV(MBB, InsertionPoint, DL, TII, XReg, AArch64::LR);
+    emitSEHNopIfRequired();
 
     // The XPACI instruction is only available with FEAT_PAUTH. So if the
     // subtarget does not have it, the alternative XPACLRI instruction must be
     // used instead. The latter is in hint space, therefore can be present even
     // if FEAT_PAUTH is absent.
     if (Subtarget->hasPAuth()) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::XPACI), XReg)
+      BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::XPACI), XReg)
           .addUse(XReg)
           .setMIFlag(MachineInstr::FrameDestroy);
+      emitSEHNopIfRequired();
       Register WReg =
           Subtarget->getRegisterInfo()->getSubReg(XReg, AArch64::sub_32);
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), WReg)
+      BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::LDRWui), WReg)
           .addUse(XReg)
           .addImm(0)
           .setMIFlag(MachineInstr::FrameDestroy);
+      emitSEHNopIfRequired();
     } else {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::XPACLRI))
+      // Emit a CFI directive to tell unwinders that the return address is now
+      // saved in XReg.
+      CFIInstBuilder(MBB, InsertionPoint, MachineInstr::FrameDestroy)
+          .buildRegister(AArch64::LR, XReg);
+      BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::XPACLRI))
           .setMIFlag(MachineInstr::FrameDestroy);
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRWui), AArch64::W30)
+      emitSEHNopIfRequired();
+      BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::LDRWui), AArch64::W30)
           .addUse(AArch64::LR)
           .addImm(0)
           .setMIFlag(MachineInstr::FrameDestroy);
-      if (MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET) {
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::RET))
-            .addUse(XReg)
-            .copyImplicitOps(*MBBI);
-        MBB.erase(MBBI);
-      }
+      emitSEHNopIfRequired();
+      BuildMI(MBB, RetInstIter, DL, TII->get(AArch64::RET))
+          .addUse(XReg)
+          .copyImplicitOps(*RetInstIter);
+      MBB.erase(RetInstIter);
     }
     Modified = true;
   }

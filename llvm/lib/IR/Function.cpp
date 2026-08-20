@@ -432,6 +432,8 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                        ? "b_key"
                        : "a_key");
   }
+  if (isModuleAttributeSet("sign-return-address-harden-load-return-address"))
+    B.addAttribute("sign-return-address-harden", "load-return-address");
   AddAttributeIfSet("branch-target-enforcement");
   AddAttributeIfSet("branch-protection-pauth-lr");
   AddAttributeIfSet("guarded-control-stack");
