@@ -256,11 +256,30 @@ std::optional<Label> GetFinalLabel(const OpenMPConstruct &x) {
       x.u);
 }
 
+// The DO loop associated with a loop or combined construct is only terminated
+// by a labeled statement when the construct has no end directive.
+template <typename END, typename C>
+static std::optional<Label> GetFinalLabelOfAssociatedLoop(const C &x) {
+  if (std::get<std::optional<END>>(x.t)) {
+    return std::nullopt;
+  }
+  if (const auto &doLoop{std::get<std::optional<DoConstruct>>(x.t)}) {
+    return GetFinalLabel(std::get<Block>(doLoop->t));
+  }
+  return std::nullopt;
+}
+
 std::optional<Label> GetFinalLabel(const OpenACCConstruct &x) {
   return common::visit(
       common::visitors{
           [](const OpenACCBlockConstruct &x) -> std::optional<Label> {
             return GetFinalLabel(std::get<Block>(x.t));
+          },
+          [](const OpenACCLoopConstruct &x) -> std::optional<Label> {
+            return GetFinalLabelOfAssociatedLoop<AccEndLoop>(x);
+          },
+          [](const OpenACCCombinedConstruct &x) -> std::optional<Label> {
+            return GetFinalLabelOfAssociatedLoop<AccEndCombinedDirective>(x);
           },
           [](const OpenACCAtomicConstruct &x) -> std::optional<Label> {
             return common::visit(
