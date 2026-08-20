@@ -33,6 +33,10 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/taskloop-in-shared-section.f90 2>&1 | FileCheck %s --check-prefix=TASKLOOP-IN-SHARED-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 --enable-delayed-privatization=false -o - %t/task-shared-element.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASK-SHARED-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir --enable-delayed-privatization=false -o - %t/task-shared-element.f90 2>&1 | FileCheck %s --check-prefix=EAGER-TASK-SHARED-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/target-element.f90 2>&1 | FileCheck %s --check-prefix=TARGET-ELEMENT
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -53,6 +57,8 @@
 ! TASK-CROSS-SCOPE-BOUNDS: not yet implemented: TASK construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! TASKLOOP-UDR-SHARED-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of a partial array section
 ! TASKLOOP-IN-SHARED-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of a partial array section
+! EAGER-TASK-SHARED-ELEMENT: not yet implemented: TASK construct with IN_REDUCTION of an array element when delayed privatization is disabled
+! TARGET-ELEMENT: not yet implemented: TARGET construct with IN_REDUCTION of an array element
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -62,6 +68,26 @@ subroutine task_reduction_element(a)
   a(2) = a(2) + 1
   !$omp end task
   !$omp end taskgroup
+end subroutine
+
+!--- task-shared-element.f90
+subroutine task_in_reduction_shared_element(a)
+  integer :: a(4)
+  !$omp parallel shared(a)
+  !$omp single
+  !$omp task in_reduction(+: a(2))
+  a(2) = a(2) + 1
+  !$omp end task
+  !$omp end single
+  !$omp end parallel
+end subroutine
+
+!--- target-element.f90
+subroutine target_in_reduction_element(a)
+  integer :: a(4)
+  !$omp target in_reduction(+: a(2)) map(tofrom: a)
+  a(2) = a(2) + 1
+  !$omp end target
 end subroutine
 
 !--- task-section.f90

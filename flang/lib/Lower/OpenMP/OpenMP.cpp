@@ -192,6 +192,25 @@ hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
   return false;
 }
 
+static bool
+hasArrayElementReductionObject(llvm::ArrayRef<Object> reductionObjects) {
+  for (const Object &object : reductionObjects) {
+    if (!object.ref())
+      continue;
+    std::optional<evaluate::DataRef> dataRef =
+        evaluate::ExtractDataRef(*object.ref());
+    if (!dataRef)
+      continue;
+    const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
+    if (arrayRef && llvm::all_of(arrayRef->subscript(),
+                                 [](const evaluate::Subscript &subscript) {
+                                   return subscript.Rank() == 0;
+                                 }))
+      return true;
+  }
+  return false;
+}
+
 /// Structure holding the information needed to create and bind entry block
 /// arguments associated to a single clause during OpenMP lowering.
 struct ObjectEntryBlockArgsEntry {
@@ -4050,6 +4069,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              "TARGET construct with IN_REDUCTION of a privatized variable");
     }
 
+  if (hasArrayElementReductionObject(inReductionObjects))
+    TODO(loc, "TARGET construct with IN_REDUCTION of an array element");
+
   // Collect symbols that have dynamic substring accesses
   llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
@@ -4347,12 +4369,16 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
                  clauseOps, inReductionObjects);
 
-  if (!enableDelayedPrivatization)
+  if (!enableDelayedPrivatization) {
+    if (hasArrayElementReductionObject(inReductionObjects))
+      TODO(loc, "TASK construct with IN_REDUCTION of an array element when "
+                "delayed privatization is disabled");
     return genOpWithBody<mlir::omp::TaskOp>(
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                           llvm::omp::Directive::OMPD_task)
             .setClauses(&item->clauses),
         queue, item, clauseOps);
+  }
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
