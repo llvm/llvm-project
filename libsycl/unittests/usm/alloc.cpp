@@ -14,11 +14,15 @@
 using namespace sycl;
 using namespace ::testing;
 
-TEST(USMFunctions, DeviceAllocation) {
-  constexpr size_t NumBytes = 1024;
-  constexpr size_t Alignment = 256;
-  constexpr size_t DefaultAlign = alignof(std::max_align_t);
+constexpr size_t NumBytes = 1024;
+constexpr size_t Alignment = 256;
+constexpr size_t DefaultAlign = alignof(std::max_align_t);
+static_assert(Alignment != DefaultAlign,
+              "Alignment must differ from DefaultAlign to keep the "
+              "default-aligned and explicitly-aligned EXPECT_CALLs below "
+              "distinguishable");
 
+TEST(USMFunctions, DeviceAllocation) {
   mock::MockWrapper Mock;
   queue Q;
   device Dev = Q.get_device();
@@ -61,10 +65,6 @@ TEST(USMFunctions, DeviceAllocation) {
 }
 
 TEST(USMFunctions, HostAllocation) {
-  constexpr size_t NumBytes = 512;
-  constexpr size_t Alignment = 64;
-  constexpr size_t DefaultAlign = alignof(std::max_align_t);
-
   mock::MockWrapper Mock;
   queue Q;
   context Ctx = Q.get_context();
@@ -104,10 +104,6 @@ TEST(USMFunctions, HostAllocation) {
 }
 
 TEST(USMFunctions, SharedAllocation) {
-  constexpr size_t NumBytes = 1024;
-  constexpr size_t Alignment = 128;
-  constexpr size_t DefaultAlign = alignof(std::max_align_t);
-
   mock::MockWrapper Mock;
   queue Q;
   device Dev = Q.get_device();
@@ -164,8 +160,6 @@ TEST(USMFunctions, ZeroByteAllocation) {
 }
 
 TEST(USMFunctions, InvalidAlignment) {
-  constexpr size_t NumBytes = 128;
-
   mock::MockWrapper Mock;
   queue Q;
   device Dev = Q.get_device();
