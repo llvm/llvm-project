@@ -1120,13 +1120,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSELECT(SDNode *N) {
 }
 
 /// If the operand is a vector that needs to be scalarized then the
-/// result must be v1i1, so just convert to a scalar SETCC and wrap
-/// with a scalar_to_vector since the res type is legal if we got here
+/// result must be a single-element vector, so just convert to a scalar
+/// SETCC and wrap with a scalar_to_vector since the res type is legal
+/// if we got here
 SDValue DAGTypeLegalizer::ScalarizeVecOp_VSETCC(SDNode *N) {
   assert(N->getValueType(0).isVector() &&
          N->getOperand(0).getValueType().isVector() &&
          "Operand types must be vectors");
-  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Expected single-element vector type");
 
   EVT VT = N->getValueType(0);
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
@@ -1156,7 +1158,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSTRICT_FSETCC(SDNode *N,
   assert(N->getValueType(0).isVector() &&
          N->getOperand(1).getValueType().isVector() &&
          "Operand types must be vectors");
-  assert(N->getValueType(0) == MVT::v1i1 && "Expected v1i1 type");
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Expected single-element vector type");
 
   EVT VT = N->getValueType(0);
   SDValue Ch = N->getOperand(0);
