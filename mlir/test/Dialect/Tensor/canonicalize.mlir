@@ -1009,8 +1009,8 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
 
 // Verify that the constant-argument folder for insert_slice preserves the
 // source's encoding on the inserted cast, rather than silently picking up the
-// destination's encoding (which is `none` here) via the shape template used by
-// ExtractSliceOp::inferCanonicalRankReducedResultType.
+// destination's encoding (which is `none` here) while deriving the folded
+// source shape.
 // CHECK-LABEL: func @preserve_source_encoding_on_insert_slice_folding
 //  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
 //  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
