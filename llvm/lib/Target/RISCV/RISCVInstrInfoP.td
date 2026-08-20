@@ -1845,8 +1845,7 @@ def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
 
 def SDT_RISCVPackedWideningMul : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                                       SDTCisSameAs<1, 2>,
-                                                      SDTCisOpSmallerThanOp<1, 0>,
-                                                      SDTCisSameNumEltsAs<0, 1>]>;
+                                                      SDTCisOpSmallerThanOp<1, 0>]>;
 def riscv_pwmul   : RVSDNode<"PWMUL",   SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
 def riscv_pwmulu  : RVSDNode<"PWMULU",  SDT_RISCVPackedWideningMul, [SDNPCommutative]>;
 def riscv_pwmulsu : RVSDNode<"PWMULSU", SDT_RISCVPackedWideningMul>;
@@ -2307,19 +2306,18 @@ let append Predicates = [IsRV32] in {
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // Packed widening multiply patterns.
-  // The v2i32 patterns are not needed yet.
   def : Pat<(v4i16 (riscv_pwmul (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PWMUL_B   GPR:$rs1, GPR:$rs2)>;
+            (PWMUL_B GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pwmul (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-            (PWMUL_H  GPR:$rs1, GPR:$rs2)>;
+            (PWMUL_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwmulu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-            (PWMULU_B  GPR:$rs1, GPR:$rs2)>;
-  //def : Pat<(v2i32 (riscv_pwmulu  (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-  //          (PWMULU_H GPR:$rs1, GPR:$rs2)>;
+            (PWMULU_B GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmulu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMULU_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v4i16 (riscv_pwmulsu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
             (PWMULSU_B GPR:$rs1, GPR:$rs2)>;
-  //def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-  //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(v2i32 (riscv_pwmulsu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+            (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
   // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
@@ -2807,6 +2805,26 @@ let append Predicates = [IsRV64] in {
                       (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
             (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
+
+  // Packed widening multiply patterns.
+  def : Pat<(v4i16 (riscv_pwmul (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMUL_H_B01 (ZIP8P GPR:$rs1, GPR:$rs2),
+                         (ZIP8P GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v2i32 (riscv_pwmul (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMUL_W_H01 (ZIP16P GPR:$rs1, GPR:$rs2),
+                         (ZIP16P GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v4i16 (riscv_pwmulu (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMULU_H_B01 (ZIP8P GPR:$rs1, GPR:$rs2),
+                          (ZIP8P GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v2i32 (riscv_pwmulu (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULU_W_H01 (ZIP16P GPR:$rs1, GPR:$rs2),
+                          (ZIP16P GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v4i16 (riscv_pwmulsu (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+            (PMULSU_H_B00 (ZIP8P GPR:$rs1, (v8i8 X0)),
+                           (ZIP8P GPR:$rs2, (v8i8 X0)))>;
+  def : Pat<(v2i32 (riscv_pwmulsu (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+            (PMULSU_W_H00 (ZIP16P GPR:$rs1, (v4i16 X0)),
+                           (ZIP16P GPR:$rs2, (v4i16 X0)))>;
 
   // 8-bit multiply high patterns
   // FIXME custom lower
