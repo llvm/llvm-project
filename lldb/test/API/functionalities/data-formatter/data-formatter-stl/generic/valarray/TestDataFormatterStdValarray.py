@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class StdValarrayDataFormatterTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
 
     def do_test(self):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -190,11 +191,8 @@ class StdValarrayDataFormatterTestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
-        va = self.frame().FindVariable("va_int")
-        self.assertTrue(va.IsValid())
-        summary = va.GetSummary() or ""
-        self.assertNotIn("size=2", summary)
-        self.expect("frame variable va_int", matching=False, substrs=["size=2"])
+        va = self.expect_var_path("va_int")
+        self.assertNotEqual(va.summary, "size=2")
 
     @add_test_categories(["msvcstl"])
     def test_msvcstl(self):
@@ -202,28 +200,29 @@ class StdValarrayDataFormatterTestCase(TestBase):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
-        va_int = self.frame().FindVariable("va_int")
-        self.assertEqual(va_int.GetNumChildren(), 4)
-        self.expect("frame variable va_int", substrs=["va_int = size=4"])
-        va_empty = self.frame().FindVariable("va_empty")
-        self.assertEqual(va_empty.GetNumChildren(), 0)
-        self.expect("frame variable va_empty", substrs=["size=0"])
-        va_ref = self.frame().FindVariable("va_ref")
-        self.assertEqual(va_ref.GetNumChildren(), 4)
+
+        zero_children = [
+            ValueCheck(name=f"[{index}]", value="0") for index in range(4)
+        ]
+        self.expect_var_path("va_int", summary="size=4", children=zero_children)
+        self.expect_var_path("va_empty", summary="size=0", children=[])
+        self.expect_var_path("va_ref", summary="size=4", children=zero_children)
+
         lldbutil.continue_to_breakpoint(process, bkpt)
-        self.expect(
-            "frame variable va_int",
-            substrs=[
-                "va_int = size=4",
-                "[0] = 1",
-                "[1] = 12",
-                "[2] = 123",
-                "[3] = 1234",
+
+        int_children = [
+            ValueCheck(name=f"[{index}]", value=value)
+            for index, value in enumerate(["1", "12", "123", "1234"])
+        ]
+        self.expect_var_path("va_int", summary="size=4", children=int_children)
+        self.expect_var_path("va_ref", summary="size=4", children=int_children)
+        self.expect_var_path(
+            "va_double",
+            summary="size=4",
+            children=[
+                ValueCheck(name="[0]", value="1"),
+                ValueCheck(name="[1]", value="0.5"),
+                ValueCheck(name="[2]", value="0.25"),
+                ValueCheck(name="[3]", value="0.125"),
             ],
-        )
-        self.assertEqual(va_ref.GetNumChildren(), 4)
-        self.assertEqual(va_ref.GetChildAtIndex(3).GetValueAsSigned(), 1234)
-        self.expect(
-            "frame variable va_double",
-            substrs=["va_double = size=4", "[0] = 1", "[1] = 0.5"],
         )

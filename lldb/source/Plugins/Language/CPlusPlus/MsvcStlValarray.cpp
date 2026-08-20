@@ -90,6 +90,7 @@ public:
   }
 
 private:
+  /// A non-owning pointer to valarray's _Myptr member.
   ValueObject *m_start = nullptr;
   CompilerType m_element_type;
   uint32_t m_element_size = 0;
