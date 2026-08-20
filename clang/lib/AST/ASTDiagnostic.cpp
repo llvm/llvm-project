@@ -2119,7 +2119,7 @@ public:
                QualType ToType, bool PrintTree, bool PrintFromType,
                bool ElideType, bool ShowColor)
     : Context(Context),
-      Policy(Context.getLangOpts()),
+      Policy(Context.getPrintingPolicy()),
       ElideType(ElideType),
       PrintTree(PrintTree),
       ShowColor(ShowColor),
