@@ -954,16 +954,19 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     }
   }
 
+  // Lower fneg x to xor x, 0x80... to preserve NaN payloads
+  setOperationAction(ISD::FNEG, {MVT::f32, MVT::f64}, Custom);
+
   // f16/f16x2 neg was introduced in PTX 60, SM_53.
   const bool IsFP16FP16x2NegAvailable = STI.hasFeature(NVPTX::SM53) &&
                                         STI.hasFeature(NVPTX::PTX60) &&
                                         STI.allowFP16Math();
   for (const auto &VT : {MVT::f16, MVT::v2f16})
     setOperationAction(ISD::FNEG, VT,
-                       IsFP16FP16x2NegAvailable ? Legal : Expand);
+                       IsFP16FP16x2NegAvailable ? Custom : Expand);
 
-  setBF16OperationAction(ISD::FNEG, MVT::bf16, Legal, Expand);
-  setBF16OperationAction(ISD::FNEG, MVT::v2bf16, Legal, Expand);
+  setBF16OperationAction(ISD::FNEG, MVT::bf16, Custom, Expand);
+  setBF16OperationAction(ISD::FNEG, MVT::v2bf16, Custom, Expand);
   setOperationAction(ISD::FNEG, MVT::v2f32, Expand);
   // (would be) Library functions.
 
@@ -1064,17 +1067,18 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setFP16OperationAction(ISD::FTANH, MVT::v2f16, Legal, Expand);
   setBF16OperationAction(ISD::FTANH, MVT::v2bf16, Legal, Expand);
 
-  setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
+  // Lower fabs x to and x, 0x7f... to preserve NaN payloads
+  setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Custom);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
   if (STI.hasFeature(NVPTX::PTX65)) {
-    setFP16OperationAction(ISD::FABS, MVT::f16, Legal, Promote);
-    setFP16OperationAction(ISD::FABS, MVT::v2f16, Legal, Expand);
+    setFP16OperationAction(ISD::FABS, MVT::f16, Custom, Promote);
+    setFP16OperationAction(ISD::FABS, MVT::v2f16, Custom, Expand);
   } else {
     setOperationAction(ISD::FABS, MVT::f16, Promote);
     setOperationAction(ISD::FABS, MVT::v2f16, Expand);
   }
-  setBF16OperationAction(ISD::FABS, MVT::v2bf16, Legal, Expand);
-  setBF16OperationAction(ISD::FABS, MVT::bf16, Legal, Promote);
+  setBF16OperationAction(ISD::FABS, MVT::v2bf16, Custom, Expand);
+  setBF16OperationAction(ISD::FABS, MVT::bf16, Custom, Promote);
   if (getOperationAction(ISD::FABS, MVT::bf16) == Promote)
     AddPromotedToType(ISD::FABS, MVT::bf16, MVT::f32);
 
@@ -2242,6 +2246,73 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
     return SDValue();
 
   return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
+}
+
+static bool isCanonicalizingFPOp(unsigned Opc) {
+  switch (Opc) {
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
+  case ISD::FMA:
+  case ISD::FSQRT:
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN:
+  case ISD::FROUND:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+  case ISD::FSIN:
+  case ISD::FCOS:
+  case ISD::FTANH:
+  // SETCC is not strictly canonicalizing, just eats the nan
+  case ISD::SETCC:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool canUseNativeSignOp(SDValue Op, SelectionDAG &DAG) {
+  // A canonicalizing input is not enough: abs/neg still return an unspecified
+  // NaN for it. Only a non-NaN input makes the native op exact.
+  if (DAG.isKnownNeverNaN(Op.getOperand(0)))
+    return true;
+  return llvm::all_of(Op->users(), [](const SDNode *U) {
+    return isCanonicalizingFPOp(U->getOpcode());
+  });
+}
+
+static SDValue lowerFABSOrFNEG(SDValue Op, SelectionDAG &DAG) {
+  const bool IsNeg = Op.getOpcode() == ISD::FNEG;
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue In = Op.getOperand(0);
+
+  if (canUseNativeSignOp(Op, DAG))
+    return DAG.getNode(IsNeg ? NVPTXISD::FNEG : NVPTXISD::FABS, DL, VT, In);
+
+  const unsigned Bits = VT.getSizeInBits();
+  const unsigned EltBits = VT.getScalarSizeInBits();
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
+  APInt Mask = APInt::getSplat(Bits, IsNeg ? APInt::getSignMask(EltBits)
+                                           : APInt::getSignedMaxValue(EltBits));
+  SDValue AsInt = DAG.getNode(ISD::BITCAST, DL, IntVT, In);
+  SDValue Masked = DAG.getNode(IsNeg ? ISD::XOR : ISD::AND, DL, IntVT, AsInt,
+                               DAG.getConstant(Mask, DL, IntVT));
+  return DAG.getNode(ISD::BITCAST, DL, VT, Masked);
 }
 
 SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -3479,6 +3550,9 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerShiftRightParts(Op, DAG);
   case ISD::SELECT:
     return lowerSELECT(Op, DAG);
+  case ISD::FABS:
+  case ISD::FNEG:
+    return lowerFABSOrFNEG(Op, DAG);
   case ISD::FROUND:
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:

@@ -1828,7 +1828,7 @@ define i8 @to_f8e5m2_from_f16(half %x) {
 ; CHECK-NEXT:    setp.eq.f16 %p12, %rs1, %rs58;
 ; CHECK-NEXT:    selp.b16 %rs59, %rs35, %rs57, %p12;
 ; CHECK-NEXT:    cvt.f32.f16 %r8, %rs1;
-; CHECK-NEXT:    abs.f32 %r9, %r8;
+; CHECK-NEXT:    and.b32 %r9, %r8, 2147483647;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs60, %r9;
 ; CHECK-NEXT:    mov.b16 %rs61, 0x7C00;
 ; CHECK-NEXT:    setp.eq.f16 %p13, %rs60, %rs61;
@@ -1936,12 +1936,12 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 ; CHECK-NEXT:    selp.b16 %rs56, %rs53, %rs55, %p12;
 ; CHECK-NEXT:    setp.eq.f32 %p13, %r2, 0f00000000;
 ; CHECK-NEXT:    selp.b16 %rs57, %rs34, %rs56, %p13;
-; CHECK-NEXT:    abs.f32 %r16, %r2;
-; CHECK-NEXT:    bfe.u32 %r17, %r16, 16, 1;
-; CHECK-NEXT:    or.b32 %r18, %r17, %r16;
+; CHECK-NEXT:    and.b32 %r16, %r1, 1;
+; CHECK-NEXT:    and.b32 %r17, %r2, 2147418112;
+; CHECK-NEXT:    or.b32 %r18, %r16, %r17;
 ; CHECK-NEXT:    add.s32 %r19, %r18, 32767;
-; CHECK-NEXT:    setp.nan.f32 %p14, %r16, %r16;
-; CHECK-NEXT:    or.b32 %r20, %r16, 4194304;
+; CHECK-NEXT:    or.b32 %r20, %r2, 4194304;
+; CHECK-NEXT:    setp.nan.f32 %p14, %r17, %r17;
 ; CHECK-NEXT:    selp.b32 %r21, %r20, %r19, %p14;
 ; CHECK-NEXT:    and.b32 %r22, %r21, 2147418112;
 ; CHECK-NEXT:    setp.eq.f32 %p15, %r22, 0f7F800000;

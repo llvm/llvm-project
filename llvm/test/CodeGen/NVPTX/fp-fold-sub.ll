@@ -68,3 +68,42 @@ define double @sub_f64(double %a, double %b) {
 
   ret double %r4
 }
+
+; A negated operand that is known to never be a NaN reaches isel as the native
+; neg rather than a sign-bit xor. The fold has to apply to that form too.
+define float @sub_f32_never_nan(float %a, i32 %i) {
+; CHECK-LABEL: sub_f32_never_nan(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [sub_f32_never_nan_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [sub_f32_never_nan_param_1];
+; CHECK-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; CHECK-NEXT:    sub.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %b = sitofp i32 %i to float
+  %f = fneg float %b
+  %r = call float @llvm.nvvm.add.rn.f(float %a, float %f)
+  ret float %r
+}
+
+define double @sub_f64_never_nan(double %a, i32 %i) {
+; CHECK-LABEL: sub_f64_never_nan(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [sub_f64_never_nan_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [sub_f64_never_nan_param_1];
+; CHECK-NEXT:    cvt.rn.f64.s32 %rd2, %r1;
+; CHECK-NEXT:    sub.rn.f64 %rd3, %rd1, %rd2;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-NEXT:    ret;
+  %b = sitofp i32 %i to double
+  %f = fneg double %b
+  %r = call double @llvm.nvvm.add.rn.d(double %a, double %f)
+  ret double %r
+}

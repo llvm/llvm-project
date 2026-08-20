@@ -150,9 +150,7 @@ define half @test_old_fneg(half %a) #0 {
 
 ; CHECK-LABEL: test_fneg(
 ; CHECK:  ld.param.b16    [[A:%rs[0-9]+]], [test_fneg_param_0];
-; CHECK-F16-NOFTZ-NEXT:   neg.f16     [[R:%rs[0-9]+]], [[A]];
-; CHECK-F16-FTZ-NEXT:   neg.ftz.f16     [[R:%rs[0-9]+]], [[A]];
-; CHECK-NOF16-NEXT:  xor.b16    [[R:%rs[0-9]+]], [[A]], -32768;
+; CHECK-NEXT:  xor.b16    [[R:%rs[0-9]+]], [[A]], -32768;
 ; CHECK-NEXT: st.param.b16    [func_retval0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_fneg(half %a) #0 {
@@ -969,9 +967,8 @@ define half @test_fma(half %a, half %b, half %c) #0 {
 ; CHECK-LABEL: test_fabs(
 ; CHECK:      ld.param.b16    [[A:%rs[0-9]+]], [test_fabs_param_0];
 ; CHECK-NOFTZ:      cvt.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-NOFTZ:      abs.f32         [[RF:%r[0-9]+]], [[AF]];
 ; CHECK-F16-FTZ:      cvt.ftz.f32.f16     [[AF:%r[0-9]+]], [[A]];
-; CHECK-F16-FTZ:      abs.ftz.f32         [[RF:%r[0-9]+]], [[AF]];
+; CHECK:      and.b32         [[RF:%r[0-9]+]], [[AF]], 2147483647;
 ; CHECK:      cvt.rn.f16.f32  [[R:%rs[0-9]+]], [[RF]];
 ; CHECK:      st.param.b16    [func_retval0], [[R]];
 ; CHECK:      ret;
@@ -1165,18 +1162,14 @@ define half @test_fmuladd(half %a, half %b, half %c) #0 {
 }
 
 ; CHECK-LABEL: test_neg_f16(
-; CHECK-F16-NOFTZ: neg.f16
-; CHECK-F16-FTZ: neg.ftz.f16
-; CHECK-NOF16: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
+; CHECK: xor.b16  	%rs{{.*}}, %rs{{.*}}, -32768
 define half @test_neg_f16(half noundef %arg) #0 {
   %res = fneg half %arg
   ret half %res
 }
 
 ; CHECK-LABEL: test_neg_f16x2(
-; CHECK-F16-NOFTZ: neg.f16x2
-; CHECK-F16-FTZ: neg.ftz.f16x2
-; CHECK-NOF16: xor.b32 %r{{.*}}, %r{{.*}}, -2147450880
+; CHECK: xor.b32 %r{{.*}}, %r{{.*}}, -2147450880
 define <2 x half> @test_neg_f16x2(<2 x half> noundef %arg) #0 {
   %res = fneg <2 x half> %arg
   ret <2 x half> %res

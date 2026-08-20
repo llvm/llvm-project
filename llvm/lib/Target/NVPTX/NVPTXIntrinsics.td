@@ -2332,7 +2332,10 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
       def INT_NVVM_SUB # rnd # ftz # sat # _F : 
         BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
           !subst("_", ".", "sub" # rnd # sat # ftz # "_f32"),
-          [(set f32:$dst, (add_intrin f32:$a, (f32 (fneg f32:$b))))]>;
+          [(set f32:$dst, (add_intrin f32:$a, (f32 (nvptx_fneg f32:$b))))]>;
+      def : Pat<(add_intrin f32:$a, (fneg_xor_f32 B32:$b)),
+                (!cast<NVPTXInst>("INT_NVVM_SUB" # rnd # ftz # sat # "_F")
+                  $a, $b)>;
     }
   }
   
@@ -2340,7 +2343,9 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   def INT_NVVM_SUB # rnd # _D : 
     BasicNVPTXInst<(outs B64:$dst), (ins B64:$a, B64:$b),
       !subst("_", ".", "sub" # rnd # "_f64"),
-      [(set f64:$dst, (add_intrin f64:$a, (f64 (fneg f64:$b))))]>;
+      [(set f64:$dst, (add_intrin f64:$a, (f64 (nvptx_fneg f64:$b))))]>;
+  def : Pat<(add_intrin f64:$a, (fneg_xor_f64 B64:$b)),
+            (!cast<NVPTXInst>("INT_NVVM_SUB" # rnd # "_D") $a, $b)>;
 }
 
 foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
@@ -2352,7 +2357,12 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
           [(set f32:$dst, 
            (!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f") 
              (f32 (fpextend type:$a)),
-             (f32 (fneg f32:$b))))]>,
+             (f32 (nvptx_fneg f32:$b))))]>,
+        Requires<[SM100]>;
+      def : Pat<(!cast<Intrinsic>("int_nvvm_add" # rnd # sat # "_f")
+                  (f32 (fpextend type:$a)), (fneg_xor_f32 B32:$b)),
+                (!cast<NVPTXInst>("INT_NVVM_MIXED_SUB" # rnd # sat #
+                                  "_f32_" # type) $a, $b)>,
         Requires<[SM100]>;
     }
   }

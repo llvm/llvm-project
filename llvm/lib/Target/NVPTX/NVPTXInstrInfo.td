@@ -259,6 +259,17 @@ def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
 def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
 
 
+// For lowering to ptx native abs/neg
+def nvptx_fabs : SDNode<"NVPTXISD::FABS", SDTFPUnaryOp>;
+def nvptx_fneg : SDNode<"NVPTXISD::FNEG", SDTFPUnaryOp>;
+
+// LowerFNEG emits either of these, so folds of a negated operand match both.
+class fneg_xor<ValueType vt, ValueType ivt, int signmask> :
+  PatFrag<(ops node:$a), (vt (bitconvert (xor node:$a, (ivt signmask))))>;
+def fneg_xor_f32 : fneg_xor<f32, i32, -2147483648>;
+def fneg_xor_f64 : fneg_xor<f64, i64, -9223372036854775808>;
+
+
 // Operands which can hold a Register or an Immediate.
 //
 // Unfortunately, since most register classes can hold multiple types, we must
@@ -1011,7 +1022,7 @@ def : Pat<(vt (select i1:$p, vt:$a, vt:$b)),
 // Test Instructions
 //-----------------------------------
 
-def fabs_oneuse : OneUse1<fabs>;
+def fabs_oneuse : OneUse1<nvptx_fabs>;
 
 def TESTINF_f32r : BasicNVPTXInst<(outs B1:$p), (ins B32:$a),
                              "testp.infinite.f32",
@@ -1197,10 +1208,10 @@ defm FMAX3 : FMINIMUMMAXIMUM3<"max", /* NaN */ false, nvptx_fmaxnum3>;
 defm FMINNAN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ true, nvptx_fminimum3>;
 defm FMAXNAN3 : FMINIMUMMAXIMUM3<"max", /* NaN */ true, nvptx_fmaximum3>;
 
-defm FABS  : F2<"abs", fabs>;
-defm FNEG  : F2<"neg", fneg>;
-defm FABS_H: F2_Support_Half<"abs", fabs>;
-defm FNEG_H: F2_Support_Half<"neg", fneg>;
+defm FABS  : F2<"abs", nvptx_fabs>;
+defm FNEG  : F2<"neg", nvptx_fneg>;
+defm FABS_H: F2_Support_Half<"abs", nvptx_fabs>;
+defm FNEG_H: F2_Support_Half<"neg", nvptx_fneg>;
 
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
 
@@ -1210,8 +1221,10 @@ defm FSQRT : F2<"sqrt.rn", fsqrt>;
 class FNEG16<RegTyInfo t> :
       BasicFlagsNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src), (ins FTZFlag:$ftz),
                 "neg$ftz." # t.PtxType,
-                [(set t.Ty:$dst, (fneg t.Ty:$src))]>;
+                [(set t.Ty:$dst, (nvptx_fneg t.Ty:$src))]>;
 
+// These (PTX60) cover the full f16/f16x2 FNEG custom range, unlike FNEG_Hf16
+// and FNEG_Hf16x2 which require PTX65.
 let Predicates = [allowFP16Math, PTX60, SM53] in {
   def NEG_F16    : FNEG16<F16RT>;
   def NEG_F16x2  : FNEG16<F16X2RT>;
