@@ -15,7 +15,6 @@
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVMachineScheduler.h"
-#include "RISCVOptWInstrs.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -631,7 +630,7 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isRISCV64()) {
-    addPass(createRISCVOptWInstrsPass());
+    addPass(createRISCVOptWInstrsLegacyPass());
   }
 }
 
