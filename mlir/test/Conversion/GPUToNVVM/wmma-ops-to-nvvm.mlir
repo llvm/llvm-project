@@ -8,7 +8,7 @@ gpu.module @test_module {
   // CHECK-SAME: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
   // CHECK32-LABEL: func @gpu_wmma_load_op() ->
   func.func @gpu_wmma_load_op() -> (!gpu.mma_matrix<16x16xf16, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
@@ -47,7 +47,7 @@ gpu.module @test_module {
   // CHECK-SAME: !llvm.struct<(i32, i32)>
   // CHECK32-LABEL: func @gpu_wmma_int8_load_op() ->
   func.func @gpu_wmma_int8_load_op() -> (!gpu.mma_matrix<16x16xsi8, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xi8, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xi8, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 transpose : memref<32x32xi8, 3> -> !gpu.mma_matrix<16x16xsi8, "AOp">
@@ -86,7 +86,7 @@ gpu.module @test_module {
   // CHECK-SAME: f64
   // CHECK32-LABEL: func @gpu_wmma_f64_load_op() ->
   func.func @gpu_wmma_f64_load_op() -> (!gpu.mma_matrix<8x4xf64, "AOp">) {
-    %wg = memref.alloca() {alignment = 32} : memref<32x32xf64, 3>
+    %wg = memref.alloca() alignment = 32 : memref<32x32xf64, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %j] leadDimension 32 : memref<32x32xf64, 3> -> !gpu.mma_matrix<8x4xf64, "AOp">
@@ -109,7 +109,7 @@ gpu.module @test_module {
   // CHECK32-LABEL: func @gpu_wmma_store_op
   // CHECK32-SAME: (%[[D:.*]]: !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>)
   func.func @gpu_wmma_store_op(%arg0 : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
-    %sg = memref.alloca(){alignment = 32} : memref<32x32xf16, 3>
+    %sg = memref.alloca() alignment = 32 : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
     %j = arith.constant 16 : index
     gpu.subgroup_mma_store_matrix %arg0, %sg[%i,%j] leadDimension 32 transpose : !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
