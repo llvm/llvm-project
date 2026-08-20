@@ -213,8 +213,8 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
       finalStrides.push_back(strides[i]);
     }
 
-    resultType = memref::updateTypeFromDescriptor(resultType, finalOffset,
-                                                  finalSizes, finalStrides);
+    resultType = memref::updateTypeFromMetadata(resultType, finalOffset,
+                                                finalSizes, finalStrides);
     auto flattenedSubview = memref::ReinterpretCastOp::create(
         rewriter, op.getLoc(), resultType, base, finalOffset, finalSizes,
         finalStrides);

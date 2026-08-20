@@ -198,7 +198,7 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    MemRefType resultType = memref::updateTypeFromDescriptor(
+    MemRefType resultType = memref::updateTypeFromMetadata(
         subview.getType(), stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
     auto foldedSubview = memref::ReinterpretCastOp::create(
@@ -613,7 +613,7 @@ public:
 
     MemRefType resultType = reshape.getResultType();
     if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
-      resultType = memref::updateTypeFromDescriptor(
+      resultType = memref::updateTypeFromMetadata(
           resultType, stridedMetadata->offset, stridedMetadata->sizes,
           stridedMetadata->strides);
     auto foldedReshape = memref::ReinterpretCastOp::create(

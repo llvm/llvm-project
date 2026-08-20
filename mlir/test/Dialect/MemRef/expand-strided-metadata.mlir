@@ -72,16 +72,18 @@ func.func @simplify_subview_all_dynamic(
 
 // -----
 
-// Check that constant folding of the descriptor is reflected in the result
-// type of the reinterpret_cast. The subview sizes remain dynamic because they
-// are SSA operands, while its offset and strides fold to static values.
-// CHECK-LABEL: func @simplify_subview_folded_descriptor
-//       CHECK: %[[CAST:.*]] = memref.reinterpret_cast %{{.*}} to offset: [10],
-//  CHECK-SAME: sizes: [%{{.*}}, %{{.*}}], strides: [8, 2]
+// Check that folded offsets and strides are reflected in the result type of
+// the reinterpret_cast. Sizes remain dynamic because they are forwarded
+// without folding.
+// CHECK-LABEL: func @simplify_subview_folded_metadata
+//       CHECK: %[[CAST:.*]] = memref.reinterpret_cast %{{[^ ]+}} to
+//  CHECK-SAME:   offset: [10],
+//  CHECK-SAME:   sizes: [%{{[^ ]+}}, %{{[^ ]+}}],
+//  CHECK-SAME:   strides: [8, 2]
 //  CHECK-SAME: memref<f32> to memref<?x?xf32, strided<[8, 2], offset: 10>>
 //       CHECK: memref.load %[[CAST]]
 //  CHECK-SAME: memref<?x?xf32, strided<[8, 2], offset: 10>>
-func.func @simplify_subview_folded_descriptor(%base: memref<4x8xf32>) -> f32 {
+func.func @simplify_subview_folded_metadata(%base: memref<4x8xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
