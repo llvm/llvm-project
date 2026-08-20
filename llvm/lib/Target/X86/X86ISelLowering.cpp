@@ -43797,16 +43797,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     unsigned DstIdx = (InsertPSMask >> 4) & 0x3;
     unsigned ZeroMask = InsertPSMask & 0xF;
 
-    // If we zero out all elements from Op0 then we don't need to reference it.
-    if (((ZeroMask | (1u << DstIdx)) == 0xF) && !Op0.isUndef())
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, DAG.getUNDEF(VT), Op1,
-                         DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-
-    // If we zero out the element from Op1 then we don't need to reference it.
-    if ((ZeroMask & (1u << DstIdx)) && !Op1.isUndef())
-      return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
-                         DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
-
     // Chained inserts of the same src - prefer splat + blend.
     // TODO: Splat isn't necessary if they insert into different v2f32 subs.
     if (Op0.getOpcode() == X86ISD::INSERTPS && Op0.getOperand(1) == Op1) {
