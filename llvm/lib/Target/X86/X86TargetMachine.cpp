@@ -478,7 +478,7 @@ bool X86PassConfig::addLegalizeMachineIR() {
 }
 
 bool X86PassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
