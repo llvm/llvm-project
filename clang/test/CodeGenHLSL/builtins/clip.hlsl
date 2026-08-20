@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-library %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefix=SPIRV
 
 
-void test_scalar(float Buf) {
+void test_clip_scalar(float Buf) {
   // CHECK:      define hidden void @{{.*}}test_scalar{{.*}}(float {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load float, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt float [[LOAD]], 0.000000e+00
@@ -20,7 +20,7 @@ void test_scalar(float Buf) {
   clip(Buf);
 }
 
-void test_vector4(float4 Buf) {
+void test_clip_vector4(float4 Buf) {
   // CHECK:      define hidden void @{{.*}}test_vector{{.*}}(<4 x float> {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load <4 x float>, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <4 x float> [[LOAD]], zeroinitializer
@@ -38,7 +38,7 @@ void test_vector4(float4 Buf) {
   clip(Buf);
 }
 
-void test_vector5(vector<float, 5> Buf) {
+void test_clip_vector5(vector<float, 5> Buf) {
   // CHECK:      define hidden void @{{.*}}test_vector5{{.*}}(<5 x float> {{.*}} [[VALP:%.*]])
   // CHECK:      [[LOAD:%.*]] = load <5 x float>, ptr [[VALP]].addr
   // CHECK-NEXT: [[FCMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt <5 x float> [[LOAD]], zeroinitializer
