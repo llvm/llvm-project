@@ -194,5 +194,15 @@ int main() {
            std::tuple{[&]() { return TAMalloc(q, usm::alloc::host); },
                       [&]() { return TAMalloc(d, ctx, usm::alloc::host); }});
 
+  // Testing invalid arguments for alignment
+  assert(aligned_alloc_device(3, 1024, q) == nullptr);
+  assert(aligned_alloc_device(0, 1024, q) == nullptr);
+  assert(aligned_alloc_host(3, 1024, q) == nullptr);
+  assert(aligned_alloc_host(0, 1024, q) == nullptr);
+  if (d.has(aspect::usm_shared_allocations)) {
+    assert(aligned_alloc_shared(3, 1024, q) == nullptr);
+    assert(aligned_alloc_shared(0, 1024, q) == nullptr);
+  }
+
   return 0;
 }
