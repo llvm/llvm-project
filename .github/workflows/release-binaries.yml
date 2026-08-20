@@ -291,6 +291,14 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    # Wix is not installed by default on Windows ARM64
+    - name: Install Wix (Windows ARM64)
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset
+        # Add wix install directory to PATH.
+        Split-Path (Get-ChildItem -Path "C:\" -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
