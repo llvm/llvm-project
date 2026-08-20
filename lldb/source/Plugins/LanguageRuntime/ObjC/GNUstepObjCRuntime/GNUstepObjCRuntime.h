@@ -104,6 +104,12 @@ public:
   lldb::ValueObjectSP
   GetExceptionObjectForThread(lldb::ThreadSP thread_sp) override;
 
+  /// Thread whose frames are the call stack recorded inside \p exception_sp,
+  /// for `thread exception`. gnustep-base captures it in -[NSException raise];
+  /// an exception raised by a bare `@throw` has none.
+  lldb::ThreadSP
+  GetBacktraceThreadFromException(lldb::ValueObjectSP exception_sp) override;
+
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
@@ -246,6 +252,13 @@ protected:
   /// equivalent private, and reaches it only from GetRuntimeType - which takes
   /// a type rather than a name, so the dynamic-value path cannot use it.
   CompilerType LookupClassTypeInRuntime(ConstString class_name);
+
+  /// Address of ivar \p ivar_name within the object at \p object_addr, found
+  /// through the runtime's metadata so that it works for a class whose ivars
+  /// the debug info does not describe - which is every gnustep-base class
+  /// behind GS_EXPOSE.
+  std::optional<lldb::addr_t> GetIvarAddress(lldb::addr_t object_addr,
+                                             llvm::StringRef ivar_name);
 
   /// Lazily-built FunctionCaller for a utility function that reproduces
   /// gnustep-base's `_NSPrintForDebugger` (NSDebug.m) using nothing but

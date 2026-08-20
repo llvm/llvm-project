@@ -12,6 +12,7 @@
 #include "GNUstepObjCTypeEncodingParser.h"
 #include "GNUstepThreadPlanStepThroughObjCTrampoline.h"
 
+#include "Plugins/Process/Utility/HistoryThread.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -67,6 +68,9 @@ static constexpr uint32_t g_max_superclass_depth = 256;
 // A type encoding longer than this is not something a compiler produced.
 // Bounded for the same reason as the depth above.
 static constexpr size_t g_max_type_encoding_length = 1024;
+
+/// gnustep-base captures at most MAXFRAMES (NSException.m) return addresses.
+static constexpr uint64_t g_max_stack_frames = 128;
 
 namespace {
 /// Registers the Objective-C selectors of a JIT'd expression module with the
@@ -881,6 +885,113 @@ GNUstepObjCRuntime::GetExceptionObjectForThread(ThreadSP thread_sp) {
       return cpp_exception_sp;
   }
   return {};
+}
+
+std::optional<addr_t>
+GNUstepObjCRuntime::GetIvarAddress(addr_t object_addr,
+                                   llvm::StringRef ivar_name) {
+  if (!m_process || object_addr == 0 || object_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  Status error;
+  const addr_t isa = m_process->ReadPointerFromMemory(object_addr, error);
+  if (error.Fail() || isa == 0 || isa == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  const ConstString name(ivar_name);
+  ClassDescriptorSP descriptor_sp = GetClassDescriptorFromISA(isa);
+  // The chain comes from inferior memory, so bound the walk.
+  for (uint32_t depth = 0; descriptor_sp && depth < g_max_superclass_depth;
+       ++depth, descriptor_sp = descriptor_sp->GetSuperclass()) {
+    const size_t num_ivars = descriptor_sp->GetNumIVars();
+    for (size_t i = 0; i < num_ivars; ++i) {
+      const auto &ivar = descriptor_sp->GetIVarAtIndex(i);
+      if (ivar.m_name == name)
+        return object_addr + ivar.m_offset;
+    }
+  }
+  return std::nullopt;
+}
+
+ThreadSP GNUstepObjCRuntime::GetBacktraceThreadFromException(
+    ValueObjectSP exception_sp) {
+  if (!m_process || !exception_sp)
+    return ThreadSP();
+
+  // gnustep-base captures the stack in -[NSException raise] (NSException.m),
+  // unconditionally, into a GSStackTrace held in the second slot of the
+  // `_reserved` allocation:
+  //
+  //   #define _e_info (((id*)_reserved)[0])
+  //   #define _e_stack (((id*)_reserved)[1])
+  //
+  // A bare `@throw` does not go through -raise, so `_reserved` is null and
+  // there is simply no stack to report. That is not a failure; `thread
+  // exception` prints the object and nothing more, which is what it does
+  // today for every exception.
+  std::optional<addr_t> reserved_ivar =
+      GetIvarAddress(exception_sp->GetValueAsUnsigned(0), "_reserved");
+  if (!reserved_ivar)
+    return ThreadSP();
+
+  Status error;
+  const addr_t reserved =
+      m_process->ReadPointerFromMemory(*reserved_ivar, error);
+  if (error.Fail() || reserved == 0 || reserved == LLDB_INVALID_ADDRESS)
+    return ThreadSP();
+
+  const uint32_t ptr_size = m_process->GetAddressByteSize();
+  const addr_t stack_obj =
+      m_process->ReadPointerFromMemory(reserved + ptr_size, error);
+  if (error.Fail() || stack_obj == 0 || stack_obj == LLDB_INVALID_ADDRESS)
+    return ThreadSP();
+
+  // GSStackTrace declares both of these @public (GSPThread.h), so they are
+  // reachable by name even though the class itself is private to gnustep-base
+  // and has no debug info in a normal build.
+  std::optional<addr_t> returns_ivar = GetIvarAddress(stack_obj, "returns");
+  std::optional<addr_t> count_ivar = GetIvarAddress(stack_obj, "numReturns");
+  if (!returns_ivar || !count_ivar)
+    return ThreadSP();
+
+  const addr_t returns = m_process->ReadPointerFromMemory(*returns_ivar, error);
+  if (error.Fail() || returns == 0 || returns == LLDB_INVALID_ADDRESS)
+    return ThreadSP();
+  const int64_t num_returns = m_process->ReadSignedIntegerFromMemory(
+      *count_ivar, sizeof(int32_t), 0, error);
+  if (error.Fail() || num_returns <= 0)
+    return ThreadSP();
+
+  // gnustep-base's own cap is MAXFRAMES (128); clamp rather than trust a
+  // count read out of the inferior.
+  const uint64_t count = std::min<uint64_t>(static_cast<uint64_t>(num_returns),
+                                            g_max_stack_frames);
+
+  std::vector<addr_t> pcs;
+  pcs.reserve(count);
+  for (uint64_t i = 0; i < count; ++i) {
+    const addr_t pc =
+        m_process->ReadPointerFromMemory(returns + i * ptr_size, error);
+    if (error.Fail() || pc == 0 || pc == LLDB_INVALID_ADDRESS)
+      break;
+    pcs.push_back(pc);
+  }
+  if (pcs.empty())
+    return ThreadSP();
+
+  // Every entry came from backtrace(3), so all of them are return addresses -
+  // there is no live frame 0 to except from the usual adjustment.
+  //
+  // No frames are skipped. gnustep-base's own -callStackReturnAddresses drops
+  // the first FrameOffset (4) so that a program sees its own code first, but
+  // that count is a private detail of a particular gnustep-base and dropping
+  // four here would also discard the frame that raised. Apple's runtime
+  // likewise leaves objc_exception_throw visible, so showing the capture
+  // machinery is both safer and the more consistent choice.
+  ThreadSP thread_sp = std::make_shared<HistoryThread>(
+      *m_process, 0, pcs, HistoryPCType::ReturnsNoZerothFrame);
+  m_process->GetExtendedThreadList().AddThread(thread_sp);
+  return thread_sp;
 }
 
 llvm::Expected<std::unique_ptr<UtilityFunction>>

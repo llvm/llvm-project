@@ -53,6 +53,51 @@ class TestGNUstepExceptions(TestBase):
         self.assertTrue(exception.IsValid(), "thread has a current exception")
         self.assertIn("NSException", exception.GetTypeName())
 
+    def test_exception_backtrace(self):
+        """`thread exception` reports the stack recorded inside the exception.
+
+        gnustep-base captures it on the first -[NSException raise], into a
+        GSStackTrace whose `returns` array holds raw return addresses - so this
+        is a pure memory read, no NSArray walk and no inferior call."""
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target, VALID_TARGET)
+        self.runCmd("breakpoint set -E objc")
+
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetState(), lldb.eStateStopped)
+
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertIsNotNone(thread, "stopped on the exception breakpoint")
+
+        history = thread.GetCurrentExceptionBacktrace()
+        self.assertTrue(history.IsValid(), "exception carries a backtrace")
+
+        # The frames that raised must be present and attributed to this file.
+        # Frames below them are gnustep-base's own capture machinery, which is
+        # deliberately not filtered out - see GetBacktraceThreadFromException.
+        names = [f.GetFunctionName() for f in history.frames]
+        for expected in ["raiser", "main"]:
+            self.assertEqual(
+                len([n for n in names if n == expected]),
+                1,
+                f"exactly one {expected} frame in {names}",
+            )
+
+        # The recorded stack must be the one captured at the raise, not the
+        # thread's current frames - which at the throw site also contain
+        # exactly one `raiser` and one `main`, so the check above cannot tell
+        # them apart on its own. gnustep-base's own capture machinery is only
+        # ever present in the recorded stack.
+        self.assertTrue(
+            any(n and "GSStackTrace" in n for n in names),
+            f"recorded stack, not the live one: {names}",
+        )
+
+        # The command layer is the user-visible surface for this.
+        self.expect("thread exception", substrs=["-[NSException raise]"])
+
     def test_exception_is_recognized_argument(self):
         """The thrown object is exposed as a recognized argument, which is
         what lldb-dap's exception view reads."""
