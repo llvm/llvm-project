@@ -8,18 +8,18 @@
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
 // CIR-DAG: !rec_IncompleteS = !cir.struct<"IncompleteS" incomplete>
-// CIR-DAG: !rec_CompleteS = !cir.struct<"CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {!rec_InnerS, !s32i}>  
-// CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
-// CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {!cir.ptr<!cir.struct<"NodeS">>}>
-// CIR-DAG: !rec_RightS = !cir.struct<"RightS" {!cir.ptr<!cir.struct<"LeftS" {!cir.ptr<!cir.struct<"RightS">>}>>}>
-// CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {!cir.ptr<!rec_RightS>}>
-// CIR-DAG: !rec_CycleEnd = !cir.struct<"CycleEnd" {!cir.ptr<!cir.struct<"CycleStart" {!cir.ptr<!cir.struct<"CycleMiddle" {!cir.ptr<!cir.struct<"CycleEnd">>}>>}>>}>
-// CIR-DAG: !rec_CycleMiddle = !cir.struct<"CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
-// CIR-DAG: !rec_CycleStart = !cir.struct<"CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
-// CIR-DAG: !rec_IncompleteArray = !cir.struct<"IncompleteArray" {!cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_CompleteS = !cir.struct<"CompleteS" {data !s32i, data !s8i}>
+// CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {data !rec_InnerS, data !s32i}>  
+// CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {data !s32i, data !s8i}>
+// CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {data !s32i, data !s8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed {data !s32i, data !s8i, pad !u8i}>
+// CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {data !cir.ptr<!cir.struct<"NodeS">>}>
+// CIR-DAG: !rec_RightS = !cir.struct<"RightS" {data !cir.ptr<!cir.struct<"LeftS" {data !cir.ptr<!cir.struct<"RightS">>}>>}>
+// CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {data !cir.ptr<!rec_RightS>}>
+// CIR-DAG: !rec_CycleEnd = !cir.struct<"CycleEnd" {data !cir.ptr<!cir.struct<"CycleStart" {data !cir.ptr<!cir.struct<"CycleMiddle" {data !cir.ptr<!cir.struct<"CycleEnd">>}>>}>>}>
+// CIR-DAG: !rec_CycleMiddle = !cir.struct<"CycleMiddle" {data !cir.ptr<!rec_CycleEnd>}>
+// CIR-DAG: !rec_CycleStart = !cir.struct<"CycleStart" {data !cir.ptr<!rec_CycleMiddle>}>
+// CIR-DAG: !rec_IncompleteArray = !cir.struct<"IncompleteArray" {data !cir.array<!s32i x 0>}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
@@ -171,7 +171,7 @@ void f(void) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   ret void
 
 // OGCG:      define{{.*}} void @f()
@@ -188,7 +188,7 @@ void f2(void) {
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f2()
-// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
+// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, align 4
 // LLVM-NEXT:   ret void
 
 // OGCG:      define{{.*}} void @f2()
@@ -217,8 +217,8 @@ char f3(int a) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
-// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
@@ -259,9 +259,9 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
 // LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
-// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
+// LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   store ptr %[[ARG_P]], ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4

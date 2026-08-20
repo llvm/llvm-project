@@ -64,7 +64,8 @@ public:
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
@@ -123,7 +124,7 @@ public:
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
-                       TTI::TargetCostKind CostKind) const override;
+                       const TTI::TargetCostKind CostKind) const override;
   InstructionCost
   getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
                             TTI::TargetCostKind CostKind) const override;

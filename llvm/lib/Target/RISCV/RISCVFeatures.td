@@ -204,6 +204,13 @@ def FeatureZilsdWordAlign
     : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
 
+def FeatureStdExtZilx
+    : RISCVExperimentalExtension<0, 1, "Indexed Integer Load Instructions">;
+def HasStdExtZilx
+    : Predicate<"Subtarget->hasStdExtZilx()">,
+      AssemblerPredicate<(all_of FeatureStdExtZilx),
+                          "'Zilx' (Indexed Integer Load Instructions)">;
+
 // Multiply Extensions
 
 def FeatureStdExtZmmul
@@ -1065,6 +1072,20 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
+def FeatureStdExtSmcsps
+    : RISCVExperimentalExtension<0, 19,
+                                 "Conditional Stack Pointer Swap at Machine Level">;
+def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSmcsps),
+                          "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
+def FeatureStdExtSscsps
+    : RISCVExperimentalExtension<0, 19,
+                                 "Conditional Stack Pointer Swap at Supervisor Level",
+                                 [FeatureStdExtSmcsps]>;
+def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSscsps),
+                          "'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)">;
+
 def FeatureStdExtSmcsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Machine Level">;
 def FeatureStdExtSscsrind
@@ -1077,6 +1098,22 @@ def FeatureStdExtSsdbltrp
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
+
+def FeatureStdExtSmijt
+    : RISCVExperimentalExtension<0, 19,
+                                 "Interrupt Jump Table at Machine Level">;
+def FeatureStdExtSsijt
+    : RISCVExperimentalExtension<0, 19,
+                                 "Interrupt Jump Table at Supervisor Level">;
+
+def FeatureStdExtSmehv
+    : RISCVExperimentalExtension<0, 19,
+                                 "Synchronous Exception Hardware Vectoring at Machine Level",
+                                 [FeatureStdExtSmijt]>;
+def FeatureStdExtSsehv
+    : RISCVExperimentalExtension<0, 19,
+                                 "Synchronous Exception Hardware Vectoring at Supervisor Level",
+                                 [FeatureStdExtSsijt]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1176,7 +1213,7 @@ def FeatureStdExtSha
                       FeatureStdExtShvsatpa, FeatureStdExtShgatpa]>;
 
 def FeatureStdExtSvukte
-    : RISCVExperimentalExtension<0, 3,
+    : RISCVExperimentalExtension<1, 0,
                                  "Address-Independent Latency of User-Mode Faults to Supervisor Addresses">;
 
 // Pointer Masking extensions
@@ -1660,6 +1697,8 @@ def HasVendorXqcibi
     : Predicate<"Subtarget->hasVendorXqcibi()">,
       AssemblerPredicate<(all_of FeatureVendorXqcibi),
                          "'Xqcibi' (Qualcomm uC Branch Immediate Extension)">;
+def NoVendorXqcibiOrNoShortForwardBranch
+    : Predicate<"!Subtarget->hasVendorXqcibi() || !Subtarget->hasShortForwardBranchIALU()">;
 
 def FeatureVendorXqcibm
     : RISCVExtension<0, 8, "Qualcomm uC Bit Manipulation Extension",
@@ -1856,6 +1895,14 @@ def HasVendorXSMTVDot
       AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
+def FeatureVendorXSMTVDotII
+    : RISCVExtension<1, 0, "SpacemiT Vector Extension for Matrix 2.0",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDotII
+    : Predicate<"Subtarget->hasVendorXSMTVDotII()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDotII),
+                         "'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0)">;
+
 def FeatureVendorXAIFET
     : RISCVExtension<1, 0, "AI Foundry ET Extension", [FeatureStdExtF]>;
 def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
@@ -1875,18 +1922,21 @@ def HasCheriot
 
 class RISCVTuneFeature<string name, string pos_directive, string neg_directive,
                        string field_name, string value, string description,
-                       list<RISCVTuneFeature> implied_features = []>
+                       list<RISCVTuneFeature> implied_features = [],
+                       InlineBehavior ib = InlineIgnore>
     : SubtargetFeature<name, field_name, value, description> {
   let Implies = implied_features;
+  let InlineBehavior = ib;
 
   string PositiveDirectiveName = pos_directive;
   string NegativeDirectiveName = neg_directive;
 }
 class RISCVSimpleTuneFeature<string name, string field_name, string value,
                              string description,
-                             list<RISCVTuneFeature> implied_features = []>
+                             list<RISCVTuneFeature> implied_features = [],
+                             InlineBehavior ib = InlineIgnore>
     : RISCVTuneFeature<name, name, "no-"#name, field_name, value, description,
-                       implied_features>;
+                       implied_features, ib>;
 
 // Feature32Bit exists to mark CPUs that support RV32 to distinguish them from
 // tuning CPU names.
@@ -1976,7 +2026,8 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
 
 def TuneNLogNVRGather
    : SubtargetFeature<"log-vrgather", "RISCVVRGatherCostModel", "NLog2N",
-                      "Has vrgather.vv with LMUL*log2(LMUL) latency">;
+                      "Has vrgather.vv with LMUL*log2(LMUL) latency", [],
+                      InlineIgnore>;
 
 def TunePostRAScheduler
     : RISCVSimpleTuneFeature<"use-postra-scheduler", "UsePostRAScheduler",
@@ -2020,7 +2071,7 @@ def TuneDisableLatencySchedHeuristic
 
 def TuneEnableVsetvliSchedHeuristic
     : SubtargetFeature<"enable-vsetvli-sched-heuristic", "EnableVsetvliSchedHeuristic", "true",
-                       "Enable vsetvli-based scheduling heuristic">;
+                       "Enable vsetvli-based scheduling heuristic", [], InlineIgnore>;
 
 def TunePredictableSelectIsExpensive
     : RISCVSimpleTuneFeature<"predictable-select-expensive",
@@ -2030,24 +2081,26 @@ def TunePredictableSelectIsExpensive
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
-                      "zero-stride vector load">;
+                      "zero-stride vector load", [], InlineIgnore>;
 
 def TuneEnableSelectOptimize
     : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
-                       "Enable the select optimize pass for select loop heuristics">;
+                       "Enable the select optimize pass for select loop heuristics",
+                       [], InlineIgnore>;
 
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
       SubtargetFeature<"optimized-nf"#nf#"-segment-load-store",
                        "HasOptimizedNF"#nf#"SegmentLoadStore",
                        "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are "
-                       "implemented as a wide memory op and shuffle">;
+                       "implemented as a wide memory op and shuffle",
+                       [], InlineIgnore>;
 
 def TuneVLDependentLatency
     : RISCVSimpleTuneFeature<
           "vl-dependent-latency", "HasVLDependentLatency", "true",
           "Latency of vector instructions is dependent on the "
-          "dynamic value of vl">;
+          "dynamic value of vl", [], InlineIgnore>;
 
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
@@ -2058,7 +2111,8 @@ def Experimental
 // that can be done in parallel.
 def TuneDLenFactor2
    : SubtargetFeature<"dlen-factor-2", "DLenFactor2", "true",
-                      "Vector unit DLEN(data path width) is half of VLEN">;
+                      "Vector unit DLEN(data path width) is half of VLEN",
+                      [], InlineIgnore>;
 
 def TuneNoDefaultUnroll
     : RISCVTuneFeature<"no-default-unroll", "no-default-unroll",
@@ -2115,13 +2169,6 @@ def TuneShortForwardBranchILoad
           [TuneShortForwardBranchIALU]>;
 def HasShortForwardBranchILoad : Predicate<"Subtarget->hasShortForwardBranchILoad()">;
 
-def TuneShortForwardBranchImm
-    : SubtargetFeature<"short-forward-branch-imm", "HasShortForwardBranchImm",
-                       "true", "Enable short forward branch optimization for branches with immediates",
-                       [TuneShortForwardBranchIALU]>;
-def HasShortForwardBranchImm : Predicate<"Subtarget->hasShortForwardBranchImm()">;
-def NoShortForwardBranchImm : Predicate<"!Subtarget->hasShortForwardBranchImm()">;
-
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
@@ -2168,14 +2215,15 @@ def TunePreferVsetvliOverReadVLENB
 //===----------------------------------------------------------------------===//
 
 def TuneAndes45 : SubtargetFeature<"andes45", "RISCVProcFamily", "Andes45",
-                                   "Andes 45-Series processors">;
+                                   "Andes 45-Series processors", [], InlineIgnore>;
 
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
-                       "MIPS p8700 processor">;
+                       "MIPS p8700 processor", [], InlineIgnore>;
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
-                                   "SiFive 7-Series processors">;
+                                   "SiFive 7-Series processors", [], InlineIgnore>;
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors">;
+                                         "Ventana Veyron-Series processors",
+                                         [], InlineIgnore>;

@@ -369,6 +369,17 @@ void StmtProfiler::VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+}
+
+void StmtProfiler::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  ID.AddBoolean(S->shouldApplyLifetimeExtensionToPreamble());
+}
+
 void StmtProfiler::VisitMSDependentExistsStmt(const MSDependentExistsStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isIfExists());
@@ -618,6 +629,9 @@ void OMPClauseProfiler::VisitOMPReadClause(const OMPReadClause *) {}
 void OMPClauseProfiler::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseProfiler::VisitOMPUpdateClause(const OMPUpdateClause *) {}
+
+void OMPClauseProfiler::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
 
 void OMPClauseProfiler::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
@@ -912,11 +926,17 @@ void OMPClauseProfiler::VisitOMPAllocateClause(const OMPAllocateClause *C) {
   VisitOMPClauseList(C);
 }
 void OMPClauseProfiler::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
+  Profiler->VisitInteger(C->getModifier());
+  if (const Expr *Modifier = C->getModifierExpr())
+    Profiler->VisitStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
 void OMPClauseProfiler::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  Profiler->VisitInteger(C->getModifier());
+  if (const Expr *Modifier = C->getModifierExpr())
+    Profiler->VisitStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
@@ -1183,7 +1203,13 @@ void StmtProfiler::VisitOMPScanDirective(const OMPScanDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
-void StmtProfiler::VisitOMPOrderedDirective(const OMPOrderedDirective *S) {
+void StmtProfiler::VisitOMPOrderedStandaloneDirective(
+    const OMPOrderedStandaloneDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPOrderedBlockAssocDirective(
+    const OMPOrderedBlockAssocDirective *S) {
   VisitOMPExecutableDirective(S);
 }
 
@@ -2327,6 +2353,14 @@ void StmtProfiler::VisitCXXUnresolvedConstructExpr(
   ID.AddInteger(S->isListInitialization());
 }
 
+void StmtProfiler::VisitDependentTemplateIdExpr(
+    const DependentTemplateIdExpr *S) {
+  VisitExpr(S);
+  VisitTemplateName(S->getTemplateName());
+  VisitTemplateArguments(S->template_arguments().data(),
+                         S->getNumTemplateArgs());
+}
+
 void StmtProfiler::VisitCXXDependentScopeMemberExpr(
     const CXXDependentScopeMemberExpr *S) {
   ID.AddBoolean(S->isImplicitAccess());
@@ -2470,6 +2504,11 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 }
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
+
+void StmtProfiler::VisitCXXExpansionSelectExpr(
+    const CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+}
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 

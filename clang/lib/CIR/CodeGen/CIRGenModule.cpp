@@ -16,7 +16,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -37,6 +37,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -143,6 +144,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
 
+  theModule->setAttr(
+      cir::CIRDialect::getDefaultTlsModelAttrName(),
+      cir::TLSModelAttr::get(&mlirContext, getDefaultCIRTLSModel()));
+
   if (langOpts.OpenMP) {
     mlir::omp::OffloadModuleOpts ompOpts(
         langOpts.OpenMPTargetDebug, langOpts.OpenMPTeamSubscription,
@@ -151,6 +156,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
         getTriple().isGPU(), langOpts.OpenMPForceUSM, langOpts.OpenMP,
         langOpts.OMPHostIRFile, langOpts.OMPTargetTriples, langOpts.NoGPULib);
     mlir::omp::setOffloadModuleInterfaceAttributes(theModule, ompOpts);
+    mlir::omp::setOpenMPVersionAttribute(theModule, langOpts.OpenMP);
   }
 
   if (langOpts.CUDA)
@@ -174,7 +180,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   // Set CUDA GPU binary handle.
   if (langOpts.CUDA) {
-    llvm::StringRef cudaBinaryName = codeGenOpts.CudaGpuBinaryFileName;
+    llvm::StringRef cudaBinaryName = codeGenOpts.OffloadBinaryToEmbedFile;
     if (!cudaBinaryName.empty()) {
       theModule->setAttr(cir::CIRDialect::getCUDABinaryHandleAttrName(),
                          cir::CUDABinaryHandleAttr::get(
@@ -306,11 +312,17 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
       return *theTargetCIRGenInfo;
     }
   }
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be: {
+    theTargetCIRGenInfo = createAArch64TargetCIRGenInfo(genTypes);
+    return *theTargetCIRGenInfo;
+  }
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
     theTargetCIRGenInfo = createNVPTXTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
@@ -430,6 +442,27 @@ void CIRGenModule::emitDeferred() {
   curDeclsToEmit.swap(deferredDeclsToEmit);
 
   for (const GlobalDecl &d : curDeclsToEmit) {
+    // Functions declared with the sycl_kernel_entry_point attribute are
+    // emitted normally during host compilation. During device compilation, a
+    // SYCL kernel caller offload entry point function is generated and emitted
+    // in place of each of these functions.
+    if (const auto *fd = d.getDecl()->getAsFunction()) {
+      if (langOpts.SYCLIsDevice && fd->hasAttr<SYCLKernelEntryPointAttr>() &&
+          fd->isDefined()) {
+        // Functions with an invalid sycl_kernel_entry_point attribute are
+        // ignored during device compilation.
+        if (!fd->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+          // Generate and emit the SYCL kernel caller function.
+          emitSYCLKernelCaller(fd, getASTContext());
+          // Recurse to emit any symbols directly or indirectly referenced
+          // by the SYCL kernel caller function.
+          emitDeferred();
+        }
+        // Do not emit the sycl_kernel_entry_point attributed function.
+        continue;
+      }
+    }
+
     emitGlobalDecl(d);
 
     // If we found out that we need to emit more decls, do that recursively.
@@ -866,11 +899,11 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   }
 
   if (!targetCPU.empty()) {
-    attrs["cir.target-cpu"] = targetCPU.str();
+    attrs[cir::CIRDialect::getTargetCPUAttrName()] = targetCPU.str();
     addedAttr = true;
   }
   if (!tuneCPU.empty()) {
-    attrs["cir.tune-cpu"] = tuneCPU.str();
+    attrs[cir::CIRDialect::getTuneCPUAttrName()] = tuneCPU.str();
     addedAttr = true;
   }
   if (!features.empty() && setTargetFeatures) {
@@ -880,7 +913,8 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
       return getTarget().isReadOnlyFeature(f.substr(1));
     });
     llvm::sort(features);
-    attrs["cir.target-features"] = llvm::join(features, ",");
+    attrs[cir::CIRDialect::getTargetFeaturesAttrName()] =
+        llvm::join(features, ",");
     addedAttr = true;
   }
   // TODO(cir): add metadata for AArch64 Function Multi Versioning.
@@ -902,9 +936,17 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
       if (auto func = dyn_cast<cir::FuncOp>(op)) {
         llvm::StringMap<std::string> attrs;
         if (getCPUAndFeaturesAttributes(gd, attrs)) {
-          // TODO(cir): Classic codegen removes the existing target-cpu,
-          // target-features, tune-cpu and fmv-features attributes here
-          // before adding the new ones.
+          // TODO(cir): Classic codegen also removes fmv-features here, which
+          // CIR does not emit yet.
+          //
+          // getCPUAndFeaturesAttributes reads the most recent declaration, so
+          // its result supersedes anything an earlier one wrote.  Clear first:
+          // setAttr alone would leave a name this call no longer produces.
+          for (llvm::StringRef name :
+               {cir::CIRDialect::getTargetCPUAttrName(),
+                cir::CIRDialect::getTuneCPUAttrName(),
+                cir::CIRDialect::getTargetFeaturesAttrName()})
+            func->removeAttr(name);
           for (const auto &[key, val] : attrs)
             func->setAttr(key, builder.getStringAttr(val));
         }
@@ -1063,16 +1105,23 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   };
 
   if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
+    // ConstArrayAttr::verify guarantees the elements are either an ArrayAttr or
+    // a StringAttr.  A StringAttr is a string-literal initializer: raw 8-bit
+    // character bytes with no nested global references, so there is nothing to
+    // rewrite and it is returned unchanged.  The ArrayAttr case recurses to
+    // rewrite any nested global views.
+    mlir::Attribute oldElts = oldArray.getElts();
+    if (mlir::isa<mlir::StringAttr>(oldElts))
+      return oldInit;
     mlir::Attribute newElements =
-        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
+        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldElts));
     return cgm.getBuilder().getConstArray(
         newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
   }
   if (auto oldRecord = mlir::dyn_cast<cir::ConstRecordAttr>(oldInit)) {
     mlir::ArrayAttr newMembers = getNewInitElements(oldRecord.getMembers());
     auto recordTy = mlir::cast<cir::RecordType>(oldRecord.getType());
-    return cgm.getBuilder().getConstRecordOrZeroAttr(
-        newMembers, recordTy.getPacked(), recordTy.getPadded(), recordTy);
+    return cgm.getBuilder().getConstRecordOrZeroAttr(newMembers, recordTy);
   }
 
   // This may be unreachable in practice, but keep it as errorNYI while CIR
@@ -1449,7 +1498,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -1829,7 +1878,7 @@ cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
   }
 
   // Create a new variable.
-  gv = createGlobalOp(loc, name, ty);
+  gv = createGlobalOp(loc, name, ty, /*isConstant=*/true);
 
   // Set up extra information and add to the module
   gv.setLinkageAttr(
@@ -2026,6 +2075,10 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   // Iterate through all calls of the no-proto function.
   std::optional<mlir::SymbolTable::UseRange> symUses =
       oldFn.getSymbolUses(oldFn->getParentOp());
+
+  if (!symUses)
+    return;
+
   for (const mlir::SymbolTable::SymbolUse &use : symUses.value()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -2297,6 +2350,22 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *fieldDecl = cast<FieldDecl>(decl);
   const auto *mpt = e->getType()->castAs<MemberPointerType>();
   const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+
+  // Empty [[no_unique_address]] fields have no CIR field index; represent the
+  // pointer-to-data-member by its concrete byte offset within the class.
+  if (isEmptyFieldForMemberPointer(fieldDecl)) {
+    // This function should ONLY be accessed in reference to itself, I don't see
+    // any cases/couldn't find any cases where anything else could get here, and
+    // classic-codegen does the same.
+    assert(fieldDecl->getParent() == destClass &&
+           "scalar member pointer should be relative to the declaring class");
+    uint64_t offset =
+        astContext.toCharUnitsFromBits(astContext.getFieldOffset(fieldDecl))
+            .getQuantity();
+    return cir::ConstantOp::create(builder, loc,
+                                   cir::DataMemberOffsetAttr::get(ty, offset));
+  }
+
   std::optional<llvm::SmallVector<int32_t>> path =
       buildMemberPath(destClass, fieldDecl);
   if (!path)
@@ -2321,7 +2390,7 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       getTypes().getCIRGenRecordLayout(currentClass);
 
   // The field is declared directly in this class.
-  if (field->getParent() == currentClass) {
+  if (astContext.isSameEntity(field->getParent(), currentClass)) {
     int32_t fieldIdx;
     if (currentClass->isUnion()) {
       // For unions, getCIRFieldNo always returns 0 for every union member (all
@@ -2362,6 +2431,11 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
       continue;
     }
 
+    // If a base class doesn't participate in layout, the field cannot be in it,
+    // skip it.
+    if (!layout.hasNonVirtualBaseCIRField(baseDecl))
+      continue;
+
     auto baseFieldIdx =
         static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
     path.push_back(baseFieldIdx);
@@ -2370,6 +2444,11 @@ bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
     path.pop_back();
   }
   return false;
+}
+
+bool CIRGenModule::isEmptyFieldForMemberPointer(const FieldDecl *field) {
+  return isEmptyFieldForLayout(astContext, field) &&
+         field->isPotentiallyOverlapping();
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -2723,6 +2802,16 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
     }
   }
 
+  // In CUDA/HIP device compilation with -fgpu-rdc, the mangled name of a
+  // static device variable depends on whether the variable is referenced by
+  // a host or device host function. Therefore the mangled name cannot be
+  // cached.
+  if (!langOpts.CUDAIsDevice || !astContext.mayExternalize(gd.getDecl())) {
+    auto foundName = mangledDeclNames.find(canonicalGd);
+    if (foundName != mangledDeclNames.end())
+      return foundName->second;
+  }
+
   // Keep the first result in the case of a mangling collision.
   const auto *nd = cast<NamedDecl>(gd.getDecl());
   std::string mangledName = getMangledNameImpl(*this, gd, nd);
@@ -3013,16 +3102,24 @@ bool CIRGenModule::lookupRepresentativeDecl(StringRef mangledName,
   return true;
 }
 
-cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
+static cir::TLSModel getCIRTLSModel(StringRef S) {
+  return llvm::StringSwitch<cir::TLSModel>(S)
+      .Case("global-dynamic", cir::TLSModel::GeneralDynamic)
+      .Case("local-dynamic", cir::TLSModel::LocalDynamic)
+      .Case("initial-exec", cir::TLSModel::InitialExec)
+      .Case("local-exec", cir::TLSModel::LocalExec);
+}
+
+cir::TLSModel CIRGenModule::getDefaultCIRTLSModel() const {
   switch (getCodeGenOpts().getDefaultTLSModel()) {
   case CodeGenOptions::GeneralDynamicTLSModel:
-    return cir::TLS_Model::GeneralDynamic;
+    return cir::TLSModel::GeneralDynamic;
   case CodeGenOptions::LocalDynamicTLSModel:
-    return cir::TLS_Model::LocalDynamic;
+    return cir::TLSModel::LocalDynamic;
   case CodeGenOptions::InitialExecTLSModel:
-    return cir::TLS_Model::InitialExec;
+    return cir::TLSModel::InitialExec;
   case CodeGenOptions::LocalExecTLSModel:
-    return cir::TLS_Model::LocalExec;
+    return cir::TLSModel::LocalExec;
   }
   llvm_unreachable("Invalid TLS model!");
 }
@@ -3031,18 +3128,18 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
                               bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
-  cir::TLS_Model tlm = getDefaultCIRTLSModel();
+  cir::TLSModel tlm = getDefaultCIRTLSModel();
 
   // Override the TLS model if it is explicitly specified.
-  if (d.getAttr<TLSModelAttr>())
-    errorNYI(d.getSourceRange(), "TLS model attribute");
+  if (const auto *attr = d.getAttr<TLSModelAttr>())
+    tlm = getCIRTLSModel(attr->getModel());
 
   auto global = cast<cir::GlobalOp>(op);
   global.setTlsModel(tlm);
 
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
-  if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+  if (d.isStaticLocal())
     return;
 
   // If this function was called to set the TLS mode for a temporary whose
@@ -3230,6 +3327,119 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
   assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
+// Maps an AST address space to the OpenCL logical address space kind recorded
+// in kernel argument metadata. This mapping is independent of the target
+// address space map, allowing consumers to distinguish OpenCL logical address
+// spaces even when the target maps them to the same address space.
+static cir::LangAddressSpace
+getOpenCLKernelArgAddressSpace(LangAS addressSpace) {
+  switch (addressSpace) {
+  case LangAS::opencl_global:
+    return cir::LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+    return cir::LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_local:
+    return cir::LangAddressSpace::OffloadLocal;
+  case LangAS::opencl_generic:
+    return cir::LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+    return cir::LangAddressSpace::OffloadGlobalDevice;
+  case LangAS::opencl_global_host:
+    return cir::LangAddressSpace::OffloadGlobalHost;
+  default:
+    // All other AST address spaces, including target-specific ones, use the
+    // OpenCL metadata default, which lowers to SPIR address space ID 0.
+    return cir::LangAddressSpace::Default;
+  }
+}
+
+void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
+                                               const clang::FunctionDecl *fd) {
+  assert(fd && "expected a kernel function declaration");
+  const PrintingPolicy &policy = getASTContext().getPrintingPolicy();
+
+  // Create arrays that represent the kernel argument metadata. Each array has
+  // one value per kernel argument, in source order.
+  SmallVector<mlir::Attribute> addressQuals;
+  SmallVector<mlir::Attribute> accessQuals;
+  SmallVector<mlir::Attribute> argTypeNames;
+  SmallVector<mlir::Attribute> argBaseTypeNames;
+  SmallVector<mlir::Attribute> argTypeQuals;
+  SmallVector<mlir::Attribute> argNames;
+
+  for (const ParmVarDecl *param : fd->parameters()) {
+    argNames.push_back(builder.getStringAttr(param->getName()));
+
+    QualType type = param->getType();
+    std::string typeQuals;
+
+    if (type->isImageType() || type->isPipeType()) {
+      errorNYI(param->getSourceRange(),
+               "OpenCL kernel argument metadata for image and pipe types");
+      return;
+    }
+
+    accessQuals.push_back(builder.getStringAttr("none"));
+
+    auto getTypeSpelling = [&](QualType paramType) {
+      std::string typeName = paramType.getUnqualifiedType().getAsString(policy);
+
+      if (paramType.isCanonical()) {
+        StringRef typeNameRef = typeName;
+        if (typeNameRef.consume_front("unsigned "))
+          return std::string("u") + typeNameRef.str();
+        if (typeNameRef.consume_front("signed "))
+          return typeNameRef.str();
+      }
+
+      return typeName;
+    };
+
+    // Type metadata preserves source spelling, while base type metadata uses
+    // canonical spelling without typedefs.
+    if (type->isPointerType()) {
+      QualType pointeeType = type->getPointeeType();
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(),
+          getOpenCLKernelArgAddressSpace(pointeeType.getAddressSpace())));
+
+      argTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(pointeeType) + "*"));
+      argBaseTypeNames.push_back(builder.getStringAttr(
+          getTypeSpelling(pointeeType.getCanonicalType()) + "*"));
+
+      if (type.isRestrictQualified())
+        typeQuals = "restrict";
+      if (pointeeType.isConstQualified() ||
+          pointeeType.getAddressSpace() == LangAS::opencl_constant)
+        typeQuals += typeQuals.empty() ? "const" : " const";
+      if (pointeeType.isVolatileQualified())
+        typeQuals += typeQuals.empty() ? "volatile" : " volatile";
+    } else {
+      addressQuals.push_back(cir::LangAddressSpaceAttr::get(
+          &getMLIRContext(), cir::LangAddressSpace::Default));
+
+      argTypeNames.push_back(builder.getStringAttr(getTypeSpelling(type)));
+      argBaseTypeNames.push_back(
+          builder.getStringAttr(getTypeSpelling(type.getCanonicalType())));
+    }
+
+    argTypeQuals.push_back(builder.getStringAttr(typeQuals));
+  }
+
+  mlir::ArrayAttr names;
+  if (getCodeGenOpts().EmitOpenCLArgMetadata)
+    names = builder.getArrayAttr(argNames);
+
+  mlir::Attribute metadata = cir::OpenCLKernelArgMetadataAttr::get(
+      func.getContext(), builder.getArrayAttr(addressQuals),
+      builder.getArrayAttr(accessQuals), builder.getArrayAttr(argTypeNames),
+      builder.getArrayAttr(argBaseTypeNames),
+      builder.getArrayAttr(argTypeQuals), names);
+  func->setAttr(cir::CIRDialect::getOpenCLKernelArgMetadataAttrName(),
+                metadata);
+}
+
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
@@ -3407,13 +3617,10 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { x.method() }
-    //
-    // Be sure to insert a new function before a current one.
-    CIRGenFunction *cgf = this->curCGF;
-    if (cgf)
-      builder.setInsertionPoint(cgf->curFn);
+    // Functions always belong at module scope, but the ambient insertion
+    // point may be inside another op's region, e.g. a thunk body or a
+    // global's ctor region, so it cannot be used here.
+    builder.setInsertionPointToEnd(theModule.getBody());
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
 
@@ -3435,11 +3642,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
 
-    // Mark C++ special member functions (Constructor, Destructor etc.)
-    setCXXSpecialMemberAttr(func, funcDecl);
-
-    if (!cgf)
-      theModule.push_back(func);
+    // Record the func_info tag, a C++ special member form or a known standard
+    // library entity.
+    setFuncInfoAttr(func, funcDecl);
 
     if (this->getLangOpts().OpenACC) {
       // We only have to handle this attribute, since OpenACCAnnotAttrs are
@@ -3480,8 +3685,8 @@ static cir::AssignKind getAssignKindFromDecl(const CXXMethodDecl *method) {
   llvm_unreachable("not a copy or move assignment operator");
 }
 
-void CIRGenModule::setCXXSpecialMemberAttr(
-    cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl) {
+void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
+                                   const clang::FunctionDecl *funcDecl) {
   if (!funcDecl)
     return;
 
@@ -3489,7 +3694,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxDtor = cir::CXXDtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
         dtor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    funcOp.setFuncInfoAttr(cxxDtor);
     return;
   }
 
@@ -3498,7 +3703,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxCtor = cir::CXXCtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
         kind, ctor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    funcOp.setFuncInfoAttr(cxxCtor);
     return;
   }
 
@@ -3509,9 +3714,36 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxAssign = cir::CXXAssignAttr::get(
         convertType(getASTContext().getCanonicalTagType(method->getParent())),
         assignKind, method->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
+
+  // Otherwise tag a function that matches a known standard library entity. A
+  // known entity is named by a plain identifier in std. For a member the
+  // record decides std membership. Inline namespaces, like the versioning
+  // namespace of libc++, count as part of std.
+  if (!funcDecl->getIdentifier())
+    return;
+  bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
+                               : funcDecl->isInStdNamespace();
+  if (!inStdNamespace)
+    return;
+
+  // The names and the tags come from CIRStdOps.td, and the recognizer checks
+  // the shape of each call. Only free functions name a known entity today, so
+  // a member like char_traits::find never shares the tag of the free std::find.
+  std::optional<cir::KnownFuncKind> kind;
+  if (!method) {
+    kind = llvm::StringSwitch<std::optional<cir::KnownFuncKind>>(
+               funcDecl->getName())
+               .Case(cir::StdFindOp::getFunctionName(),
+                     cir::StdFindOp::getFuncKind())
+               .Default(std::nullopt);
+  }
+  if (!kind)
+    return;
+
+  funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(&getMLIRContext(), *kind));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
@@ -3704,25 +3936,8 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
     const auto *vd = cast<VarDecl>(d);
     linkage = getCIRLinkageVarDefinition(vd);
   }
-
-  // Aliases that target weak symbols must themselves be marked weak.
-  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
-      d->isWeakImported())
-    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
-
-  // Create the alias op. If there is an existing declaration with the same
-  // name, erase it: any references to it via flat symbol reference will
-  // automatically resolve to the new alias.
-  if (entry) {
-    eraseGlobalSymbol(entry);
-    entry->erase();
-  }
-
-  // Aliases are always definitions, so the MLIR visibility should match the
-  // linkage rather than defaulting to private.
-  mlir::SymbolTable::Visibility visibility =
-      getMLIRVisibilityFromCIRLinkage(linkage);
-
+  //
+  // Create the alias op.
   // TODO(cir): Make GlobalAlias a separate op.
   cir::CIRGlobalValueInterface alias =
       isFunction ? mlir::cast<cir::CIRGlobalValueInterface>(
@@ -3732,6 +3947,30 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
                            .getOperation())
                  : mlir::cast<cir::CIRGlobalValueInterface>(
                        createGlobalOp(loc, mangledName, declTy).getOperation());
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  // However, function aliases actually change its type, so we have to replace
+  // uses of it.
+  if (entry) {
+    if (isFunction)
+      replaceUsesOfNonProtoTypeWithRealFunction(
+          entry, mlir::cast<cir::FuncOp>(alias.getOperation()));
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
   alias.setAliasee(aa->getAliasee());
   alias.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(alias, visibility);
@@ -3873,42 +4112,6 @@ void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
   diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
 }
 
-void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
-                                   cir::LabelOp label) {
-  [[maybe_unused]] auto result =
-      blockAddressInfoToLabel.try_emplace(blockInfo, label);
-  assert(result.second &&
-         "attempting to map a blockaddress info that is already mapped");
-}
-
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
-}
-
-cir::LabelOp
-CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
-  return blockAddressInfoToLabel.lookup(blockInfo);
-}
-
 mlir::Operation *
 CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
                                        const Expr *init) {
@@ -4020,8 +4223,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with comdat/weak linkage");
+    gv.setComdat(true);
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;

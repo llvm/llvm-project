@@ -22,9 +22,11 @@
 #include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -45,6 +47,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/IOSandbox.h"
@@ -89,7 +92,9 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DynamicDebugging.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -188,6 +193,15 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+  void RunCodegenPipelineLegacy(BackendAction Action,
+                                std::unique_ptr<raw_pwrite_stream> &OS,
+                                std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                                CodeGenFileType CGFT);
+  void RunCodegenPipelineNewPM(BackendAction Action,
+                               std::unique_ptr<raw_pwrite_stream> &OS,
+                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                               CodeGenFileType CGFT);
+  void TimeCodegenPasses(llvm::function_ref<void()> RunPasses);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -379,17 +393,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.ThreadModel = llvm::ThreadModel::Single;
     break;
   }
-
-  // Set float ABI type.
-  assert((CodeGenOpts.FloatABI == "soft" || CodeGenOpts.FloatABI == "softfp" ||
-          CodeGenOpts.FloatABI == "hard" || CodeGenOpts.FloatABI.empty()) &&
-         "Invalid Floating Point ABI!");
-  Options.FloatABIType =
-      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
-          .Case("soft", llvm::FloatABI::Soft)
-          .Case("softfp", llvm::FloatABI::Soft)
-          .Case("hard", llvm::FloatABI::Hard)
-          .Default(llvm::FloatABI::Default);
 
   // Set FP fusion mode.
   switch (LangOpts.getDefaultFPContractMode()) {
@@ -657,7 +660,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
       TargetTriple.isAArch64(64) || TargetTriple.isRISCV() ||
-      TargetTriple.isARM() || TargetTriple.isThumb())
+      TargetTriple.isARM() || TargetTriple.isThumb() ||
+      TargetTriple.getArch() == llvm::Triple::hexagon)
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
@@ -1116,7 +1120,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (CodeGenOpts.FatLTO) {
       MPM.addPass(PB.buildFatLTODefaultPipeline(
           Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+          PrepareForThinLTO || shouldEmitRegularLTOSummary(),
+          CodeGenOpts.VerifyModule));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1127,8 +1132,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
-  if (CodeGenOpts.LinkBitcodePostopt)
+  if (CodeGenOpts.LinkBitcodePostopt) {
     MPM.addPass(LinkInModulesPass(BC));
+    MPM.addPass(AssignGUIDPass());
+  }
 
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
@@ -1230,6 +1237,26 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
+      return;
+  }
+
+  if (CodeGenOpts.getEnableNewPMCodeGen() ==
+          CodeGenOptions::NewPMEnablementLevel::ForceEnable ||
+      (CodeGenOpts.getEnableNewPMCodeGen() ==
+           CodeGenOptions::NewPMEnablementLevel::Auto &&
+       TM->shouldDefaultToNewPM())) {
+    RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
+  } else {
+    RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
+  }
+}
+
+void EmitAssemblyHelper::RunCodegenPipelineLegacy(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1243,15 +1270,9 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   const llvm::TargetOptions &Options = TM->Options;
-  CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-      TargetTriple, Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
-
-  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-    if (!DwoOS)
-      return;
-  }
+  CodeGenPasses.add(
+      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
+                                    Options.MCOptions.ABIName, Options.VecLib));
 
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
@@ -1267,18 +1288,58 @@ void EmitAssemblyHelper::RunCodegenPipeline(
     return;
   }
 
-  {
-    PrettyStackTraceString CrashInfo("Code generation");
-    llvm::TimeTraceScope TimeScope("CodeGenPasses");
-    Timer timer;
-    if (CI.getCodeGenOpts().TimePasses) {
-      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
-      CI.getFrontendTimer().yieldTo(timer);
-    }
-    CodeGenPasses.run(*TheModule);
-    if (CI.getCodeGenOpts().TimePasses)
-      timer.yieldTo(CI.getFrontendTimer());
+  TimeCodegenPasses([&] { CodeGenPasses.run(*TheModule); });
+}
+
+void EmitAssemblyHelper::RunCodegenPipelineNewPM(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
+  ModulePassManager MPM;
+  MachineFunctionAnalysisManager MFAM;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  CGPassBuilderOption Opt = getCGPassBuilderOption();
+  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
+  MachineModuleInfo MMI(TM.get());
+  PassInstrumentationCallbacks PIC;
+  PipelineTuningOptions PTOptions;
+  TargetMachine *TMPointer = TM.get();
+  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
+                 CI.getVirtualFileSystemPtr());
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
+  Error BuildPipelineError =
+      TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                               CGFT, Opt, MMI.getContext(), &PIC);
+  if (BuildPipelineError) {
+    Diags.Report(diag::err_fe_unable_to_interface_with_target);
+    return;
   }
+
+  TimeCodegenPasses([&] { MPM.run(*TheModule, MAM); });
+}
+
+void EmitAssemblyHelper::TimeCodegenPasses(
+    llvm::function_ref<void()> RunPasses) {
+  PrettyStackTraceString CrashInfo("Code generation");
+  llvm::TimeTraceScope TimeScope("CodeGenPasses");
+  Timer timer;
+  if (CI.getCodeGenOpts().TimePasses) {
+    timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+    CI.getFrontendTimer().yieldTo(timer);
+  }
+  RunPasses();
+  if (CI.getCodeGenOpts().TimePasses)
+    timer.yieldTo(CI.getFrontendTimer());
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
@@ -1425,6 +1486,91 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   }
 }
 
+static void createAndEmbedModuleForDynamicDebugging(
+    CompilerInstance &CI, CodeGenOptions &CGOpts, llvm::Module *M,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, BackendConsumer *BC) {
+  /// Helper for saving the module(s) at various dyndbg stages.
+  auto SaveModule = [&](StringRef Name, llvm::Module &M) {
+    if (CGOpts.SaveDynDbgTempsFilePrefix == "")
+      return;
+    std::error_code EC;
+    std::string Path =
+        Twine(CGOpts.SaveDynDbgTempsFilePrefix + "." + Name + ".ll").str();
+    raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+    if (EC) {
+      // Copy -save-temps behaviour: this is a debugging option so we simply
+      // exit if there's an issue.
+      errs() << "failed to open " << Path << ": " << EC.message() << '\n';
+      errs().flush();
+      exit(1);
+    }
+    M.print(OS, nullptr);
+  };
+
+  // Compute a hash suffix for promoting static globals (once per TU).
+  std::string PromotionSuffix;
+  {
+    // LLVM's hash/hash_combine is not guaranteed to be stable.
+    MD5 Hash;
+    // Include args in the hash else preprocessor definitions used to alter
+    // the same source file compiled twice won't generate unique hashes.
+    Hash.update(CGOpts.CmdArgs);
+    for (auto *CU : M->debug_compile_units()) {
+      if (CU->getDirectory().size() > 0)
+        Hash.update(CU->getDirectory());
+
+      Hash.update(CU->getFilename());
+    }
+
+    MD5::MD5Result Result;
+    Hash.final(Result);
+    PromotionSuffix = ".dyndbg." + utohexstr(Result.low());
+  }
+
+  SaveModule("dyndbg.0.input", *M);
+  // Modify M as needed and create an "unoptimized" clone.
+  auto UnoptM = prepareForDynamicDebugging(M, PromotionSuffix);
+  SaveModule("dyndbg.1.inner", *UnoptM);
+
+  if (!CGOpts.DiscardDynamicDebuggingDebugModule) {
+    CodeGenOptions UnoptOpts = CGOpts;
+    UnoptOpts.OptimizationLevel = 0;
+    UnoptOpts.OptimizeSize = 0;
+    EmitAssemblyHelper AsmHelper(CI, UnoptOpts, UnoptM.get(), VFS);
+
+    // Create a buffer and ostream for the inner ELF.
+    SmallVector<char, 0> UnoptBuf;
+    std::unique_ptr<llvm::raw_pwrite_stream> UnoptOS =
+        std::make_unique<llvm::raw_svector_ostream>(UnoptBuf);
+
+    // Always run the full codegen pipeline (Backend_EmitObj). This causes
+    // assertion failures if there's no registered backend which is why we
+    // disable the feature if that's the case (see
+    // warn_dyndbg_unable_to_create_target above).
+    AsmHelper.emitAssembly(Backend_EmitObj, std::move(UnoptOS), BC);
+    assert(!UnoptBuf.empty() && "Expected emitAssembly to fill UnoptBuf");
+
+    // Inject the inner ELF into the outer module.
+    StringRef SR(UnoptBuf.data(), UnoptBuf.size());
+    std::unique_ptr<MemoryBuffer> Buf =
+        MemoryBuffer::getMemBuffer(SR, "", false);
+
+    GlobalVariable *EmbeddedGV =
+        llvm::embedBufferInModule(*M, *Buf, ".debug_llvm_dyndbg", Align(8),
+                                  /*SectionExclude*/ false);
+    // Add ELF section properties metadata.
+    auto &C = M->getContext();
+    auto getU32Metadata = [&C](unsigned Val) {
+      return ConstantAsMetadata::get(ConstantInt::get(C, APInt(32, Val)));
+    };
+    EmbeddedGV->addMetadata(
+        LLVMContext::MD_elf_section_properties,
+        *MDTuple::get(C, {/*sh_type*/ getU32Metadata(ELF::SHT_LLVM_DYNDBG_ELF),
+                          /*sh_entsize*/ getU32Metadata(0)}));
+  }
+  SaveModule("dyndbg.2.outer", *M);
+}
+
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               StringRef TDesc, llvm::Module *M,
                               BackendAction Action,
@@ -1448,7 +1594,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                       .moveInto(CombinedIndex)) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
-                            CGOpts.ThinLTOIndexFile + "': ");
+                                CGOpts.ThinLTOIndexFile + "': ");
       return;
     }
 
@@ -1473,6 +1619,30 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       M = EmptyModule.get();
     }
   }
+
+  bool EnableDynamicDebugging = CGOpts.DynamicDebugging;
+  if (EnableDynamicDebugging) {
+    // Disable dyndbg if the target isn't available as we're compiling to the
+    // inner module (unless we're discarding it for debugging/testing).
+    std::string Error;
+    const llvm::Target *TheTarget =
+        TargetRegistry::lookupTarget(M->getTargetTriple(), Error);
+    if (!TheTarget && !CGOpts.DiscardDynamicDebuggingDebugModule) {
+      Diags.Report(diag::warn_dyndbg_unable_to_create_target) << Error;
+      EnableDynamicDebugging = false;
+    }
+
+    // Instrumentation causes issues (parts of LLVM expect certain globals to
+    // have initializers). Intrinsics may already have been added to IR by now,
+    // so we can't just turn it off for the inner module (we'd have to strip
+    // them out / not clone them). TODO: Support instrumentation.
+    if (CGOpts.getProfileInstr() != driver::ProfileInstrKind::ProfileNone) {
+      Diags.Report(diag::err_dyndbg_no_instrumentation);
+      EnableDynamicDebugging = false;
+    }
+  }
+  if (EnableDynamicDebugging)
+    createAndEmbedModuleForDynamicDebugging(CI, CGOpts, M, VFS, BC);
 
   EmitAssemblyHelper AsmHelper(CI, CGOpts, M, VFS);
   AsmHelper.emitAssembly(Action, std::move(OS), BC);

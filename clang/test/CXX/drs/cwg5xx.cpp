@@ -472,7 +472,7 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(const a) {
+const cwg539_f(const a) {
 // expected-error@-1 {{unknown type name 'a'}}
 // expected-error@-2 {{a type specifier is required for all declarations}}
   const b;
@@ -679,8 +679,8 @@ namespace cwg553 {
   // "is looked up in global scope", where it is not visible.
   void *p = new (c) int;
   // expected-error@-1 {{no matching function for call to 'operator new'}}
-  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: no known conversion from 'cwg553_class' to 'std::align_val_t' for 2nd argument}}
   //   expected-note@#cwg5xx-global-operator-new {{candidate function not viable: requires 1 argument, but 2 were provided}}
+  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
   struct namespace_scope {
     friend void *operator new(size_t, namespace_scope);

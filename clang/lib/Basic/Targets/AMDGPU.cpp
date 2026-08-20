@@ -28,34 +28,35 @@ namespace targets {
 // getPointerWidthV().
 
 const LangASMap AMDGPUTargetInfo::AMDGPUAddrSpaceMap = {
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // Default
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // opencl_local
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
-    llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
-    llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_uptr
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr64
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // hlsl_groupshared
-    llvm::AMDGPUAS::CONSTANT_ADDRESS, // hlsl_constant
+    {LangAS::Default, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::opencl_global, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::opencl_local, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::opencl_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
+    {LangAS::opencl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::opencl_generic, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::opencl_global_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::opencl_global_host, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::cuda_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::cuda_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
+    {LangAS::cuda_shared, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::sycl_global, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_global_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_global_host, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::sycl_local, llvm::AMDGPUAS::LOCAL_ADDRESS},
+    {LangAS::sycl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::ptr32_sptr, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::ptr32_uptr, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::ptr64, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::hlsl_groupshared, llvm::AMDGPUAS::FLAT_ADDRESS},
+    {LangAS::hlsl_constant, llvm::AMDGPUAS::CONSTANT_ADDRESS},
     // FIXME(pr/122103): hlsl_private -> PRIVATE is wrong, but at least this
     // will break loudly.
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_private
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_device
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_input
-    llvm::AMDGPUAS::PRIVATE_ADDRESS, // hlsl_output
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,  // hlsl_push_constant
+    {LangAS::hlsl_private, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_device, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::hlsl_input, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_output, llvm::AMDGPUAS::PRIVATE_ADDRESS},
+    {LangAS::hlsl_push_constant, llvm::AMDGPUAS::GLOBAL_ADDRESS},
+    {LangAS::amdgpu_barrier, llvm::AMDGPUAS::LOCAL_ADDRESS},
 };
 
 } // namespace targets
@@ -183,7 +184,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   if (getTriple().isAMDGCN())
-    llvm::AMDGPU::fillValidArchListAMDGCN(Values);
+    llvm::AMDGPU::fillValidArchListAMDGCN(Values, getTriple().getSubArch());
   else
     llvm::AMDGPU::fillValidArchListR600(Values);
 }
@@ -191,14 +192,18 @@ void AMDGPUTargetInfo::fillValidCPUList(
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
     : TargetInfo(Triple),
-      GPUKind(Triple.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Opts.CPU)
-                                : llvm::AMDGPU::parseArchR600(Opts.CPU)),
+      GPUKind(Triple.isAMDGCN()
+                  ? (Opts.CPU.empty() ? llvm::AMDGPU::getGPUKindFromSubArch(
+                                            Triple.getSubArch())
+                                      : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
+                  : llvm::AMDGPU::parseArchR600(Opts.CPU)),
       GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
                                     : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
   UseAddrSpaceMapMangling = true;
+  HasAMDGPUTypes = true;
 
   if (Triple.isAMDGCN()) {
     // __bf16 is always available as a load/store only type on AMDGCN.
@@ -210,7 +215,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
+  WavefrontSize = llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+                      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32)
+                      ? 32
+                      : 64;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -219,16 +227,31 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    Int64Type = SignedLong;
+    IntMaxType = SignedLong;
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  CUMode = !llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WGP);
 
-  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts"}) {
+  for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
+                 "supports-wave32", "xnack-support", "sramecc-support",
+                 "xnack-on-off-modes"}) {
     if (GPUKind != llvm::AMDGPU::GK_NONE)
       ReadOnlyFeatures.insert(F);
   }
   HalfArgsAndReturns = true;
+
+  if (Opts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["xnack"] =
+        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
+
+  if (Opts.AMDGPUSramEccState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["sramecc"] =
+        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
@@ -278,12 +301,9 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
       (getTriple().isAMDGCN() ? getArchNameAMDGCN(GPUKind)
                               : getArchNameR600(GPUKind));
 
-  // Sanitize the name of generic targets.
+  // Sanitize the name of generic targets, the only names containing '-'.
   // e.g. gfx10-1-generic -> gfx10_1_generic
-  if (GPUKind >= llvm::AMDGPU::GK_AMDGCN_GENERIC_FIRST &&
-      GPUKind <= llvm::AMDGPU::GK_AMDGCN_GENERIC_LAST) {
-    llvm::replace(CanonName, '-', '_');
-  }
+  llvm::replace(CanonName, '-', '_');
 
   Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
   // Emit macros for gfx family e.g. gfx906 -> __GFX9__, gfx1030 -> __GFX10___

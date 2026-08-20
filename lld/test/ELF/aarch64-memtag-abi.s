@@ -43,7 +43,7 @@
 
 # RUN: not ld.lld -shared -z memtag-mode=asymm -z memtag-heap 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=BAD-MODE
-# BAD-MODE: error: unknown -z memtag-mode= value: asymm
+# BAD-MODE: error: unknown -z memtag-mode= value 'asymm'
 
 # RUN: ld.lld -static -z memtag-mode=sync -z memtag-heap \
 # RUN:    -z memtag-stack %t.o -o %t

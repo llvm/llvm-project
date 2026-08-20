@@ -11,7 +11,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpecList.h"
@@ -32,6 +31,8 @@
 // C++ Includes
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 // C inclues
 #include <cstdlib>
@@ -189,7 +190,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   }
 
   file_spec.SetDirectory(raw_path);
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -747,7 +748,7 @@ const LazyDyldSPIs &GetLazyDyldSPIs() {
 
 class SharedCacheInfo {
 public:
-  SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
+  SharedCacheImageInfo GetByFilename(UUID sc_uuid, llvm::StringRef filename) {
     llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
@@ -785,7 +786,7 @@ private:
   // All of the entries for a given shared cache are in m_file_infos.
   // m_filename_map and m_uuid_map have pointers into those entries.
   llvm::SmallDenseMap<UUID, std::vector<SharedCacheImageInfo>> m_file_infos;
-  llvm::SmallDenseMap<UUID, llvm::DenseMap<ConstString, size_t>> m_filename_map;
+  llvm::SmallDenseMap<UUID, llvm::StringMap<size_t>> m_filename_map;
   llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, size_t>> m_uuid_map;
 
   UUID m_host_uuid;
@@ -940,11 +941,11 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
         return;
       UUID image_uuid(uuid_tmp, sizeof(uuid_t));
 
-      // Copy the filename into the const string pool to
-      // ensure lifetime.
-      ConstString installname(dyld_image_get_installname(image));
+      const char *installname_cstr = dyld_image_get_installname(image);
+      std::string installname = installname_cstr ? installname_cstr : "";
+
       Log *log = GetLog(LLDBLog::Modules);
-      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.GetCString(),
+      LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.c_str(),
                         (void *)image);
 
       dyld.image_retain_4HWTrace(image);
@@ -1023,6 +1024,10 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     __block uint64_t maxVmAddr = 0;
     uuid_t uuidStore;
     __block uuid_t *uuid = &uuidStore;
+    // A shared cache image's segments can occupy non-adjacent regions of the
+    // cache. Keep track of the segment's start and end so we can build a
+    // VirtualDataExtractor that prevents reads between segments.
+    __block std::vector<std::pair<uint64_t, uint64_t>> segments;
 
     dyld_image_for_each_segment_info(
         image,
@@ -1030,15 +1035,24 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
           minVmAddr = std::min(minVmAddr, vmAddr);
           maxVmAddr = std::max(maxVmAddr, vmAddr + vmSize);
           dyld_image_copy_uuid(image, uuid);
+          if (vmSize > 0)
+            segments.emplace_back(vmAddr, vmSize);
         });
     assert(minVmAddr != UINT_MAX);
     assert(maxVmAddr != 0);
     lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
-    lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
-    // Copy the filename into the const string pool to
-    // ensure lifetime.
-    ConstString installname(dyld_image_get_installname(image));
+    // Data is read in place from lldb's own shared cache, so each segment's
+    // virtual offset (image base at 0) equals its physical offset in the
+    // buffer.
+    VirtualDataExtractor::LookupTable table;
+    for (const std::pair<uint64_t, uint64_t> &seg : segments)
+      table.Append(VirtualDataExtractor::LookupTable::Entry(
+          seg.first - minVmAddr, seg.second, seg.first - minVmAddr));
+    lldb::DataExtractorSP extractor_sp =
+        std::make_shared<VirtualDataExtractor>(data_sp, table);
+    const char *installname_cstr = dyld_image_get_installname(image);
+    std::string installname = installname_cstr ? installname_cstr : "";
     m_file_infos[m_host_uuid].push_back(
         SharedCacheImageInfo(installname, UUID(uuid, 16), extractor_sp));
   });
@@ -1060,7 +1074,7 @@ SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(ConstString filepath,
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef filepath,
                                         SymbolSharedCacheUse sc_mode) {
   return GetSharedCacheSingleton(sc_mode).GetByFilename(UUID(), filepath);
 }
@@ -1071,8 +1085,10 @@ HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
   return GetSharedCacheSingleton(sc_mode).GetByUUID(UUID(), file_uuid);
 }
 
-SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
-    ConstString filepath, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef filepath,
+                                        const UUID &sc_uuid,
+                                        SymbolSharedCacheUse sc_mode) {
   return GetSharedCacheSingleton(sc_mode).GetByFilename(sc_uuid, filepath);
 }
 
@@ -1103,13 +1119,13 @@ bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
       path.size(), /*isDirectory=*/true);
   if (!url)
     return false;
-  auto url_cleanup = llvm::make_scope_exit([&]() { CFRelease(url); });
+  auto url_cleanup = llvm::scope_exit([&]() { CFRelease(url); });
 
   SecStaticCodeRef static_code = nullptr;
   if (SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &static_code) !=
       errSecSuccess)
     return false;
-  auto code_cleanup = llvm::make_scope_exit([&]() { CFRelease(static_code); });
+  auto code_cleanup = llvm::scope_exit([&]() { CFRelease(static_code); });
 
   // Check that the signature chains to a trusted root CA.
   SecRequirementRef requirement = nullptr;
@@ -1117,7 +1133,7 @@ bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
                                      kSecCSDefaultFlags,
                                      &requirement) != errSecSuccess)
     return false;
-  auto req_cleanup = llvm::make_scope_exit([&]() { CFRelease(requirement); });
+  auto req_cleanup = llvm::scope_exit([&]() { CFRelease(requirement); });
 
   return SecStaticCodeCheckValidity(static_code, kSecCSDefaultFlags,
                                     requirement) == errSecSuccess;

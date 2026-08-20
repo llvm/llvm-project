@@ -1809,11 +1809,32 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
+/// Collapse a `BroadcastOp` with a 0-D input into the single flattened
+/// dimension (`dimensions = [0]`).
+template <>
+BroadcastOp
+cloneToCollapsedOp<BroadcastOp>(RewriterBase &rewriter, BroadcastOp origOp,
+                                const CollapsingInfo &collapsingInfo) {
+  assert(origOp.getInput().getType().getRank() == 0 && "expected a 0-D input");
+
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+
+  SmallVector<int64_t> newDimensions = {0};
+  return BroadcastOp::create(rewriter, origOp.getLoc(), inputOperands[0],
+                             outputOperands[0], newDimensions);
+}
+
 static LinalgOp createCollapsedOp(LinalgOp op,
                                   const CollapsingInfo &collapsingInfo,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
+  }
+  if (BroadcastOp broadcastOp = dyn_cast<BroadcastOp>(op.getOperation())) {
+    return cloneToCollapsedOp(rewriter, broadcastOp, collapsingInfo);
   }
   return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }

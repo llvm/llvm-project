@@ -460,19 +460,63 @@ protected:
   const ArraySpec &arraySpec();
   void set_arraySpec(const ArraySpec arraySpec) { arraySpec_ = arraySpec; }
   const ArraySpec &coarraySpec();
+  std::vector<Bound> &droppedBoundsToCheck() { return droppedBoundsToCheck_; }
+  const std::vector<Bound> &attrDroppedBoundsToCheck() const {
+    return attrDroppedBoundsToCheck_;
+  }
+  // Bounds from a DIMENSION attribute's array-spec that an entity-decl's own
+  // array-spec has overridden.  They are no longer part of the entity's shape,
+  // but they remain specification expressions that must be validated.  Copies
+  // are returned because the attribute applies to every entity-decl in the
+  // statement.
+  std::vector<Bound> overriddenAttrArraySpecBounds() const {
+    std::vector<Bound> result;
+    // An entity-decl overrides the DIMENSION attribute when it supplies its own
+    // array-spec, whether that yields an array (arraySpec_) or, for a zero-size
+    // explicit-shape bounds array (F2023), a scalar (droppedBoundsToCheck_).
+    bool entityHasOwnArraySpec{
+        !arraySpec_.empty() || !droppedBoundsToCheck_.empty()};
+    if (entityHasOwnArraySpec && !attrArraySpec_.empty()) {
+      for (const ShapeSpec &spec : attrArraySpec_) {
+        for (const Bound *bound : {&spec.lbound(), &spec.ubound()}) {
+          // A constant bound -- notably the synthesized default lower bound of
+          // 1 when only an upper bound was written -- is trivially a valid
+          // specification expression, so retain only bounds that might
+          // reference something requiring validation.
+          if (const auto &expr{bound->GetExplicit()};
+              expr && !evaluate::IsConstantExpr(*expr)) {
+            result.push_back(*bound);
+          }
+        }
+      }
+    }
+    return result;
+  }
   void BeginArraySpec();
   void EndArraySpec();
-  void ClearArraySpec() { arraySpec_.clear(); }
+  void ClearArraySpec() {
+    arraySpec_.clear();
+    droppedBoundsToCheck_.clear();
+  }
   void ClearCoarraySpec() { coarraySpec_.clear(); }
 
 private:
   // arraySpec_/coarraySpec_ are populated from any ArraySpec/CoarraySpec
   ArraySpec arraySpec_;
   ArraySpec coarraySpec_;
+  // Bounds of a zero-size explicit-shape bounds array (F2023): the entity is
+  // scalar, so these specification expressions are stashed here and validated
+  // later rather than stored in the shape.
+  std::vector<Bound> droppedBoundsToCheck_;
   // When an ArraySpec is under an AttrSpec or ComponentAttrSpec, it is moved
   // into attrArraySpec_
   ArraySpec attrArraySpec_;
   ArraySpec attrCoarraySpec_;
+  // Bounds dropped from a zero-size or overriden DIMENSION attribute (F2023).
+  // Like attrArraySpec_, this is statement-level: it survives per-entity
+  // clearing so the bounds are validated for every entity-decl the attribute
+  // applies to, even when an entity-decl's own array-spec overrides the shape.
+  std::vector<Bound> attrDroppedBoundsToCheck_;
 
   void PostAttrSpec();
 };
@@ -751,6 +795,9 @@ protected:
   bool deferImplicitTyping_{false};
   bool skipImplicitTyping_{false};
   bool inEquivalenceStmt_{false};
+  // Whether the DATA statement whose objects are being visited appeared in
+  // a specification part (as opposed to an execution part)
+  bool dataStmtObjectInSpecPart_{false};
 
   // Some information is collected from a specification part for deferred
   // processing in DeclarationPartVisitor functions (e.g., CheckSaveStmts())
@@ -764,6 +811,10 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
+    // data-implied-do index variables whose typing is deferred to the end
+    // of the specification part, since the declaration typing the index's
+    // name may follow the DATA statement (F'2023 19.4 p5)
+    std::vector<MutableSymbolRef> deferredDataIDoVars;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -825,12 +876,17 @@ public:
   Symbol &AddGenericUse(GenericDetails &, const SourceName &, const Symbol &);
   void AddAndCheckModuleUse(SourceName, bool isIntrinsic);
   void CollectUseRenames(const parser::UseStmt &);
+  void AddImplicitUseModules();
   void ClearUseRenames() { useRenames_.clear(); }
   void ClearUseOnly() { useOnly_.clear(); }
   void ClearModuleUses() {
     intrinsicUses_.clear();
     nonIntrinsicUses_.clear();
   }
+
+protected:
+  std::optional<std::string> implicitUseModuleBeingResolved_;
+  std::set<std::string> implicitUseModulesInCurrentProgram_;
 
 private:
   // The location of the last AccessStmt without access-ids, if any.
@@ -855,6 +911,8 @@ private:
   // Record a use from useModuleScope_ of use Name/Symbol as local Name/Symbol
   SymbolRename AddUse(const SourceName &localName, const SourceName &useName);
   SymbolRename AddUse(const SourceName &, const SourceName &, Symbol *);
+  void AddUseForPublicSymbols(SourceName, const std::set<SourceName> &);
+  void AddUseForCommonBlocks();
   void DoAddUse(
       SourceName, SourceName, Symbol &localSymbol, const Symbol &useSymbol);
   void AddUse(const GenericSpecInfo &);
@@ -1000,6 +1058,9 @@ public:
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
   bool Pre(const parser::EnumerationTypeDef &);
+  void Post(const parser::EnumerationTypeStmt &);
+  bool Pre(const parser::EnumerationEnumeratorStmt &);
+  void Post(const parser::EndEnumerationTypeStmt &);
   bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
@@ -1635,22 +1696,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }
@@ -1752,7 +1831,7 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
+      auto *name{parser::omp::GetCommonBlockFromObj(obj)};
       if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
@@ -2168,29 +2247,39 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
-  auto &globalScope{[&]() -> Scope & {
-    for (Scope *s{&currScope()};; s = &s->parent()) {
-      if (s->IsTopLevel()) {
-        return *s;
-      }
-    }
-    llvm_unreachable("Cannot find global scope");
-  }()};
+  auto *object{parser::Unwrap<parser::OmpObject>(arg.u)};
+  if (!object) {
+    return;
+  }
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{FindInScope(globalScope, *name)}) {
-          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-            SayWithDecl(*name, *symbol,
-                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-                name->ToString());
-          }
-        } else {
-          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
-          name->symbol->set(Symbol::Flag::OmpCriticalLock);
-        }
+  const parser::Name *name{common::visit( //
+      common::visitors{//
+          [&](const parser::Designator &x) -> const parser::Name * {
+            return parser::GetDesignatorNameIfDataRef(x);
+          },
+          [&](const parser::OmpLocator &x) -> const parser::Name * {
+            if (auto *res{std::get_if<parser::OmpReservedIdentifier>(&x.u)}) {
+              return &res->v;
+            }
+            return nullptr;
+          },
+          [&](const parser::Name &) -> const parser::Name * { return nullptr; },
+          [&](const parser::OmpObject::Invalid &) -> const parser::Name * {
+            return nullptr;
+          }},
+      object->u)};
+
+  if (name) {
+    if (auto *symbol{FindInScope(context().globalScope(), *name)}) {
+      if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+        SayWithDecl(*name, *symbol,
+            "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+            name->ToString());
       }
+    } else {
+      name->symbol =
+          &MakeSymbol(context().globalScope(), name->source, Attrs{});
+      name->symbol->set(Symbol::Flag::OmpCriticalLock);
     }
   }
 }
@@ -2897,7 +2986,7 @@ void ArraySpecVisitor::Post(const parser::RankClause &x) {
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
-  arraySpec_ = AnalyzeArraySpec(context(), x);
+  arraySpec_ = AnalyzeArraySpec(context(), x, droppedBoundsToCheck_);
 }
 void ArraySpecVisitor::Post(const parser::ComponentArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -2909,7 +2998,18 @@ void ArraySpecVisitor::Post(const parser::CoarraySpec &x) {
 }
 
 const ArraySpec &ArraySpecVisitor::arraySpec() {
-  return !arraySpec_.empty() ? arraySpec_ : attrArraySpec_;
+  if (!arraySpec_.empty()) {
+    return arraySpec_;
+  }
+  // An entity-decl's own array-spec that is a zero-size explicit-shape bounds
+  // array (F2023) declares a scalar: arraySpec_ is empty but its dropped
+  // bounds are recorded.  This still overrides any DIMENSION attribute, so
+  // don't fall back to the attribute's array-spec -- return the empty scalar
+  // shape.
+  if (!droppedBoundsToCheck_.empty()) {
+    return arraySpec_;
+  }
+  return attrArraySpec_;
 }
 const ArraySpec &ArraySpecVisitor::coarraySpec() {
   return !coarraySpec_.empty() ? coarraySpec_ : attrCoarraySpec_;
@@ -2917,27 +3017,40 @@ const ArraySpec &ArraySpecVisitor::coarraySpec() {
 void ArraySpecVisitor::BeginArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   CHECK(attrArraySpec_.empty());
   CHECK(attrCoarraySpec_.empty());
+  CHECK(attrDroppedBoundsToCheck_.empty());
 }
 void ArraySpecVisitor::EndArraySpec() {
   CHECK(arraySpec_.empty());
   CHECK(coarraySpec_.empty());
+  CHECK(droppedBoundsToCheck_.empty());
   attrArraySpec_.clear();
   attrCoarraySpec_.clear();
+  attrDroppedBoundsToCheck_.clear();
 }
 void ArraySpecVisitor::PostAttrSpec() {
   // Save dimension/codimension from attrs so we can process array/coarray-spec
-  // on the entity-decl
-  if (!arraySpec_.empty()) {
-    if (attrArraySpec_.empty()) {
-      attrArraySpec_ = arraySpec_;
-      arraySpec_.clear();
+  // on the entity-decl.
+  if (!arraySpec_.empty() || !droppedBoundsToCheck_.empty()) {
+    if (attrArraySpec_.empty() && attrDroppedBoundsToCheck_.empty()) {
+      if (!arraySpec_.empty()) {
+        attrArraySpec_ = arraySpec_;
+        arraySpec_.clear();
+      }
     } else {
       Say(currStmtSource().value(),
           "Attribute 'DIMENSION' cannot be used more than once"_err_en_US);
     }
   }
+  // A zero-size DIMENSION attribute leaves arraySpec_ empty but produces bounds
+  // to check; move them to the statement-level list so they apply to every
+  // entity-decl.
+  attrDroppedBoundsToCheck_.insert(attrDroppedBoundsToCheck_.end(),
+      std::make_move_iterator(droppedBoundsToCheck_.begin()),
+      std::make_move_iterator(droppedBoundsToCheck_.end()));
+  droppedBoundsToCheck_.clear();
   if (!coarraySpec_.empty()) {
     if (attrCoarraySpec_.empty()) {
       attrCoarraySpec_ = coarraySpec_;
@@ -3831,30 +3944,40 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
                     },
           rename.u);
     }
-    for (const auto &[name, symbol] : *useModuleScope_) {
-      // Default USE imports public names, excluding intrinsic-only and most
-      // miscellaneous details. Allow OpenMP mapper identifiers represented
-      // as MapperDetails, and also legacy MiscDetails::ConstructName.
-      bool isMapper{symbol->has<MapperDetails>()};
-      if (!isMapper) {
-        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
-          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
-        }
+    AddUseForPublicSymbols(x.moduleName.source, useNames);
+  }
+  AddUseForCommonBlocks();
+
+  useModuleScope_ = nullptr;
+}
+
+void ModuleVisitor::AddUseForPublicSymbols(
+    SourceName location, const std::set<SourceName> &useNames) {
+  for (const auto &[name, symbol] : *useModuleScope_) {
+    // Default USE imports public names, excluding intrinsic-only and most
+    // miscellaneous details. Allow OpenMP mapper identifiers represented
+    // as MapperDetails, and also legacy MiscDetails::ConstructName.
+    bool isMapper{symbol->has<MapperDetails>()};
+    if (!isMapper) {
+      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
       }
-      if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
-          (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
-              symbol->has<UseDetails>()) &&
-          (!symbol->has<MiscDetails>() || isMapper) &&
-          useNames.count(name) == 0) {
-        SourceName location{x.moduleName.source};
-        if (auto *localSymbol{FindInScope(name)}) {
-          DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
-        } else {
-          DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
-        }
+    }
+    if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
+        (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
+            symbol->has<UseDetails>()) &&
+        (!symbol->has<MiscDetails>() || isMapper) &&
+        useNames.count(name) == 0) {
+      if (auto *localSymbol{FindInScope(name)}) {
+        DoAddUse(location, localSymbol->name(), *localSymbol, *symbol);
+      } else {
+        DoAddUse(location, location, CopySymbol(name, *symbol), *symbol);
       }
     }
   }
+}
+
+void ModuleVisitor::AddUseForCommonBlocks() {
   // Go through the list of COMMON block symbols in the module scope and add
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
@@ -3869,8 +3992,76 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+}
 
-  useModuleScope_ = nullptr;
+void ModuleVisitor::AddImplicitUseModules() {
+  if (InModuleFile() || currScope().kind() != Scope::Kind::Subprogram) {
+    return;
+  }
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *details{symbol->detailsIf<SubprogramDetails>()}) {
+      if (auto attrs{details->cudaSubprogramAttrs()}) {
+        if (*attrs == common::CUDASubprogramAttrs::Device ||
+            *attrs == common::CUDASubprogramAttrs::Global ||
+            *attrs == common::CUDASubprogramAttrs::Grid_Global) {
+          return;
+        }
+      }
+    }
+  }
+  for (const std::string &module : context().implicitUseModules()) {
+    if (module.empty()) {
+      continue;
+    }
+    SourceName moduleName{module};
+    if (implicitUseModulesInCurrentProgram_.count(module) != 0) {
+      continue;
+    }
+    if (implicitUseModuleBeingResolved_ &&
+        *implicitUseModuleBeingResolved_ == module) {
+      continue;
+    }
+    bool isContainedInImplicitModule{false};
+    for (const Scope *scope{&currScope()}; !scope->IsTopLevel();
+        scope = &scope->parent()) {
+      if (scope->kind() == Scope::Kind::Module) {
+        if (std::optional<SourceName> scopeName{scope->GetName()};
+            scopeName && scopeName->ToString() == module) {
+          // Do not implicitly USE a module while resolving anything contained
+          // in that module; doing so would be a self USE.
+          isContainedInImplicitModule = true;
+          break;
+        }
+      }
+    }
+    if (isContainedInImplicitModule) {
+      continue;
+    }
+    if (auto it{context().globalScope().find(moduleName)};
+        it != context().globalScope().end()) {
+      if (Scope *scope{it->second->scope()};
+          scope && DoesScopeContain(scope, currScope())) {
+        continue;
+      }
+    }
+    parser::Name name{moduleName};
+    std::optional<bool> isIntrinsic;
+    if (currScope().IsModule() && currScope().symbol() &&
+        currScope().symbol()->attrs().test(Attr::INTRINSIC)) {
+      // Intrinsic modules USE only other intrinsic modules.
+      isIntrinsic = true;
+    }
+    useModuleScope_ = FindModule(name, isIntrinsic);
+    if (!useModuleScope_) {
+      continue;
+    }
+    AddAndCheckModuleUse(moduleName,
+        useModuleScope_->parent().kind() == Scope::Kind::IntrinsicModules);
+    useModuleScope_->symbol()->ReplaceName(moduleName);
+    AddUseForPublicSymbols(moduleName, {});
+    AddUseForCommonBlocks();
+    useModuleScope_ = nullptr;
+  }
 }
 
 ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
@@ -5003,17 +5194,24 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Launch_Bounds &x) {
       ok = false;
     }
   }
-  if (!ok || bounds.size() < 2 || bounds.size() > 3) {
-    Say(currStmtSource().value(),
-        "Operands of LAUNCH_BOUNDS() must be 2 or 3 integer constants"_err_en_US);
+  // The second (minimum blocks per multiprocessor) and third (maximum blocks
+  // per cluster) operands of LAUNCH_BOUNDS() are optional, so 1, 2, or 3
+  // integer constants are accepted.  This handler runs during the direct walk
+  // of the subprogram statement performed by ResolveSpecificationParts(), where
+  // currStmtSource() may not be set, so derive the diagnostic source from the
+  // prefix instead of dereferencing it.
+  parser::CharBlock source{parser::GetSource(x).value_or(
+      currStmtSource().value_or(parser::CharBlock{}))};
+  if (!ok || bounds.empty() || bounds.size() > 3) {
+    Say(source,
+        "Operands of LAUNCH_BOUNDS() must be 1, 2, or 3 integer constants"_err_en_US);
   } else if (auto *subp{currScope().symbol()
                      ? currScope().symbol()->detailsIf<SubprogramDetails>()
                      : nullptr}) {
     if (subp->cudaLaunchBounds().empty()) {
       subp->set_cudaLaunchBounds(std::move(bounds));
     } else {
-      Say(currStmtSource().value(),
-          "LAUNCH_BOUNDS() may only appear once"_err_en_US);
+      Say(source, "LAUNCH_BOUNDS() may only appear once"_err_en_US);
     }
   }
 }
@@ -5028,8 +5226,12 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
       ok = false;
     }
   }
+  // As in Post(Launch_Bounds), currStmtSource() may be unset on this path, so
+  // take the diagnostic source from the prefix.
+  parser::CharBlock source{parser::GetSource(x).value_or(
+      currStmtSource().value_or(parser::CharBlock{}))};
   if (!ok || dims.size() != 3) {
-    Say(currStmtSource().value(),
+    Say(source,
         "Operands of CLUSTER_DIMS() must be three integer constants"_err_en_US);
   } else if (auto *subp{currScope().symbol()
                      ? currScope().symbol()->detailsIf<SubprogramDetails>()
@@ -5037,8 +5239,7 @@ void SubprogramVisitor::Post(const parser::PrefixSpec::Cluster_Dims &x) {
     if (subp->cudaClusterDims().empty()) {
       subp->set_cudaClusterDims(std::move(dims));
     } else {
-      Say(currStmtSource().value(),
-          "CLUSTER_DIMS() may only appear once"_err_en_US);
+      Say(source, "CLUSTER_DIMS() may only appear once"_err_en_US);
     }
   }
 }
@@ -6019,8 +6220,24 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
           enumerator.t)}) {
-    Walk(*init); // Resolve names in expression before evaluation.
-    if (auto value{EvaluateInt64(context(), *init)}) {
+    std::optional<std::int64_t> value;
+    const parser::Expr &expr{parser::UnwrapRef<parser::Expr>(*init)};
+    if (parser::IsBOZLiteral(*init)) {
+      // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
+      // has the value specified by INT(boz-literal-constant, C_INT).
+      const evaluate::DynamicType cIntType{
+          TypeCategory::Integer, evaluate::CInteger::kind};
+      if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
+        if (auto converted{
+                evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
+          value = evaluate::ToInt64(FoldExpr(std::move(*converted)));
+        }
+      }
+    } else {
+      Walk(*init); // Resolve names in expression before evaluation.
+      value = EvaluateInt64(context(), *init);
+    }
+    if (value) {
       // Cast all init expressions to C_INT so that they can then be
       // safely incremented (see 7.6 Note 2).
       enumerationState_.value = static_cast<int>(*value);
@@ -6048,14 +6265,115 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   return false;
 }
 
+void DeclarationVisitor::Post(const parser::EnumDef &) {
+  enumerationState_ = EnumeratorState{};
+}
+
+// F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
+// and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
-      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+  const auto &source{
+      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
+  // ENUMERATION TYPE is an experimental feature: semantics are partially
+  // implemented.  FIR lowering is not implemented.
+  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
+    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+    return false;
+  }
+  Say(source,
+      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
+  BeginAttrs();
+  return true;
+}
+
+// F2023 R767 EnumerationTypeStmt — create the enumeration type symbol
+// in the enclosing scope and push a DerivedType scope for it.
+void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
+  const auto &name{std::get<parser::Name>(x.t)};
+  Attrs attrs{EndAttrs()};
+  if (const auto &optAccessSpec{
+          std::get<std::optional<parser::AccessSpec>>(x.t)};
+      optAccessSpec) {
+    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
+      Say(currStmtSource().value(),
+          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
+    }
+  }
+  // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
+  // the name of a previously defined enumeration type.  Enumeration Types are
+  // based on derived types, but unlike derived types, an enumeration type may
+  // not be forward referenced.
+  if (Symbol * prev{FindInScope(name.source)}) {
+    if (const auto *prevDetails{prev->detailsIf<DerivedTypeDetails>()};
+        prevDetails && prevDetails->isForwardReferenced()) {
+      Say(prev->name(),
+          "Enumeration type '%s' must be defined before it is referenced"_err_en_US,
+          name.source);
+    }
+  }
+  DerivedTypeDetails details;
+  details.set_isEnumerationType(true);
+  auto &symbol{MakeSymbol(name, attrs, std::move(details))};
+  symbol.ReplaceName(name.source);
+  PushScope(Scope::Kind::DerivedType, &symbol);
+  // Add a hidden __ordinal component to hold the 1-based enumerator position.
+  // This is a compiler-created INTEGER(4) component that preserves ordinal
+  // identity through constant folding and enables enumerator comparison.
+  SourceName ordinalName{context().SaveTempName(
+      std::string{DerivedTypeDetails::ordinalComponentName})};
+  Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
+  ordinalSym.set_details(ObjectEntityDetails{});
+  ordinalSym.SetType(
+      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+  ordinalSym.set(Symbol::Flag::CompilerCreated);
+  symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
+}
+
+// F2023 R768 EnumerationEnumeratorStmt — create PARAMETER symbols for
+// each enumerator name in the enclosing scope with 1-based ordinal init.
+bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
+  Scope &enclosingScope{NonDerivedTypeScope()};
+  // The current DerivedType scope's symbol is the enumeration type.
+  Symbol *typeSymbol{currScope().symbol()};
+  CHECK(typeSymbol);
+  auto &typeDetails{typeSymbol->get<DerivedTypeDetails>()};
+  // Build a DerivedTypeSpec for the enumeration type.
+  DerivedTypeSpec enumTypeSpec{typeSymbol->name(), *typeSymbol};
+  enumTypeSpec.set_category(DerivedTypeSpec::Category::EnumerationType);
+  DeclTypeSpec &declType{enclosingScope.MakeDerivedType(
+      DeclTypeSpec::TypeDerived, std::move(enumTypeSpec))};
+  for (const parser::Name &name : x.v) {
+    int ordinal{typeDetails.enumeratorCount() + 1};
+    // Create the enumerator symbol in the enclosing scope, not the
+    // enumeration type's own DerivedType scope.
+    Symbol &enumerator{
+        MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
+    Resolve(name, enumerator);
+    enumerator.set_details(ObjectEntityDetails{});
+    enumerator.SetType(declType);
+    // Store the init as a StructureConstructor of the enumeration type with
+    // the ordinal in the hidden __ordinal component.  This gives each
+    // enumerator a distinct Constant<SomeDerived> value.
+    evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
+    // Look up the __ordinal component symbol in the type's scope.
+    auto ordinalIter{
+        currScope().find(SourceName{DerivedTypeDetails::ordinalComponentName,
+            sizeof(DerivedTypeDetails::ordinalComponentName) - 1})};
+    CHECK(ordinalIter != currScope().end());
+    const Symbol &ordinalSym{*ordinalIter->second};
+    enumCtor.Add(ordinalSym,
+        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+    enumerator.get<ObjectEntityDetails>().set_init(
+        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
+            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+    typeDetails.set_enumeratorCount(ordinal);
+  }
   return false;
 }
 
-void DeclarationVisitor::Post(const parser::EnumDef &) {
-  enumerationState_ = EnumeratorState{};
+// F2023 R769 EndEnumerationTypeStmt — pop the scope.
+void DeclarationVisitor::Post(const parser::EndEnumerationTypeStmt &) {
+  PopScope();
 }
 
 bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {
@@ -6202,7 +6520,8 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     // these can be set on a symbol that is host-assoc or use-assoc
     if (!symbol &&
         (currScope().kind() == Scope::Kind::Subprogram ||
-            currScope().kind() == Scope::Kind::BlockConstruct)) {
+            currScope().kind() == Scope::Kind::BlockConstruct ||
+            currScope().IsSubmodule())) {
       if (auto *hostSymbol{FindSymbol(name)}) {
         symbol = &MakeHostAssocSymbol(name, *hostSymbol);
       }
@@ -6249,7 +6568,11 @@ void DeclarationVisitor::Post(const parser::ObjectDecl &x) {
 // Declare an entity not yet known to be an object or proc.
 Symbol &DeclarationVisitor::DeclareUnknownEntity(
     const parser::Name &name, Attrs attrs) {
-  if (!arraySpec().empty() || !coarraySpec().empty()) {
+  if (!arraySpec().empty() || !coarraySpec().empty() ||
+      !droppedBoundsToCheck().empty() || !attrDroppedBoundsToCheck().empty()) {
+    // A zero-size explicit-shape bounds array (F2023) declares a scalar with an
+    // empty arraySpec, but still carries dropped bound checks that must be
+    // stashed on an ObjectEntityDetails, so route it to DeclareObjectEntity.
     return DeclareObjectEntity(name, attrs);
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
@@ -6378,6 +6701,24 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
       } else {
         details->set_coshape(coarraySpec());
       }
+    }
+    // Stash bounds from a zero-size explicit-shape bounds array (F2023).  The
+    // entity is scalar, so these are not part of its shape, but they are still
+    // specification expressions to be validated during declaration checking.
+    // Bounds from the entity-decl's own array-spec are moved; those from a
+    // DIMENSION attribute are copied, since the attribute applies to every
+    // entity-decl in the statement.
+    for (Bound &bound : droppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(std::move(bound));
+    }
+    for (const Bound &bound : attrDroppedBoundsToCheck()) {
+      details->add_droppedBoundToCheck(Bound{bound});
+    }
+    // An entity-decl's own array-spec overrides the DIMENSION attribute's
+    // array-spec (a non-zero-size bounds array), but the attribute's bounds
+    // remain specification expressions that must be validated.
+    for (Bound &bound : overriddenAttrArraySpecBounds()) {
+      details->add_droppedBoundToCheck(std::move(bound));
     }
     SetBindNameOn(symbol);
   }
@@ -6647,6 +6988,17 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
+
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (dtDetails.isEnumerationType()) {
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
+
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -7958,8 +8310,14 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     // an explicit "integer(k)::" in an implied DO.
     context().NoteDefinedSymbol(*prev);
     name.symbol = nullptr; // undo the "FindSymbol()" above
-    // F'2023 19.4 p5 ambiguous rule about outer declarations
-    declTypeSpec = prev->GetType();
+    if (!dataStmtObjectInSpecPart_ || type) {
+      // F'2023 19.4 p5: the index adopts the type of a visible declaration
+      // of its name (see Extensions.md on 19.4 p5).  But for a DATA
+      // statement in a specification part, defer typing to
+      // FinishSpecificationPart(), where a local declaration following the
+      // DATA statement takes precedence over this outer one.
+      declTypeSpec = prev->GetType();
+    }
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
   if (!symbol.has<ObjectEntityDetails>()) {
@@ -7974,6 +8332,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
     auto restorer{
         common::ScopedSet(charInfo_.length, std::optional<ParamValue>{})};
     SetType(name, *declTypeSpec);
+  } else if (dataStmtObjectInSpecPart_) {
+    // F'2023 19.4 p5: the index takes the type its name has in the scoping
+    // unit, and that declaration may follow the DATA statement; defer
+    // typing to FinishSpecificationPart().  (8.6.7 p3 restricts only the
+    // data-stmt-objects, not this statement entity.)
+    specPartState_.deferredDataIDoVars.emplace_back(symbol);
   } else {
     ApplyImplicitRules(symbol);
   }
@@ -8405,6 +8769,8 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   // for purposes of implicit variable declaration vs. host association.
   // When a name first appears as an object in a DATA statement, it should
   // be implicitly declared locally as if it had been assigned.
+  auto specPartRestorer{
+      common::ScopedSet(dataStmtObjectInSpecPart_, inSpecificationPart_)};
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(
       common::visitors{
@@ -8967,6 +9333,12 @@ public:
     return true;
   }
   void Post(const parser::DerivedTypeDef &) { PopScope(); }
+  bool Pre(const parser::EnumerationTypeStmt &x) {
+    Hide(std::get<parser::Name>(x.t));
+    PushScope();
+    return true;
+  }
+  void Post(const parser::EnumerationTypeDef &) { PopScope(); }
   bool Pre(const parser::SelectTypeConstruct &) {
     PushScope();
     return true;
@@ -9437,6 +9809,12 @@ const parser::Name *DeclarationVisitor::FindComponent(
       return &component;
     }
   } else if (DerivedTypeSpec * derived{type->AsDerived()}) {
+    if (derived->IsEnumerationType()) {
+      Say(component.source,
+          "Component reference is not allowed for enumeration type '%s'"_err_en_US,
+          derived->typeSymbol().name());
+      return nullptr;
+    }
     derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
@@ -10132,6 +10510,7 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
     CollectUseRenames(useStmt.statement.value());
   }
   Walk(useStmts);
+  AddImplicitUseModules();
   UseCUDABuiltinNames();
   ClearUseRenames();
   ClearUseOnly();
@@ -10399,6 +10778,24 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
+  // Type the deferred data-implied-do index variables now that the whole
+  // specification part has been visited (F'2023 19.4 p5).  Plain
+  // Symbol::SetType suffices: the symbol is untyped, so no conflict
+  // diagnostics can arise.
+  for (MutableSymbolRef ref : specPartState_.deferredDataIDoVars) {
+    Symbol &symbol{*ref};
+    if (!symbol.GetType()) {
+      if (const Symbol *outer{currScope().FindSymbol(symbol.name())};
+          outer && outer->GetType()) {
+        symbol.SetType(*outer->GetType());
+        // Inhibit unused-variable diagnostics: the outer declaration may
+        // exist solely to give the index its type.
+        context().NoteDefinedSymbol(*outer);
+      } else {
+        ApplyImplicitRules(symbol);
+      }
+    }
+  }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
     if (const auto *statement{std::get_if<
@@ -10433,6 +10830,49 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
       details->moduleInterface() || symbol->test(Symbol::Flag::Subroutine)) {
     return; // error recovery
   }
+
+  // F2023 19.4 p2: a statement function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  Only
+  // names present in the current scope after specification-part resolution
+  // can conflict: per 19.5.1.4 p2 item (11), the name's appearance as a
+  // statement function dummy argument renders any host entity of that name
+  // inaccessible by host association, and a global entity to which this
+  // scoping unit makes no other reference is not accessible in it either.
+  // (A name that becomes an external procedure name only by way of a
+  // reference in the execution part is not yet visible here and is not
+  // diagnosed.)
+  const std::set<SourceName> importNames{currScope().importNames()};
+  const common::ImportKind importKind{currScope().GetImportKind()};
+  for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
+    // F2023 C8106: an explicitly imported name, or any host name made
+    // accessible by IMPORT, ALL, may not appear in a context that would
+    // render the host entity inaccessible, and a statement function dummy
+    // argument name is such a context (19.5.1.4 p2 item (11)).  There is
+    // no exception for scalar variables.  A plain IMPORT statement does
+    // not protect names from being hidden (8.8 p4).
+    if (importNames.count(dummyName.source) > 0 ||
+        importKind == common::ImportKind::All) {
+      if (const Symbol *host{
+              currScope().parent().FindSymbol(dummyName.source)}) {
+        Say(dummyName.source,
+            "'%s' from host may not be hidden by a statement function dummy argument"_err_en_US,
+            dummyName.source)
+            .Attach(host->name(), "Declaration of '%s'"_en_US, host->name());
+        continue;
+      }
+    }
+    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
+      const Symbol &ultimate{local->GetUltimate()};
+      const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
+                                      ultimate.has<EntityDetails>()) &&
+          !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
+      if (!isScalarVariable) {
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
+    }
+  }
+
   // Resolve the symbols on the RHS of the statement function.
   PushScope(*symbol->scope());
   const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(stmtFunc.t)};
@@ -10462,7 +10902,7 @@ void ResolveNamesVisitor::CheckImports() {
   case common::ImportKind::None:
     break;
   case common::ImportKind::All:
-    // C8102: all entities in host must not be hidden
+    // F2023 C8106: all entities in host must not be hidden
     for (const auto &pair : scope.parent()) {
       auto &name{pair.first};
       std::optional<SourceName> scopeName{scope.GetName()};
@@ -10473,7 +10913,7 @@ void ResolveNamesVisitor::CheckImports() {
     break;
   case common::ImportKind::Default:
   case common::ImportKind::Only:
-    // C8102: entities named in IMPORT must not be hidden
+    // F2023 C8106: entities named in IMPORT must not be hidden
     for (auto &name : scope.importNames()) {
       CheckImport(name, name);
     }
@@ -10773,6 +11213,10 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     return false;
   }
   ProgramTree &root{ProgramTree::Build(x, context())};
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          root.IsModule() ? std::optional<std::string>{root.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
@@ -10814,6 +11258,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
     ImplicitRulesVisitor::BeginScope(*hermetic);
   }
   std::map<SourceName, const parser::ProgramUnit *> modules;
+  std::set<std::string> moduleNamesInCurrentProgram;
   std::set<SourceName> uses;
   bool disordered{false};
   for (const auto &progUnit : x.v) {
@@ -10823,6 +11268,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       const auto &moduleStmt{
           std::get<parser::Statement<parser::ModuleStmt>>(mod.t)};
       const SourceName &name{moduleStmt.statement.v.source};
+      moduleNamesInCurrentProgram.insert(name.ToString());
       if (auto iter{modules.find(name)}; iter != modules.end()) {
         Say(name,
             "Module '%s' appears multiple times in a compilation unit"_err_en_US)
@@ -10846,6 +11292,7 @@ bool ResolveNamesVisitor::Pre(const parser::Program &x) {
       uses.insert(used);
     }
   }
+  implicitUseModulesInCurrentProgram_ = std::move(moduleNamesInCurrentProgram);
   if (!disordered) {
     return true;
   }
@@ -10940,6 +11387,10 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   if (node.isSpecificationPartResolved()) {
     return; // been here already
   }
+  auto implicitUseModuleBeingResolvedRestorer{
+      common::ScopedSet(implicitUseModuleBeingResolved_,
+          node.IsModule() ? std::optional<std::string>{node.name().ToString()}
+                          : implicitUseModuleBeingResolved_)};
   node.set_isSpecificationPartResolved();
   if (!BeginScopeForNode(node)) {
     return; // an error prevented scope from being created
@@ -11157,6 +11608,25 @@ public:
     }
   }
   void Post(const parser::EndTypeStmt &) {
+    if (outerScope_) {
+      resolver_.SetScope(*outerScope_);
+      outerScope_ = nullptr;
+    }
+  }
+
+  void Post(const parser::EnumerationTypeStmt &x) {
+    const auto &name{std::get<parser::Name>(x.t)};
+    if (Symbol * symbol{name.symbol}) {
+      if (Scope * scope{symbol->scope()}) {
+        if (scope->IsDerivedType()) {
+          CHECK(outerScope_ == nullptr);
+          outerScope_ = &resolver_.currScope();
+          resolver_.SetScope(*scope);
+        }
+      }
+    }
+  }
+  void Post(const parser::EndEnumerationTypeStmt &) {
     if (outerScope_) {
       resolver_.SetScope(*outerScope_);
       outerScope_ = nullptr;
