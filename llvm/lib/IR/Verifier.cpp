@@ -6844,6 +6844,37 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::vector_broadcast: {
+    auto *ResultTy = cast<VectorType>(Call.getType());
+    auto *ArgTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+    ElementCount ResultEC = ResultTy->getElementCount();
+    ElementCount InputEC = ArgTy->getElementCount();
+
+    Check(ResultTy->getElementType() == ArgTy->getElementType(),
+          "vector_broadcast argument and result must have the same element "
+          "type.",
+          &Call);
+
+    if (InputEC.isScalable() && ResultEC.isFixed()) {
+      CheckFailed("vector_broadcast cannot broadcast a scalable vector to a "
+                  "fixed-width vector.",
+                  &Call);
+      break;
+    }
+
+    uint64_t MinResultElements = ResultEC.getKnownMinValue();
+    if (ResultEC.isScalable() && InputEC.isFixed()) {
+      Attribute Attr =
+          Call.getFunction()->getFnAttribute(Attribute::VScaleRange);
+      if (Attr.isValid())
+        MinResultElements *= Attr.getVScaleRangeMin();
+    }
+    Check(MinResultElements % InputEC.getKnownMinValue() == 0,
+          "vector_broadcast result element count must be a multiple of the "
+          "argument element count for all possible values of vscale.",
+          &Call);
+    break;
+  }
   case Intrinsic::vector_insert: {
     Value *Vec = Call.getArgOperand(0);
     Value *SubVec = Call.getArgOperand(1);

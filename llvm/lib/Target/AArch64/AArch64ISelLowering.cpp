@@ -1965,10 +1965,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
 
-    // Direct patterns exist for broadcasts to packed SVE types.
+    // Direct patterns exist for broadcasts to packed SVE types whose sources
+    // fit in a NEON register. Custom lowering handles wider fixed sources.
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64,
                     MVT::nxv8f16, MVT::nxv4f32, MVT::nxv2f64, MVT::nxv8bf16})
-      setOperationAction(ISD::VECTOR_BROADCAST, VT, Legal);
+      setOperationAction(ISD::VECTOR_BROADCAST, VT, Custom);
+
+    // Custom legalise unpacked types to avoid promoting fixed-length sources
+    // beyond the width supported by NEON.
+    for (auto VT : {MVT::nxv2i8, MVT::nxv2i16, MVT::nxv2i32, MVT::nxv4i8,
+                    MVT::nxv4i16, MVT::nxv8i8})
+      setOperationAction(ISD::VECTOR_BROADCAST, VT, Custom);
 
     // Broadcasts to unpacked SVE type require explicit unpacking to add spacing
     // between elements.
@@ -17791,6 +17798,38 @@ SDValue AArch64TargetLowering::LowerVECTOR_BROADCAST(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
+  assert(VT.isScalableVector() &&
+         "Custom lowering expected for scalable vectors only.");
+
+  if (isPackedVectorType(VT, DAG)) {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (ElementCount::isKnownGE(VT.getVectorElementCount(),
+                                SrcVT.getVectorElementCount()))
+      return Op;
+
+    // We are broadcasting to a packed scalable vector for a wider-than-NEON
+    // vector. Deinterleave smaller source vectors until we get to a quad.
+    // This is similar to SplitVecRes_VECTOR_BROADCAST, but we are past type
+    // legalisation so it cannot be reused.
+    // TODO: tbl might be cheaper? Or or repeated dup z.q[idx] followed by zip1
+    // z.q, but that requires +F64MM+NS
+    assert(SrcVT.isFixedLengthVector() &&
+           SrcVT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock &&
+           "Expected a fixed source for a vscale-dependent broadcast");
+    auto [SrcLo, SrcHi] = DAG.SplitVector(Src, DL);
+    EVT SplitVT = SrcLo.getValueType();
+    SDValue Deinterleaved =
+        DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                    DAG.getVTList(SplitVT, SplitVT), SrcLo, SrcHi);
+    SDValue Even = DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved);
+    SDValue Odd =
+        DAG.getNode(ISD::VECTOR_BROADCAST, DL, VT, Deinterleaved.getValue(1));
+    SDValue Interleaved = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL,
+                                      DAG.getVTList(VT, VT), Even, Odd);
+    return Interleaved.getValue(0);
+  }
+
   assert(isUnpackedType(VT, DAG) && "Expected an unpacked vector type!");
 
   // Broadcast into a packed container before extracting the low lanes, which
@@ -32459,6 +32498,26 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::BITCAST:
     ReplaceBITCASTResults(N, Results, DAG);
     return;
+  case ISD::VECTOR_BROADCAST: {
+    EVT VT = N->getValueType(0);
+    EVT PromotedVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    EVT PromotedInVT = N->getOperand(0).getValueType().changeVectorElementType(
+        *DAG.getContext(), PromotedVT.getVectorElementType());
+    if (!PromotedInVT.isFixedLengthVector() ||
+        PromotedInVT.getFixedSizeInBits() <= AArch64::SVEBitsPerBlock)
+      return;
+
+    // Avoid promoting the input vector if that creates a vector wider than
+    // 128bits. Instead, keep the element type and broadcast to its packed type.
+    EVT PackedVT = getPackedSVEVectorVT(VT.getVectorElementType());
+    SDLoc DL(N);
+    SDValue Broadcast =
+        DAG.getNode(ISD::VECTOR_BROADCAST, DL, PackedVT, N->getOperand(0));
+    SDValue Promoted =
+        DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, PromotedVT, Broadcast);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Promoted));
+    return;
+  }
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_SMAX:
   case ISD::VECREDUCE_SMIN:

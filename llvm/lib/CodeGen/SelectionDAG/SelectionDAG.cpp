@@ -9150,18 +9150,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
     break;
   }
-  case ISD::VECTOR_BROADCAST: {
-    [[maybe_unused]] EVT InputVT = N1.getValueType();
-    assert(InputVT.isVector() && VT.isVector() &&
-           "Expected the input and output of the VECTOR_BROADCAST node to be "
-           "vectors!");
-    assert(VT.getVectorElementCount().hasKnownScalarFactor(
-               InputVT.getVectorElementCount()) &&
-           "Expected the element count of the output of the VECTOR_BROADCAST "
-           "node to be a positive integer multiple of the element count of the "
-           "source operand!");
-    break;
-  }
   case ISD::BITCAST:
     // Fold bit_convert nodes from a type to themselves.
     if (N1.getValueType() == VT)
