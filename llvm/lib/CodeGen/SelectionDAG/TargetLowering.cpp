@@ -788,6 +788,9 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  // On little-endian targets, a scalar-to-vector round trip from lane zero
+  // preserves the demanded low bits when the source and destination widths
+  // match.
   case ISD::SCALAR_TO_VECTOR: {
     if (!IsLE || !VT.isFixedLengthVector() ||
         !VT.getVectorElementType().isInteger())
@@ -802,12 +805,11 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     SDValue Vec = Extract.getOperand(0);
     EVT VecVT = Vec.getValueType();
-    auto *Idx = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
     if (!VecVT.isFixedLengthVector() ||
         !VecVT.getVectorElementType().isInteger() ||
         Extract.getValueType() != VecVT.getVectorElementType() ||
-        (IsTruncate && Scalar.getValueType() != DstEltVT) || !Idx ||
-        !Idx->isZero() ||
+        (IsTruncate && Scalar.getValueType() != DstEltVT) ||
+        !isNullConstant(Extract.getOperand(1)) ||
         VecVT.getScalarSizeInBits() < VT.getScalarSizeInBits() ||
         VecVT.getSizeInBits() != VT.getSizeInBits())
       break;
