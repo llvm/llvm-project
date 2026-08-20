@@ -62,7 +62,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
     %20 = llvm.extractvalue %19[0] : !llvm.struct<(ptr, i64)>
     %21 = llvm.extractvalue %19[1] : !llvm.struct<(ptr, i64)>
     %22 = llvm.sub %21, %4 : i64
-    %23 = omp.map.bounds lower_bound(%5 : i64) upper_bound(%22 : i64) extent(%21 : i64) stride(%4 : i64) start_idx(%5 : i64) {stride_in_bytes = true}
+    %23 = omp.map.bounds lower_bound(%5 : i64) upper_bound(%22 : i64) extent(%21 : i64) stride(%4 : i64) start_idx(%5 : i64) stride_in_bytes(true)
     %24 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
     %25 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%24 : !llvm.ptr, i8) bounds(%23) -> !llvm.ptr
     %26 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(to) capture(ByRef) members(%25 : [0] : !llvm.ptr) -> !llvm.ptr
@@ -101,7 +101,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: %[[VAL_22:.*]] = llvm.extractvalue %[[VAL_21]][0] : !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_23:.*]] = llvm.extractvalue %[[VAL_21]][1] : !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_24:.*]] = llvm.sub %[[VAL_23]], %[[VAL_6]] : i64
-// CHECK: %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_7]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_23]] : i64) stride(%[[VAL_6]] : i64) start_idx(%[[VAL_7]] : i64) {stride_in_bytes = true}
+// CHECK: %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_7]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_23]] : i64) stride(%[[VAL_6]] : i64) start_idx(%[[VAL_7]] : i64) stride_in_bytes(true)
 // CHECK: %[[VAL_26:.*]] = llvm.load %[[VAL_5]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_27:.*]] = llvm.load %[[HEAP0]] : !llvm.ptr -> !llvm.struct<(ptr, i64)>
 // CHECK: %[[VAL_28:.*]] = llvm.call @boxchar_firstprivate_init(%[[VAL_26]], %[[VAL_27]]) : (!llvm.struct<(ptr, i64)>, !llvm.struct<(ptr, i64)>) -> !llvm.struct<(ptr, i64)>

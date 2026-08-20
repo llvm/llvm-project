@@ -1002,6 +1002,13 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     auto yieldedVals = llvm::to_vector(innerTerminator->getOperands());
     assert(llvm::equal(outerLoop.getRegionIterArgs(), innerLoop.getInitArgs()));
     for (Value &yieldedVal : yieldedVals) {
+      // The yielded value may be the induction variable of the inner loop,
+      // which is about to be inlined and whose block argument is about to
+      // be destroyed. Use its replacement value instead.
+      if (yieldedVal == innerLoop.getInductionVar()) {
+        yieldedVal = delinearizeIvs[i];
+        continue;
+      }
       // The yielded value may be an iteration argument of the inner loop
       // which is about to be inlined.
       auto iter = llvm::find(innerLoop.getRegionIterArgs(), yieldedVal);

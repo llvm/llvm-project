@@ -73,12 +73,20 @@ TEST_F(RecordMemberKindTest, EmptyForTheABIWhenNoMemberHoldsData) {
   EXPECT_FALSE(makeStruct("dp", {u8, u8},
                           {RecordMemberKind::Data, RecordMemberKind::Pad})
                    .isEmptyForABI());
+  // A unit with a named occupant holds data the same way a field does.
+  EXPECT_FALSE(
+      makeStruct("b1", {u8}, {RecordMemberKind::BitField}).isEmptyForABI());
+  EXPECT_FALSE(makeStruct("be", {u8, u8},
+                          {RecordMemberKind::BitField, RecordMemberKind::Empty})
+                   .isEmptyForABI());
 }
 
 TEST_F(RecordMemberKindTest, PaddedFollowsThePadKinds) {
   IntType u8 = getU8();
   EXPECT_FALSE(makeStruct("d", {u8}, {RecordMemberKind::Data}).getPadded());
   EXPECT_FALSE(makeStruct("e", {u8}, {RecordMemberKind::Empty}).getPadded());
+  // Bit-field storage is declared, so an access unit is not padding.
+  EXPECT_FALSE(makeStruct("b", {u8}, {RecordMemberKind::BitField}).getPadded());
   EXPECT_TRUE(makeStruct("p", {u8}, {RecordMemberKind::Pad}).getPadded());
   // Interior padding counts too, not just a trailing run.
   EXPECT_TRUE(makeStruct("dpd", {u8, u8, u8},
@@ -156,6 +164,13 @@ TEST_F(RecordMemberKindTest, RejectsPadOnAUnionMember) {
                                     /*packed=*/false, /*padding=*/mlir::Type{},
                                     llvm::ArrayRef<RecordMemberKind>(empty)));
   EXPECT_EQ(diags.count, 1u);
+  // A union variant can be a bit-field access unit, which is not padding.
+  llvm::SmallVector<RecordMemberKind> bitField{RecordMemberKind::BitField};
+  EXPECT_TRUE(
+      UnionType::getChecked(getLoc(), &context, membersRef,
+                            /*packed=*/false, /*padding=*/mlir::Type{},
+                            llvm::ArrayRef<RecordMemberKind>(bitField)));
+  EXPECT_EQ(diags.count, 1u);
 }
 
 TEST_F(RecordMemberKindTest, AnIncompleteRecordIsNotEmptyForTheABI) {
@@ -191,6 +206,12 @@ TEST_F(RecordMemberKindTest, KindsTakePartInAnonymousTypeIdentity) {
 
   // Kinds are provenance rather than layout.
   EXPECT_TRUE(kindsPad.isLayoutIdentical(kindsEmpty));
+
+  auto kindsBitField =
+      StructType::get(&context, {u8, u8}, /*packed=*/false, /*is_class=*/false,
+                      {RecordMemberKind::BitField, RecordMemberKind::Pad});
+  EXPECT_NE(kindsPad, kindsBitField);
+  EXPECT_TRUE(kindsPad.isLayoutIdentical(kindsBitField));
 
   llvm::SmallVector<mlir::Type> unionMembers{u8, u8};
   llvm::SmallVector<RecordMemberKind> unionEmpty{RecordMemberKind::Data,

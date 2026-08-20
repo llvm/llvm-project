@@ -122,7 +122,7 @@ LLVM_ABI void initializeFinalizeISelPass(PassRegistry &);
 LLVM_ABI void initializeFixIrreduciblePass(PassRegistry &);
 LLVM_ABI void initializeFixupStatepointCallerSavedLegacyPass(PassRegistry &);
 LLVM_ABI void initializeFlattenCFGLegacyPassPass(PassRegistry &);
-LLVM_ABI void initializeFuncletLayoutPass(PassRegistry &);
+LLVM_ABI void initializeFuncletLayoutLegacyPass(PassRegistry &);
 LLVM_ABI void initializeGCEmptyBasicBlocksLegacyPass(PassRegistry &);
 LLVM_ABI void initializeGCMachineCodeAnalysisPass(PassRegistry &);
 LLVM_ABI void initializeGCModuleInfoPass(PassRegistry &);
@@ -198,7 +198,7 @@ LLVM_ABI void
 initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineCFGPrinterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCSELegacyPass(PassRegistry &);
-LLVM_ABI void initializeMachineCombinerPass(PassRegistry &);
+LLVM_ABI void initializeMachineCombinerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCopyPropagationLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCycleInfoPrinterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCycleInfoWrapperPassPass(PassRegistry &);

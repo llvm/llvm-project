@@ -90,7 +90,7 @@
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     branch-relaxation
-; CHECK-NEXT:     FuncletLayoutPass
+; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
 ; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>

@@ -10,7 +10,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %0 = llvm.mlir.constant(0 : index) : i64
     %1 = llvm.mlir.constant(2 : index) : i64
     %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) {stride_in_bytes = true}
+    %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) stride_in_bytes(true)
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg3 : !llvm.ptr, i32) bounds(%3) -> !llvm.ptr
@@ -39,7 +39,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %0 = llvm.mlir.constant(0 : index) : i64
     %1 = llvm.mlir.constant(2 : index) : i64
     %2 = llvm.mlir.constant(1 : index) : i64
-    %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) {stride_in_bytes = true}
+    %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) stride_in_bytes(true)
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %6 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg3 : !llvm.ptr, i32) bounds(%3) -> !llvm.ptr

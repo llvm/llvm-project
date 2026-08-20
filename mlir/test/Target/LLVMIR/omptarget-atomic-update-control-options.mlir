@@ -16,8 +16,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
     %9 = llvm.mlir.constant(1 : i64) : i64
     llvm.store %7, %2 : i32, !llvm.ptr
     llvm.store %6, %5 : i32, !llvm.ptr
-    %10 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "threads"}
-    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "a"}
+    %10 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("threads") -> !llvm.ptr
+    %11 = omp.map.info var_ptr(%5 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("a") -> !llvm.ptr
     omp.target kernel_type(generic) map_entries(%10 -> %arg0, %11 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %12 = llvm.mlir.constant(1 : i32) : i32
       %13 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -26,7 +26,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
         ^bb0(%arg2: i32):
           %14 = llvm.add %arg2, %12 : i32
           omp.yield(%14 : i32)
-        } {atomic_control = #omp.atomic_control<ignore_denormal_mode = true>}
+        } atomic_control #omp.atomic_control<ignore_denormal_mode = true>
         omp.terminator
       }
       omp.terminator

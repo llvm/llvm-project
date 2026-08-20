@@ -1,7 +1,15 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -target-abi darwinpcs -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -fenable-matrix -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,AAPCS,LONG32 --implicit-check-not="not yet implemented"
 
 // This test is verifying that the LLVM ABI library classifies return types in
 // the same way that Clang does without the library.
@@ -36,7 +44,8 @@ unsigned int ret_uint() { return 1; }
 // CHECK: define{{.*}} i32 @ret_uint
 
 long int ret_long() { return 1; }
-// CHECK: define{{.*}} i64 @ret_long
+// LONG64: define{{.*}} i64 @ret_long
+// LONG32: define{{.*}} i32 @ret_long
 
 _Float16 ret_float16() { return (_Float16)1.0f; }
 // CHECK: define{{.*}} half @ret_float16

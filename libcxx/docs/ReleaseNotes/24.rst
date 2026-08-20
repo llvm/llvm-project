@@ -51,6 +51,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
+
 Deprecations and Removals
 -------------------------
 

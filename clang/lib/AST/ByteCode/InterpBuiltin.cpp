@@ -1374,15 +1374,16 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     return false;
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  const ASTContext &ASTCtx = S.getASTContext();
   CharUnits Align = CharUnits::fromQuantity(Alignment.getZExtValue());
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer()) {
     CharUnits BaseAlignment;
     if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = S.getASTContext().getDeclAlign(VD);
+      BaseAlignment = ASTCtx.getDeclAlign(VD);
     else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
@@ -1392,8 +1393,11 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
     }
   }
 
-  APValue AV = Ptr.toAPValue(S.getASTContext());
-  CharUnits AVOffset = AV.getLValueOffset();
+  std::optional<size_t> LayoutOffset = Ptr.computeLayoutOffset(ASTCtx);
+  if (!LayoutOffset)
+    return false;
+
+  CharUnits AVOffset = CharUnits::fromQuantity(*LayoutOffset);
   if (ExtraOffset)
     AVOffset -= CharUnits::fromQuantity(ExtraOffset->getZExtValue());
   if (AVOffset.alignTo(Align) != AVOffset) {

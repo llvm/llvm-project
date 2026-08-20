@@ -2303,9 +2303,12 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
+      auto CanReplaceOperand = [OI](const Instruction *I) {
+        return canReplaceOperandWithVariable(I, OI);
+      };
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
-          !canReplaceOperandWithVariable(I0, OI))
-        // We can't create a PHI from this GEP.
+          !all_of(Insts, CanReplaceOperand))
+        // We can't create a PHI from this operand.
         return false;
       auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)

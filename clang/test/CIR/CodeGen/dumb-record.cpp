@@ -30,8 +30,8 @@ struct BitfieldsInOrder {
 } bitfield_order;
 
 // CHECK: Layout: <CIRecordLayout
-// CHECK:  CIR Type:!cir.struct<"BitfieldsInOrder" {data !cir.int<s, 8>, data !cir.int<u, 8>, data !cir.int<u, 32>}>
-// CHECK:  NonVirtualBaseCIRType:!cir.struct<"BitfieldsInOrder" {data !cir.int<s, 8>, data !cir.int<u, 8>, data !cir.int<u, 32>}>
+// CHECK:  CIR Type:!cir.struct<"BitfieldsInOrder" {data !cir.int<s, 8>, bitfield !cir.int<u, 8>, bitfield !cir.int<u, 32>}>
+// CHECK:  NonVirtualBaseCIRType:!cir.struct<"BitfieldsInOrder" {data !cir.int<s, 8>, bitfield !cir.int<u, 8>, bitfield !cir.int<u, 32>}>
 // CHECK:  IsZeroInitializable:1
 // CHECK:  BitFields:[
 // CHECK-NEXT:   <CIRBitFieldInfo name:bit offset:0 size:8 isSigned:0 storageSize:8 storageOffset:1 volatileOffset:0 volatileStorageSize:0 volatileStorageOffset:0>

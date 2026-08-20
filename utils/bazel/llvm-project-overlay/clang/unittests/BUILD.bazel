@@ -225,6 +225,7 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
         "//third-party/unittest:gmock",

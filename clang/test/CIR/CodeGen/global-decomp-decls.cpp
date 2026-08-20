@@ -29,7 +29,6 @@ auto [t1, t2, t3] = t;
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC2t12t22t3E, ptr {{.*}}@t, i64 12, i1 false)
 
 const auto & [t11, t12, t13] = getT<Type>();
-// CIR: cir.func {{.*}} @_Z4getTI4TypeEDav() -> !rec_anon_struct
 
 // CIR: cir.global external @_ZDC3t113t123t13E = #cir.ptr<null> : !cir.ptr<!rec_Type>
 // CIR: cir.func internal private @__cxx_global_var_init{{.*}}() {
@@ -71,6 +70,8 @@ auto [dt1, dt2, dt3] = dt;
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}@_ZDC3dt13dt23dt3E, ptr {{.*}}@dt, i64 12, i1 false)
 // LLVM:   call {{.*}} @__cxa_atexit(ptr @_ZN8DtorTypeD1Ev, ptr @_ZDC3dt13dt23dt3E, ptr @__dso_handle)
+
+// CIR: cir.func {{.*}} @_Z4getTI4TypeEDav() -> !rec_anon_struct
 
 extern "C" int use() {
   return t1 + t2 + t3 +

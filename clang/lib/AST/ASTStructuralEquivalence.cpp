@@ -1238,9 +1238,18 @@ bool ASTStructuralEquivalence::isEquivalent(
             Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
             cast<HLSLAttributedResourceType>(T2)->getContainedType()))
       return false;
-    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
-        cast<HLSLAttributedResourceType>(T2)->getAttrs())
-      return false;
+    {
+      const auto *Res1 = cast<HLSLAttributedResourceType>(T1);
+      const auto *Res2 = cast<HLSLAttributedResourceType>(T2);
+      if (!IsStructurallyEquivalent(Context, Res1->getSampleCountExpr(),
+                                    Res2->getSampleCountExpr()))
+        return false;
+      HLSLAttributedResourceType::Attributes Attrs1 = Res1->getAttrs();
+      HLSLAttributedResourceType::Attributes Attrs2 = Res2->getAttrs();
+      Attrs1.SampleCountExpr = Attrs2.SampleCountExpr = nullptr;
+      if (Attrs1 != Attrs2)
+        return false;
+    }
     break;
 
   case Type::HLSLInlineSpirv:

@@ -5405,7 +5405,7 @@ def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMf<[100, 101, 1
     llvm::SmallVector<llvm::Value *> args;
     auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
       *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 

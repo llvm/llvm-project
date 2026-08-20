@@ -2969,6 +2969,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
     NewAttr = S.Swift().mergeNameAttr(D, *SNA, SNA->getName());
+  else if (const auto *SAA = dyn_cast<SwiftAttrAttr>(Attr))
+    NewAttr = S.Swift().mergeAttrAttr(D, *SAA);
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))

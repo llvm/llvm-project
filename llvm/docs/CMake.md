@@ -864,11 +864,12 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
 **LLVM_LIT_TOOLS_DIR**:PATH
 
-:   The path to GnuWin32 tools for tests. Valid on Windows host. Defaults to
-    the empty string, in which case lit will look for tools needed for tests
-    (e.g., `grep`, `sort`, etc.) in your `%PATH%`. If GnuWin32 is not in your
-    `%PATH%`, then you can set this variable to the GnuWin32 directory so that
-    lit can find tools needed for tests in that directory.
+:   The path to the [Git for Windows](https://git-scm.com/) tools for tests.
+    Valid on Windows host. Defaults to the empty string, in which case lit will
+    look for tools needed for tests (e.g., `grep`, `sort`, etc.) in your
+    `%PATH%`. If Git for Windows is not in your `%PATH%`, then you can set this
+    variable to the Git for Windows `usr/bin` sub-directory so that lit can
+    find tools needed for tests in that directory.
 
 **LLVM_NATIVE_TOOL_DIR**:STRING
 

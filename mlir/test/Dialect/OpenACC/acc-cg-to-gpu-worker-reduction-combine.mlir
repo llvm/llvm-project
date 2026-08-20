@@ -15,11 +15,11 @@ func.func @worker_reduction_combine(%result: memref<i32>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %c32 = arith.constant 32 : index
-  %block_y = acc.par_width %c1 {par_dim = #acc.par_dim<block_y>}
-  %thread_y = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_y = acc.par_width %c1 par_dim(#acc.par_dim<block_y>)
+  %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
         ins(%private_arg = %private, %result_arg = %result)
@@ -59,11 +59,11 @@ func.func @worker_reduction_combine_region(%result: memref<i32>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %c32 = arith.constant 32 : index
-  %block_y = acc.par_width %c1 {par_dim = #acc.par_dim<block_y>}
-  %thread_y = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_y = acc.par_width %c1 par_dim(#acc.par_dim<block_y>)
+  %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
         ins(%private_arg = %private, %result_arg = %result)
@@ -109,11 +109,11 @@ func.func @nested_worker_reduction_combines(
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %c32 = arith.constant 32 : index
-  %block_y = acc.par_width %c1 {par_dim = #acc.par_dim<block_y>}
-  %thread_y = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_y = acc.par_width %c1 par_dim(#acc.par_dim<block_y>)
+  %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
         ins(%private_arg = %private, %other_arg = %other,
@@ -157,11 +157,11 @@ func.func @worker_combine_in_scf_if(%result: memref<i32>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
   %c32 = arith.constant 32 : index
-  %block_y = acc.par_width %c1 {par_dim = #acc.par_dim<block_y>}
-  %thread_y = acc.par_width %c4 {par_dim = #acc.par_dim<thread_y>}
-  %thread_x = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %block_y = acc.par_width %c1 par_dim(#acc.par_dim<block_y>)
+  %thread_y = acc.par_width %c4 par_dim(#acc.par_dim<thread_y>)
+  %thread_x = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
-    %private = acc.privatize [#acc<par_dims[thread_y]>]
+    %private = acc.privatize par_dims(#acc<par_dims[thread_y]>)
         : () -> !acc.private_type<memref<i32>>
     acc.compute_region launch(%by = %block_y, %ty = %thread_y, %tx = %thread_x)
         ins(%private_arg = %private, %result_arg = %result)

@@ -45,7 +45,13 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
            "std::string", /*default=*/"",
            "Name of the function to call to allocate CUDA Fortran descriptors. "
            "Must have the same signature as CUFAllocDescriptor. "
-           "Defaults to CUFAllocDescriptor.">
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"unifiedHeapAllocSuffix", "unified-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the unified heap allocation mode.">,
+    Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the managed heap allocation mode.">
   ];
 }
 

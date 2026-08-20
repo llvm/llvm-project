@@ -67,10 +67,10 @@ func.func @promote_in0_out_bufferize(%arg0: tensor<?x42xf32>, %arg1: tensor<42x?
     // CHECK:  %{{.+}} = memref.dim %{{.+}}, %[[C0]] : memref<?x?xf32, strided<[?, ?], offset: ?>>
     // CHECK:  %[[C1:.+]] = arith.constant 1 : index
     // CHECK:  %{{.+}} = memref.dim %{{.+}}, %[[C1]] : memref<?x?xf32, strided<[?, ?], offset: ?>>
-    // CHECK:  %[[ALLOC_OUT:.+]] = memref.alloc(%{{.+}}, %{{.+}}) {alignment = 64 : i64} : memref<?x?xf32, 1>
+    // CHECK:  %[[ALLOC_OUT:.+]] = memref.alloc(%{{.+}}, %{{.+}}) alignment = 64 : memref<?x?xf32, 1>
     // CHECK:  %{{.+}} = arith.constant 0 : index
     // CHECK:  %{{.+}} = memref.dim %{{.+}}, %{{.+}} : memref<?x42xf32, strided<[?, ?], offset: ?>>
-    // CHECK:  %[[ALLOC_IN:.+]] = memref.alloc(%{{.+}}) {alignment = 64 : i64} : memref<?x42xf32, 1>
+    // CHECK:  %[[ALLOC_IN:.+]] = memref.alloc(%{{.+}}) alignment = 64 : memref<?x42xf32, 1>
     // CHECK:  memref.copy %[[IN0]], %[[ALLOC_IN]] : memref<?x42xf32, strided<[?, ?], offset: ?>> to memref<?x42xf32, 1>
     // CHECK: linalg.add ins(%[[ALLOC_IN]], %[[IN1]] : memref<?x42xf32, 1>, memref<42x?xf32, strided<[?, ?], offset: ?>>) outs(%[[ALLOC_OUT]] : memref<?x?xf32, 1>)
     %0 = linalg.add ins(%arg0, %arg1: tensor<?x42xf32>, tensor<42x?xf32>)

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_EXPRCXX_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -2905,7 +2906,7 @@ class TypeTraitExpr final
 
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
-                std::variant<bool, APValue> Value);
+                std::variant<bool, APValue, ComparisonCategoryResult> Value);
 
   TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
@@ -2934,6 +2935,12 @@ public:
                                ArrayRef<TypeSourceInfo *> Args,
                                SourceLocation RParenLoc, APValue Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc,
+                               ComparisonCategoryResult Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            bool IsStoredAsBool,
                                            unsigned NumArgs);
@@ -2945,6 +2952,10 @@ public:
 
   bool isStoredAsBoolean() const {
     return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool isStoredAsComparisonResult() const {
+    return TypeTraitExprBits.IsComparisonResult;
   }
 
   bool getBoolValue() const {

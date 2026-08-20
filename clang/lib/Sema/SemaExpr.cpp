@@ -12962,6 +12962,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     CheckPtrComparisonWithNullChar(RHS, LHS);
   }
 
+  if (getLangOpts().HLSL && (LHS.get()->getType()->isConstantMatrixType() ||
+                             RHS.get()->getType()->isConstantMatrixType()))
+    return CheckMatrixCompareOperands(LHS, RHS, Loc, Opc);
+
   // Handle vector comparisons separately.
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
@@ -13535,6 +13539,35 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
 
   // Return a signed type for the vector.
   return GetSignedVectorType(vType);
+}
+
+QualType Sema::CheckMatrixCompareOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
+  assert(getLangOpts().HLSL && "matrix comparisons are only supported in HLSL");
+  assert(Opc != BO_Cmp && "three-way comparisons are not supported in HLSL");
+
+  QualType MatrixTy =
+      CheckMatrixElementwiseOperands(LHS, RHS, Loc, /*IsCompAssign=*/false);
+  if (MatrixTy.isNull())
+    return QualType();
+
+  if (!LHS.get()->getType()->isMatrixType()) {
+    LHS = prepareMatrixSplat(MatrixTy, LHS.get());
+    if (LHS.isInvalid())
+      return QualType();
+    LHS = ImpCastExprToType(LHS.get(), MatrixTy, CK_HLSLAggregateSplatCast);
+  }
+  if (!RHS.get()->getType()->isMatrixType()) {
+    RHS = prepareMatrixSplat(MatrixTy, RHS.get());
+    if (RHS.isInvalid())
+      return QualType();
+    RHS = ImpCastExprToType(RHS.get(), MatrixTy, CK_HLSLAggregateSplatCast);
+  }
+
+  const auto *MT = MatrixTy->castAs<ConstantMatrixType>();
+  return Context.getConstantMatrixType(Context.BoolTy, MT->getNumRows(),
+                                       MT->getNumColumns());
 }
 
 QualType Sema::CheckSizelessVectorCompareOperands(ExprResult &LHS,

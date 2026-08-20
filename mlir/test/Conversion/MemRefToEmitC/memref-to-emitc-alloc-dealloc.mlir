@@ -37,7 +37,7 @@ func.func @alloc_and_dealloc() {
 // NOCPP-NEXT:   return
 
 func.func @alloc_and_dealloc_aligned() {
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<999xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<999xf32>
   memref.dealloc %alloc : memref<999xf32>
   return
 }

@@ -19,6 +19,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 typedef llvm::ImmutableSet<
@@ -30,6 +33,7 @@ namespace clang {
 namespace ento {
 
 class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
+  using ConstraintEntry = std::pair<SymbolRef, const llvm::SMTExpr *>;
   mutable llvm::SMTSolverRef Solver = llvm::CreateZ3Solver();
 
 public:
@@ -222,12 +226,40 @@ public:
 
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override {
-    auto CZ = State->get<ConstraintSMT>();
-    auto &CZFactory = State->get_context<ConstraintSMT>();
+    ConstraintSMTType CZ = State->get<ConstraintSMT>();
+    ConstraintSMTType::Factory &CZFactory = State->get_context<ConstraintSMT>();
+    llvm::SmallVector<ConstraintEntry> Constraints(CZ.begin(), CZ.end());
+    llvm::DenseMap<SymbolRef, SmallVector<size_t>> ConstraintsBySym;
+    llvm::DenseSet<SymbolRef> TraversedSymbols;
+    llvm::SmallVector<SymbolRef> WorkList;
+    llvm::BitVector RetainedConstraints(Constraints.size());
 
-    for (const auto &Entry : CZ) {
-      if (SymReaper.isDead(Entry.first))
-        CZ = CZFactory.remove(CZ, Entry);
+    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
+      for (auto Symbol : Constraints[Idx].first->symbols()) {
+        if (SymReaper.isLive(Symbol) && TraversedSymbols.insert(Symbol).second)
+          WorkList.push_back(Symbol);
+        ConstraintsBySym[Symbol].push_back(Idx);
+      }
+    }
+
+    while (WorkList.size()) {
+      SymbolRef Item = WorkList.pop_back_val();
+      for (auto Idx : ConstraintsBySym[Item]) {
+        if (RetainedConstraints.test(Idx))
+          continue;
+
+        RetainedConstraints.set(Idx);
+
+        for (auto Symbol : Constraints[Idx].first->symbols()) {
+          if (TraversedSymbols.insert(Symbol).second)
+            WorkList.push_back(Symbol);
+        }
+      }
+    }
+
+    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
+      if (!RetainedConstraints.test(Idx))
+        CZ = CZFactory.remove(CZ, Constraints[Idx]);
     }
 
     return State->set<ConstraintSMT>(CZ);

@@ -1895,10 +1895,9 @@ public:
 
   AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee,
                        ArrayRef<AnyValue> CalleeArgs) {
-    LibFunc LF;
+    LibFunc LF = CurrentFrame->TLI.getLibFunc(*ResolvedCallee);
     // Respect nobuiltin attributes on call site.
-    if (CB.isNoBuiltin() ||
-        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+    if (CB.isNoBuiltin() || LF == NotLibFunc) {
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
       return AnyValue();

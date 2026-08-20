@@ -64,9 +64,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {
 ! CHECK:        acc.loop private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}seq
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop
   DO i = 1, n
@@ -76,9 +76,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial combined(loop) {
 ! CHECK:        acc.loop combined(serial) private{{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}seq{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop async
   DO i = 1, n
@@ -89,7 +89,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
@@ -102,9 +102,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} async([[ASYNC1]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop async(async)
   DO i = 1, n
@@ -115,9 +115,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} async([[ASYNC2]] : i32) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop async(async) device_type(nvidia) async(1)
   DO i = 1, n
@@ -133,7 +133,7 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} wait {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }
 
@@ -146,9 +146,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} wait({[[WAIT1]] : i32}) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop wait(1, 2)
   DO i = 1, n
@@ -160,9 +160,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} wait({[[WAIT2]] : i32, [[WAIT3]] : i32}) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop wait(wait1, wait2)
   DO i = 1, n
@@ -174,9 +174,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} wait({[[WAIT4]] : i32, [[WAIT5]] : i32}) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop if(.TRUE.)
   DO i = 1, n
@@ -187,9 +187,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} if([[IF1]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop if(ifCondition)
   DO i = 1, n
@@ -201,9 +201,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} if([[IF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop self(.TRUE.)
   DO i = 1, n
@@ -214,9 +214,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} self([[SELF1]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop self
   DO i = 1, n
@@ -226,9 +226,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {selfAttr}
+! CHECK-NEXT: } selfAttr
 
   !$acc serial loop self(ifCondition)
   DO i = 1, n
@@ -239,164 +239,164 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} self(%[[SELF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop copy(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b")
 
   !$acc serial loop copy(a) copy(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "a"}
-! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("a")
+! CHECK:      acc.copyout accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copy) name("b")
 
   !$acc serial loop copyin(a) copyin(readonly: b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK:      %[[COPYIN_A:.*]] = acc.copyin varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin_readonly) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyin>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[COPYIN_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin) name("a")
+! CHECK:      acc.delete accPtr(%[[COPYIN_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyin_readonly) name("b")
 
   !$acc serial loop copyout(a) copyout(zero: b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a"}
-! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
+! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout_zero) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[CREATE_A]], %[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) {name = "a"}
-! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_copyout_zero>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a")
+! CHECK:      acc.copyout accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) to varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_copyout_zero) name("b")
 
   !$acc serial loop create(b) create(zero: a)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
-! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "a"}
+! CHECK:      %[[CREATE_B:.*]] = acc.create varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create_zero) name("a") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[CREATE_B]], %[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_create>, name = "b"}
-! CHECK:      acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "a"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[CREATE_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create) name("b")
+! CHECK:      acc.delete accPtr(%[[CREATE_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_create_zero) name("a")
 
   !$acc serial loop no_create(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[NOCREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[NOCREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[NOCREATE_A:.*]] = acc.nocreate varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[NOCREATE_B:.*]] = acc.nocreate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[NOCREATE_A]], %[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_no_create) name("a")
+! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_no_create) name("b")
 
   !$acc serial loop present(a, b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[PRESENT_A:.*]] = acc.present varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[PRESENT_B:.*]] = acc.present varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[PRESENT_A]], %[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
-! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) name("a")
+! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) dataClause(acc_present) name("b")
 
   !$acc serial loop deviceptr(a) deviceptr(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:      %[[DEVICEPTR_B:.*]] = acc.deviceptr varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[DEVICEPTR_A:.*]] = acc.deviceptr varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) name("a") -> !fir.ref<!fir.array<10xf32>>
+! CHECK:      %[[DEVICEPTR_B:.*]] = acc.deviceptr varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[DEVICEPTR_A]], %[[DEVICEPTR_B]] : !fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop attach(f, g)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[ATTACH_F:.*]] = acc.attach varPtr(%[[DECLF]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "f"}
-! CHECK:      %[[ATTACH_G:.*]] = acc.attach varPtr(%[[DECLG]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>> {name = "g"}
+! CHECK:      %[[ATTACH_F:.*]] = acc.attach varPtr(%[[DECLF]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("f") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK:      %[[ATTACH_G:.*]] = acc.attach varPtr(%[[DECLG]]#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>) name("g") -> !fir.ref<!fir.box<!fir.ptr<f32>>>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[ATTACH_F]], %[[ATTACH_G]] : !fir.ref<!fir.box<!fir.ptr<f32>>>, !fir.ref<!fir.box<!fir.ptr<f32>>>) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop private(a) firstprivate(b)
   DO i = 1, n
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@firstprivatization_ref_10xf32) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:      acc.serial {{.*}} firstprivate(%[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
-! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) recipe(@privatization_ref_10xf32) name("a") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK:        acc.loop {{.*}} private(%[[ACC_PRIVATE_A]]{{.*}} : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:          fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop seq
   DO i = 1, n
@@ -406,9 +406,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) seq
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop auto
   DO i = 1, n
@@ -418,9 +418,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop independent
   DO i = 1, n
@@ -430,9 +430,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop gang
   DO i = 1, n
@@ -442,9 +442,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop gang(num: 8)
   DO i = 1, n
@@ -455,9 +455,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop gang(num: gangNum)
   DO i = 1, n
@@ -468,9 +468,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
  !$acc serial loop gang(num: gangNum, static: gangStatic)
   DO i = 1, n
@@ -480,9 +480,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop vector
   DO i = 1, n
@@ -492,9 +492,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} vector {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop vector(128)
   DO i = 1, n
@@ -505,9 +505,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop vector(vectorLength)
   DO i = 1, n
@@ -518,9 +518,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop worker
   DO i = 1, n
@@ -530,9 +530,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} worker {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop worker(128)
   DO i = 1, n
@@ -543,9 +543,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
 ! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {auto_ = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) auto_
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop collapse(2)
   DO i = 1, n
@@ -558,9 +558,9 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK-NOT:            fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+! CHECK-NEXT:   } {{.*}}collapse([2]){{.*}}collapseDeviceType([#acc.device_type<none>]){{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop
   DO i = 1, n
@@ -574,11 +574,11 @@ subroutine acc_serial_loop
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:            acc.loop {{.*}} {
 ! CHECK:              acc.yield
-! CHECK-NEXT:     } attributes {{{.*}}seq = [#acc.device_type<none>]}
+! CHECK-NEXT:     } {{.*}}seq{{.*}}
 ! CHECK:          acc.yield
-! CHECK-NEXT:   } attributes {{{.*}}seq = [#acc.device_type<none>]}
+! CHECK-NEXT:   } {{.*}}seq{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
  !$acc serial loop tile(2)
   DO i = 1, n
@@ -589,9 +589,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[TILESIZE:%.*]] = arith.constant 2 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZE]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
  !$acc serial loop tile(*)
   DO i = 1, n
@@ -602,9 +602,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[TILESIZEM1:%.*]] = arith.constant -1 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop tile(2, 2)
   DO i = 1, n
@@ -618,9 +618,9 @@ subroutine acc_serial_loop
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
 ! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop tile(tileSize)
   DO i = 1, n
@@ -630,9 +630,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32}) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop tile(tileSize, tileSize)
   DO i = 1, n
@@ -644,9 +644,9 @@ subroutine acc_serial_loop
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: }{{.*}}
 
   !$acc serial loop reduction(+:reduction_r) reduction(*:reduction_i)
   do i = 1, n
@@ -654,18 +654,18 @@ subroutine acc_serial_loop
     reduction_i = 1
   end do
 
-! CHECK:      %[[COPYINREDR:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_r"}
-! CHECK:      %[[COPYINREDI:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_i"}
+! CHECK:      %[[COPYINREDR:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) dataClause(acc_reduction) implicit(true) name("reduction_r") -> !fir.ref<f32>
+! CHECK:      %[[COPYINREDI:.*]] = acc.copyin varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i") -> !fir.ref<i32>
 ! CHECK:      acc.serial {{.*}} dataOperands(%[[COPYINREDR]], %[[COPYINREDI]] : !fir.ref<f32>, !fir.ref<i32>) {
-! CHECK:        %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "reduction_r"}
-! CHECK:        %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) -> !fir.ref<i32> {name = "reduction_i"}
+! CHECK:        %[[REDUCTION_R:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<f32>) recipe(@reduction_add_ref_f32) name("reduction_r") -> !fir.ref<f32>
+! CHECK:        %[[REDUCTION_I:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) recipe(@reduction_mul_ref_i32) name("reduction_i") -> !fir.ref<i32>
 ! CHECK:        acc.loop {{.*}} reduction(%[[REDUCTION_R]], %[[REDUCTION_I]] : !fir.ref<f32>, !fir.ref<i32>)
 ! CHECK-NOT:      fir.do_loop
 ! CHECK:          acc.yield
-! CHECK-NEXT:   }{{$}}
+! CHECK-NEXT:   }{{.*}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
-! CHECK:      acc.copyout accPtr(%[[COPYINREDR]] : !fir.ref<f32>) to varPtr(%{{.*}} : !fir.ref<f32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_r"}
-! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) {dataClause = #acc<data_clause acc_reduction>, implicit = true, name = "reduction_i"}
+! CHECK-NEXT: }{{.*}}
+! CHECK:      acc.copyout accPtr(%[[COPYINREDR]] : !fir.ref<f32>) to varPtr(%{{.*}} : !fir.ref<f32>) dataClause(acc_reduction) implicit(true) name("reduction_r")
+! CHECK:      acc.copyout accPtr(%[[COPYINREDI]] : !fir.ref<i32>) to varPtr(%{{.*}} : !fir.ref<i32>) dataClause(acc_reduction) implicit(true) name("reduction_i")
 
 end subroutine acc_serial_loop

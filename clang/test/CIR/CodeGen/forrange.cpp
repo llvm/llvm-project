@@ -15,9 +15,6 @@ void for_range() {
     ;
 }
 
-// CIR: cir.func{{.*}} @_Z5beginR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element>{{.*}})
-// CIR: cir.func{{.*}} @_Z3endR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element{{.*}})
-
 // CIR: cir.func{{.*}} @_Z9for_rangev()
 // CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_Container>
 // CIR:    cir.scope {
@@ -49,6 +46,9 @@ void for_range() {
 // CIR:        cir.yield
 // CIR:      }
 // CIR:    }
+
+// CIR: cir.func{{.*}} @_Z5beginR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element>{{.*}})
+// CIR: cir.func{{.*}} @_Z3endR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element{{.*}})
 
 struct C2 {
   Element *begin();

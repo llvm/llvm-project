@@ -422,6 +422,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
+    libc.src.unistd.execle
     libc.src.unistd.execve
     libc.src.unistd.faccessat
     libc.src.unistd.fchdir

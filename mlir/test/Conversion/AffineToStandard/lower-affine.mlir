@@ -935,9 +935,9 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 
 // CHECK-LABEL: func @affine_load_store_alignment
 func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
-  // CHECK: memref.load {{.*}} {alignment = 16 : i64}
+  // CHECK: memref.load {{.*}} alignment(16)
   %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
-  // CHECK: memref.store {{.*}} {alignment = 16 : i64}
+  // CHECK: memref.store {{.*}} alignment(16)
   affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
   return
 }

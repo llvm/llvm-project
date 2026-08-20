@@ -9526,10 +9526,8 @@ define amdgpu_kernel void @constant_zextload_v2i8_to_v2i16(ptr addrspace(1) %out
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 8, v2
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX12-FAKE16-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-FAKE16-NEXT:    s_endpgm

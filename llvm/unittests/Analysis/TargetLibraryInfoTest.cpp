@@ -47,8 +47,7 @@ protected:
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc F;
-    if (!TLI.getLibFunc(*FDecl, F))
+    if (TLI.getLibFunc(*FDecl) == NotLibFunc)
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
     return ::testing::AssertionSuccess() << ExpectedLFName << " is LibFunc";
@@ -721,8 +720,8 @@ protected:
 
   /// Returns the TLI function name for the given \p Opcode and type \p Ty.
   StringRef getScalarName(unsigned int Opcode, Type *Ty) {
-    LibFunc Func;
-    if (!TLI->getLibFunc(Opcode, Ty, Func))
+    LibFunc Func = TLI->getLibFunc(Opcode, Ty);
+    if (Func == NotLibFunc)
       return "";
     return TLI->getName(Func);
   }

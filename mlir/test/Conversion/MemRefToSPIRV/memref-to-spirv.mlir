@@ -89,21 +89,21 @@ func.func @load_i1(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i :
 //  CHECK-SAME: (%[[SRC:.+]]: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %[[IDX:.+]]: index)
 func.func @load_aligned(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_nontemporal
 func.func @load_aligned_nontemporal(%src: memref<4xi1, #spirv.storage_class<StorageBuffer>>, %i : index) -> i1 {
   // CHECK: spirv.Load "StorageBuffer" {{.*}} ["Aligned|Nontemporal", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32, nontemporal = true } : memref<4xi1, #spirv.storage_class<StorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) nontemporal(true) : memref<4xi1, #spirv.storage_class<StorageBuffer>>
   return %0: i1
 }
 
 // CHECK-LABEL: func @load_aligned_psb
 func.func @load_aligned_psb(%src: memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>, %i : index) -> i1 {
   // CHECK: %[[VAL:.+]] = spirv.Load "PhysicalStorageBuffer" {{.*}} ["Aligned", 32] : i8
-  %0 = memref.load %src[%i] { alignment = 32 } : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
+  %0 = memref.load %src[%i] alignment(32) : memref<4xi1, #spirv.storage_class<PhysicalStorageBuffer>>
   return %0: i1
 }
 
@@ -620,17 +620,17 @@ module attributes {
   ]>, #spirv.resource_limits<>>
 } {
   func.func @load_nontemporal(%arg0: memref<f32, #spirv.storage_class<StorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Load "StorageBuffer" %{{.+}} ["Nontemporal"] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<StorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<StorageBuffer>>
 //       CHECK:  spirv.Store "StorageBuffer" %{{.+}}, %{{.+}} ["Nontemporal"] : f32
     return
   }
 
   func.func @load_nontemporal_aligned(%arg0: memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>) {
-    %0 = memref.load %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    %0 = memref.load %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Load "PhysicalStorageBuffer" %{{.+}} ["Aligned|Nontemporal", 4] : f32
-    memref.store %0, %arg0[] {nontemporal = true} : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
+    memref.store %0, %arg0[] nontemporal(true) : memref<f32, #spirv.storage_class<PhysicalStorageBuffer>>
 //       CHECK:  spirv.Store "PhysicalStorageBuffer" %{{.+}}, %{{.+}} ["Aligned|Nontemporal", 4] : f32
     return
   }

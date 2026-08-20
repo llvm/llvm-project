@@ -10763,6 +10763,7 @@ cc_library(
         ":GPUDialect",
         ":GPUUtils",
         ":IR",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":NVVMDialect",

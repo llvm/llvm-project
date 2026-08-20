@@ -405,7 +405,7 @@ func.func @get_gv3_memref() {
 // Test scalar memref with an alignment.
 // CHECK: llvm.mlir.global private @gv4(1.000000e+00 : f32) {addr_space = 0 : i32, alignment = 64 : i64} : f32
 // CHECK-INTERFACE: llvm.mlir.global private
-memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
+memref.global "private" @gv4 : memref<f32> = dense<1.0> alignment = 64
 
 // -----
 
@@ -810,7 +810,7 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} {nontemporal} : !llvm.ptr -> f32
   // CHECK-INTERFACE: llvm.load
-  %2 = memref.load %arg0[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  %2 = memref.load %arg0[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
 
@@ -822,7 +822,7 @@ func.func @load_invariant(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
   // CHECK: llvm.load %{{.*}} invariant : !llvm.ptr -> f32
   // CHECK-INTERFACE: llvm.load
-  %2 = memref.load %arg0[%1] {invariant = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  %2 = memref.load %arg0[%1] invariant(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
 
@@ -833,7 +833,7 @@ func.func @load_invariant(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
   // CHECK: llvm.load %{{.*}} {alignment = 32 : i64} : !llvm.ptr -> f32
   // CHECK-INTERFACE: llvm.load
-  %1 = memref.load %arg0[%arg1] {alignment = 32} : memref<32xf32>
+  %1 = memref.load %arg0[%arg1] alignment(32) : memref<32xf32>
   func.return
 }
 
@@ -843,10 +843,10 @@ func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
 // CHECK-INTERFACE-LABEL: func @store_non_temporal(
 func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
   %1 = arith.constant 7 : index
-  %2 = memref.load %input[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  %2 = memref.load %input[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : f32, !llvm.ptr
   // CHECK-INTERFACE: llvm.store
-  memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  memref.store %2, %output[%1] nontemporal(true) : memref<32xf32, affine_map<(d0) -> (d0)>>
   func.return
 }
 
@@ -857,7 +857,7 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
 func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : index) {
   // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 32 : i64} : f32, !llvm.ptr
   // CHECK-INTERFACE: llvm.store
-  memref.store %arg1, %arg0[%arg2] {alignment = 32} : memref<32xf32>
+  memref.store %arg1, %arg0[%arg2] alignment(32) : memref<32xf32>
   func.return
 }
 

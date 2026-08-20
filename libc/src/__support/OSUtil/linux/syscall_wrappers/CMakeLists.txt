@@ -993,3 +993,15 @@ add_header_library(
     libc.include.sys_syscall
 )
 
+add_header_library(
+  execve
+  HDRS
+    execve.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)

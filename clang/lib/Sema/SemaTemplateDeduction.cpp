@@ -931,6 +931,11 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
+
+        // Function parameter packs cannot be deduced.
+        if (isa_and_present<ParmVarDecl>(
+                dyn_cast<NamedDecl *>(Unexpanded[I].first)))
+          continue;
         if (auto DI = getDepthAndIndex(Unexpanded[I]))
           std::tie(Depth, Index) = *DI;
         else

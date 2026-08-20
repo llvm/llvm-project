@@ -17,9 +17,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -133,6 +136,40 @@ bool AddressSpaceAttr::isValidPtrIntCast(
   // dialect.
   assert(false && "unimplemented, see TODO in the source.");
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionMetadataAttr
+//===----------------------------------------------------------------------===//
+
+static constexpr unsigned kReservedFunctionMetadataKinds[] = {
+    llvm::LLVMContext::MD_dbg, llvm::LLVMContext::MD_prof};
+
+static StringRef getFixedMetadataKindName(unsigned kind) {
+  switch (kind) {
+#define LLVM_FIXED_MD_KIND(EnumID, Name, Value)                                \
+  case llvm::LLVMContext::EnumID:                                              \
+    return Name;
+#include "llvm/IR/FixedMetadataKinds.def"
+#undef LLVM_FIXED_MD_KIND
+  }
+  llvm_unreachable("unknown fixed metadata kind");
+}
+
+LogicalResult
+FunctionMetadataAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             StringAttr metadataName, MDNodeAttr node) {
+  (void)node;
+  StringRef name = metadataName.getValue();
+  if (name.empty())
+    return emitError() << "function_metadata entry name must not be empty";
+  if (llvm::any_of(kReservedFunctionMetadataKinds, [&](unsigned kind) {
+        return name == getFixedMetadataKindName(kind);
+      })) {
+    return emitError() << "reserved function_metadata entry '" << name
+                       << "' is not supported by the generic carrier";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

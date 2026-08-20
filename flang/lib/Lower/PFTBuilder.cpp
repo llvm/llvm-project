@@ -11,12 +11,14 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <algorithm>
 #include <limits>
 
 #define DEBUG_TYPE "flang-pft"
@@ -1247,7 +1249,7 @@ private:
       // wrap pass will fold this construct into a self-contained
       // scf.execute_region, in which case the parent sees only a single op.
       if (parentConstruct && eval.isUnstructured &&
-          !lower::pft::isWrappableConstruct(eval))
+          !lower::pft::isWrappableConstruct(eval, semanticsContext))
         parentConstruct->isUnstructured = true;
 
       // The successor of a branch starts a new block.
@@ -2497,78 +2499,137 @@ hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
   return walk(funit->evaluationList);
 }
 
-/// True if \p eval is a DoConstruct driven directly into an enclosing acc.loop
-/// by the OpenACCLoopConstruct / OpenACCCombinedConstruct lowering — the
-/// immediate body DO, or one of the N collapsed iterator DOs reached by
-/// walking down from the body DO under a `collapse(N)` clause.
-static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+/// The DoConstructs enclosing (and including) a DO evaluation; index k holds
+/// the one at depth k, so index 0 is the evaluation's own DO.
+using DoConstructChain = llvm::SmallVector<const parser::DoConstruct *, 4>;
+
+/// Value of \p intExpr, or INT64_MAX if it isn't a compile-time constant.
+///
+/// This is used for the loop count of the OpenACC `collapse(N)` clause, which
+/// requires N to be a positive scalar integer constant expression. A constant
+/// too large to be represented in an int64_t would be truncated by ToInt64
+/// rather than reported, so a value that is not positive is treated like a
+/// non-constant one rather than being used. INT64_MAX makes every enclosing
+/// loop count as associated with the directive, which is the safe answer here
+/// because it only prevents wrapping.
+///
+/// OpenMP uses semantics::omp::GetAffectedNestDepthWithReason instead, which
+/// covers the loop transforming directives as well as the clauses.
+static int64_t
+constantValueOrMax(const parser::ScalarIntConstantExpr &intExpr) {
+  if (const auto *expr = semantics::GetExpr(intExpr))
+    if (auto v = evaluate::ToInt64(*expr))
+      if (*v > 0)
+        return *v;
+  return std::numeric_limits<int64_t>::max();
+}
+
+/// Fill \p chain with the DoConstruct at each depth above (and including)
+/// \p eval, and return the innermost enclosing evaluation that is not a
+/// DoConstruct — the one a directive would be attached to. Returns null if
+/// \p eval is not a DoConstruct or has no such enclosing evaluation.
+static const Fortran::lower::pft::Evaluation *
+collectEnclosingDoChain(const Fortran::lower::pft::Evaluation &eval,
+                        DoConstructChain &chain) {
   const auto *doConstruct = eval.getIf<parser::DoConstruct>();
   if (!doConstruct)
-    return false;
-  // N from `collapse(N)`, or 1 if no clause. eval at depth d from the body
-  // (d == 0 means eval IS the body) is a collapsed iterator iff d < N. If the
-  // Collapse value isn't a compile-time constant, be conservative and treat
-  // every DO in the chain as collapsed (INT64_MAX) — wrapping is opt-in and
-  // a false "is collapsed" is safer than a false "is not".
-  auto collapseN = [](const parser::AccClauseList &cl) -> int64_t {
-    for (const parser::AccClause &c : cl.v)
-      if (const auto *cc = std::get_if<parser::AccClause::Collapse>(&c.u)) {
-        const auto &intExpr = std::get<parser::ScalarIntConstantExpr>(cc->v.t);
-        if (const auto *expr = semantics::GetExpr(intExpr))
-          if (auto v = evaluate::ToInt64(*expr))
-            return *v;
-        return std::numeric_limits<int64_t>::max();
-      }
-    return 1;
-  };
-
-  // candidates[k] is the DoConstruct at depth k above (and including) eval.
-  llvm::SmallVector<const parser::DoConstruct *, 4> candidates{doConstruct};
+    return nullptr;
+  chain.push_back(doConstruct);
 
   for (const Fortran::lower::pft::Evaluation *p = eval.parentConstruct; p;
        p = p->parentConstruct) {
     if (const auto *d = p->getIf<parser::DoConstruct>()) {
-      candidates.push_back(d);
+      chain.push_back(d);
       continue;
     }
+    return p;
+  }
+  return nullptr;
+}
 
-    if (const auto *acc = p->getIf<parser::OpenACCConstruct>()) {
-      const parser::DoConstruct *body = nullptr;
-      int64_t n = 1;
-      if (const auto *loop =
-              std::get_if<parser::OpenACCLoopConstruct>(&acc->u)) {
-        if (const auto &b =
-                std::get<std::optional<parser::DoConstruct>>(loop->t))
-          body = &b.value();
-        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(loop->t).t));
-      } else if (const auto *comb =
-                     std::get_if<parser::OpenACCCombinedConstruct>(&acc->u)) {
-        if (const auto &b =
-                std::get<std::optional<parser::DoConstruct>>(comb->t))
-          body = &b.value();
-        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(comb->t).t));
-      }
+/// True if the DO at depth 0 of \p chain is one of the \p n loops a directive
+/// associates with itself, given that the directive's body DO is \p body.
+///
+/// \p body is the outermost candidate, so the evaluation sits at depth
+/// `index of body in chain` below it and is associated iff that depth < \p n.
+/// A \p body outside \p chain is not an error: OpenMPLoopConstruct's body is
+/// found by searching the construct's block (looking through a BLOCK
+/// construct), so it can name a DO that is not on this ancestor chain.
+static bool isAssociatedLoop(const DoConstructChain &chain,
+                             const parser::DoConstruct *body, int64_t n) {
+  if (!body)
+    return false;
+  auto it = llvm::find(chain, body);
+  if (it == chain.end())
+    return false;
+  return std::distance(chain.begin(), it) < n;
+}
 
-      if (body) {
-        // body is at index `candidates.size()-1` (the outermost candidate);
-        // eval at depth (candidates.size()-1) from body. Collapsed iff < N.
-        auto it = llvm::find(candidates, body);
-        if (it != candidates.end()) {
-          int64_t depth = std::distance(candidates.begin(), it);
-          if (depth < n)
-            return true;
-        }
-      }
-    }
+/// True if \p eval is a DoConstruct attached to an enclosing OpenACC loop.
+static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+  DoConstructChain chain;
+  const Fortran::lower::pft::Evaluation *p =
+      collectEnclosingDoChain(eval, chain);
+  if (!p)
+    return false;
 
-    break;
+  const auto *acc = p->getIf<parser::OpenACCConstruct>();
+  if (!acc)
+    return false;
+
+  // N from `collapse(N)`, or 1 if no clause.
+  auto collapseValue = [](const parser::AccClauseList &cl) -> int64_t {
+    for (const parser::AccClause &c : cl.v)
+      if (const auto *cc = std::get_if<parser::AccClause::Collapse>(&c.u))
+        return constantValueOrMax(
+            std::get<parser::ScalarIntConstantExpr>(cc->v.t));
+    return 1;
+  };
+
+  const parser::DoConstruct *body = nullptr;
+  int64_t n = 1;
+  if (const auto *loop = std::get_if<parser::OpenACCLoopConstruct>(&acc->u)) {
+    if (const auto &b = std::get<std::optional<parser::DoConstruct>>(loop->t))
+      body = &b.value();
+    n = collapseValue(std::get<parser::AccClauseList>(std::get<0>(loop->t).t));
+  } else if (const auto *comb =
+                 std::get_if<parser::OpenACCCombinedConstruct>(&acc->u)) {
+    if (const auto &b = std::get<std::optional<parser::DoConstruct>>(comb->t))
+      body = &b.value();
+    n = collapseValue(std::get<parser::AccClauseList>(std::get<0>(comb->t).t));
   }
 
-  return false;
+  return isAssociatedLoop(chain, body, n);
+}
+
+/// True if \p eval is a DoConstruct attached to an enclosing OpenMP loop.
+static bool isOmpLoopBody(const Fortran::lower::pft::Evaluation &eval,
+                          const semantics::SemanticsContext &semaCtx) {
+  DoConstructChain chain;
+  const Fortran::lower::pft::Evaluation *p =
+      collectEnclosingDoChain(eval, chain);
+  if (!p)
+    return false;
+
+  const auto *omp = p->getIf<parser::OpenMPConstruct>();
+  if (!omp)
+    return false;
+
+  const auto *loop = std::get_if<parser::OpenMPLoopConstruct>(&omp->u);
+  if (!loop)
+    return false;
+
+  unsigned version = semaCtx.langOptions().OpenMPVersion;
+  auto [depth, _] =
+      semantics::omp::GetAffectedNestDepthWithReason(loop->BeginDir(), version);
+  int64_t n = depth.value.value_or(1);
+
+  return isAssociatedLoop(chain, loop->GetNestedLoop(), n);
 }
 
 bool Fortran::lower::pft::isWrappableConstruct(
-    const Fortran::lower::pft::Evaluation &eval) {
+    const Fortran::lower::pft::Evaluation &eval,
+    const Fortran::semantics::SemanticsContext &semaCtx) {
   if (!wrapUnstructuredConstructsInExecuteRegion)
     return false;
 
@@ -2581,10 +2642,10 @@ bool Fortran::lower::pft::isWrappableConstruct(
 
   // Wrapping requires self-contained CFG.
   //
-  // Note: Loops attached to OpenACC constructs are not wrappable since
-  // genOpenACCLoopFromDoConstruct takes over code-gen when a DoConstruct is
-  // attached to an OpenACC directive. We might extend wrapping to such
-  // unstructured loops later on if needed.
+  // Note: Loops attached to OpenACC/OpenMP constructs are not wrappable since
+  // the directive lowering (e.g. genOpenACCLoopFromDoConstruct) takes over
+  // code-gen when a DoConstruct is attached to such a directive. We might
+  // extend wrapping to such unstructured loops later on if needed.
   return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
-         !isAccLoopBody(eval);
+         !isAccLoopBody(eval) && !isOmpLoopBody(eval, semaCtx);
 }

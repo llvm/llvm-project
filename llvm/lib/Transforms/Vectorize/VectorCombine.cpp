@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -162,6 +163,7 @@ private:
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
+  bool foldDeinterleaveInterleavePair(Instruction &I);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -5914,6 +5916,235 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+/// Fold away a matched pair of vector.deinterleave/interleave intrinsics
+/// with a chain of elementwise operations on each between the
+/// deinterleave and interleave.
+///
+/// For example:
+///  ```
+///  %d = call { <2 x i16>, <2 x i16> } @deinterleave2.v4i16(<4 x i16> %v)
+///  %f0 = extractvalue { <2 x i16>, <2 x i16> } %d, 0
+///  %f1 = extractvalue { <2 x i16>, <2 x i16> } %d, 1
+///
+///  %u0 = add <2 x i16> %f0, splat (i16 3)
+///  %u1 = add <2 x i16> %f1, splat (i16 3)
+///
+///  %r = call <4 x i16> @interleave2.v4i16(<2 x i16> %u0, <2 x i16> %u1)
+///  ```
+/// Folds to:
+///  ```
+///  %r = add <4 x i16> %v, splat (i16 3)
+///  ```
+bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
+  auto *Deinterleave = dyn_cast<IntrinsicInst>(&I);
+  if (!Deinterleave)
+    return false;
+
+  unsigned Factor =
+      getDeinterleaveIntrinsicFactor(Deinterleave->getIntrinsicID());
+  if (!Factor || Deinterleave->hasOperandBundles() ||
+      !Deinterleave->hasNUndroppableUses(Factor))
+    return false;
+
+  const Intrinsic::ID ExpectedInterleaveIID =
+      Intrinsic::getInterleaveIntrinsicID(Factor);
+
+  // Collect one extract for each deinterleaved field.
+  SmallVector<Use *, 8> CurrentUses(Factor, nullptr);
+  for (Use &U : Deinterleave->uses()) {
+    if (U.getUser()->isDroppable())
+      continue;
+
+    auto *Extract = dyn_cast<ExtractValueInst>(U.getUser());
+    if (!Extract || Extract->getNumIndices() != 1)
+      return false;
+
+    unsigned Index = *Extract->idx_begin();
+    if (Index >= Factor || CurrentUses[Index])
+      return false;
+
+    CurrentUses[Index] = &U;
+  }
+
+  using ElementwiseStep = SmallVector<Use *, 8>;
+  SmallVector<ElementwiseStep, 4> Steps;
+  IntrinsicInst *Interleave = nullptr;
+  unsigned NumVisited = 0;
+
+  auto GetNumDataOperands = [](Instruction *Inst) {
+    if (auto *CB = dyn_cast<CallBase>(Inst))
+      return CB->arg_size(); // Exclude callee operand and bundles.
+    return Inst->getNumOperands();
+  };
+
+  auto IsSupportedElementwise = [&](Instruction *Inst) {
+    auto *ResultTy = dyn_cast<VectorType>(Inst->getType());
+    if (!ResultTy || !isSafeToSpeculativelyExecute(Inst))
+      return false;
+
+    if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+      if (II->hasOperandBundles() ||
+          !isTriviallyVectorizable(II->getIntrinsicID()))
+        return false;
+    } else if (!isa<BinaryOperator, UnaryOperator, CastInst, CmpInst,
+                    SelectInst, FreezeInst>(Inst)) {
+      return false;
+    }
+
+    // Reject operations that change the element-count.
+    // E.g., bitcast <vscale x 4 x i16> %v to <vscale x 8 x i8>
+    for (unsigned Op = 0, E = GetNumDataOperands(Inst); Op != E; ++Op) {
+      auto *OperandTy = dyn_cast<VectorType>(Inst->getOperand(Op)->getType());
+      if (OperandTy &&
+          OperandTy->getElementCount() != ResultTy->getElementCount())
+        return false;
+    }
+
+    return true;
+  };
+
+  // Traverse the Factor use chains with a breadth-first search.
+  // At each level, expect every chain to perform the same operation with the
+  // preceding chain value at the same operand position, until they all reach
+  // the matching interleave.
+  while (NumVisited + Factor <= MaxInstrsToScan) {
+    NumVisited += Factor;
+
+    for (Use *&CurrentUse : CurrentUses) {
+      Use *NextUse = CurrentUse->getUser()->getSingleUndroppableUse();
+      auto *Next =
+          NextUse ? dyn_cast<Instruction>(NextUse->getUser()) : nullptr;
+      if (!Next)
+        return false;
+
+      CurrentUse = NextUse;
+    }
+
+    // Check whether every chain has reached the same interleave.
+    if (auto *II = dyn_cast<IntrinsicInst>(CurrentUses.front()->getUser());
+        II && II->getIntrinsicID() == ExpectedInterleaveIID) {
+      if (II->hasOperandBundles())
+        return false;
+
+      for (unsigned Index = 0; Index != Factor; ++Index)
+        if (CurrentUses[Index]->getUser() != II ||
+            CurrentUses[Index]->getOperandNo() != Index)
+          return false;
+
+      Interleave = II;
+      break;
+    }
+
+    auto *FirstInst = cast<Instruction>(CurrentUses.front()->getUser());
+    if (!IsSupportedElementwise(FirstInst))
+      return false;
+
+    unsigned ChainOperand = CurrentUses.front()->getOperandNo();
+    if (any_of(CurrentUses, [&](Use *U) {
+          auto *Inst = cast<Instruction>(U->getUser());
+          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                       !FirstInst->isSameOperationAs(Inst));
+        }))
+      return false;
+
+    auto GetSplatOrScalar = [](Value *V) {
+      return isa<VectorType>(V->getType()) ? getSplatValue(V) : V;
+    };
+
+    // Non-chain operands must be either the same scalar or splats of that
+    // scalar. This intentionally rejects differing poison/undef or non-splat
+    // vector operands between chains.
+    for (unsigned Op = 0, E = GetNumDataOperands(FirstInst); Op != E; ++Op) {
+      if (Op == ChainOperand)
+        continue;
+
+      Value *CommonValue = GetSplatOrScalar(FirstInst->getOperand(Op));
+      if (!CommonValue || any_of(CurrentUses, [&](Use *U) {
+            Instruction *Inst = cast<Instruction>(U->getUser());
+            return Inst != FirstInst &&
+                   GetSplatOrScalar(Inst->getOperand(Op)) != CommonValue;
+          }))
+        return false;
+    }
+
+    Steps.push_back(CurrentUses);
+  }
+
+  if (!Interleave)
+    return false;
+
+  // Rebuild the matched elementwise chain at the original vector width.
+  Value *WideValue = Deinterleave->getArgOperand(0);
+  ElementCount WideEC =
+      cast<VectorType>(WideValue->getType())->getElementCount();
+
+  auto CreateWideInstruction = [&](Instruction *NarrowInst,
+                                   ArrayRef<Value *> NewOperands,
+                                   VectorType *WideResultTy) -> Value * {
+    assert(IsSupportedElementwise(NarrowInst) &&
+           "Expected supported elementwise");
+    if (isa<BinaryOperator, UnaryOperator>(NarrowInst))
+      return Builder.CreateNAryOp(NarrowInst->getOpcode(), NewOperands);
+    if (auto *Cast = dyn_cast<CastInst>(NarrowInst))
+      return Builder.CreateCast(Cast->getOpcode(), NewOperands[0],
+                                WideResultTy);
+    if (auto *Cmp = dyn_cast<CmpInst>(NarrowInst))
+      return Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
+                               NewOperands[1]);
+    if (isa<SelectInst>(NarrowInst))
+      return Builder.CreateSelect(NewOperands[0], NewOperands[1],
+                                  NewOperands[2]);
+    if (isa<FreezeInst>(NarrowInst))
+      return Builder.CreateFreeze(NewOperands[0]);
+    if (auto *II = dyn_cast<IntrinsicInst>(NarrowInst))
+      return Builder.CreateIntrinsic(WideResultTy, II->getIntrinsicID(),
+                                     NewOperands);
+    llvm_unreachable("Unsupported instruction");
+  };
+
+  // The BFS has succeeded and collected multiple levels of instructions that
+  // can be SLP-widened into a chain of wider instructions.
+  for (const ElementwiseStep &Step : Steps) {
+    Instruction *NarrowInst = cast<Instruction>(Step.front()->getUser());
+    unsigned ChainOperand = Step.front()->getOperandNo();
+
+    Builder.SetInsertPoint(NarrowInst);
+    Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
+
+    unsigned NumOperands = GetNumDataOperands(NarrowInst);
+    SmallVector<Value *, 4> NewOperands;
+    NewOperands.reserve(NumOperands);
+
+    for (unsigned Op = 0; Op != NumOperands; ++Op) {
+      Value *Operand = NarrowInst->getOperand(Op);
+
+      if (Op == ChainOperand)
+        Operand = WideValue;
+      else if (isa<VectorType>(Operand->getType()))
+        Operand = Builder.CreateVectorSplat(WideEC, getSplatValue(Operand));
+      NewOperands.push_back(Operand);
+    }
+
+    auto *WideResultTy =
+        VectorType::get(NarrowInst->getType()->getScalarType(), WideEC);
+    Value *NewValue =
+        CreateWideInstruction(NarrowInst, NewOperands, WideResultTy);
+
+    SmallVector<Value *> NarrowInsts =
+        map_to_vector(Step, [](Use *U) { return cast<Value>(U->getUser()); });
+    propagateIRFlags(NewValue, NarrowInsts);
+
+    if (auto *NewInst = dyn_cast<Instruction>(NewValue))
+      propagateMetadata(NewInst, NarrowInsts);
+
+    WideValue = NewValue;
+  }
+
+  assert(WideValue->getType() == Interleave->getType());
+  replaceValue(*Interleave, *WideValue);
+  return true;
+}
+
 /// If we're interleaving 2 constant splats, for instance `<vscale x 8 x i32>
 /// <splat of 666>` and `<vscale x 8 x i32> <splat of 777>`, we can create a
 /// larger splat `<vscale x 8 x i64> <splat of ((777 << 32) | 666)>` first
@@ -5984,6 +6215,9 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  if (foldDeinterleaveInterleavePair(I))
+    return true;
+
   // This pattern involves bitcast that is not compatible with big endian.
   if (DL->isBigEndian())
     return false;

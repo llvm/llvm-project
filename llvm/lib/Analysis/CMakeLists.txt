@@ -113,6 +113,7 @@ add_llvm_component_library(LLVMAnalysis
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
   LazyValueInfo.cpp
+  LibcallLoweringInfo.cpp
   Lint.cpp
   Loads.cpp
   Local.cpp

@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -95,6 +96,14 @@ static Block::iterator cloneACCRegionIntoForLoop(Region *src, Block *dest,
       acc::cloneACCRegionInto(src, dest, insertionPoint, mapping, ValueRange{});
   (void)replacements;
   return ip;
+}
+
+/// Copy the discardable LLVM loop annotation attribute from an acc.loop to the
+/// lowered SCF op so later SCF to CFG/LLVM lowering can emit !llvm.loop
+/// metadata.
+static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
+  if (Attribute ann = from->getDiscardableAttr(LLVM::LoopAnnotationAttr::name))
+    to->setDiscardableAttr(LLVM::LoopAnnotationAttr::name, ann);
 }
 
 } // namespace
@@ -257,6 +266,7 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
       setCollapseCountAttr(forOps.front(), numCollapsed);
   }
 
+  copyLoopAnnotationAttr(loopOp, forOps.front());
   return forOps.front();
 }
 
@@ -321,6 +331,7 @@ scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
                       loopOp.getStep()[idx]);
 
   setCollapseCountAttr(parallelOp, parallelOp.getNumLoops());
+  copyLoopAnnotationAttr(loopOp, parallelOp);
   return parallelOp;
 }
 

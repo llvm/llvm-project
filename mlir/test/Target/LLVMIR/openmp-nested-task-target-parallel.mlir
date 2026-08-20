@@ -29,7 +29,7 @@ llvm.br ^bb1(%11, %4 : i32, i64)
 %14 = llvm.icmp "sgt" %13, %5 : i64
 llvm.store %12, %3 : i32, !llvm.ptr
 omp.task private(@_QFEc_firstprivate_i32 %3 -> %arg0 : !llvm.ptr) {
-  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"}
+  %19 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) name("i") -> !llvm.ptr
   %22 = llvm.mlir.constant(9999 : i32) : i32
   %23 = llvm.mlir.constant(1 : i32) : i32
   %24 = llvm.load %arg0 : !llvm.ptr -> i32

@@ -19,7 +19,8 @@ using namespace clang::interp;
 State::~State() {}
 
 bool State::shouldRelaxDiag(const SourceLocation &Loc, diag::kind DiagId) {
-  if (!Ctx.getLangOpts().MSVCCompat || !EvalStatus.ExtendedDiag)
+  if (!Ctx.getLangOpts().MSVCCompat ||
+      (!EvalStatus.ExtendedDiag && !InConstantContext))
     return false;
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
@@ -111,6 +112,8 @@ PartialDiagnostic &State::addDiag(SourceLocation Loc, diag::kind DiagId) {
 }
 
 void State::addExtendedDiag(SourceLocation Loc, diag::kind DiagId) {
+  if (!EvalStatus.ExtendedDiag)
+    return;
   PartialDiagnostic PD(DiagId, Ctx.getDiagAllocator());
   EvalStatus.ExtendedDiag->push_back(std::make_pair(Loc, PD));
 }

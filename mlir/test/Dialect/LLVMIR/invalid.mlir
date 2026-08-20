@@ -1857,6 +1857,26 @@ llvm.mlir.alias external @y5 : i32 {
 
 // -----
 
+// expected-error@+1{{attribute 'function_metadata' failed to satisfy constraint: array of #llvm.func_metadata attributes}}
+llvm.func @function_metadata_value() attributes {function_metadata = [#llvm.md_string<"int">]}
+
+// -----
+
+// expected-error@+1{{function_metadata entry name must not be empty}}
+llvm.func @empty_function_metadata_name() attributes {function_metadata = [#llvm.func_metadata<"", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'dbg' is not supported by the generic carrier}}
+llvm.func @reserved_dbg_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"dbg", #llvm.md_node<#llvm.md_string<"x">>>]}
+
+// -----
+
+// expected-error@+1{{reserved function_metadata entry 'prof' is not supported by the generic carrier}}
+llvm.func @reserved_prof_function_metadata() attributes {function_metadata = [#llvm.func_metadata<"prof", #llvm.md_node<#llvm.md_string<"unknown">, #llvm.md_string<"sample-pass">>>]}
+
+// -----
+
 // expected-error@+1{{attribute 'nodes' failed to satisfy constraint: array of #llvm.md_node attributes}}
 llvm.named_metadata "not_node" [#llvm.md_string<"int">]
 

@@ -145,6 +145,12 @@ def int_dx_resource_load_level
                              llvm_any_ty],
                             [IntrReadMem]>;
 
+def int_dx_resource_load_ms
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_i32_ty,
+                             llvm_any_ty],
+                            [IntrReadMem]>;
+
 def int_dx_resource_store_texture
     : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_any_ty, llvm_any_ty],
                             [IntrWriteMem]>;

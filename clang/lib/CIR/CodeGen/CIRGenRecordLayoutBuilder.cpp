@@ -148,10 +148,23 @@ struct CIRRecordLowering final {
     return cirGenTypes.isZeroInitializable(rd);
   }
 
+  /// The mark for a member, given whether it holds data for argument passing
+  /// and whether it is a bit-field access unit.  A run of bit-fields is
+  /// allocated as a single storage type, and that storage is the access unit,
+  /// so its width is ours to choose and can be narrower than the declared type
+  /// of the bit-fields it holds.
+  static cir::RecordMemberKind makeMemberKind(bool holdsData,
+                                              bool isBitFieldAccessUnit) {
+    if (!holdsData)
+      return cir::RecordMemberKind::Empty;
+    return isBitFieldAccessUnit ? cir::RecordMemberKind::BitField
+                                : cir::RecordMemberKind::Data;
+  }
+
   /// The mark for a field.
   cir::RecordMemberKind getFieldMemberKind(const FieldDecl *fd) {
-    return isEmptyFieldForABI(astContext, fd) ? cir::RecordMemberKind::Empty
-                                              : cir::RecordMemberKind::Data;
+    return makeMemberKind(/*holdsData=*/!isEmptyFieldForABI(astContext, fd),
+                          /*isBitFieldAccessUnit=*/fd->isBitField());
   }
 
   /// The mark for a base subobject.  A base contributes no ABI data when it is
@@ -422,7 +435,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
       assert(members[storageIdx].offset == bitsToCharUnits(startBitOffset) &&
              "storageIdx must name the current run's storage");
       if (!field->isUnnamedBitField())
-        members[storageIdx].memberKind = cir::RecordMemberKind::Data;
+        members[storageIdx].memberKind = cir::RecordMemberKind::BitField;
       // Bitfields get the offset of their storage but come afterward and remain
       // there after a stable sort.
       members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
@@ -607,7 +620,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
             makeStorageInfo(beginOffset, type, cir::RecordMemberKind::Empty));
         for (; begin != bestEnd; ++begin) {
           if (!begin->isUnnamedBitField())
-            members[storageIdx].memberKind = cir::RecordMemberKind::Data;
+            members[storageIdx].memberKind = cir::RecordMemberKind::BitField;
           if (!begin->isZeroLengthBitField())
             members.push_back(MemberInfo(beginOffset,
                                          MemberInfo::InfoKind::Field, nullptr,
@@ -948,9 +961,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
     }
 
     fieldIdxMap[field->getCanonicalDecl()] = 0;
-    addField(fieldType, isEmptyFieldForABI(astContext, field)
-                            ? cir::RecordMemberKind::Empty
-                            : cir::RecordMemberKind::Data);
+    addField(fieldType, getFieldMemberKind(field));
   }
 
   // Compute zero-initializable status.
@@ -994,12 +1005,15 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
   // the storage type and any trailing padding as ordinary fields rather than
   // routing padding through the union's single tail-padding slot.
   if (nonVirtualBaseType) {
-    // One member stands in for every variant, so it holds data unless no
-    // variant does.  Computed before clearFields() drops the variant marks.
-    const cir::RecordMemberKind storageKind =
-        llvm::is_contained(getFieldKinds(), cir::RecordMemberKind::Data)
-            ? cir::RecordMemberKind::Data
-            : cir::RecordMemberKind::Empty;
+    // A unit mark here says the stand-in's extent is not a declared extent, not
+    // that its storage came from a bit-field: UnionBitAndWide in
+    // clang/test/CIR/CodeGen/no-unique-address.cpp takes its double as storage
+    // and still marks bitfield.  Computed before clearFields() drops the
+    // variant marks.
+    const cir::RecordMemberKind storageKind = makeMemberKind(
+        /*holdsData=*/llvm::any_of(getFieldKinds(), cir::holdsDataForABI),
+        /*isBitFieldAccessUnit=*/llvm::any_of(getFieldKinds(),
+                                              cir::isBitFieldAccessUnit));
     clearFields();
     addField(storageType, storageKind);
     CharUnits padding = layoutSize - getSize(storageType);

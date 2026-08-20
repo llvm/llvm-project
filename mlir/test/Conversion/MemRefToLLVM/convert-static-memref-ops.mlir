@@ -54,7 +54,7 @@ func.func @aligned_1d_alloc() -> memref<42xf32> {
 // CHECK: llvm.insertvalue %[[alignedBitCast]], %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK: llvm.insertvalue %[[c0]], %{{.*}}[2] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  %0 = memref.alloc() {alignment = 8} : memref<42xf32>
+  %0 = memref.alloc() alignment = 8 : memref<42xf32>
   return %0 : memref<42xf32>
 }
 
@@ -89,7 +89,7 @@ func.func @static_alloca() -> memref<32x18xf32> {
  // CHECK: %[[desc:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
  // CHECK: %[[desc1:.*]] = llvm.insertvalue %[[alloca_aligned]], %[[desc]][0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
  // CHECK: llvm.insertvalue %[[alloca_aligned]], %[[desc1]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
- memref.alloca() {alignment = 32} : memref<32x18xf32>
+ memref.alloca() alignment = 32 : memref<32x18xf32>
  return %0 : memref<32x18xf32>
 }
 

@@ -44,41 +44,29 @@ func.func @structured_data(
     %arg6: memref<f32>, %arg7: memref<f32>, %arg8: memref<f32>,
     %arg9: memref<f32>, %arg10: memref<f32>, %arg11: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copyin(a) [if not already present]"
-  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copyin(readonly:b) [if not already present]"
-  %copyin_readonly = acc.copyin varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
+  %copyin_readonly = acc.copyin varPtr(%arg1 : memref<f32>) dataClause(acc_copyin_readonly) name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copy(c) [if not already present]"
-  %copy = acc.copyin varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_copy>, name = "c"}
+  %copy = acc.copyin varPtr(%arg2 : memref<f32>) dataClause(acc_copy) name("c") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copyout(d) [if not already present]"
-  %copyout = acc.create varPtr(%arg3 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_copyout>, name = "d"}
+  %copyout = acc.create varPtr(%arg3 : memref<f32>) dataClause(acc_copyout) name("d") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copyout(zero:e) [if not already present]"
-  %copyout_zero = acc.create varPtr(%arg4 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_copyout_zero>, name = "e"}
+  %copyout_zero = acc.create varPtr(%arg4 : memref<f32>) dataClause(acc_copyout_zero) name("e") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating present(f)"
-  %present = acc.present varPtr(%arg5 : memref<f32>) -> memref<f32>
-      {name = "f"}
+  %present = acc.present varPtr(%arg5 : memref<f32>) name("f") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating create(g) [if not already present]"
-  %create = acc.create varPtr(%arg6 : memref<f32>) -> memref<f32>
-      {name = "g"}
+  %create = acc.create varPtr(%arg6 : memref<f32>) name("g") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating create(zero:h) [if not already present]"
-  %create_zero = acc.create varPtr(%arg7 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_create_zero>, name = "h"}
+  %create_zero = acc.create varPtr(%arg7 : memref<f32>) dataClause(acc_create_zero) name("h") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating attach(i)"
-  %attach = acc.attach varPtr(%arg8 : memref<f32>) -> memref<f32>
-      {name = "i"}
+  %attach = acc.attach varPtr(%arg8 : memref<f32>) name("i") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating no_create(j) [if not already present]"
-  %no_create = acc.nocreate varPtr(%arg9 : memref<f32>) -> memref<f32>
-      {name = "j"}
+  %no_create = acc.nocreate varPtr(%arg9 : memref<f32>) name("j") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating deviceptr(k)"
-  %deviceptr = acc.deviceptr varPtr(%arg10 : memref<f32>) -> memref<f32>
-      {name = "k"}
+  %deviceptr = acc.deviceptr varPtr(%arg10 : memref<f32>) name("k") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_data | Remark="Generating copy(l) [if not already present]"
-  %reduction_copy = acc.copyin varPtr(%arg11 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_reduction>, name = "l"}
+  %reduction_copy = acc.copyin varPtr(%arg11 : memref<f32>) dataClause(acc_reduction) name("l") -> memref<f32>
   acc.data dataOperands(%copyin, %copyin_readonly, %copy, %copyout,
       %copyout_zero, %present, %create, %create_zero, %attach, %no_create,
       %deviceptr, %reduction_copy : memref<f32>, memref<f32>, memref<f32>,
@@ -92,14 +80,12 @@ func.func @structured_data(
 // Each data construct in a function is reported independently.
 func.func @multiple_data_constructs(%arg0: memref<f32>, %arg1: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=multiple_data_constructs | Remark="Generating copyin(a) [if not already present]"
-  %copyin0 = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %copyin0 = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   acc.data dataOperands(%copyin0 : memref<f32>) {
     acc.terminator
   }
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=multiple_data_constructs | Remark="Generating copyin(b) [if not already present]"
-  %copyin1 = acc.copyin varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {name = "b"}
+  %copyin1 = acc.copyin varPtr(%arg1 : memref<f32>) name("b") -> memref<f32>
   acc.data dataOperands(%copyin1 : memref<f32>) {
     acc.terminator
   }
@@ -113,26 +99,22 @@ func.func @kernel_environment(
     %arg3: memref<f32>, %arg4: memref<f32>, %arg5: memref<f32>,
     %arg6: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating copyin(a) [if not already present]"
-  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating private(b)"
   %private = acc.private varPtr(%arg1 : memref<f32>)
-      recipe(@privatization_memref_f32) -> memref<f32> {name = "b"}
+      recipe(@privatization_memref_f32) name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating firstprivate(c)"
   %firstprivate = acc.firstprivate varPtr(%arg2 : memref<f32>)
-      recipe(@firstprivatization_memref_f32) -> memref<f32> {name = "c"}
+      recipe(@firstprivatization_memref_f32) name("c") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating use_device(d)"
-  %use_device = acc.use_device varPtr(%arg3 : memref<f32>) -> memref<f32>
-      {name = "d"}
+  %use_device = acc.use_device varPtr(%arg3 : memref<f32>) name("d") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating reduction(e)"
   %reduction = acc.reduction varPtr(%arg4 : memref<f32>)
-      recipe(@reduction_add_memref_f32) -> memref<f32> {name = "e"}
+      recipe(@reduction_add_memref_f32) name("e") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating cache(f)"
-  %cache = acc.cache varPtr(%arg5 : memref<f32>) -> memref<f32>
-      {name = "f"}
+  %cache = acc.cache varPtr(%arg5 : memref<f32>) name("f") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=kernel_environment | Remark="Generating cache(readonly:g)"
-  %cache_readonly = acc.cache varPtr(%arg6 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_cache_readonly>, name = "g"}
+  %cache_readonly = acc.cache varPtr(%arg6 : memref<f32>) dataClause(acc_cache_readonly) name("g") -> memref<f32>
   acc.kernel_environment dataOperands(%copyin, %private, %firstprivate,
       %use_device, %reduction, %cache, %cache_readonly : memref<f32>,
       memref<f32>, memref<f32>, memref<f32>, memref<f32>, memref<f32>,
@@ -148,19 +130,17 @@ func.func @kernel_environment(
 func.func @structured_declare(
     %arg0: memref<f32>, %arg1: memref<f32>, %arg2: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_declare | Remark="Generating create(a) [if not already present]"
-  %create = acc.create varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %create = acc.create varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_declare | Remark="Generating device_resident(b)"
   %device_resident = acc.declare_device_resident varPtr(%arg1 : memref<f32>)
-      -> memref<f32> {name = "b"}
+      name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=structured_declare | Remark="Generating link(c)"
-  %link = acc.declare_link varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {name = "c"}
+  %link = acc.declare_link varPtr(%arg2 : memref<f32>) name("c") -> memref<f32>
   %token = acc.declare_enter dataOperands(%create, %device_resident, %link
       : memref<f32>, memref<f32>, memref<f32>)
   acc.declare_exit token(%token) dataOperands(%create : memref<f32>)
   acc.delete accPtr(%create : memref<f32>)
-      {dataClause = #acc<data_clause acc_create>}
+      dataClause(acc_create)
   return
 }
 
@@ -168,14 +148,11 @@ func.func @structured_declare(
 func.func @enter_data(
     %arg0: memref<f32>, %arg1: memref<f32>, %arg2: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=enter_data | Remark="Generating enter data copyin(a) [if not already present]"
-  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=enter_data | Remark="Generating enter data create(b) [if not already present]"
-  %create = acc.create varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {name = "b"}
+  %create = acc.create varPtr(%arg1 : memref<f32>) name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=enter_data | Remark="Generating enter data attach(c)"
-  %attach = acc.attach varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {name = "c"}
+  %attach = acc.attach varPtr(%arg2 : memref<f32>) name("c") -> memref<f32>
   acc.enter_data dataOperands(%copyin, %create, %attach
       : memref<f32>, memref<f32>, memref<f32>)
   return
@@ -184,14 +161,11 @@ func.func @enter_data(
 func.func @exit_data(
     %arg0: memref<f32>, %arg1: memref<f32>, %arg2: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=exit_data | Remark="Generating exit data copyout(a) [if not already present]"
-  %copyout = acc.getdeviceptr varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_copyout>, name = "a"}
+  %copyout = acc.getdeviceptr varPtr(%arg0 : memref<f32>) dataClause(acc_copyout) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=exit_data | Remark="Generating exit data delete(b)"
-  %delete = acc.getdeviceptr varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_delete>, name = "b"}
+  %delete = acc.getdeviceptr varPtr(%arg1 : memref<f32>) dataClause(acc_delete) name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=exit_data | Remark="Generating exit data detach(c)"
-  %detach = acc.getdeviceptr varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_detach>, name = "c"}
+  %detach = acc.getdeviceptr varPtr(%arg2 : memref<f32>) dataClause(acc_detach) name("c") -> memref<f32>
   acc.exit_data dataOperands(%copyout, %delete, %detach
       : memref<f32>, memref<f32>, memref<f32>)
   acc.copyout accPtr(%copyout : memref<f32>) to varPtr(%arg0 : memref<f32>)
@@ -204,21 +178,18 @@ func.func @exit_data(
 func.func @update(
     %arg0: memref<f32>, %arg1: memref<f32>, %arg2: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=update | Remark="Generating update_host(a)"
-  %update_host = acc.getdeviceptr varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_update_host>, name = "a"}
+  %update_host = acc.getdeviceptr varPtr(%arg0 : memref<f32>) dataClause(acc_update_host) name("a") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=update | Remark="Generating update_self(b)"
-  %update_self = acc.getdeviceptr varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_update_self>, name = "b"}
+  %update_self = acc.getdeviceptr varPtr(%arg1 : memref<f32>) dataClause(acc_update_self) name("b") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=update | Remark="Generating update_device(c)"
-  %update_device = acc.update_device varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {name = "c"}
+  %update_device = acc.update_device varPtr(%arg2 : memref<f32>) name("c") -> memref<f32>
   acc.update dataOperands(%update_host, %update_self, %update_device
       : memref<f32>, memref<f32>, memref<f32>)
   acc.update_host accPtr(%update_host : memref<f32>)
       to varPtr(%arg0 : memref<f32>)
   acc.update_host accPtr(%update_self : memref<f32>)
       to varPtr(%arg1 : memref<f32>)
-      {dataClause = #acc<data_clause acc_update_self>}
+      dataClause(acc_update_self)
   return
 }
 
@@ -226,11 +197,10 @@ func.func @update(
 // from a default clause are marked as default.
 func.func @implicit_and_default(%arg0: memref<f32>, %arg1: memref<f32>) {
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=implicit_and_default | Remark="Generating default copyin(a) [if not already present]"
-  %from_default = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {acc.from_default, name = "a"}
+  %from_default = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
+      {acc.from_default}
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=implicit_and_default | Remark="Generating implicit present(b)"
-  %implicit = acc.present varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {implicit = true, name = "b"}
+  %implicit = acc.present varPtr(%arg1 : memref<f32>) implicit(true) name("b") -> memref<f32>
   acc.data dataOperands(%from_default, %implicit : memref<f32>, memref<f32>) {
     acc.terminator
   }
@@ -243,19 +213,14 @@ func.func @implicit_and_default(%arg0: memref<f32>, %arg1: memref<f32>) {
 func.func @grouping_and_sorting(
     %arg0: memref<f32>, %arg1: memref<f32>, %arg2: memref<f32>,
     %arg3: memref<f32>, %arg4: memref<f32>) {
-  %copyin_z = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "z"}
+  %copyin_z = acc.copyin varPtr(%arg0 : memref<f32>) name("z") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=grouping_and_sorting | Remark="Generating copyin(x, y, z) [if not already present]"
-  %copyin_x = acc.copyin varPtr(%arg1 : memref<f32>) -> memref<f32>
-      {name = "x"}
-  %copyin_y = acc.copyin varPtr(%arg2 : memref<f32>) -> memref<f32>
-      {name = "y"}
+  %copyin_x = acc.copyin varPtr(%arg1 : memref<f32>) name("x") -> memref<f32>
+  %copyin_y = acc.copyin varPtr(%arg2 : memref<f32>) name("y") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=grouping_and_sorting | Remark="Generating implicit copyin(i) [if not already present]"
-  %copyin_i = acc.copyin varPtr(%arg3 : memref<f32>) -> memref<f32>
-      {implicit = true, name = "i"}
+  %copyin_i = acc.copyin varPtr(%arg3 : memref<f32>) implicit(true) name("i") -> memref<f32>
   // CHECK: [[@LINE+1]]:{{[0-9]+}}: remark: [Passed] openacc | Category:acc-emit-remarks-data | Function=grouping_and_sorting | Remark="Generating present(p)"
-  %present = acc.present varPtr(%arg4 : memref<f32>) -> memref<f32>
-      {name = "p"}
+  %present = acc.present varPtr(%arg4 : memref<f32>) name("p") -> memref<f32>
   acc.data dataOperands(%copyin_z, %copyin_x, %copyin_y, %copyin_i, %present
       : memref<f32>, memref<f32>, memref<f32>, memref<f32>, memref<f32>) {
     acc.terminator
@@ -274,8 +239,7 @@ func.func @grouping_and_sorting(
 // The synthetic getdeviceptr clause and clauses without a variable name are
 // not reported.
 func.func @not_reportable_clauses(%arg0: memref<f32>, %arg1: memref<f32>) {
-  %synthetic = acc.getdeviceptr varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "synthetic"}
+  %synthetic = acc.getdeviceptr varPtr(%arg0 : memref<f32>) name("synthetic") -> memref<f32>
   %unnamed = acc.copyin varPtr(%arg1 : memref<f32>) -> memref<f32>
   acc.data dataOperands(%synthetic, %unnamed : memref<f32>, memref<f32>) {
     acc.terminator
@@ -287,15 +251,14 @@ func.func @not_reportable_clauses(%arg0: memref<f32>, %arg1: memref<f32>) {
 func.func @default_only_data() {
   acc.data {
     acc.terminator
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   return
 }
 
 // A declare enter whose token is unused registers the variables for the whole
 // program instead of a region, and is not reported.
 func.func @unstructured_declare(%arg0: memref<f32>) {
-  %create = acc.create varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %create = acc.create varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   acc.declare_enter dataOperands(%create : memref<f32>)
   return
 }
@@ -304,8 +267,7 @@ func.func @unstructured_declare(%arg0: memref<f32>) {
 // are reported at the declare enter, and an unstructured declare exit only
 // unregisters variables.
 func.func @declare_exit(%arg0: memref<f32>) {
-  %delete = acc.getdeviceptr varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {dataClause = #acc<data_clause acc_delete>, name = "a"}
+  %delete = acc.getdeviceptr varPtr(%arg0 : memref<f32>) dataClause(acc_delete) name("a") -> memref<f32>
   acc.declare_exit dataOperands(%delete : memref<f32>)
   acc.delete accPtr(%delete : memref<f32>)
   return
@@ -314,8 +276,7 @@ func.func @declare_exit(%arg0: memref<f32>) {
 // Data clauses on a compute construct are not reported by this pass - they are
 // reported once they are outlined into a kernel environment.
 func.func @compute_construct(%arg0: memref<f32>) {
-  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) -> memref<f32>
-      {name = "a"}
+  %copyin = acc.copyin varPtr(%arg0 : memref<f32>) name("a") -> memref<f32>
   acc.parallel dataOperands(%copyin : memref<f32>) {
     acc.yield
   }

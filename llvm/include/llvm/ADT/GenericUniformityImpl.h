@@ -731,8 +731,8 @@ public:
         for (auto *BlockCycleExit : BlockCycleExits) {
           if (BranchIsInside)
             visitCycleExitEdge(*BlockCycleExit, *Label);
-          else
-            visitEdge(*BlockCycleExit, *Label);
+          // Propagate the label to the exit block.
+          visitEdge(*BlockCycleExit, *Label);
         }
       } else {
         for (const auto *SuccBlock : successors(Block))

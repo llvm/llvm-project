@@ -121,6 +121,15 @@ TEST_F(TargetAPIMutexTargetTest, BareHandleDoesNotAutoUnlockOnDestruction) {
     EXPECT_FALSE(background_lock.try_lock());
   });
   t.join();
+
+  // Unlock the original locked mutex.
+  // Calling try_lock() resolves the underlying mutex and re-enters it on this
+  // thread (incrementing the recursive count), so we unlock twice to fully
+  // release both acquisitions.
+  TargetAPIMutex cleanup_lock(target_sp);
+  ASSERT_TRUE(cleanup_lock.try_lock());
+  cleanup_lock.unlock();
+  cleanup_lock.unlock();
 }
 
 TEST_F(TargetAPIMutexTargetTest, LockGuardReleasesOnScopeExit) {

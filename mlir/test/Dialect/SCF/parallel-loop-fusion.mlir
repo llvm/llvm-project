@@ -1231,7 +1231,7 @@ func.func @test_fuse_interchanged_loops(%arg0: memref<1x64xf32>) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %alloc_0 = memref.alloc() : memref<1x8x8xf32>
-  %alloc = memref.alloc() {alignment = 64 : i64} : memref<8x8x1xf32>
+  %alloc = memref.alloc() alignment = 64 : memref<8x8x1xf32>
   scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%c8, %c8) step (%c1, %c1) {
     %0 = memref.load %alloc_0[%c0, %arg2, %arg3] : memref<1x8x8xf32>
     memref.store %0, %alloc[%arg3, %arg2, %c0] : memref<8x8x1xf32>

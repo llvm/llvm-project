@@ -206,7 +206,7 @@ entry:
   ret <2 x i32> %t
 }
 
-; Test the (concat_vectors (X), (trunc(smin(smax(Y, -2^n), 2^n-1))) pattern.
+; Test the (concat_vectors (X), (trunc(smin(smax(Y, -2^n), 2^n-1)))) pattern.
 
 define <16 x i8> @signed_minmax_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: signed_minmax_v8i16_to_v16i8:
@@ -250,7 +250,7 @@ entry:
   ret <4 x i32> %shuffle
 }
 
-; Test the (concat_vectors (X), (trunc(smax(smin(Y, 2^n-1), -2^n))) pattern.
+; Test the (concat_vectors (X), (trunc(smax(smin(Y, 2^n-1), -2^n)))) pattern.
 
 define <16 x i8> @signed_maxmin_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: signed_maxmin_v8i16_to_v16i8:
@@ -335,7 +335,7 @@ entry:
   ret <4 x i32> %shuffle
 }
 
-; Test the (concat_vectors (X), (trunc(umin(smax(Y, 0), 2^n))))) pattern.
+; Test the (concat_vectors (X), (trunc(umin(smax(Y, 0), 2^n)))) pattern.
 
 define <16 x i8> @us_maxmin_v8i16_to_v16i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: us_maxmin_v8i16_to_v16i8:
@@ -379,7 +379,7 @@ entry:
   ret <4 x i32> %shuffle
 }
 
-; Test the (concat_vectors (X), (trunc(smin(smax(Y, 0), 2^n))))) pattern.
+; Test the (concat_vectors (X), (trunc(smin(smax(Y, 0), 2^n)))) pattern.
 
 define <16 x i8> @sminsmax_range_unsigned_i16_to_i8(<8 x i8> %x, <8 x i16> %y) {
 ; CHECK-LABEL: sminsmax_range_unsigned_i16_to_i8:
@@ -425,7 +425,7 @@ entry:
 
 
 
-; Test the (concat_vectors (X), (trunc(smin(smax(Y, -2^n), 2^n-1))) pattern.
+; Test the larger (trunc(smin(smax(Y, -2^n), 2^n-1))) pattern.
 
 define <16 x i8> @signed_minmax_v16i16_to_v16i8(<16 x i16> %y) {
 ; CHECK-LABEL: signed_minmax_v16i16_to_v16i8:
@@ -466,7 +466,7 @@ entry:
   ret <4 x i32> %trunc
 }
 
-; Test the (concat_vectors (X), (trunc(smax(smin(Y, 2^n-1), -2^n))) pattern.
+; Test the larger (trunc(smax(smin(Y, 2^n-1), -2^n))) pattern.
 
 define <16 x i8> @signed_maxmin_v16i16_to_v16i8(<16 x i16> %y) {
 ; CHECK-LABEL: signed_maxmin_v16i16_to_v16i8:
@@ -507,7 +507,7 @@ entry:
   ret <4 x i32> %trunc
 }
 
-; Test the (concat_vectors (X), (trunc(umin(Y, 2^n)))) pattern.
+; Test the larger (trunc(umin(Y, 2^n))) pattern.
 
 define <16 x i8> @unsigned_v16i16_to_v16i8(<16 x i16> %y) {
 ; CHECK-LABEL: unsigned_v16i16_to_v16i8:
@@ -545,7 +545,7 @@ entry:
   ret <4 x i32> %trunc
 }
 
-; Test the (concat_vectors (X), (trunc(umin(smax(Y, 0), 2^n))))) pattern.
+; Test the larger (trunc(umin(smax(Y, 0), 2^n)))) pattern.
 
 define <16 x i8> @us_maxmin_v16i16_to_v16i8(<16 x i16> %y) {
 ; CHECK-LABEL: us_maxmin_v16i16_to_v16i8:
@@ -586,7 +586,7 @@ entry:
   ret <4 x i32> %trunc
 }
 
-; Test the (concat_vectors (X), (trunc(smin(smax(Y, 0), 2^n))))) pattern.
+; Test the larger (trunc(smin(smax(Y, 0), 2^n))) pattern.
 
 define <16 x i8> @sminsmax_range_unsig16ed_i16_to_i8(<16 x i16> %y) {
 ; CHECK-LABEL: sminsmax_range_unsig16ed_i16_to_i8:
@@ -624,6 +624,80 @@ entry:
   %smax = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %y, <4 x i64> zeroinitializer)
   %smin = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %smax, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
   %trunc = trunc <4 x i64> %smin to <4 x i32>
+  ret <4 x i32> %trunc
+}
+
+; Test the trunc nsw trunc(smin(smax(Y, -2^n), 2^n-1)) pattern.
+
+define <16 x i8> @signed_minnsw_v16i16_to_v16i8(<16 x i16> %y) {
+; CHECK-SD-LABEL: signed_minnsw_v16i16_to_v16i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v2.8h, #127
+; CHECK-SD-NEXT:    smin v1.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: signed_minnsw_v16i16_to_v16i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.8h, #127
+; CHECK-GI-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-GI-NEXT:    smin v1.8h, v1.8h, v2.8h
+; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %min = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %y, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>)
+  %trunc = trunc nsw <16 x i16> %min to <16 x i8>
+  ret <16 x i8> %trunc
+}
+
+define <8 x i16> @signed_minnsw_v8i32_to_v8i16(<8 x i32> %y) {
+; CHECK-SD-LABEL: signed_minnsw_v8i32_to_v8i16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-SD-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    smin v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: signed_minnsw_v8i32_to_v8i16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v2.4s
+; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
+entry:
+  %min = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %y, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
+  %trunc = trunc nsw <8 x i32> %min to <8 x i16>
+  ret <8 x i16> %trunc
+}
+
+define <4 x i32> @signed_minnsw_v4i64_to_v4i32(<4 x i64> %y) {
+; CHECK-SD-LABEL: signed_minnsw_v4i64_to_v4i32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #2147483647 // =0x7fffffff
+; CHECK-SD-NEXT:    dup v2.2d, x8
+; CHECK-SD-NEXT:    cmgt v3.2d, v2.2d, v1.2d
+; CHECK-SD-NEXT:    cmgt v4.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    bif v1.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v4.16b
+; CHECK-SD-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: signed_minnsw_v4i64_to_v4i32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
+; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v1.2d
+; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
+; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    ret
+entry:
+  %min = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %y, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
+  %trunc = trunc nsw <4 x i64> %min to <4 x i32>
   ret <4 x i32> %trunc
 }
 
@@ -681,13 +755,13 @@ define <4 x i16> @sminsmax_range_signed_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
 ;
 ; CHECK-GI-LABEL: sminsmax_range_signed_i64_to_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI46_1
+; CHECK-GI-NEXT:    adrp x8, .LCPI49_1
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI49_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI49_0
 ; CHECK-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI49_0]
 ; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
