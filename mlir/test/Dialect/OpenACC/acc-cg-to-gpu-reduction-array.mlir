@@ -300,9 +300,8 @@ func.func @thread_y_reduction_single_thread_rows() {
   return
 }
 
-// A worker-only launch with several threads per worker keeps its shape too.
-// Worker partials are combined in the lowest ThreadY threads of the block, so
-// the rows do not have to start at subgroup boundaries.
+// A worker-only launch with several threads per worker keeps its shape too:
+// the partials are combined in the lowest ThreadY threads of the block.
 //
 // CHECK-LABEL: func.func @thread_y_reduction_narrow_rows
 // CHECK: %[[C8_NARROW:.*]] = arith.constant 8 : index
@@ -327,9 +326,8 @@ func.func @thread_y_reduction_narrow_rows() {
   return
 }
 
-// A ThreadX reduction in the same region shuffles within a row, so the rows are
-// aligned again: blockDim.x is padded to a subgroup and blockDim.y divided by
-// the same factor.
+// A ThreadX reduction in the same region shuffles within a row, so the rows
+// are aligned again and blockDim.y is divided by the same factor.
 //
 // CHECK-LABEL: func.func @thread_y_reduction_with_thread_x_reduction
 // CHECK: %[[C32_BOTH:.*]] = arith.constant 32 : index
