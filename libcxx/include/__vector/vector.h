@@ -556,9 +556,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
-    size_type __old_size = size();
-    __base_destruct_at_end(this->__layout_.__begin_ptr());
-    __annotate_shrink(__old_size);
+    __destruct_at_end(__layout_.__begin_ptr());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
@@ -711,9 +709,11 @@ private:
       _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
       _NOEXCEPT_(__alloc_traits::is_always_equal::value);
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
     size_type __old_size = size();
-    __base_destruct_at_end(__new_last);
+    std::__allocator_destroy(__layout_.__alloc(), __new_last, __layout_.__end_ptr());
+    __layout_.__set_bound_using_pointer(__new_last);
     __annotate_shrink(__old_size);
   }
 
@@ -769,13 +769,6 @@ private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
-    pointer __soon_to_be_end = __layout_.__end_ptr();
-    while (__new_last != __soon_to_be_end)
-      __alloc_traits::destroy(this->__layout_.__alloc(), std::__to_address(--__soon_to_be_end));
-    __layout_.__set_bound_using_pointer(__new_last);
-  }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const vector& __c) {
     __copy_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_copy_assignment::value>());
