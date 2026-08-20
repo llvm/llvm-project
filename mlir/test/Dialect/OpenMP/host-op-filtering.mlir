@@ -183,7 +183,7 @@ module attributes {omp.is_target_device = true} {
     %11 = llvm.load %10 : !llvm.ptr -> i64
     %12 = llvm.sub %3, %7 : i64
     %13 = llvm.sub %4, %7 : i64
-    %14 = omp.map.bounds lower_bound(%12 : i64) upper_bound(%13 : i64) extent(%9 : i64) stride(%11 : i64) start_idx(%7 : i64) {stride_in_bytes = true}
+    %14 = omp.map.bounds lower_bound(%12 : i64) upper_bound(%13 : i64) extent(%9 : i64) stride(%11 : i64) start_idx(%7 : i64) stride_in_bytes(true)
     %15 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 
     // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG]] {{.*}} map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : !llvm.ptr, f32) -> !llvm.ptr
@@ -352,11 +352,10 @@ module attributes {omp.is_target_device = true} {
     // argument; it is captured by a matching `map_entries` entry.
     // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
-    // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
-    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
+    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0]) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
+    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0]) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+    }
 
     // CHECK-NOT: omp.target_enter_data
     // CHECK-NOT: omp.target_exit_data

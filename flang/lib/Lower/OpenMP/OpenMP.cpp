@@ -1509,16 +1509,43 @@ static void getDeclareTargetInfo(
   } else {
     List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
     if (clauses.empty()) {
+      // Case: implicit capture of the enclosing function/subroutine.
       Fortran::lower::pft::FunctionLikeUnit *owningProc =
           eval.getOwningProcedure();
-      // Main programs are never device routines. Skip them so that a bare
-      // '!$omp declare target' inside an interface body that lives in a named
-      // main program does not incorrectly mark _QQmain as a device function.
-      if (owningProc && !owningProc->isMainProgram()) {
-        // Case: declare target, implicit capture of enclosing
-        // function/subroutine.
+      bool owningProcNotMainProgram =
+          owningProc && !owningProc->isMainProgram();
+
+      const semantics::Symbol *owningSym =
+          owningProcNotMainProgram
+              ? &owningProc->getSubprogramSymbol()
+              : (owningProc ? owningProc->getMainProgramSymbol() : nullptr);
+
+      // A bare '!$omp declare target' may appear in the specification part of
+      // an interface body. In that case, the PFT records the directive as an
+      // evaluation of the enclosing program unit rather than of the interface
+      // body's subprogram, so eval.getOwningProcedure() points at the main
+      // program.
+      //
+      // Detect this by comparing the program unit lexically containing
+      // the directive with the procedure currently being lowered; when they
+      // differ, it might be this case or it might be one of the entries of a
+      // multiple-entry subprogram. In the first case, the directive belongs to
+      // the interface-body subprogram; otherwise, the owning subprogram is the
+      // correct one.
+      const semantics::Scope &progUnitScope =
+          semantics::GetProgramUnitContaining(
+              semaCtx.FindScope(construct.v.source));
+      const semantics::Symbol *lexicalSym = progUnitScope.symbol();
+
+      if (lexicalSym && lexicalSym != owningSym) {
+        // Interface subprogram capture or non-default subprogram entry.
         symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
-                                     owningProc->getSubprogramSymbol());
+                                     owningProcNotMainProgram ? *owningSym
+                                                              : *lexicalSym);
+      } else if (owningProcNotMainProgram) {
+        // Main programs are never device routines, so skip those here.
+        symbolAndClause.emplace_back(mlir::omp::DeclareTargetCaptureClause::to,
+                                     *owningSym);
       }
     }
 
@@ -1816,11 +1843,13 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   if (declareTargetOp.isDeclareTarget()) {
     if (declareTargetOp.getDeclareTargetDeviceType() != deviceType)
       declareTargetOp.setDeclareTarget(mlir::omp::DeclareTargetDeviceType::any,
-                                       captureClause, automap);
+                                       captureClause, automap,
+                                       /*implicit=*/false);
     return;
   }
 
-  declareTargetOp.setDeclareTarget(deviceType, captureClause, automap);
+  declareTargetOp.setDeclareTarget(deviceType, captureClause, automap,
+                                   /*implicit=*/false);
 }
 
 //===----------------------------------------------------------------------===//

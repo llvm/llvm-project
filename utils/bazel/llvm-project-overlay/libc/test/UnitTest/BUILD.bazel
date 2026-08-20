@@ -68,6 +68,7 @@ libc_test_library(
         "//libc:__support_macros_properties_types",
         "//libc:__support_stringutil",
         "//libc:__support_uint128",
+        "//libc:__support_wchar_string_converter",
         "//libc:errno",
         "//libc:func_aligned_alloc",
         "//libc:func_free",

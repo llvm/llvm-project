@@ -131,10 +131,24 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     QT = Context.BoolTy;
     break;
   case ScalarTypeKind::SignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
+    // getIntTypeForBitwidth() picks a type purely by matching bit width, so
+    // on LP64 targets a 64-bit element would resolve to "long" even if the
+    // target's actual int64_t is "long long" (e.g. OpenBSD). Go through the
+    // target's Int64Type so this matches int64_t/uint64_t.
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.LongTy
+               : Context.LongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), true);
     break;
   case ScalarTypeKind::UnsignedInteger:
-    QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    if (Type->getElementBitwidth() == 64)
+      QT = Context.getTargetInfo().getInt64Type() == TargetInfo::SignedLong
+               ? Context.UnsignedLongTy
+               : Context.UnsignedLongLongTy;
+    else
+      QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
     break;
   case ScalarTypeKind::FloatE4M3:
   case ScalarTypeKind::FloatE5M2: {
@@ -1646,6 +1660,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
+  bool ReportedDuplicateType = false;
 
   SmallSet<RISCVInterruptAttr::InterruptType, 3> Types;
   for (unsigned ArgIndex = 0; ArgIndex < AL.getNumArgs(); ++ArgIndex) {
@@ -1683,7 +1698,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       break;
     }
 
-    Types.insert(Type);
+    if (!Types.insert(Type).second && !ReportedDuplicateType) {
+      Diag(Loc, diag::warn_riscv_attribute_interrupt_duplicate_type)
+          << TypeString;
+      ReportedDuplicateType = true;
+    }
   }
 
   if (HasUnaryType && Types.size() > 1) {

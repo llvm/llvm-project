@@ -400,6 +400,9 @@ features cannot lower the translation-unit ABI level;
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
+  later, matching the behavior in C++11 through C++17. (#GH161689)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -440,6 +443,10 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+
+- Fixed a crash when an `address_space` attribute with a dependent argument was
+  written after the declarator-id, where it appertains to the declared entity
+  rather than to a declarator chunk. (#GH196982, #GH111463)
 
 #### Bug Fixes to C++ Support
 
@@ -564,6 +571,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together
   with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
+
+- Added a new warning when the same interrupt type is specified more than
+  once in a RISC-V `interrupt` attribute.
 
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If
