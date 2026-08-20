@@ -1,0 +1,105 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=si-pre-emit-peephole -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=si-pre-emit-peephole -amdgpu-wmma-reuse-lookahead=2 %s -o - | FileCheck -check-prefix=LOOKAHEAD2 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=si-pre-emit-peephole -amdgpu-set-wmma-reuse-bits=false %s -o - | FileCheck -check-prefix=OFF %s
+
+# The next WMMA reuses the first one's A (src0) register: set matrix_a_reuse on
+# the earlier instruction. The last consumer is left unset so its read drops the
+# cache entry out of the high-temporality state.
+---
+name: reuse_a
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; GCN-LABEL: name: reuse_a
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    ;
+    ; OFF-LABEL: name: reuse_a
+    ; OFF: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# The next WMMA reuses the first one's B (src1) register: set matrix_b_reuse.
+---
+name: reuse_b
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; GCN-LABEL: name: reuse_b
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 1, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr20_vgpr21, $vgpr2_vgpr3, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# Chain of three WMMAs each sharing the A register with the next. The first two
+# each have the next WMMA reuse A and get the bit; the terminal one is left
+# unset.
+---
+name: reuse_chain
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21, $vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; GCN-LABEL: name: reuse_chain
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 1, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr22_vgpr23, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr22_vgpr23, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# The A register is redefined before the reusing WMMA, so the cached value would
+# differ: do not set the bit.
+---
+name: reuse_blocked_by_redef
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21
+    ; GCN-LABEL: name: reuse_blocked_by_redef
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr20_vgpr21, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# An intervening WMMA does not reuse the A register; the reuser is the WMMA
+# after that. With the default lookahead of 1 the bit is not set (only the next
+# WMMA is considered); with a lookahead of 2 it is.
+---
+name: reuse_beyond_lookahead
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, $vgpr20_vgpr21, $vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33
+    ; GCN-LABEL: name: reuse_beyond_lookahead
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    ;
+    ; LOOKAHEAD2-LABEL: name: reuse_beyond_lookahead
+    ; LOOKAHEAD2: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr20_vgpr21, $vgpr22_vgpr23, 8, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr32_vgpr33, 8, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# A bit already requested by the frontend is preserved even with no reuser (the
+# pass only ever sets bits, never clears them).
+---
+name: preserve_frontend_bit
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; GCN-LABEL: name: preserve_frontend_bit
+    ; GCN: early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X4_F32_w32_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, 8, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 1, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
