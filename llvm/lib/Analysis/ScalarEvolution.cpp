@@ -1380,11 +1380,12 @@ static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR, Type *Ty,
   // `Step`:
 
   // 1. NSW/NUW flags on the step increment.
+  // Any flags valid on AR are valid on PreAR.
   auto PreStartFlags =
-    ScalarEvolution::maskFlags(SA->getNoWrapFlags(), SCEV::FlagNUW);
+      ScalarEvolution::maskFlags(SA->getNoWrapFlags(), SCEV::FlagNUW);
   const SCEV *PreStart = SE->getAddExpr(DiffOps, PreStartFlags);
   const SCEVAddRecExpr *PreAR = dyn_cast<SCEVAddRecExpr>(
-      SE->getAddRecExpr(PreStart, Step, L, SCEV::FlagAnyWrap));
+      SE->getAddRecExpr(PreStart, Step, L, AR->getNoWrapFlags()));
 
   // "{S,+,X} is <nsw>/<nuw>" and "the backedge is taken at least once" implies
   // "S+X does not sign/unsign-overflow".
@@ -1401,15 +1402,8 @@ static const SCEV *getPreStartForExtend(const SCEVAddRecExpr *AR, Type *Ty,
   const SCEV *OperandExtendedStart =
       SE->getAddExpr((SE->*GetExtendExpr)(PreStart, WideTy, Depth),
                      (SE->*GetExtendExpr)(Step, WideTy, Depth));
-  if ((SE->*GetExtendExpr)(Start, WideTy, Depth) == OperandExtendedStart) {
-    if (PreAR && any(AR->getNoWrapFlags(WrapType))) {
-      // If we know `AR` == {`PreStart`+`Step`,+,`Step`} is `WrapType` (FlagNSW
-      // or FlagNUW) and that `PreStart` + `Step` is `WrapType` too, then
-      // `PreAR` == {`PreStart`,+,`Step`} is also `WrapType`.  Cache this fact.
-      SE->setNoWrapFlags(const_cast<SCEVAddRecExpr *>(PreAR), WrapType);
-    }
+  if ((SE->*GetExtendExpr)(Start, WideTy, Depth) == OperandExtendedStart)
     return PreStart;
-  }
 
   // 3. Loop precondition.
   ICmpInst::Predicate Pred;
