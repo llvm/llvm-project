@@ -170,7 +170,7 @@ def OpenACC_ReductionAccumulateOp
       }
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_accumulate %partial to %private <add>
-        : i32 -> memref<i32> <{par_dims = #acc<par_dims[thread_x]>}>
+        par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
     acc.reduction_combine %private into %shared <add> : memref<i32>
         {acc.par_dims = #acc<par_dims[thread_x]>}
     ```
@@ -182,8 +182,9 @@ def OpenACC_ReductionAccumulateOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    $value `to` $memref $reductionOperator `:` type($value) `->`
-    type($memref) prop-dict attr-dict
+    $value `to` $memref $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($value) `->`
+    type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -206,8 +207,8 @@ def OpenACC_ReductionAccumulateArrayOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    $memref `bounds` `(` $bounds `)` $reductionOperator `:`
-    type($memref) prop-dict attr-dict
+    $memref `bounds` `(` $bounds `)` $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -319,14 +320,16 @@ def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
     Optional `index` operands supply dynamic sizes when the privatized shape
     depends on SSA values (for example `memref<?xi32>` row lengths).
 
-    The optional `acc.par_dims` attribute records which GPU parallel dimensions
+    The optional `par_dims` attribute records which GPU parallel dimensions
     participate in the privatization.
   }];
   let arguments = (ins Variadic<Index>:$dynamicSizes,
                        OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   let results = (outs OpenACC_PrivateType:$result);
   let assemblyFormat = [{
-    (`(` $dynamicSizes^ `)`)? (`[` qualified($par_dims)^ `]`)? attr-dict `:` functional-type(operands, results)
+    (`(` $dynamicSizes^ `)`)?
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
   let builders = [
     OpBuilder<(ins "::mlir::Type":$resultType,
