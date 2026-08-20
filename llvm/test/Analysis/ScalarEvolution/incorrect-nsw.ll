@@ -11,7 +11,7 @@ define void @bad.nsw() {
 ; CHECK-NEXT:    %i.inc = add i8 %i, -128
 ; CHECK-NEXT:    --> {127,+,-128}<%loop> U: [127,0) S: [127,0) Exits: -1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.sext = sext i8 %i to i16
-; CHECK-NEXT:    --> {-1,+,128}<nw><%loop> U: [-1,128) S: [-1,128) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (127 + (sext i8 {-128,+,-128}<%loop> to i16))<nuw><nsw> U: [127,0) S: [-1,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %counter.inc = add i8 %counter, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: 2 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @bad.nsw
