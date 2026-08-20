@@ -2663,11 +2663,12 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value, bool IsRELR) {
+                                         uint64_t Value, bool IsRELR,
+                                         uint64_t JmpRelocationIndex) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value, IsRELR);
+                                Addend, Value, IsRELR, JmpRelocationIndex);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

@@ -65,6 +65,7 @@
 #include <memory>
 #include <optional>
 #include <system_error>
+#include <tuple>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
@@ -2976,9 +2977,6 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
              << " : + 0x" << Twine::utohexstr(Addend) << '\n'
     );
 
-    if (IsJmpRel)
-      IsJmpRelocation[RType] = true;
-
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
@@ -2994,7 +2992,12 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       handleRelativeDynamicRelocation(Rel.getOffset(), ReferencedAddress);
     }
 
-    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
+    const uint64_t JmpRelocationIndex =
+        IsJmpRel ? NumJmpRelocations++
+                 : Relocation::NoJmpRelocationIndex;
+    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend,
+                             /*Value=*/0, /*IsRELR=*/false,
+                             JmpRelocationIndex);
   }
 }
 
@@ -6085,65 +6088,87 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
     Offset += sizeof(*RelA);
   };
 
-  auto writeRelocations = [&](bool PatchRelative) {
-    for (BinarySection &Section : BC->allocatableSections()) {
-      const uint64_t SectionInputAddress = Section.getAddress();
-      uint64_t SectionAddress = Section.getOutputAddress();
-      if (!SectionAddress)
-        SectionAddress = SectionInputAddress;
+  auto writeRelocation = [&](BinarySection &Section, const Relocation &Rel) {
+    const uint64_t SectionInputAddress = Section.getAddress();
+    uint64_t SectionAddress = Section.getOutputAddress();
+    if (!SectionAddress)
+      SectionAddress = SectionInputAddress;
 
+    Elf_Rela NewRelA;
+    MCSymbol *Symbol = Rel.Symbol;
+    uint32_t SymbolIdx = 0;
+    uint64_t Addend = Rel.Addend;
+    uint64_t RelOffset =
+        getNewFunctionOrDataAddress(SectionInputAddress + Rel.Offset);
+
+    RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
+    if (Rel.Symbol) {
+      SymbolIdx = getOutputDynamicSymbolIndex(Symbol);
+    } else {
+      // Usually this case is used for R_*_(I)RELATIVE relocations
+      const uint64_t Address = getNewFunctionOrDataAddress(Addend);
+      if (Address)
+        Addend = Address;
+    }
+
+    NewRelA.setSymbolAndType(SymbolIdx, Rel.Type, EF.isMips64EL());
+    NewRelA.r_offset = RelOffset;
+    NewRelA.r_addend = Addend;
+
+    const bool IsJmpRel = Rel.isJmpRelocation();
+    uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
+    const uint64_t &EndOffset = IsJmpRel ? RelPltEndOffset : RelDynEndOffset;
+    if (!Offset || !EndOffset) {
+      BC->errs() << "BOLT-ERROR: Invalid offsets for dynamic relocation\n";
+      exit(1);
+    }
+
+    if (Offset + sizeof(NewRelA) > EndOffset) {
+      BC->errs() << "BOLT-ERROR: Offset overflow for dynamic relocation\n";
+      exit(1);
+    }
+
+    writeRela(&NewRelA, Offset);
+  };
+
+  auto writeDynRelocations = [&](bool PatchRelative) {
+    for (BinarySection &Section : BC->allocatableSections()) {
       for (const Relocation &Rel : Section.dynamicRelocations()) {
+        if (Rel.isJmpRelocation())
+          continue;
+
         const bool IsRelative = Rel.isRelative();
         if (PatchRelative != IsRelative || Rel.isRELR())
           continue;
 
         if (IsRelative)
           ++DynamicRelativeRelocationsCount;
-
-        Elf_Rela NewRelA;
-        MCSymbol *Symbol = Rel.Symbol;
-        uint32_t SymbolIdx = 0;
-        uint64_t Addend = Rel.Addend;
-        uint64_t RelOffset =
-            getNewFunctionOrDataAddress(SectionInputAddress + Rel.Offset);
-
-        RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
-        if (Rel.Symbol) {
-          SymbolIdx = getOutputDynamicSymbolIndex(Symbol);
-        } else {
-          // Usually this case is used for R_*_(I)RELATIVE relocations
-          const uint64_t Address = getNewFunctionOrDataAddress(Addend);
-          if (Address)
-            Addend = Address;
-        }
-
-        NewRelA.setSymbolAndType(SymbolIdx, Rel.Type, EF.isMips64EL());
-        NewRelA.r_offset = RelOffset;
-        NewRelA.r_addend = Addend;
-
-        const bool IsJmpRel = IsJmpRelocation.contains(Rel.Type);
-        uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
-        const uint64_t &EndOffset =
-            IsJmpRel ? RelPltEndOffset : RelDynEndOffset;
-        if (!Offset || !EndOffset) {
-          BC->errs() << "BOLT-ERROR: Invalid offsets for dynamic relocation\n";
-          exit(1);
-        }
-
-        if (Offset + sizeof(NewRelA) > EndOffset) {
-          BC->errs() << "BOLT-ERROR: Offset overflow for dynamic relocation\n";
-          exit(1);
-        }
-
-        writeRela(&NewRelA, Offset);
+        writeRelocation(Section, Rel);
       }
     }
   };
 
   // The dynamic linker expects all R_*_RELATIVE relocations in RELA
   // to be emitted first.
-  writeRelocations(/* PatchRelative */ true);
-  writeRelocations(/* PatchRelative */ false);
+  writeDynRelocations(/* PatchRelative */ true);
+  writeDynRelocations(/* PatchRelative */ false);
+
+  using OrderedJmpRel = std::tuple<uint64_t, BinarySection *, const Relocation *>;
+  std::vector<OrderedJmpRel> JmpRelocations;
+  for (BinarySection &Section : BC->allocatableSections()) {
+    for (const Relocation &Rel : Section.dynamicRelocations()) {
+      if (!Rel.isJmpRelocation())
+        continue;
+      assert(!Rel.isRELR() && "RELR relocation cannot belong to DT_JMPREL");
+      JmpRelocations.emplace_back(Rel.getJmpRelocationIndex(), &Section, &Rel);
+    }
+  }
+  llvm::sort(JmpRelocations, [](const OrderedJmpRel &A,
+                                const OrderedJmpRel &B) {
+    return std::get<0>(A) < std::get<0>(B);
+  });
+  for (const OrderedJmpRel &Entry : JmpRelocations)
+    writeRelocation(*std::get<1>(Entry), *std::get<2>(Entry));
 
   auto fillNone = [&](uint64_t &Offset, uint64_t EndOffset) {
     if (!Offset)
