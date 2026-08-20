@@ -2884,8 +2884,7 @@ void RISCVFrameLowering::orderFrameObjects(
     Sorting.push_back(Obj);
   }
 
-  // Count static references to each frame index. This provides an access
-  // density heuristic without requiring profile data.
+  // Count the number of uses for each object.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (MI.isDebugInstr())
