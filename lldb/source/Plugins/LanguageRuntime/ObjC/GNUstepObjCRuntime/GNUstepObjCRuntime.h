@@ -215,6 +215,18 @@ public:
   /// module is the program's own and the distinction cannot be drawn.
   bool IsRuntimeInternalAddress(lldb::addr_t addr);
 
+  /// Address of the runtime variable a JIT'd expression's symbol refers to,
+  /// for the ivar-offset and class symbols the gnustep-2.x ABI emits. Only
+  /// consulted after the inferior's own symbol table has been tried.
+  lldb::addr_t LookupRuntimeSymbol(ConstString name) override;
+
+  /// Splits `__objc_ivar_offset_<Class>.<ivar>.<mangled type encoding>` into
+  /// its class and ivar names, false if \p symbol is not one. Static so it can
+  /// be tested without a process.
+  static bool ParseIvarOffsetSymbol(llvm::StringRef symbol,
+                                    llvm::StringRef &class_name,
+                                    llvm::StringRef &ivar_name);
+
 protected:
   // Call CreateInstance instead.
   GNUstepObjCRuntime(Process *process);

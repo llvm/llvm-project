@@ -1365,6 +1365,65 @@ bool GNUstepObjCRuntime::IsRuntimeInternalAddress(lldb::addr_t addr) {
   return resolved.GetModule() == m_objc_module_sp;
 }
 
+bool GNUstepObjCRuntime::ParseIvarOffsetSymbol(llvm::StringRef symbol,
+                                               llvm::StringRef &class_name,
+                                               llvm::StringRef &ivar_name) {
+  // __objc_ivar_offset_<Class>.<ivar>.<mangled type encoding> (CGObjCGNU.cpp).
+  // Neither a class nor an ivar name can contain a '.', so the first two
+  // components are unambiguous however the encoding is spelled - and the
+  // encoding itself is not needed to identify the ivar.
+  static constexpr llvm::StringLiteral g_ivar_prefix("__objc_ivar_offset_");
+  if (!symbol.consume_front(g_ivar_prefix))
+    return false;
+
+  std::tie(class_name, ivar_name) = symbol.split('.');
+  // The gnustep-2.x spelling always carries the encoding, so a name with no
+  // second '.' is not one: it is either the v1 ABI's two-component form or
+  // the `__objc_ivar_offset_value_` variant, neither of which this runtime
+  // handles. Rejecting them degrades to the behaviour before this fallback
+  // existed rather than resolving to a wrong address.
+  if (ivar_name.find('.') == llvm::StringRef::npos)
+    return false;
+  ivar_name = ivar_name.split('.').first;
+  return !class_name.empty() && !ivar_name.empty();
+}
+
+addr_t GNUstepObjCRuntime::LookupRuntimeSymbol(ConstString name) {
+  const llvm::StringRef symbol = name.GetStringRef();
+
+  // An expression that touches an ivar emits a reference to the runtime's
+  // offset variable. Normally the inferior exports it and the JIT resolves it
+  // from the symbol table; this is the fallback for when it does not - a
+  // stripped module, a @private ivar given hidden visibility, or a class built
+  // at run time that never had a symbol at all.
+  llvm::StringRef class_name, ivar_name;
+  if (ParseIvarOffsetSymbol(symbol, class_name, ivar_name)) {
+    const ConstString ivar(ivar_name);
+    ClassDescriptorSP descriptor_sp =
+        GetClassDescriptorFromClassName(ConstString(class_name));
+    // clang emits the symbol for the class that declares the ivar, so the
+    // walk is belt and braces; bound it, as the chain comes from memory.
+    for (uint32_t depth = 0; descriptor_sp && depth < g_max_superclass_depth;
+         ++depth, descriptor_sp = descriptor_sp->GetSuperclass()) {
+      const addr_t offset_addr =
+          static_cast<GNUstepObjCClassDescriptor *>(descriptor_sp.get())
+              ->GetIVarOffsetAddress(ivar);
+      if (offset_addr != LLDB_INVALID_ADDRESS)
+        return offset_addr;
+    }
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  // Only ivar offsets. Apple's equivalent also resolves OBJC_CLASS_$_, but
+  // there is nothing here to answer with: an expression referencing a class
+  // emits `._OBJC_REF_CLASS_<name>` (SymbolForClassRef, CGObjCGNU.cpp), a
+  // pointer variable the JIT loads the class out of - not the class symbol
+  // itself - and if that variable is absent there is no address to hand back.
+  // Resolving it by name would also be circular, since the name-to-ISA map is
+  // built by sweeping exactly the class symbols that would be missing.
+  return LLDB_INVALID_ADDRESS;
+}
+
 llvm::StringRef GNUstepObjCRuntime::GetClassSymbolPrefix() {
   // clang mangles the public runtime symbols with a leading "._" on every
   // object format except COFF, which uses "$_" (CGObjCGNU.cpp).

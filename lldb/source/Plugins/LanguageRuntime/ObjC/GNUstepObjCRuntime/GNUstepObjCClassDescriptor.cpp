@@ -225,12 +225,13 @@ bool GNUstepObjCClassDescriptor::Describe(
 
   if (ivar_func) {
     for (const RawIvar &ivar : ReadIvarList()) {
-      // libobjc2 stores a pointer to the offset so it can rewrite it in
-      // place, and that pointer is what Apple's runtime reports here, so
-      // pass the already-resolved offset as the address. Consumers that only
-      // want the value - which is all of them in tree - are unaffected.
+      // The third parameter is the *address* of the runtime's offset
+      // variable, not the offset - that is what Apple's runtime reports here
+      // and what its consumers read from. libobjc2 keeps a pointer for the
+      // same reason, so it can rewrite the offset in place, and that pointer
+      // is what we have.
       if (ivar_func(ivar.name.GetCString(), ivar.type_encoding.c_str(),
-                    static_cast<lldb::addr_t>(ivar.offset), ivar.size))
+                    ivar.offset_ptr, ivar.size))
         break;
     }
   }
@@ -421,6 +422,7 @@ GNUstepObjCClassDescriptor::ReadIvarList() const {
     ivar.name = ConstString(name_buffer);
     ivar.type_encoding.assign(type_buffer, type_length);
     ivar.offset = static_cast<int32_t>(offset);
+    ivar.offset_ptr = offset_ptr;
     ivar.size = ivar_size;
     ivars.push_back(std::move(ivar));
   }
@@ -458,6 +460,7 @@ void GNUstepObjCClassDescriptor::GetIVarInformation() {
     descriptor.m_name = ivar.name;
     descriptor.m_size = ivar.size;
     descriptor.m_offset = ivar.offset;
+    m_ivar_offset_addrs.push_back(ivar.offset_ptr);
     // The name, offset and size are useful on their own, so an encoding that
     // does not realize leaves the ivar in place with an empty type rather
     // than dropping it.
@@ -478,6 +481,16 @@ GNUstepObjCClassDescriptor::GetIVarAtIndex(size_t idx) {
   if (idx >= GetNumIVars())
     return iVarDescriptor();
   return m_ivars[idx];
+}
+
+addr_t GNUstepObjCClassDescriptor::GetIVarOffsetAddress(ConstString ivar_name) {
+  const size_t num_ivars = GetNumIVars();
+  if (m_ivar_offset_addrs.size() != num_ivars)
+    return LLDB_INVALID_ADDRESS;
+  for (size_t i = 0; i < num_ivars; ++i)
+    if (m_ivars[i].m_name == ivar_name)
+      return m_ivar_offset_addrs[i];
+  return LLDB_INVALID_ADDRESS;
 }
 
 ObjCLanguageRuntime::ClassDescriptorSP
