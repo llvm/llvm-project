@@ -400,6 +400,9 @@ features cannot lower the translation-unit ABI level;
   for pointer arithmetic on statically-sized arrays when the offset is a
   non-negative constant within the array bounds.
 
+- `-Wc++98-compat` now diagnoses explicit conversion functions in C++20 and
+  later, matching the behavior in C++11 through C++17. (#GH161689)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -568,6 +571,9 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together
   with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
+
+- Added a new warning when the same interrupt type is specified more than
+  once in a RISC-V `interrupt` attribute.
 
 - Added `-march=native` for better compatibility with ARM, AArch64, and X86. This
   option will be treated like `-mcpu=native` if `-mcpu` is not present. If

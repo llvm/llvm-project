@@ -20,10 +20,10 @@ omp.private {type = private} @y.private : i32
 
 llvm.func @allocator_unaligned(%x: !llvm.ptr) {
   %null = llvm.mlir.constant(0 : i64) : i64
-  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_private_indices([0])
       private(@y.private %x -> %x.private : !llvm.ptr) {
     omp.terminator
-  } {allocate_private_indices = array<i64: 0>}
+  }
   llvm.return
 }
 
@@ -32,7 +32,7 @@ llvm.func @allocator_unaligned(%x: !llvm.ptr) {
 // CHECK: call void @__kmpc_free({{.*}}, ptr %[[UNALIGNED]], ptr null)
 
 llvm.func @allocator_dynamic(%x: !llvm.ptr, %y: !llvm.ptr, %allocator: i64) {
-  omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr)
+  omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0])
       private(@x.firstprivate %x -> %x.private,
               @y.private %y -> %y.private : !llvm.ptr, !llvm.ptr) {
     %x.value = llvm.load %x.private : !llvm.ptr -> i32
@@ -41,7 +41,7 @@ llvm.func @allocator_dynamic(%x: !llvm.ptr, %y: !llvm.ptr, %allocator: i64) {
     llvm.store %next, %x.private : i32, !llvm.ptr
     llvm.store %one, %y.private : i32, !llvm.ptr
     omp.terminator
-  } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+  }
   llvm.return
 }
 
@@ -80,14 +80,14 @@ omp.private {type = private} @y.private : i32
 llvm.func @allocator_reverse_free(%x: !llvm.ptr, %y: !llvm.ptr,
                                   %allocator.x: i64, %allocator.y: i64) {
   omp.parallel allocate(%allocator.y : i64 -> %y : !llvm.ptr,
-                        %allocator.x : i64 -> %x : !llvm.ptr)
+                        %allocator.x : i64 -> %x : !llvm.ptr) allocate_alignments([128, 64]) allocate_private_indices([1, 0])
       private(@x.private %x -> %x.private,
               @y.private %y -> %y.private : !llvm.ptr, !llvm.ptr) {
     %one = llvm.mlir.constant(1 : i32) : i32
     llvm.store %one, %x.private : i32, !llvm.ptr
     llvm.store %one, %y.private : i32, !llvm.ptr
     omp.terminator
-  } {allocate_alignments = array<i64: 128, 64>, allocate_private_indices = array<i64: 1, 0>}
+  }
   llvm.return
 }
 
@@ -112,11 +112,11 @@ omp.private {type = private} @x.private : i32
 
 llvm.func @allocator_cancel(%x: !llvm.ptr) {
   %null = llvm.mlir.constant(0 : i64) : i64
-  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0])
       private(@x.private %x -> %x.private : !llvm.ptr) {
     omp.cancel cancellation_construct_type(parallel)
     omp.terminator
-  } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+  }
   llvm.return
 }
 
@@ -136,11 +136,11 @@ omp.private {type = private} @x.private : i32
 
 llvm.func @allocator_cancellation_point(%x: !llvm.ptr) {
   %null = llvm.mlir.constant(0 : i64) : i64
-  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+  omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([128]) allocate_private_indices([0])
       private(@x.private %x -> %x.private : !llvm.ptr) {
     omp.cancellation_point cancellation_construct_type(parallel)
     omp.terminator
-  } {allocate_alignments = array<i64: 128>, allocate_private_indices = array<i64: 0>}
+  }
   llvm.return
 }
 
@@ -164,10 +164,10 @@ module attributes {
 
   llvm.func @allocator_i386(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_private_indices([0])
         private(@x.private %x -> %x.private : !llvm.ptr) {
       omp.terminator
-    } {allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 }
@@ -189,12 +189,12 @@ module attributes {
 
   llvm.func @allocator_i386_aligned(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0])
         private(@x.private %x -> %x.private : !llvm.ptr) {
       %one = llvm.mlir.constant(1 : i32) : i32
       llvm.store %one, %x.private : i32, !llvm.ptr
       omp.terminator
-    } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 }
@@ -217,19 +217,19 @@ module attributes {
 
   llvm.func @allocator_below_natural_alignment(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([2]) allocate_private_indices([0])
         private(@i64.private %x -> %x.private : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 2>, allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 
   llvm.func @allocator_above_natural_alignment(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([32]) allocate_private_indices([0])
         private(@i64.private %x -> %x.private : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 32>, allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 }
@@ -249,10 +249,10 @@ module attributes {
 
   llvm.func @allocator_i386_overflow(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_private_indices([0])
         private(@x.private %x -> %x.private : !llvm.ptr) {
       omp.terminator
-    } {allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 }
@@ -273,10 +273,10 @@ module attributes {
 
   llvm.func @allocator_i386_alignment_overflow(%x: !llvm.ptr) {
     %null = llvm.mlir.constant(0 : i64) : i64
-    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%null : i64 -> %x : !llvm.ptr) allocate_alignments([4294967296]) allocate_private_indices([0])
         private(@x.private %x -> %x.private : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 4294967296>, allocate_private_indices = array<i64: 0>}
+    }
     llvm.return
   }
 }
@@ -295,10 +295,10 @@ llvm.func @allocator_device() {
   omp.target kernel_type(generic) {
     %allocator = llvm.mlir.constant(0 : i64) : i64
     %x = llvm.alloca %allocator x i32 : (i64) -> !llvm.ptr
-    omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr)
+    omp.parallel allocate(%allocator : i64 -> %x : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0])
         private(@device.private %x -> %private : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+    }
     omp.terminator
   }
   llvm.return
