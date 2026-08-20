@@ -1538,10 +1538,10 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
 
 } // namespace
 
-bool CanBuildSplitSumExpressionTree(
+bool CanBuildSplitSumExpressionTree(FoldingContext &context,
     const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
   return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
-      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasVectorSubscript(lhs) && !FindImpureCall(context, rhs) &&
       !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
       !HasVolatileOrAsynchronousSymbol(lhs);
 }
