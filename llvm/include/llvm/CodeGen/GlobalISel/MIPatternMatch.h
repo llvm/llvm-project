@@ -235,6 +235,39 @@ inline SpecificConstantMatch m_SpecificICst(int64_t RequestedValue) {
   return SpecificConstantMatch(APInt(64, RequestedValue, /* isSigned */ true));
 }
 
+struct SpecificImmMatch {
+  int64_t RequestedVal;
+  SpecificImmMatch(int64_t RequestedVal) : RequestedVal(RequestedVal) {}
+  bool match(int64_t Imm) const { return Imm == RequestedVal; }
+};
+
+/// Matches an immediate operand equal to \p RequestedValue.
+inline SpecificImmMatch m_SpecificImm(int64_t RequestedValue) {
+  return SpecificImmMatch(RequestedValue);
+}
+
+struct BindImmMatch {
+  int64_t &ImmOut;
+  BindImmMatch(int64_t &ImmOut) : ImmOut(ImmOut) {}
+  bool match(int64_t Imm) const {
+    ImmOut = Imm;
+    return true;
+  }
+};
+
+/// Binds an immediate operand's value.
+inline BindImmMatch m_Imm(int64_t &Imm) { return BindImmMatch(Imm); }
+
+/// Matches an integer constant with all bits set, regardless of width.
+struct AllOnesConstantMatch {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    APInt MatchedVal;
+    return mi_match(Reg, MRI, m_ICst(MatchedVal)) && MatchedVal.isAllOnes();
+  }
+};
+
+inline AllOnesConstantMatch m_AllOnes() { return {}; }
+
 /// Matcher for a specific constant splat.
 struct SpecificConstantSplatMatch {
   APInt RequestedVal;
@@ -948,25 +981,52 @@ m_GFPTrunc(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FPTRUNC>(Src);
 }
 
-/// Matches a G_SEXT_INREG, binding its source operand. G_SEXT_INREG has an
-/// extra immediate operand, so it does not fit the plain UnaryOp_match shape.
-template <typename SrcTy> struct SExtInRegMatch {
+/// Matches an op that binds a source operand and an immediate operand with
+/// sub-matchers (e.g. G_SEXT_INREG, G_ASSERT_ZEXT).
+template <typename SrcTy, typename ImmTy, unsigned Opcode>
+struct SrcImmOp_match {
   SrcTy L;
+  ImmTy Imm;
 
-  SExtInRegMatch(const SrcTy &LHS) : L(LHS) {}
+  SrcImmOp_match(const SrcTy &LHS, const ImmTy &Imm) : L(LHS), Imm(Imm) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
     MachineInstr *TmpMI;
-    if (mi_match(Op, MRI, m_MInstr(TmpMI)) &&
-        TmpMI->getOpcode() == TargetOpcode::G_SEXT_INREG)
-      return L.match(MRI, TmpMI->getOperand(1).getReg());
-    return false;
+    return mi_match(Op, MRI, m_MInstr(TmpMI)) && TmpMI->getOpcode() == Opcode &&
+           L.match(MRI, TmpMI->getOperand(1).getReg()) &&
+           Imm.match(TmpMI->getOperand(2).getImm());
   }
 };
 
+/// Matches any immediate operand.
+struct AnyImmMatch {
+  bool match(int64_t) const { return true; }
+};
+
+/// Matches a G_SEXT_INREG, binding its source and immediate width.
 template <typename SrcTy>
-inline SExtInRegMatch<SrcTy> m_GSExtInReg(const SrcTy &Src) {
-  return SExtInRegMatch<SrcTy>(Src);
+inline SrcImmOp_match<SrcTy, AnyImmMatch, TargetOpcode::G_SEXT_INREG>
+m_GSExtInReg(const SrcTy &Src) {
+  return {Src, AnyImmMatch()};
+}
+
+template <typename SrcTy, typename ImmTy>
+inline SrcImmOp_match<SrcTy, ImmTy, TargetOpcode::G_SEXT_INREG>
+m_GSExtInReg(const SrcTy &Src, const ImmTy &Imm) {
+  return {Src, Imm};
+}
+
+/// Matches a G_ASSERT_ZEXT, binding its source and immediate bit width.
+template <typename SrcTy>
+inline SrcImmOp_match<SrcTy, AnyImmMatch, TargetOpcode::G_ASSERT_ZEXT>
+m_GAssertZext(const SrcTy &Src) {
+  return {Src, AnyImmMatch()};
+}
+
+template <typename SrcTy, typename ImmTy>
+inline SrcImmOp_match<SrcTy, ImmTy, TargetOpcode::G_ASSERT_ZEXT>
+m_GAssertZext(const SrcTy &Src, const ImmTy &Imm) {
+  return {Src, Imm};
 }
 
 template <typename SrcTy>

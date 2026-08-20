@@ -9442,6 +9442,24 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Target ABI Module Flags Metadata
+
+This module flag names the target ABI that the module was compiled
+for. The value is an `MDString`. The set of valid values and
+interpretation target-specific.
+
+For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
+`"lp64d"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"lp64d"}
+```
+while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"aapcs"}
+```
+
 ### Long Double Type Module Flags Metadata
 
 Describe the floating-point format used by libm for `long double`. The

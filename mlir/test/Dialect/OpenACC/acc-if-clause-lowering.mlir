@@ -1,7 +1,5 @@
 // RUN: mlir-opt %s -acc-if-clause-lowering -split-input-file | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
-
 // Test acc.parallel with if condition
 // CHECK-LABEL: func.func @test_parallel_if
 func.func @test_parallel_if(%arg0: memref<10xi32>, %cond: i1) {
@@ -403,6 +401,30 @@ func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %co
         acc.yield %r : i32
       }
       acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @test_parallel_if_atomic_capture_write(
+// CHECK-SAME: %[[X:.*]]: memref<i32>, %[[V:.*]]: memref<i32>, %[[EXPR:.*]]: i32
+func.func @test_parallel_if_atomic_capture_write(%x: memref<i32>, %v: memref<i32>, %expr: i32, %cond: i1) {
+  // CHECK: scf.if %{{.*}} {
+  // CHECK:   acc.parallel {
+  // CHECK:     acc.atomic.capture {
+  // CHECK:       acc.atomic.read %[[V]] = %[[X]]
+  // CHECK:       acc.atomic.write %[[X]] = %[[EXPR]]
+  // CHECK:   } else {
+  // CHECK-NOT: acc.atomic
+  // CHECK:     memref.copy %[[X]], %[[V]]
+  // CHECK:     memref.store %[[EXPR]], %[[X]][]
+  acc.parallel if(%cond) {
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+      acc.atomic.write %x = %expr : memref<i32>, i32
     }
     acc.yield
   }
