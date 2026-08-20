@@ -1,0 +1,25 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-jitlink -noexec %t.o 2>&1 | FileCheck %s
+
+# CHECK: inconsistent MIPS N64 ELF class/ABI flags
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+  Flags:   [ EF_MIPS_ABI2, EF_MIPS_ARCH_64R2 ]
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign: 4
+    Size:         4
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Size:    4
+...
