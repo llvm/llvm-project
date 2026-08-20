@@ -50799,11 +50799,6 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     // requires 512-bit types to be legal and a power of 2 lane count.
     if (!Subtarget.useAVX512Regs() || !isPowerOf2_32(VT.getVectorNumElements()))
       return SDValue();
-  } else if (VT.isVector() && !IsSigned && VT.getScalarSizeInBits() == 32 &&
-             !Subtarget.hasAVX2()) {
-    // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
-    // for latency and code size before AVX2.
-    return SDValue();
   }
 
   // Nothing will split an illegal FP type after type legalization and the
