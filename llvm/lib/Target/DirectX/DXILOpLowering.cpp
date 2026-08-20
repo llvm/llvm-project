@@ -435,7 +435,6 @@ public:
 
   bool lowerHandleFromHeap(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *Int1Ty = IRB.getInt1Ty();
 
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
@@ -446,13 +445,15 @@ public:
       dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
 
       Value *IndexOp = CI->getArgOperand(0);
-      Value *IsSamplerHeap = CI->getArgOperand(1);
+      Value *IsSamplerHeap =
+          ConstantInt::getBool(IRB.getContext(), RTI.isSampler());
 
       std::pair<uint32_t, uint32_t> Props =
           RI.getAnnotateProps(*F.getParent(), RTI);
 
       bool NonUniformIndex = hasNonUniformIndex(IndexOp);
-      Constant *NonUniformOp = ConstantInt::get(Int1Ty, NonUniformIndex);
+      Value *NonUniformOp =
+          ConstantInt::getBool(IRB.getContext(), NonUniformIndex);
 
       std::array<Value *, 3> Args{IndexOp, IsSamplerHeap, NonUniformOp};
       Expected<CallInst *> OpCreateHandle = OpBuilder.tryCreateOp(
