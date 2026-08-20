@@ -1195,7 +1195,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
       // 2) '&((cast) ptr->array)[idx]'
       // FIXME: `EmittedE` is the element address, not `ptr->array`, so we fall
       // back to re-emitting `ME` and the pointer field is loaded twice. This is
-      // normally harmless accept when the pointer is `volatile`. Avoiding that
+      // normally harmless except when the pointer is `volatile`. Avoiding that
       // would require restructuring how the base pointer is emitted (it is
       // handled elsewhere in the callstack), so it is left as-is for now.
       Ptr = EmitScalarExpr(ME);
