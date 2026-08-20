@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/CSE.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
@@ -23,11 +24,13 @@ namespace mlir {
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "cse"
 using namespace mlir;
 
 namespace {
 /// CSE pass.
 struct CSE : public impl::CSEPassBase<CSE> {
+  using impl::CSEPassBase<CSE>::CSEPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -41,7 +44,7 @@ void CSE::runOnOperation() {
   int64_t cseCount = 0;
   int64_t dceCount = 0;
   eliminateCommonSubExpressions(rewriter, domInfo, getOperation(), &changed,
-                                &cseCount, &dceCount);
+                                &cseCount, &dceCount, hoistPureOps);
 
   numCSE = cseCount;
   numDCE = dceCount;

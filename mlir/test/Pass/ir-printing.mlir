@@ -16,50 +16,50 @@ func.func @bar() {
   return
 }
 
-// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} //----- //
 // BEFORE: func @foo()
-// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} //----- //
 // BEFORE: func @bar()
 // BEFORE-NOT: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize //----- //
 // BEFORE-NOT: // -----// IR Dump After
 
-// BEFORE_ALL: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
+// BEFORE_ALL: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} //----- //
 // BEFORE_ALL: func @foo()
 // BEFORE_ALL: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize{{.*}} //----- //
 // BEFORE_ALL: func @foo()
-// BEFORE_ALL: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
+// BEFORE_ALL: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} //----- //
 // BEFORE_ALL: func @bar()
 // BEFORE_ALL: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize{{.*}} //----- //
 // BEFORE_ALL: func @bar()
 // BEFORE_ALL-NOT: // -----// IR Dump After
 
 // AFTER-NOT: // -----// IR Dump Before
-// AFTER: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // AFTER: func @foo()
-// AFTER: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // AFTER: func @bar()
 // AFTER-NOT: // -----// IR Dump After{{.*}}CanonicalizerPass: canonicalize{{.*}} //----- //
 
 // AFTER_ALL-NOT: // -----// IR Dump Before
-// AFTER_ALL: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER_ALL: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // AFTER_ALL: func @foo()
 // AFTER_ALL: // -----// IR Dump After{{.*}}CanonicalizerPass: canonicalize{{.*}} //----- //
 // AFTER_ALL: func @foo()
-// AFTER_ALL: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER_ALL: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // AFTER_ALL: func @bar()
 // AFTER_ALL: // -----// IR Dump After{{.*}}CanonicalizerPass: canonicalize{{.*}} //----- //
 // AFTER_ALL: func @bar()
 
-// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSEPass: cse ('func.func' operation: @foo) //----- //
+// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} ('func.func' operation: @foo) //----- //
 // BEFORE_MODULE: func @foo()
 // BEFORE_MODULE: func @bar()
-// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSEPass: cse ('func.func' operation: @bar) //----- //
+// BEFORE_MODULE: // -----// IR Dump Before{{.*}}CSEPass: cse{{.*}} ('func.func' operation: @bar) //----- //
 // BEFORE_MODULE: func @foo()
 // BEFORE_MODULE: func @bar()
 
-// AFTER_ALL_CHANGE: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER_ALL_CHANGE: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // AFTER_ALL_CHANGE: func @foo()
-// AFTER_ALL_CHANGE-NOT: // -----// IR Dump After{{.*}}CSEPass: cse //----- //
+// AFTER_ALL_CHANGE-NOT: // -----// IR Dump After{{.*}}CSEPass: cse{{.*}} //----- //
 // We expect that only 'foo' changed during CSE, and the second run of CSE did
 // nothing.
 

@@ -115,10 +115,10 @@ def testAdd():
     pm = PassManager("any", Context())
     # CHECK: pm: 'any()'
     log(f"pm: '{pm}'")
-    # CHECK: pm: 'any(cse)'
+    # CHECK: pm: 'any(cse{hoist-pure-ops=true})'
     pm.add("cse")
     log(f"pm: '{pm}'")
-    # CHECK: pm: 'any(cse,cse)'
+    # CHECK: pm: 'any(cse{hoist-pure-ops=true},cse{hoist-pure-ops=true})'
     pm.add("cse")
     log(f"pm: '{pm}'")
 

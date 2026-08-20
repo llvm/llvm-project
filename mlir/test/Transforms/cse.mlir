@@ -163,16 +163,14 @@ func.func @down_propagate() -> i32 {
 /// Check that operation definitions are NOT propagated up the dominance tree.
 // CHECK-LABEL: @up_propagate_for
 func.func @up_propagate_for() -> i32 {
+  // CHECK-NEXT: %[[VAR_c1_i32_0:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
   // CHECK: affine.for {{.*}} = 0 to 4 {
-  affine.for %i = 0 to 4 {
-    // CHECK-NEXT: %[[VAR_c1_i32_0:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
+  affine.for %i = 0 to 4 {  
     // CHECK-NEXT: "foo"(%[[VAR_c1_i32_0]]) : (i32) -> ()
     %0 = arith.constant 1 : i32
     "foo"(%0) : (i32) -> ()
   }
-
-  // CHECK: %[[VAR_c1_i32:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
-  // CHECK-NEXT: return %[[VAR_c1_i32]] : i32
+  // CHECK: return %[[VAR_c1_i32_0]] : i32
   %1 = arith.constant 1 : i32
   return %1 : i32
 }
@@ -181,7 +179,8 @@ func.func @up_propagate_for() -> i32 {
 
 // CHECK-LABEL: func @up_propagate
 func.func @up_propagate() -> i32 {
-  // CHECK-NEXT:  %[[VAR_c0_i32:[0-9a-zA-Z_]+]] = arith.constant 0 : i32
+  // CHECK-NEXT: %[[VAR_c1_i32:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
+  // CHECK-NEXT: %[[VAR_c0_i32:[0-9a-zA-Z_]+]] = arith.constant 0 : i32
   %0 = arith.constant 0 : i32
 
   // CHECK-NEXT: %[[VAR_true:[0-9a-zA-Z_]+]] = arith.constant true
@@ -191,17 +190,15 @@ func.func @up_propagate() -> i32 {
   cf.cond_br %cond, ^bb1, ^bb2(%0 : i32)
 
 ^bb1: // CHECK: ^bb1:
-  // CHECK-NEXT: %[[VAR_c1_i32:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
   %1 = arith.constant 1 : i32
 
   // CHECK-NEXT: cf.br ^bb2(%[[VAR_c1_i32]] : i32)
   cf.br ^bb2(%1 : i32)
 
 ^bb2(%arg : i32): // CHECK: ^bb2
-  // CHECK-NEXT: %[[VAR_c1_i32_0:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
   %2 = arith.constant 1 : i32
 
-  // CHECK-NEXT: %[[VAR_1:[0-9a-zA-Z_]+]] = arith.addi %{{.*}}, %[[VAR_c1_i32_0]] : i32
+  // CHECK-NEXT: %[[VAR_1:[0-9a-zA-Z_]+]] = arith.addi %{{.*}}, %[[VAR_c1_i32]] : i32
   %add = arith.addi %arg, %2 : i32
 
   // CHECK-NEXT: return %[[VAR_1]] : i32
@@ -216,6 +213,7 @@ func.func @up_propagate() -> i32 {
 func.func @up_propagate_region() -> i32 {
   // CHECK-NEXT: {{.*}} "foo.region"
   %0 = "foo.region"() ({
+    // CHECK-NEXT:  %[[VAR_c1_i32:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
     // CHECK-NEXT:  %[[VAR_c0_i32:[0-9a-zA-Z_]+]] = arith.constant 0 : i32
     // CHECK-NEXT: %[[VAR_true:[0-9a-zA-Z_]+]] = arith.constant true
     // CHECK-NEXT: cf.cond_br
@@ -225,15 +223,13 @@ func.func @up_propagate_region() -> i32 {
     cf.cond_br %true, ^bb1, ^bb2(%1 : i32)
 
   ^bb1: // CHECK: ^bb1:
-    // CHECK-NEXT: %[[VAR_c1_i32:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
     // CHECK-NEXT: cf.br
 
     %c1_i32 = arith.constant 1 : i32
     cf.br ^bb2(%c1_i32 : i32)
 
   ^bb2(%arg : i32): // CHECK: ^bb2(%[[VAR_1:.*]]: i32):
-    // CHECK-NEXT: %[[VAR_c1_i32_0:[0-9a-zA-Z_]+]] = arith.constant 1 : i32
-    // CHECK-NEXT: %[[VAR_2:[0-9a-zA-Z_]+]] = arith.addi %[[VAR_1]], %[[VAR_c1_i32_0]] : i32
+    // CHECK-NEXT: %[[VAR_2:[0-9a-zA-Z_]+]] = arith.addi %[[VAR_1]], %[[VAR_c1_i32]] : i32
     // CHECK-NEXT: "foo.yield"(%[[VAR_2]]) : (i32) -> ()
 
     %c1_i32_0 = arith.constant 1 : i32
@@ -484,7 +480,7 @@ func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor
 
 // -----
 
-func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
+func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>, tensor<5xf32>) {
   %r1 = scf.if %c -> (tensor<5xf32>) {
     %0 = tensor.empty() : tensor<5xf32>
     scf.yield %0 : tensor<5xf32>
@@ -497,17 +493,76 @@ func.func @cse_multiple_regions(%c: i1, %t: tensor<5xf32>) -> (tensor<5xf32>, te
   } else {
     scf.yield %t : tensor<5xf32>
   }
-  return %r1, %r2 : tensor<5xf32>, tensor<5xf32>
+  %r3 = scf.if %c -> (tensor<5xf32>) {
+    %0 = tensor.empty() : tensor<5xf32>
+    scf.yield %0 : tensor<5xf32>
+  } else {
+    scf.yield %t : tensor<5xf32>
+  }
+  return %r1, %r2, %r3 : tensor<5xf32>, tensor<5xf32>, tensor<5xf32>
 }
 // CHECK-LABEL: func @cse_multiple_regions
-//       CHECK:   %[[if:.*]] = scf.if {{.*}} {
-//       CHECK:     tensor.empty
+//       CHECK:   tensor.empty
+//       CHECK:   %[[if:.*]] = scf.if {{.*}}
 //       CHECK:     scf.yield
 //       CHECK:   } else {
 //       CHECK:     scf.yield
 //       CHECK:   }
 //   CHECK-NOT:   scf.if
-//       CHECK:   return %[[if]], %[[if]]
+//       CHECK:   return %[[if]], %[[if]], %[[if]] 
+
+// -----
+
+func.func @cse_multiple_regions(%c: i1, %t: i32) -> (i32, i32) {
+  %init = "test.producer"() : () -> i32
+  %r1 = scf.if %c -> (i32) {
+    %r11 = scf.if %c -> (i32) {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    } else {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    }
+    scf.yield %r11 : i32
+  } else {
+    scf.yield %t : i32
+  }
+  %r2 = scf.if %c -> (i32) {
+    %r11 = scf.if %c -> (i32) {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    } else {
+      %0 = arith.addi %init, %init : i32
+      %1 = arith.muli  %0, %0 : i32
+      scf.yield %1 : i32
+    }
+    scf.yield %r11 : i32
+  } else {
+    scf.yield %t : i32
+  }
+  return %r1, %r2 : i32, i32
+}
+// CHECK-LABEL: func @cse_multiple_regions
+//  CHECK-SAME:   %[[ARG0:.*]]: i1,
+//  CHECK-SAME:   %[[ARG1:.*]]: i32
+//       CHECK:   %[[VAL_0:.*]] = "test.producer"() : () -> i32
+//       CHECK:   %[[ADDI_0:.*]] = arith.addi %[[VAL_0]], %[[VAL_0]] : i32
+//       CHECK:   %[[MULI_0:.*]] = arith.muli %[[ADDI_0]], %[[ADDI_0]] : i32
+//       CHECK:   %[[IF_0:.*]] = scf.if %[[ARG0]] -> (i32) {
+//       CHECK:     scf.yield %[[MULI_0]] : i32
+//       CHECK:   } else {
+//       CHECK:     scf.yield %[[MULI_0]] : i32
+//       CHECK:   }
+//       CHECK:   %[[IF_1:.*]] = scf.if %[[ARG0]] -> (i32) {
+//       CHECK:     cf.yield %[[IF_0]] : i32
+//       CHECK:   } else {
+//       CHECK:     scf.yield %[[ARG1]] : i32
+//       CHECK:   }
+//       CHECK:   return %[[IF_1]], %[[IF_1]] : i32, i32
+//       CHECK:   }
 
 // -----
 
@@ -683,3 +738,58 @@ func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+func.func @cse_hoist_blocked_by_isolated_region() -> (i32, i32) {
+  %0 = "test.always_speculatable_op"() : () -> i32
+  %1 = "test.isolated_one_region_op"() ({
+      %1 = "test.always_speculatable_op"() : () -> i32
+      %2 = "test.always_speculatable_op"() : () -> i32
+      %3 = arith.addi %1, %2 : i32
+      "test.region_yield"(%3) : (i32) -> ()
+  }) : () -> (i32)
+  return %0, %1 : i32, i32
+}
+// CHECK-LABEL: func @cse_hoist_blocked_by_isolated_region
+//       CHECK:   %[[PURE_0:.*]] = "test.always_speculatable_op"()
+//       CHECK:   %[[ISOLATED_ONE_REGION_OP:.*]] = test.isolated_one_region_op  {
+//       CHECK:      %[[PURE_1:.*]] = "test.always_speculatable_op"()
+//       CHECK:      %[[ADDI:.*]] = arith.addi %[[PURE_1]], %[[PURE_1]]
+//       CHECK:      test.region_yield %[[ADDI]]
+//       CHECK:    } :  -> i32
+//       CHECK:    return %[[PURE_0]], %[[ISOLATED_ONE_REGION_OP]]
+//       CHECK: }
+
+// -----
+
+func.func @cse_no_hoist_opportunity_with_nested_isolated_regions() -> (i32) {
+  %1 = "test.always_speculatable_op"() : () -> i32
+  test.isolated_regions {
+    %2 = "test.always_speculatable_op"() : () -> i32
+    test.region_yield %2 : i32
+  }, {
+    %2 = "test.always_speculatable_op"() : () -> i32
+    test.isolated_regions {
+      %3 = "test.always_speculatable_op"() : () -> i32
+      test.region_yield %3 : i32
+    }
+    test.region_yield %2 : i32
+  }
+  return %1 : i32
+}
+// CHECK-LABEL: func @cse_no_hoist_opportunity_with_nested_isolated_regions
+//       CHECK:   %[[PURE_0:.*]] = "test.always_speculatable_op"()
+//       CHECK:   test.isolated_regions {
+//       CHECK:     %[[PURE_1:.*]] = "test.always_speculatable_op"()
+//       CHECK:     test.region_yield %[[PURE_1]]
+//       CHECK:   }, {
+//       CHECK:     %[[PURE_2:.*]] = "test.always_speculatable_op"() 
+//       CHECK:       test.isolated_regions {
+//       CHECK:         %[[PURE_3:.*]] = "test.always_speculatable_op"()
+//       CHECK:         test.region_yield %[[PURE_3]]
+//       CHECK:       }
+//       CHECK:     test.region_yield %[[PURE_2]]
+//       CHECK:   }
+//       CHECK:   return %[[PURE_0]]
+//       CHECK: }
