@@ -47,7 +47,7 @@ module attributes {gpu.container_module} {
               scf.reduce.return %sum : i32
             }
           } {acc.par_dims = #acc<par_dims[sequential]>}
-          acc.reduction_accumulate %inner_red to %a_slot <add> : i32 -> memref<i32> <{par_dims = #acc<par_dims[block_x, thread_x]>}>
+          acc.reduction_accumulate %inner_red to %a_slot <add> par_dims(#acc<par_dims[block_x, thread_x]>) : i32 -> memref<i32>
           scf.reduce
         } {acc.par_dims = #acc<par_dims[thread_x]>}
         scf.reduce
