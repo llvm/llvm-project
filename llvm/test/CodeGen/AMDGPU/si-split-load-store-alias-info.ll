@@ -27,7 +27,7 @@ define amdgpu_kernel void @test(ptr addrspace(3) noalias %in, ptr addrspace(3) n
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-!0 = !{!"inout.domain"}
+!0 = !{!"inout.domain", i1 false}
 !1 = !{!"in.scope", !0}
 !2 = !{!"out.scope", !0}
 !4 = !{!1}
