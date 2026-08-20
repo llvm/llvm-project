@@ -445,7 +445,7 @@ if(APPLE)
 
   if(COMPILER_RT_ENABLE_IOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS ios)
-    set(DARWIN_ios_MIN_VER 9.0)
+    set(DARWIN_ios_MIN_VER 15.0)
     set(DARWIN_ios_MIN_VER_FLAG -miphoneos-version-min)
     set(DARWIN_ios_SANITIZER_MIN_VER_FLAG
       ${DARWIN_ios_MIN_VER_FLAG}=${DARWIN_ios_MIN_VER})
@@ -455,7 +455,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_WATCHOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS watchos)
-    set(DARWIN_watchos_MIN_VER 2.0)
+    set(DARWIN_watchos_MIN_VER 8.0)
     set(DARWIN_watchos_MIN_VER_FLAG -mwatchos-version-min)
     set(DARWIN_watchos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_MIN_VER})
@@ -465,7 +465,7 @@ if(APPLE)
   endif()
   if(COMPILER_RT_ENABLE_TVOS)
     list(APPEND DARWIN_EMBEDDED_PLATFORMS tvos)
-    set(DARWIN_tvos_MIN_VER 9.0)
+    set(DARWIN_tvos_MIN_VER 15.0)
     set(DARWIN_tvos_MIN_VER_FLAG -mtvos-version-min)
     set(DARWIN_tvos_SANITIZER_MIN_VER_FLAG
       ${DARWIN_tvos_MIN_VER_FLAG}=${DARWIN_tvos_MIN_VER})
@@ -491,7 +491,7 @@ if(APPLE)
     set(ORC_SUPPORTED_OS osx)
   endif()
 
-  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 11.0)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
 
   string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"

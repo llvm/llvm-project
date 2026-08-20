@@ -31,7 +31,7 @@
 
 namespace llvm {
 
-/// This folding set used for two purposes:
+/// This folding set is used for two purposes:
 ///   1. Given information about a node we want to create, look up the unique
 ///      instance of the node in the set.  If the node already exists, return
 ///      it, otherwise return the bucket it should be inserted into.
@@ -97,7 +97,8 @@ namespace llvm {
 /// 3) If you get a NULL result from FindNodeOrInsertPos then you can insert a
 /// new node with InsertNode;
 ///
-///    MyFoldingSet.InsertNode(M, InsertPoint);
+///    MyNode *N = new MyNode(Name, Value);
+///    MyFoldingSet.InsertNode(N, InsertPoint);
 ///
 /// 4) Finally, if you want to remove a node from the folding set call;
 ///
@@ -368,9 +369,6 @@ protected:
   };
 
 private:
-  /// Double the size of the hash table and rehash everything.
-  void GrowHashTable(const FoldingSetInfo &Info);
-
   /// Resize the hash table and rehash everything. \p NewBucketCount must be a
   /// power of two, and must be greater than the old bucket count.
   void GrowBucketCount(unsigned NewBucketCount, const FoldingSetInfo &Info);
@@ -388,7 +386,7 @@ protected:
   /// was removed or false if the node was not in the folding set.
   LLVM_ABI bool RemoveNode(Node *N);
 
-  /// If there is an existing simple Node exactly equal to the node \p N,
+  /// If there is an existing node exactly equal to the node \p N,
   /// return it.  Otherwise, insert \p N and return it instead.
   LLVM_ABI Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
 
@@ -443,37 +441,44 @@ inline unsigned DefaultContextualFoldingSetTrait<T, Ctx>::ComputeHash(
 /// ContextualFoldingSet.
 template <class T, class Trait = FoldingSetTrait<T>>
 class FoldingSetImpl : public FoldingSetBase, public Trait::ContextStorage {
-  static constexpr FoldingSetBase::FoldingSetInfo Info = {
-      // GetNodeProfile
-      [](const FoldingSetBase *Base, FoldingSetNode *N, FoldingSetNodeID &ID) {
-        if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-          Trait::Profile(*static_cast<T *>(N), ID);
-        else
-          Trait::Profile(
-              *static_cast<T *>(N), ID,
-              static_cast<const FoldingSetImpl *>(Base)->getContext());
-      },
-      // NodeEquals
-      [](const FoldingSetBase *Base, FoldingSetNode *N,
-         const FoldingSetNodeID &ID, unsigned IDHash,
-         FoldingSetNodeID &TempID) {
-        if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-          return Trait::Equals(*static_cast<T *>(N), ID, IDHash, TempID);
-        else
-          return Trait::Equals(
-              *static_cast<T *>(N), ID, IDHash, TempID,
-              static_cast<const FoldingSetImpl *>(Base)->getContext());
-      },
-      // ComputeNodeHash
-      [](const FoldingSetBase *Base, FoldingSetNode *N,
-         FoldingSetNodeID &TempID) {
-        if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
-          return Trait::ComputeHash(*static_cast<T *>(N), TempID);
-        else
-          return Trait::ComputeHash(
-              *static_cast<T *>(N), TempID,
-              static_cast<const FoldingSetImpl *>(Base)->getContext());
-      }};
+  // We define Info inside a static member function rather than as a static
+  // constexpr member variable to avoid eager instantiation on MSVC when T is an
+  // incomplete type.
+  static const FoldingSetBase::FoldingSetInfo &getFoldingSetInfo() {
+    static constexpr FoldingSetBase::FoldingSetInfo Info = {
+        // GetNodeProfile
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           FoldingSetNodeID &ID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            Trait::Profile(*static_cast<T *>(N), ID);
+          else
+            Trait::Profile(
+                *static_cast<T *>(N), ID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        },
+        // NodeEquals
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           const FoldingSetNodeID &ID, unsigned IDHash,
+           FoldingSetNodeID &TempID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            return Trait::Equals(*static_cast<T *>(N), ID, IDHash, TempID);
+          else
+            return Trait::Equals(
+                *static_cast<T *>(N), ID, IDHash, TempID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        },
+        // ComputeNodeHash
+        [](const FoldingSetBase *Base, FoldingSetNode *N,
+           FoldingSetNodeID &TempID) {
+          if constexpr (std::is_empty_v<typename Trait::ContextStorage>)
+            return Trait::ComputeHash(*static_cast<T *>(N), TempID);
+          else
+            return Trait::ComputeHash(
+                *static_cast<T *>(N), TempID,
+                static_cast<const FoldingSetImpl *>(Base)->getContext());
+        }};
+    return Info;
+  }
 
 public:
   explicit FoldingSetImpl(unsigned Log2InitSize = 6)
@@ -503,30 +508,33 @@ public:
   /// Increase the number of buckets such that adding the \p EltCount th node
   /// won't cause a rebucket operation. reserve is permitted to allocate more
   /// space than requested by EltCount.
-  void reserve(unsigned EltCount) { FoldingSetBase::reserve(EltCount, Info); }
+  void reserve(unsigned EltCount) {
+    FoldingSetBase::reserve(EltCount, getFoldingSetInfo());
+  }
 
   /// Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
   bool RemoveNode(T *N) { return FoldingSetBase::RemoveNode(N); }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
-    return static_cast<T *>(FoldingSetBase::GetOrInsertNode(N, Info));
+    return static_cast<T *>(
+        FoldingSetBase::GetOrInsertNode(N, getFoldingSetInfo()));
   }
 
   /// Look up the node specified by ID.  If it exists, return it.  If not,
   /// return the insertion token that will make insertion faster.
   T *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos) {
-    return static_cast<T *>(
-        FoldingSetBase::FindNodeOrInsertPos(ID, InsertPos, Info));
+    return static_cast<T *>(FoldingSetBase::FindNodeOrInsertPos(
+        ID, InsertPos, getFoldingSetInfo()));
   }
 
   /// Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
   void InsertNode(T *N, void *InsertPos) {
-    FoldingSetBase::InsertNode(N, InsertPos, Info);
+    FoldingSetBase::InsertNode(N, InsertPos, getFoldingSetInfo());
   }
 
   /// Insert the specified node into the folding set, knowing that it is not
@@ -596,7 +604,7 @@ public:
     return Set.FindNodeOrInsertPos(ID, InsertPos);
   }
 
-  /// If there is an existing simple Node exactly equal to the specified node,
+  /// If there is an existing node exactly equal to the specified node,
   /// return it.  Otherwise, insert 'N' and return it instead.
   T *GetOrInsertNode(T *N) {
     T *Result = Set.GetOrInsertNode(N);
