@@ -461,6 +461,28 @@ class SubtargetFeatureInstCacheLineSize <int Value> : SubtargetFeature <
 def FeatureInstCacheLineSize64  : SubtargetFeatureInstCacheLineSize<64>;
 def FeatureInstCacheLineSize128 : SubtargetFeatureInstCacheLineSize<128>;
 
+class SubtargetFeatureInstCacheSize <int Value> : SubtargetFeature <
+  "instcachesize"#Value,
+  "InstCacheSize",
+  !cast<string>(Value),
+  "Instruction cache size in bytes."
+>;
+
+def FeatureInstCacheSize32768 : SubtargetFeatureInstCacheSize<32768>;
+def FeatureInstCacheSize65536 : SubtargetFeatureInstCacheSize<65536>;
+
+class SubtargetFeaturePreferredInstPrefSize <int Value> : SubtargetFeature <
+  "preferredinstprefsize"#Value,
+  "PreferredInstPrefSize",
+  !cast<string>(Value),
+  "Preferred instruction prefetch size in bytes."
+>;
+
+def FeaturePreferredInstPrefSize16384
+    : SubtargetFeaturePreferredInstPrefSize<16384>;
+def FeaturePreferredInstPrefSize32768
+    : SubtargetFeaturePreferredInstPrefSize<32768>;
+
 class SubtargetFeatureDataCacheLineSize <int Value> : SubtargetFeature <
   "datacachelinesize"#Value,
   "DataCacheLineSize",
@@ -2447,6 +2469,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
+   FeatureInstCacheSize32768,
+   FeaturePreferredInstPrefSize16384,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureMTBUFInsts,
@@ -2541,6 +2565,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureAsyncLoadToLDSInsts,
    FeatureAsyncStoreFromLDSInsts,
    FeatureSmemPrefetchInsts,
+   FeatureInstCacheSize65536,
+   FeaturePreferredInstPrefSize32768,
    FeatureNoF16PseudoScalarTransInlineConstants,
    FeatureRealTrue16Insts,
    FeatureVMovB64Inst,

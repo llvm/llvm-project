@@ -81,6 +81,11 @@ protected:
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
 
+  // Instruction cache and preferred prefetch sizes in bytes. A zero value
+  // means that the target does not provide the corresponding policy.
+  unsigned InstCacheSize = 0;
+  unsigned PreferredInstPrefSize = 0;
+
   // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
   unsigned DataCacheLineSize = 0;
 
@@ -204,6 +209,12 @@ public:
 
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
+
+  unsigned getInstCacheSize() const { return InstCacheSize; }
+
+  unsigned getPreferredInstPrefSize() const {
+    return PreferredInstPrefSize;
+  }
 
   /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
   /// GFX12.

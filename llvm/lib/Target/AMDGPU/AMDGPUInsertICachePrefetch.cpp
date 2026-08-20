@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -37,6 +38,11 @@ static cl::opt<bool>
     EnableICachePrefetch("amdgpu-icache-prefetch",
                          cl::desc("Insert ICache prefetch instructions"),
                          cl::init(true), cl::Hidden);
+
+static cl::opt<unsigned> ICachePrefetchSize(
+    "amdgpu-icache-prefetch-size",
+    cl::desc("Override the preferred instruction prefetch size in bytes"),
+    cl::init(0), cl::Hidden);
 
 namespace {
 
@@ -83,6 +89,27 @@ public:
 
 } // end anonymous namespace
 
+static uint64_t getPreferredICachePrefetchSize(const GCNSubtarget &ST) {
+  assert(ST.hasInstPrefSize());
+
+  uint64_t PreferredSize = ST.getPreferredInstPrefSize();
+  if (!ICachePrefetchSize.getNumOccurrences())
+    return PreferredSize;
+
+  uint32_t Mask, Shift, Width, CacheLineSize;
+  ST.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
+  uint64_t MaxPrefetchSize = (uint64_t{1} << Width) * CacheLineSize;
+  if (ICachePrefetchSize == 0 ||
+      ICachePrefetchSize % CacheLineSize != 0 ||
+      ICachePrefetchSize > MaxPrefetchSize)
+    report_fatal_error(
+        Twine("-amdgpu-icache-prefetch-size must be a non-zero multiple of ") +
+        Twine(CacheLineSize) + " bytes not exceeding " +
+        Twine(MaxPrefetchSize) + " bytes for " + ST.getCPU());
+
+  return ICachePrefetchSize;
+}
+
 static MachineBasicBlock::iterator findMBBInsertionPoint(MachineBasicBlock &MBB,
                                                          const GCNSubtarget &ST,
                                                          bool IsEntryBlock) {
@@ -123,7 +150,7 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
     return false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.hasICachePrefetch())
+  if (!ST.hasSmemPrefetchInsts() || !ST.hasInstPrefSize())
     return false;
 
   // Only run for AMDHSA - this is where kernel descriptors are used and
@@ -142,14 +169,14 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
       MF.getTarget().getBBSectionsType() != BasicBlockSection::None)
     return false;
 
+  uint64_t ICacheSize = ST.getInstCacheSize();
+  uint64_t PreferredPrefetchSize = getPreferredICachePrefetchSize(ST);
+  if (ICacheSize == 0 || PreferredPrefetchSize == 0)
+    return false;
+
   SIProgramInfo PI;
   uint64_t ProgramSize = PI.getFunctionCodeSize(MF);
-  // The kernel descriptor can specify an instruction prefetch size of up to 256
-  // in INST_PREF_SIZE. At a granularity of 128B, this equals 32KiB of
-  // instructions that can be prefetched without inserting explicit prefetch
-  // instructions.
-  constexpr uint64_t MaxKDPrefetch = 1u << 15;
-  if (ProgramSize <= MaxKDPrefetch)
+  if (ProgramSize <= PreferredPrefetchSize)
     return false;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -188,8 +215,9 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF) {
   constexpr uint64_t PrefetchSlack = 2 * 1024;
   constexpr uint64_t BytesPerPrefetch = 4 * 1024;
   // Each prefetch can transfer up to 32 cachelines of 128 bytes = 4KiB.
-  // 16 instructions cover 64KiB (the full ICache size).
-  constexpr unsigned MaxNumPrefetchInsts = 16;
+  unsigned MaxNumPrefetchInsts = ICacheSize / BytesPerPrefetch;
+  if (MaxNumPrefetchInsts == 0)
+    return false;
   unsigned NumPrefetches =
       llvm::divideCeil(ProgramSize + PrefetchSlack, BytesPerPrefetch);
   NumPrefetches = std::min(MaxNumPrefetchInsts, NumPrefetches);
