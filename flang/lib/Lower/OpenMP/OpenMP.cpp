@@ -4373,6 +4373,10 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (hasArrayElementReductionObject(inReductionObjects))
       TODO(loc, "TASK construct with IN_REDUCTION of an array element when "
                 "delayed privatization is disabled");
+    if (!inReductionObjects.empty())
+      TODO(loc, "TASK construct with IN_REDUCTION when delayed "
+                "privatization is disabled");
+
     return genOpWithBody<mlir::omp::TaskOp>(
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                           llvm::omp::Directive::OMPD_task)
