@@ -70,6 +70,7 @@ struct __is_volatile {};  // expected-warning {{made available}}
 
 }
 
+#if __cplusplus >= 202002L
 namespace std {
 enum class __order : signed char { less = -1, equal = 0, greater = 1 };
 
@@ -92,3 +93,4 @@ template <class T, class U>
 constexpr std::strong_ordering type_order() {
   return __builtin_type_order(T, U);
 }
+#endif
