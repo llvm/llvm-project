@@ -48,6 +48,15 @@ class WriteOverSoftwareBreakpoint(TestBase):
         # We could use the same breakpoint, but arranging for dead code
         # immediately before it is more risky.
 
+        # The breakpoint must be on an exact address, because we do not want
+        # lldb to adjust it based on the debug information for prologues
+        # and epilogues.
+        symbol_contexts = target.FindSymbols("place_break_here", lldb.eSymbolTypeCode)
+        self.assertEqual(1, len(symbol_contexts))
+        label_symbol = symbol_contexts[0].GetSymbol()
+        self.assertTrue(label_symbol.IsValid())
+        bkpt_address = label_symbol.GetStartAddress().GetLoadAddress(target)
+
         # lldb-server has its algorithm unit tested as part of
         # NativeProcessProtocol, but debugserver does not use that. So we will
         # do a few different types of overwrite here so we have coverage for both
@@ -77,12 +86,13 @@ class WriteOverSoftwareBreakpoint(TestBase):
 
         for write_offset, write_size in writes:
             # Place a breakpoint immediately after the dead code in foo.
-            bkpt = target.BreakpointCreateByName("place_break_here")
+            bkpt = target.BreakpointCreateByAddress(bkpt_address)
             self.assertTrue(bkpt.IsValid())
             self.assertEqual(bkpt.GetNumLocations(), 1)
             self.assertFalse(bkpt.IsHardware())
+            self.assertEqual(bkpt.GetLocationAtIndex(0).GetLoadAddress(), bkpt_address)
 
-            check_address = bkpt.GetLocationAtIndex(0).GetLoadAddress() + write_offset
+            check_address = bkpt_address + write_offset
 
             # Read around the breakpoint site. We assume that read subsitution
             # is working, so the data here is the original contents of memory
@@ -117,7 +127,7 @@ class WriteOverSoftwareBreakpoint(TestBase):
             # Should be stopped at the breakpoint we placed in foo. This proves that
             # the breakpoint instruction was intact.
             self.assertEqual(
-                bkpt.GetLocationAtIndex(0).GetLoadAddress(),
+                bkpt_address,
                 thread.selected_frame.GetPC(),
             )
 
