@@ -539,10 +539,13 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
   ShuffleMode CommonShuffleMode = Unknown;
   Mask.assign(VL.size(), PoisonMaskElem);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    // Undef can be represented as an undef element in a vector.
+    // Undef, or a copyable lane modeled on an extract main op, can be
+    // represented as an undef element in a vector.
     if (isa<UndefValue>(VL[I]))
       continue;
-    auto *EI = cast<ExtractElementInst>(VL[I]);
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI)
+      continue;
     if (isa<ScalableVectorType>(EI->getVectorOperandType()))
       return std::nullopt;
     auto *Vec = EI->getVectorOperand();
@@ -4625,7 +4628,8 @@ private:
           }
           // The commutative user with the same operands can be safely
           // considered as non-commutative, operands reordering does not change
-          // the semantics.
+          // the semantics. Same for cmps with the same operands: inverting
+          // the predicate does not change the operand columns in this case.
           assert(
               (!IsCommutativeUser ||
                (((isCommutative(User) && isCommutableOperand(User, User, 0) &&
@@ -4639,7 +4643,8 @@ private:
           bool IsCommutativeWithSameOps =
               IsCommutativeUser && User->getOperand(0) == User->getOperand(1);
           if ((!IsCommutativeUser || IsCommutativeWithSameOps) &&
-              !isa<CmpInst>(User)) {
+              (!isa<CmpInst>(User) ||
+               User->getOperand(0) == User->getOperand(1))) {
             if (CurNumOps != NumOps)
               continue;
             // A reassociated node flattens the operand chain, so the operand
@@ -5546,8 +5551,8 @@ private:
   DemandedBits *DB;
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
-  /// Cached cost-model mode for this function
-  /// Only use RecipThroughput currently
+  /// Cached cost-model mode for this function.
+  /// Only use RecipThroughput currently.
   const TargetTransformInfo::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
@@ -7452,7 +7457,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
     SmallVector<int> ReusedMask(TE.ReuseShuffleIndices.begin(),
                                 TE.ReuseShuffleIndices.end());
     if (TE.hasState() && TE.getOpcode() == Instruction::ExtractElement &&
-        all_of(TE.Scalars, [Sz](Value *V) {
+        !TE.hasCopyableElements() && all_of(TE.Scalars, [Sz](Value *V) {
           if (isa<PoisonValue>(V))
             return true;
           std::optional<unsigned> Idx = getExtractIndex(cast<Instruction>(V));
@@ -7651,7 +7656,10 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       allSameType(TE.Scalars)) {
     // TODO: add analysis of other gather nodes with extractelement
     // instructions and other values/instructions, not only undefs.
-    if (((TE.hasState() && TE.getOpcode() == Instruction::ExtractElement) ||
+    // Nodes with copyable lanes may mix in non-extract lanes, for which the
+    // extract-index order is not applicable.
+    if (((TE.hasState() && TE.getOpcode() == Instruction::ExtractElement &&
+          !TE.hasCopyableElements()) ||
          (all_of(TE.Scalars, IsaPred<UndefValue, ExtractElementInst>) &&
           any_of(TE.Scalars, IsaPred<ExtractElementInst>))) &&
         all_of(TE.Scalars, [](Value *V) {
@@ -10159,6 +10167,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   }
   case Instruction::ExtractElement:
     if (any_of(VL, [&](Value *V) {
+          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            return false;
           auto *EI = dyn_cast<ExtractElementInst>(V);
           if (!EI)
             return true;
@@ -10172,6 +10182,13 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     [[fallthrough]];
   case Instruction::ExtractValue: {
     bool Reuse = canReuseExtract(VL, CurrentOrder);
+    // Copyable lanes are inserted into the reused source vector at their own
+    // index, which is correct only for the identity extract order (empty
+    // CurrentOrder) and without a reuse shuffle; other cases fall back to
+    // gather.
+    if (S.areInstructionsWithCopyableElements() &&
+        (!Reuse || !ReuseShuffleIndices.empty()))
+      return TreeEntry::NeedToGather;
     if (Reuse || !CurrentOrder.empty())
       return TreeEntry::Vectorize;
     SmallVector<unsigned> Indices;
@@ -11153,10 +11170,14 @@ class InstructionsCompatibilityAnalysis {
   /// Checks if \p I can be the main op for copyable analysis: a supported
   /// binary operator, fmuladd, or an integer min/max intrinsic, the only
   /// call with a well-defined idempotent value (FP min/max lacks one because of
-  /// NaNs).
+  /// NaNs). An extractelement with constant index from a fixed vector is also
+  /// supported: the matching lanes reuse the source vector and the copyable
+  /// lanes are inserted into it.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
-           RecurrenceDescriptor::isFMulAddIntrinsic(I);
+           RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
+           (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
+            isa<FixedVectorType>(I->getOperand(0)->getType()));
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -11772,6 +11793,18 @@ public:
       return OrigS;
     if (!WithProfitabilityCheck)
       return S;
+    // ExtractElement copyable nodes reuse the source vector and insert the
+    // copyable lanes; the binary-operator operand heuristics below do not
+    // apply, so defer profitability to the full tree cost.
+    if (isa<ExtractElementInst>(MainOp)) {
+      // A load as a copyable lane would be pulled out of the consecutive-load
+      // vectorization; keep the original state so the node can be split.
+      if (any_of(VL, [&](Value *V) {
+            return S.isCopyableElement(V) && isa<LoadInst>(V);
+          }))
+        return OrigS;
+      return S;
+    }
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
@@ -11958,6 +11991,14 @@ public:
     if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
+      // ExtractElement copyable nodes carry a single operand (the shared
+      // source vector); copyable lanes are inserted during codegen and do
+      // not contribute an operand column.
+      if (MainOpcode == Instruction::ExtractElement) {
+        Operands.assign(1,
+                        BoUpSLP::ValueList(VL.size(), MainOp->getOperand(0)));
+        return Operands;
+      }
       // Excludes the trailing callee operand (2 for min/max, 3 for fmuladd).
       // getNumberOfPotentiallyCommutativeOps collapses fmuladd to 2 and must
       // not be used here. Only the 2-operand case is commutative-normalized.
@@ -13509,9 +13550,6 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
   const auto *It = find_if(VL, IsaPred<ExtractElementInst, ExtractValueInst>);
   assert(It != VL.end() && "Expected at least one extract instruction.");
   auto *E0 = cast<Instruction>(*It);
-  assert(
-      all_of(VL, IsaPred<UndefValue, ExtractElementInst, ExtractValueInst>) &&
-      "Invalid opcode");
   // Check if all of the extracts come from the same vector and from the
   // correct offset.
   Value *Vec = E0->getOperand(0);
@@ -13538,9 +13576,11 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
   SmallVector<int> Indices(E, PoisonMaskElem);
   unsigned MinIdx = NElts, MaxIdx = 0;
   for (auto [I, V] : enumerate(VL)) {
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
+    // Non-extract lanes (copyable elements modeled on an extract main op, or
+    // undefs) are treated as holes.
+    if (!isa<ExtractElementInst, ExtractValueInst>(V))
       continue;
+    auto *Inst = cast<Instruction>(V);
     if (Inst->getOperand(0) != Vec)
       return false;
     if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
@@ -17032,10 +17072,20 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     if (ShuffleOrOp == Instruction::ExtractValue && !E->StructEVIndices.empty())
       return CommonCost;
     APInt DemandedElts;
+    APInt CopyableInsertElts;
     VectorType *SrcVecTy = nullptr;
     auto GetScalarCost = [&](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
+
+      // Copyable lanes are not extracts; they are inserted into the reused
+      // source vector, so charge the insert to the vector side only.
+      if (E->isCopyableElement(UniqueValues[Idx])) {
+        if (CopyableInsertElts.isZero())
+          CopyableInsertElts = APInt::getZero(E->getVectorFactor());
+        CopyableInsertElts.setBit(Idx);
+        return InstructionCost(TTI::TCC_Free);
+      }
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
       if (!SrcVecTy) {
@@ -17075,11 +17125,19 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
-      return CommonCost - (DemandedElts.isZero()
-                               ? TTI::TCC_Free
-                               : TTI.getScalarizationOverhead(
-                                     SrcVecTy, DemandedElts, /*Insert=*/false,
-                                     /*Extract=*/true, CostKind));
+      return CommonCost +
+             (CopyableInsertElts.isZero()
+                  ? TTI::TCC_Free
+                  : TTI.getScalarizationOverhead(
+                        cast<VectorType>(
+                            getWidenedType(OrigScalarTy, E->getVectorFactor())),
+                        CopyableInsertElts, /*Insert=*/true,
+                        /*Extract=*/false, CostKind)) -
+             (DemandedElts.isZero()
+                  ? TTI::TCC_Free
+                  : TTI.getScalarizationOverhead(SrcVecTy, DemandedElts,
+                                                 /*Insert=*/false,
+                                                 /*Extract=*/true, CostKind));
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -18102,8 +18160,11 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
                    [this](Value *V) { return EphValues.contains(V); }) &&
            (allConstant(TE->Scalars) || isSplat(TE->Scalars) ||
             TE->Scalars.size() < Limit ||
+            // Nodes with copyable lanes may mix in non-extract lanes, which
+            // are not representable as a shuffle of the source vector.
             (((TE->hasState() &&
-               TE->getOpcode() == Instruction::ExtractElement) ||
+               TE->getOpcode() == Instruction::ExtractElement &&
+               !TE->hasCopyableElements()) ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
              isFixedVectorShuffle(TE->Scalars, Mask, AC)) ||
             (TE->hasState() && TE->getOpcode() == Instruction::Load &&
@@ -18490,11 +18551,14 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   // Check if any of the gather node forms an insertelement buildvector
   // somewhere. TreeSize >= 1 is guaranteed, so the multi-node case reduces to
   // a simple TreeSize > 1 short-circuit.
+  // A gather with copyable lanes is not a real instruction node; do not let
+  // its state qualify it as a buildvector-forming node.
   const bool IsAllowedSingleBVNode =
-      TreeSize > 1 || (FrontHasState && !Front.isAltShuffle() &&
-                       FrontOpcode != Instruction::PHI &&
-                       FrontOpcode != Instruction::GetElementPtr &&
-                       allSameBlock(Front.Scalars));
+      TreeSize > 1 ||
+      (FrontHasState && !Front.isAltShuffle() && !Front.hasCopyableElements() &&
+       FrontOpcode != Instruction::PHI &&
+       FrontOpcode != Instruction::GetElementPtr &&
+       allSameBlock(Front.Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
                  return isa<ExtractElementInst, Constant>(V) ||
@@ -19807,13 +19871,16 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // On AArch64, this helps in fusing a mov instruction, associated with
   // extractelement, with fmul in the backend so that extractelement is free.
   SmallVector<std::tuple<Value *, User *, int>, 4> ScalarUserAndIdx;
+  // Record every external use: a missing entry is indistinguishable from
+  // lane 0 and is priced as a free extract by the extract-fusion cost model.
+  for (ExternalUser &EU : ExternalUses)
+    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
   // Detect external uses that drive address computations: the scalar (through
   // an optional single-use index-promotion cast) is used as a GEP index.
   bool AllUsersGEPSWithStoresLoads = true;
   SmallVector<const Value *> Pointers;
   Type *UserScalarTy = nullptr;
   for (ExternalUser &EU : ExternalUses) {
-    ScalarUserAndIdx.emplace_back(EU.Scalar, EU.User, EU.Lane);
     Value *Usr = EU.User;
     if (Usr && match(Usr, m_OneUse(m_ZExtOrSExt(m_Value()))))
       Usr = cast<Instruction>(Usr)->user_back();
@@ -19824,9 +19891,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     if (User && User->hasOneUse() &&
         isa<LoadInst, StoreInst>(User->user_back()))
       AccessTy = getValueType(User->user_back());
-    if (!AccessTy || isa<ScalableVectorType>(AccessTy))
-      User = nullptr;
-    if (User && (!UserScalarTy || UserScalarTy == AccessTy)) {
+    if (AccessTy && !isa<ScalableVectorType>(AccessTy) &&
+        (!UserScalarTy || UserScalarTy == AccessTy)) {
       UserScalarTy = AccessTy;
       Pointers.push_back(User);
     } else {
@@ -20215,18 +20281,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   // address chain. Add the delta once rather than per external use.
   if (AllUsersGEPSWithStoresLoads && !Pointers.empty()) {
     const TreeEntry &RootEntry = getRootNode();
-    const Value *CommonBase = nullptr;
-    bool HaveCommonBase = true;
-    for (const Value *P : Pointers) {
-      const Value *Op = getUnderlyingObject(P);
-      if (!CommonBase)
-        CommonBase = Op;
-      else if (CommonBase != Op) {
-        HaveCommonBase = false;
-        break;
-      }
-    }
-    if (HaveCommonBase) {
+    const Value *CommonBase = getUnderlyingObject(Pointers.front());
+    if (all_of(Pointers, [CommonBase](const Value *P) {
+          return getUnderlyingObject(P) == CommonBase;
+        })) {
       auto *VecTy = getWidenedType(UserScalarTy, RootEntry.Scalars.size());
       InstructionCost ScalarGEPCost = TTI->getPointersChainCost(
           Pointers, CommonBase, TTI::PointersChainInfo::getUnitStride(),
@@ -23485,6 +23543,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = E->getSingleOperand(0);
       setInsertPointAfterBundle(E);
       V = FinalShuffle(V, E);
+      // Insert the copyable lanes (non-extract scalars modeled on the extract
+      // main op) into the reused source vector. The identity extract order and
+      // absence of a reuse shuffle are guaranteed when the node is created, so
+      // a lane maps to its own index.
+      if (E->hasCopyableElements()) {
+        assert(E->ReorderIndices.empty() && E->ReuseShuffleIndices.empty() &&
+               "Copyable extract lanes require identity order and no reuse.");
+        for (auto [Idx, Scalar] : enumerate(E->Scalars))
+          if (E->isCopyableElement(Scalar))
+            V = Builder.CreateInsertElement(V, Scalar, Builder.getInt32(Idx));
+      }
       E->VectorizedValue = V;
       return V;
     }

@@ -2044,9 +2044,10 @@ ExpectedType clang::ASTNodeImporter::VisitOverflowBehaviorType(
 ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
     const clang::HLSLAttributedResourceType *T) {
   Error Err = Error::success();
-  const HLSLAttributedResourceType::Attributes &ToAttrs = T->getAttrs();
+  HLSLAttributedResourceType::Attributes ToAttrs = T->getAttrs();
   QualType ToWrappedType = importChecked(Err, T->getWrappedType());
   QualType ToContainedType = importChecked(Err, T->getContainedType());
+  ToAttrs.SampleCountExpr = importChecked(Err, T->getSampleCountExpr());
   if (Err)
     return std::move(Err);
 

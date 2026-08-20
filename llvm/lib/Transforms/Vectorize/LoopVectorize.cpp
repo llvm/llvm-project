@@ -3769,7 +3769,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
-    if (requiresScalarEpilogue(Plan, VF))
+    if (Plan.requiresScalarEpilogue())
       --AvailableTC;
 
     unsigned InterleaveCountLB = bit_floor(std::max(
@@ -5959,7 +5959,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  PSE);
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, BestVPlan);
   // Check if scalar epilogue is required, before simplifying constant branches.
-  const bool RequiresScalarEpilogue = requiresScalarEpilogue(BestVPlan, BestVF);
+  const bool RequiresScalarEpilogue = BestVPlan.requiresScalarEpilogue();
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                    /*OnlyLatches=*/false);
@@ -7138,17 +7138,6 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
 }
 
-bool LoopVectorizationPlanner::requiresScalarEpilogue(VPlan &Plan,
-                                                      ElementCount VF) const {
-  // A scalar epilogue is required, if we unconditionally execute the scalar
-  // loop. Must be called before removeBranchOnConst.
-  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
-  bool Result = MiddleVPBB->getSingleSuccessor() == Plan.getScalarPreheader();
-  assert(CM.requiresScalarEpilogue(VF.isVector()) == Result &&
-         "CM.requiresScalarEpilogue and the VPlan-based check must agree");
-  return Result;
-}
-
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
@@ -7157,7 +7146,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
           ? &MinItersBypassWeights[0]
           : nullptr;
   RUN_VPLAN_PASS(VPlanTransforms::addMinimumIterationCheck, Plan, VF, UF,
-                 MinProfitableTripCount, requiresScalarEpilogue(Plan, VF),
+                 MinProfitableTripCount, Plan.requiresScalarEpilogue(),
                  Plan.hasTailFolded(), OrigLoop, BranchWeights,
                  OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                  PSE, Plan.getEntry());
@@ -7750,10 +7739,10 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
   unsigned EpilogueLoopStep =
       estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
-  RUN_VPLAN_PASS(
-      VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
-      EPI.VectorTripCount, LVP.requiresScalarEpilogue(Plan, EPI.EpilogueVF),
-      EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep, SE);
+  RUN_VPLAN_PASS(VPlanTransforms::addMinimumVectorEpilogueIterationCheck, Plan,
+                 EPI.VectorTripCount, Plan.requiresScalarEpilogue(),
+                 EPI.EpilogueVF, EPI.EpilogueUF, MainLoopStep, EpilogueLoopStep,
+                 SE);
 
   return InstsToMove;
 }
@@ -8319,12 +8308,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LVP.addMinimumIterationCheck(BestMainPlan, EPI.EpilogueVF, EPI.EpilogueUF,
                                  ElementCount::getFixed(0));
     LVP.attachRuntimeChecks(BestMainPlan, Checks, HasBranchWeights);
-    RUN_VPLAN_PASS(VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
-                   EPI.MainLoopVF, EPI.MainLoopUF,
-                   LVP.requiresScalarEpilogue(BestMainPlan, EPI.MainLoopVF), L,
-                   HasBranchWeights ? MinItersBypassWeights : nullptr,
-                   L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
-                   PSE);
+    RUN_VPLAN_PASS(
+        VPlanTransforms::addIterationCountCheckBlock, BestMainPlan,
+        EPI.MainLoopVF, EPI.MainLoopUF, BestMainPlan.requiresScalarEpilogue(),
+        L, HasBranchWeights ? MinItersBypassWeights : nullptr,
+        L->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 
     EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TTI, AC, EPI, Checks,
                                        BestMainPlan);

@@ -1593,6 +1593,30 @@ Currently, only the following parameter attributes are defined:
 
     This is not a valid attribute for return values.
 
+`nofreeobj`
+:   On arguments, this indicates that the underlying object of the argument
+    cannot be freed during the execution of the function. More precisely, any
+    free of the underlying object must happen-before function entry or function
+    exit must happen-before the free, otherwise the behavior is undefined.
+
+    On return values, this indicates that the underlying object of the return
+    value cannot be freed from this point forward. More precisely, any free
+    of the underlying object must happen-before the function returns, otherwise
+    the behavior is undefined.
+
+    Unlike `nofree`, it is not possible to free the underlying object through
+    a different pointer either.
+
+    `nofreeobj` on arguments implies `nofree`. `nofreeobj` is primarily useful
+    in cases where it's not possible to mark the argument as `noalias`.
+    The combination of `nofree` and `noalias` does *not* imply `nofreeobj`
+    by itself, because it still allows freeing the underlying object through
+    a different pointer, as long as the object is never accessed through the
+    `noalias` pointer. However, it does imply `nofreeobj` if such an access
+    exists, for example in the form of the implied read of a `dereferenceable`
+    attribute. In other words, the combination of `nofree`, `noalias` and
+    `dereferenceable` *does* imply `nofreeobj`.
+
 (nest)=
 
 `nest`
@@ -9442,6 +9466,24 @@ conflicting floating-point ABIs is rejected. For example:
 !0 = !{i32 1, !"float-abi", !"hard"}
 ```
 
+### Target ABI Module Flags Metadata
+
+This module flag names the target ABI that the module was compiled
+for. The value is an `MDString`. The set of valid values and
+interpretation target-specific.
+
+For example, RISC-V uses names such as `"ilp32"`, `"ilp32d"`, `"lp64"`, and
+`"lp64d"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"lp64d"}
+```
+while ARM uses names such as `"aapcs"` and `"apcs-gnu"`:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"target-abi", !"aapcs"}
+```
+
 ### Long Double Type Module Flags Metadata
 
 Describe the floating-point format used by libm for `long double`. The
@@ -13072,7 +13114,7 @@ address width of 32 bits (`p1:64:64:64:32` {ref}`datalayout string<langref_datal
 ##### Syntax:
 
 ```
-<result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofree !<empty_node>]            ; yields ty2
+<result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !nofreeobj !<empty_node>]            ; yields ty2
 ```
 
 ##### Overview:
@@ -13096,10 +13138,11 @@ metadata name `<deref_bytes_node>` corresponding to a metadata node with one
 `i64` entry.
 See `dereferenceable_or_null` metadata.
 
-The optional `!nofree` metadata must reference a single metadata name
+The optional `!nofreeobj` metadata must reference a single metadata name
 `<empty_node>` corresponding to a metadata node with no entries.
-The existence of the `!nofree` metadata on the instruction tells the optimizer
-that the memory pointed by the pointer will not be freed after this point.
+The existence of the `!nofreeobj` metadata on the instruction tells the
+optimizer that the memory pointed by the pointer will not be freed after this
+point.
 
 ##### Semantics:
 

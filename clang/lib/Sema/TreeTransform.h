@@ -7845,11 +7845,21 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     ContainedTy = ContainedTSI->getType();
   }
 
+  HLSLAttributedResourceType::Attributes Attrs = oldType->getAttrs();
+  if (Attrs.SampleCountExpr) {
+    ExprResult SampleCountResult =
+        getDerived().TransformExpr(Attrs.SampleCountExpr);
+    if (SampleCountResult.isInvalid())
+      return QualType();
+    Attrs.SampleCountExpr = SampleCountResult.get();
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || WrappedTy != oldType->getWrappedType() ||
-      ContainedTy != oldType->getContainedType()) {
-    Result = SemaRef.Context.getHLSLAttributedResourceType(
-        WrappedTy, ContainedTy, oldType->getAttrs());
+      ContainedTy != oldType->getContainedType() ||
+      Attrs.SampleCountExpr != oldType->getSampleCountExpr()) {
+    Result = SemaRef.Context.getHLSLAttributedResourceType(WrappedTy,
+                                                           ContainedTy, Attrs);
   }
 
   HLSLAttributedResourceTypeLoc NewTL =
