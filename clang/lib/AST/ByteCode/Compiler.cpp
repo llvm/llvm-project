@@ -3778,7 +3778,9 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, E);
 
   if (FromT == PT_Ptr || ToT == PT_Ptr) {
-    if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/false, E))
+    auto CastKind = isIntegerType(*ToT) ? CastKind::ReinterpretPtrToInt
+                                        : CastKind::Reinterpret;
+    if (!this->emitInvalidCast(CastKind, /*Fatal=*/false, E))
       return false;
     if (E->getCastKind() == CK_LValueBitCast)
       return this->delegate(SubExpr);
