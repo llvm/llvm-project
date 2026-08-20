@@ -605,9 +605,7 @@ let SingleIssue = 1 in {
   def M85VMSRLate  : SchedWriteRes<[M85UnitVPort]> { let Latency = 3; }
 }
 
-def M85FPSCRFlagPred : MCSchedPredicate<
-                           CheckAll<[CheckIsRegOperand<0>,
-                                     CheckRegOperand<0, PC>]>>;
+def M85FPSCRFlagPred : MCSchedPredicate<CheckRegOperand<0, PC>>;
 
 def M85VMRSFPSCR : SchedWriteVariant<[
   SchedVar<M85FPSCRFlagPred, [M85VMRSEarly]>,

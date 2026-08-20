@@ -1639,6 +1639,24 @@ struct SubstObjCTypeArgsVisitor
   }
 };
 
+struct StripNullabilityTypeVisitor
+    : public SimpleTransformVisitor<StripNullabilityTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripNullabilityTypeVisitor>;
+
+  explicit StripNullabilityTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType type(attrType, 0);
+    if (AttributedType::stripOuterNullability(type)) {
+      while (AttributedType::stripOuterNullability(type)) {
+      }
+      return BaseType::recurse(type);
+    }
+
+    return BaseType::VisitAttributedType(attrType);
+  }
+};
+
 struct StripObjCKindOfTypeVisitor
     : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
   using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
@@ -1713,6 +1731,14 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
   StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
+}
+
+QualType QualType::stripNullability(const ASTContext &constCtx) const {
+  // FIXME: SimpleTransformVisitor currently takes a non-const ASTContext
+  // because some rebuild paths use non-const ASTContext factory APIs.
+  auto &ctx = const_cast<ASTContext &>(constCtx);
+  StripNullabilityTypeVisitor visitor(ctx);
   return visitor.recurse(*this);
 }
 
@@ -2314,6 +2340,8 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isSignedIntegerOrEnumerationType();
 
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
     switch (BT->getKind()) {
@@ -3739,8 +3767,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:
@@ -5981,6 +6007,41 @@ std::string FunctionEffectWithCondition::description() const {
   if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
+}
+
+TypeDependence
+HLSLAttributedResourceType::computeDependence(QualType Contained,
+                                              const Attributes &Attrs) {
+  TypeDependence Deps = TypeDependence::None;
+  if (!Contained.isNull())
+    Deps |= Contained->getDependence();
+  if (Attrs.SampleCountExpr)
+    Deps |= toTypeDependence(Attrs.SampleCountExpr->getDependence());
+  return Deps;
+}
+
+HLSLAttributedResourceType::HLSLAttributedResourceType(QualType Wrapped,
+                                                       QualType Contained,
+                                                       const Attributes &Attrs)
+    : Type(HLSLAttributedResource, QualType(),
+           computeDependence(Contained, Attrs)),
+      WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+void HLSLAttributedResourceType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx,
+                                         QualType Wrapped, QualType Contained,
+                                         const Attributes &Attrs) {
+  ID.AddPointer(Wrapped.getAsOpaquePtr());
+  ID.AddPointer(Contained.getAsOpaquePtr());
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
+  ID.AddBoolean(Attrs.IsROV);
+  ID.AddBoolean(Attrs.RawBuffer);
+  ID.AddBoolean(Attrs.IsCounter);
+  ID.AddBoolean(Attrs.IsArray);
+  ID.AddBoolean(Attrs.SampleCountExpr != nullptr);
+  if (Attrs.SampleCountExpr)
+    Attrs.SampleCountExpr->Profile(ID, Ctx, /*Canonical=*/true);
 }
 
 const HLSLAttributedResourceType *

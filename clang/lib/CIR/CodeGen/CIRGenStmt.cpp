@@ -90,9 +90,9 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
 
-  bool noinline = false;
-  bool alwaysinline = false;
-  const CallExpr *musttail = nullptr;
+  bool noinline = inNoInlineAttributedStmt;
+  bool alwaysinline = inAlwaysInlineAttributedStmt;
+  const CallExpr *musttail = mustTailCall;
 
   for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
@@ -108,9 +108,11 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
       break;
     case attr::NoInline:
       noinline = true;
+      alwaysinline = false;
       break;
     case attr::AlwaysInline:
       alwaysinline = true;
+      noinline = false;
       break;
     case attr::MustTail: {
       const Stmt *sub = s.getSubStmt();
@@ -130,6 +132,9 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
     } break;
     }
   }
+
+  assert(!(alwaysinline && noinline) &&
+         "alwaysinline and noinline are mutually exclusive");
 
   SaveAndRestore save_noinline(inNoInlineAttributedStmt, noinline);
   SaveAndRestore save_alwaysinline(inAlwaysInlineAttributedStmt, alwaysinline);
@@ -312,8 +317,12 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPDepobjDirective(cast<OMPDepobjDirective>(*s));
   case Stmt::OMPScanDirectiveClass:
     return emitOMPScanDirective(cast<OMPScanDirective>(*s));
-  case Stmt::OMPOrderedDirectiveClass:
-    return emitOMPOrderedDirective(cast<OMPOrderedDirective>(*s));
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    return emitOMPOrderedStandaloneDirective(
+        cast<OMPOrderedStandaloneDirective>(*s));
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    return emitOMPOrderedBlockAssocDirective(
+        cast<OMPOrderedBlockAssocDirective>(*s));
   case Stmt::OMPAtomicDirectiveClass:
     return emitOMPAtomicDirective(cast<OMPAtomicDirective>(*s));
   case Stmt::OMPTargetDirectiveClass:

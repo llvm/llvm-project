@@ -451,6 +451,33 @@ def _should_run_inproc(
     return builtin_fn is not None and not not_crash and cmd_shenv is shenv
 
 
+def _make_env_print_fn(env: dict) -> RunFn:
+    """Builds a RunFn that writes env's environment as sorted KEY=VALUE lines.
+
+    Args:
+        env: The shell environment to print, already updated by updateEnv()
+            for this stage's KEY=VALUE/-u/-i arguments.
+
+    Returns:
+        A RunFn ignoring argv/stdin/stderr/cwd, writing the sorted
+        environment to stdout and returning 0.
+    """
+
+    def run(
+        argv: List[str],
+        stdin: BinaryIO,
+        stdout: IO[bytes] | ByteWriter | None,
+        stderr: IO[bytes] | ByteWriter | None,
+        cwd: str,
+    ) -> int:
+        assert stdout is not None
+        env_str = "\n".join(f"{key}={value}" for key, value in sorted(env.items()))
+        stdout.write(env_str.encode())
+        return 0
+
+    return run
+
+
 def _run_inproc_stage(
     args: List[str],
     builtin_fn: RunFn,
@@ -582,6 +609,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_args = []
         not_count = 0
         not_crash = False
+        bare_env = False
 
         # Expand all late substitutions.
         args = _expandLateSubstitutions(
@@ -605,16 +633,9 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     )
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    # Return the environment variables if no argument is provided.
-                    env_str = "\n".join(
-                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
-                    )
-                    results.append(
-                        ShellCommandResult(
-                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
-                        )
-                    )
-                    return 0
+                    # 'env' by itself is this stage's command
+                    bare_env = True
+                    break
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
@@ -631,48 +652,59 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             else:
                 break
 
-        # Handle in-process builtins.
-        #
-        # Handle "echo" as a builtin if it is not part of a pipeline. This
-        # greatly speeds up tests that construct input files by repeatedly
-        # echo-appending to a file.
-        # FIXME: Standardize on the builtin echo implementation. We can use a
-        # temporary file to sidestep blocking pipe write issues.
+        if bare_env:
+            # A bare 'env' (no subcommand) leaves args empty. Without this
+            # handling, the stage would have no command to run, stopping
+            # the pipeline and dropping downstream stages (e.g. a trailing
+            # 'FileCheck', lit issue #115578). Instead, execute in-process
+            # to print the environment as this stage's output, so
+            # downstream commands still receive input and run.
+            args = ["env"]
+            builtin_fn = _make_env_print_fn(cmd_shenv.env)
+            use_inproc = True
+        else:
+            # Handle in-process builtins.
+            #
+            # Handle "echo" as a builtin if it is not part of a pipeline. This
+            # greatly speeds up tests that construct input files by repeatedly
+            # echo-appending to a file.
+            # FIXME: Standardize on the builtin echo implementation. We can use a
+            # temporary file to sidestep blocking pipe write issues.
 
-        # Ensure args[0] is hashable.
-        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+            # Ensure args[0] is hashable.
+            args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
 
-        inproc_builtin = inproc_builtins.get(args[0], None)
-        if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
-            # env calling an in-process builtin is useless, so we take the safe
-            # approach of complaining.
-            if not cmd_shenv is shenv:
-                raise InternalShellError(
-                    j, "Error: 'env' cannot call '{}'".format(args[0])
-                )
-            if not_crash:
-                raise InternalShellError(
-                    j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
-                )
-            if len(cmd.commands) != 1:
-                raise InternalShellError(
-                    j,
-                    "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
-                )
-            result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
-            if not_count % 2:
-                result.exitCode = int(not result.exitCode)
-            result.command.args = j.args
-            results.append(result)
-            return result.exitCode
+            inproc_builtin = inproc_builtins.get(args[0], None)
+            if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
+                # env calling an in-process builtin is useless, so we take the safe
+                # approach of complaining.
+                if not cmd_shenv is shenv:
+                    raise InternalShellError(
+                        j, "Error: 'env' cannot call '{}'".format(args[0])
+                    )
+                if not_crash:
+                    raise InternalShellError(
+                        j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
+                    )
+                if len(cmd.commands) != 1:
+                    raise InternalShellError(
+                        j,
+                        "Unsupported: '{}' cannot be part"
+                        " of a pipeline".format(args[0]),
+                    )
+                result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
+                if not_count % 2:
+                    result.exitCode = int(not result.exitCode)
+                result.command.args = j.args
+                results.append(result)
+                return result.exitCode
 
-        builtin_fn = pipeline_builtins.get(args[0])
-        use_inproc = _should_run_inproc(builtin_fn, not_crash, cmd_shenv, shenv)
-        if not use_inproc and args[0] in builtin_commands:
-            args.insert(0, sys.executable)
-            cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
-            args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
-
+            builtin_fn = pipeline_builtins.get(args[0])
+            use_inproc = _should_run_inproc(builtin_fn, not_crash, cmd_shenv, shenv)
+            if not use_inproc and args[0] in builtin_commands:
+                args.insert(0, sys.executable)
+                cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
+                args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
 
         # We had to search through the 'not' commands to find all the 'env'
         # commands and any other in-process builtin command.  We don't want to

@@ -1020,9 +1020,8 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
     VectorType *VecTy = dyn_cast<VectorType>(Ty);
-    LibFunc Func;
-    if (VecTy &&
-        TLibInfo->getLibFunc(Instruction::FRem, Ty->getScalarType(), Func) &&
+    LibFunc Func = TLibInfo->getLibFunc(Instruction::FRem, Ty->getScalarType());
+    if (VecTy && Func != NotLibFunc &&
         TLibInfo->isFunctionVectorizable(TLibInfo->getName(Func),
                                          VecTy->getElementCount()))
       return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
@@ -1468,9 +1467,8 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
-bool TargetTransformInfo::preferFixedOverScalableIfEqualCost(
-    bool IsEpilogue) const {
-  return TTIImpl->preferFixedOverScalableIfEqualCost(IsEpilogue);
+bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
+  return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
 bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,

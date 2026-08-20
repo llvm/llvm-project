@@ -211,9 +211,9 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P6:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; CHECK-NEXT:    [[N5:%.*]] = ptrtoaddr ptr [[N]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], -3074457345618258603
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[N5]], 3074457345618258603
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP17]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], -3074457345618258603
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP17]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4

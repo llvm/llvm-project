@@ -73,13 +73,26 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
-enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
 
 enum class Tcgen05CollectorUsageOp : uint8_t {
   DISCARD = 0,
   LASTUSE = 1,
   FILL = 2,
   USE = 3,
+};
+
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
 };
 
 enum class TensormapElemType : uint8_t {
@@ -133,6 +146,9 @@ LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
 
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);

@@ -35,6 +35,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.pwd
     libc.include.sched
     libc.include.search
+    libc.include.semaphore
     libc.include.setjmp
     libc.include.signal
     libc.include.spawn
@@ -75,6 +76,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_wait
     libc.include.syscall
     libc.include.sysexits
+    libc.include.syslog
     libc.include.termios
     libc.include.threads
     libc.include.time

@@ -52,7 +52,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* Added `nofreeobj` attribute for attributes and returns, which forbids
+  freeing the underlying object (as opposed to only frees through that specific
+  pointer). Renamed `!nofree` metadata to `!nofreeobj`, as it has the same
+  semantics.
+
 ### Changes to LLVM infrastructure
+
+* Removed `TargetOptions::FloatABIType`. The soft float ABI should be
+  controlled by setting the `"float-abi"` module flag.
 
 ### Changes to building LLVM
 
@@ -63,6 +71,11 @@ Makes programs 10x faster by doing Special New Thing.
   are left unresolved.
 
 ### Changes to Interprocedural Optimizations
+
+- Interprocedural passes no longer rewrite the signature of functions marked
+  `optnone`, so their argument list, return type, and calling convention are
+  preserved. Interprocedural analysis and transformation of such functions is
+  otherwise unaffected.
 
 - The IR Outliner has been removed, due to lack of a maintainer and the presence
   of correctness issues.
@@ -81,6 +94,10 @@ Makes programs 10x faster by doing Special New Thing.
   is used, it will be zero-extended or truncated as needed.
 
 ### Changes to the ARM Backend
+
+* Using the hard-float procedure call standard without floating-point registers
+  is now an error. Previously this would fall back to the soft-float PCS while
+  still emitting the hard-float ABI attribute tag.
 
 ### Changes to the AVR Backend
 
@@ -132,6 +149,17 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLDB
 
+#### SBAPI
+
+* A [bug](https://github.com/llvm/llvm-project/issues/211787) involving SBValues
+  representing a register set was fixed. The methods `GetIndexOfChildWithName`
+  and `GetChildMemberWithName` were incorrectly looking up values in all
+  register sets. This meant that `GetIndexOfChildWithName` could return an index
+  greater than the size of the set, and that `GetChildMemberWithName` could
+  return values that were actually in a different set. Both methods are now fixed
+  so that they are limited to the registers within the register set. Scripts
+  using these methods may have to be updated as a result.
+
 #### Windows
 
 * Python 3.11 or later is now required for building LLDB 24 on Windows.
@@ -143,6 +171,12 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to Sanitizers
 
 ### Other Changes
+
+* `cas::ObjectStore::getMemoryBuffer()` was documented as returning a buffer
+  whose lifetime is independent of the CAS, but the buffer it returns may alias
+  storage the CAS owns and so cannot outlive it. The documentation now matches
+  the behavior, and the new `getStandaloneMemoryBuffer()` provides a buffer that
+  does stay valid after the `ObjectStore` is destroyed.
 
 ## External Open Source Projects Using LLVM {{env.config.release}}
 

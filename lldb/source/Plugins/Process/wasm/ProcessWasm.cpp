@@ -127,8 +127,9 @@ size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
   return size;
 }
 
-size_t ProcessWasm::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                               Status &error) {
+size_t ProcessWasm::ReadMemory(const ProcessAddress &process_addr, void *buf,
+                               size_t size, Status &error) {
+  lldb::addr_t vm_addr = process_addr.GetValue();
   wasm_addr_t wasm_addr(vm_addr);
 
   switch (wasm_addr.GetType()) {

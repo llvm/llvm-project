@@ -1424,9 +1424,9 @@ def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-
   Alias<fno_gpu_flush_denormals_to_zero>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
-defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
-  TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+defm cuda_short_ptr : BoolOptionWithoutMarshalling<
+  "f", "cuda-short-ptr",
+  PosFlag<SetTrue, [], [],
           "Use 32-bit pointers for accessing const/local/shared address spaces">,
   NegFlag<SetFalse>>;
 }
@@ -1819,6 +1819,10 @@ def fembed_offload_object_EQ : Joined<["-"], "fembed-offload-object=">,
   Visibility<[ClangOption, CC1Option, FC1Option]>,
   HelpText<"Embed Offloading device-side binary into host object file as a section.">,
   MarshallingInfoStringVector<CodeGenOpts<"OffloadObjects">>;
+def foffload_include_binary : Separate<["-"], "foffload-include-binary">,
+  Visibility<[CC1Option]>,
+  HelpText<"Incorporate offloading device-side binary into host object file.">,
+  MarshallingInfoString<CodeGenOpts<"OffloadBinaryToEmbedFile">>;
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
     Group<f_Group>, Flags<[NoXarchOption]>,
     Visibility<[ClangOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
@@ -3467,10 +3471,13 @@ def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recogniz
   HelpText<"ClangIR: Enable Idiom Recognizer pass">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
-def clangir_enable_call_conv_lowering : Flag<["-"], "clangir-enable-call-conv-lowering">,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"ClangIR: Enable calling-convention lowering pass (x86_64 only)">,
-  MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+defm clangir_call_conv_lowering : BoolFOption<"clangir-call-conv-lowering",
+  FrontendOpts<"ClangIRCallConvLowering">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Run the ClangIR calling-convention lowering pass">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Do not run the ClangIR calling-convention lowering pass">,
+  BothFlags<[], [ClangOption, CC1Option], " (x86_64 only)">>;
 
 def clangir_lib_opt_EQ : Joined<["-"], "clangir-lib-opt=">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>, Values<"all">,
@@ -3876,6 +3883,9 @@ def fmodule_file : Joined<["-"], "fmodule-file=">,
 def fmodules_ignore_macro : Joined<["-"], "fmodules-ignore-macro=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ignore the definition of the given macro when building and loading modules">;
+def fmodules_ignore_search_path : Joined<["-"], "fmodules-ignore-search-path=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Ignore the given header search path when building and loading modules">;
 def fmodules_strict_decluse : Flag <["-"], "fmodules-strict-decluse">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Like -fmodules-decluse but requires all headers to be in modules">,
@@ -4788,6 +4798,14 @@ defm enable_new_pm_codegen
                           "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
+def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
+    Group<f_Group>,
+    Visibility<[CC1Option]>,
+    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
+    Values<"auto,force-on,force-disable">,
+    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
+    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
+    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
@@ -5053,8 +5071,8 @@ defm separate_named_sections : BoolFOption<"separate-named-sections",
 
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disable">,
   BothFlags<[], [ClangOption], " late function splitting using profile information (x86 and aarch64 ELF)">>;
 
 defm partition_static_data_sections: BoolFOption<"partition-static-data-sections",
@@ -5357,6 +5375,24 @@ defm key_instructions : BoolGOption<"key-instructions",
         " in some debuggers. DWARF only.">,
     BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
   Group<g_flags_Group>;
+defm dynamic_debugging : BoolOption<"f", "dynamic-debugging",
+    CodeGenOpts<"DynamicDebugging">, DefaultFalse,
+    NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
+        "Enable Dynamic Debugging, which allows runtime switching between"
+        " optimized and unoptimized code in debuggers that support it."
+        " Specified optimization level affects only the optimized code."
+        " This flag inhibits interprocedural optimizations.">,
+    BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
+def save_dynamic_debugging_temps : Flag<["--"], "save-dynamic-debugging-temps">,
+    Visibility<[ClangOption, CLOption, CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to save the intermediate"
+             " states of dynamic debugging in the same directory as the final"
+             " output file">;
+def discard_dynamic_debugging_debug_module : Flag<["--"], "discard-dynamic-debugging-debug-module">,
+    MarshallingInfoFlag<CodeGenOpts<"DiscardDynamicDebuggingDebugModule">>,
+    Visibility<[CC1Option]>,
+    HelpText<"Compiler-debugging/testing option to discard the dynamic"
+             " debugging debug module before Clang codegen">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
     Visibility<[ClangOption, CC1Option, CC1AsOption,
@@ -9115,8 +9151,7 @@ def fcuda_is_device : Flag<["-"], "fcuda-is-device">,
   HelpText<"Generate code for CUDA device">,
   MarshallingInfoFlag<LangOpts<"CUDAIsDevice">>;
 def fcuda_include_gpubinary : Separate<["-"], "fcuda-include-gpubinary">,
-  HelpText<"Incorporate CUDA device-side binary into host object file.">,
-  MarshallingInfoString<CodeGenOpts<"CudaGpuBinaryFileName">>;
+  Alias<foffload_include_binary>;
 def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions">,
   HelpText<"Deprecated; Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,

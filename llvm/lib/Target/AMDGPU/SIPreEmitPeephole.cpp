@@ -237,14 +237,16 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     if (M == E)
       return Changed;
     // If SReg is VCC and SReg definition is a VALU comparison.
-    // This means S_AND with EXEC is not required.
+    // This means S_AND with EXEC is not required, unless
+    // the implicit def of SCC is alive.
     // Erase the S_AND and return.
     // Note: isVOPC is used instead of isCompare to catch V_CMP_CLASS
     if (A->getOpcode() == And && SReg == CondReg && !ModifiesExec &&
-        TII->isVOPC(*M)) {
+        TII->isVOPC(*M) && A->allImplicitDefsAreDead()) {
       A->eraseFromParent();
       return true;
     }
+
     if (!M->isMoveImmediate() || !M->getOperand(1).isImm() ||
         (M->getOperand(1).getImm() != -1 && M->getOperand(1).getImm() != 0))
       return Changed;

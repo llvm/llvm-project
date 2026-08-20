@@ -394,11 +394,14 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Zero-sized types have a width of one byte for parameter passing purposes.
   TInfo.Width = std::max(TInfo.Width, CharUnits::fromQuantity(1));
 
+  // Small _Complex types are right-adjusted, but small aggregates are not.
+  bool ForceRightAdjust = Ty->isAnyComplexType();
+
   // Arguments bigger than 2*SlotSize bytes are passed indirectly.
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty,
                           /*IsIndirect=*/TInfo.Width > 2 * SlotSize, TInfo,
                           SlotSize,
-                          /*AllowHigherAlign=*/true, Slot);
+                          /*AllowHigherAlign=*/true, Slot, ForceRightAdjust);
 }
 
 void SparcV9ABIInfo::computeInfo(CGFunctionInfo &FI) const {

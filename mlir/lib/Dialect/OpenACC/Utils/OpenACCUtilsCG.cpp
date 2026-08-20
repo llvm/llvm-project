@@ -224,6 +224,22 @@ void copyParDimsAttr(Operation *from, Operation *to) {
   setParDimsAttr(to, getParDimsAttr(from));
 }
 
+ActiveParDimsAttr getActiveParDimsAttr(Operation *op) {
+  return op->getAttrOfType<ActiveParDimsAttr>(ActiveParDimsAttr::name);
+}
+
+bool hasActiveParDimsAttr(Operation *op) {
+  return getActiveParDimsAttr(op) != nullptr;
+}
+
+void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr) {
+  op->setAttr(ActiveParDimsAttr::name, attr);
+}
+
+void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims) {
+  setActiveParDimsAttr(op, ActiveParDimsAttr::get(op->getContext(), dims));
+}
+
 int64_t SharedMemoryBudget::alignOffset(int64_t offset, int64_t alignment) {
   assert(alignment > 0 && llvm::isPowerOf2_64(alignment) &&
          "alignment must be a power of two");
