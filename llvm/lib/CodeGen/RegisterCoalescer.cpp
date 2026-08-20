@@ -2855,7 +2855,8 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     if (SubRangeJoin) {
       // We don't care about the lanes when joining subregister ranges.
       V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
-      if (DefMI->isImplicitDef()) {
+      // Preserve lane definitions in MIR when tracking subregister liveness.
+      if (DefMI->isImplicitDef() && !TrackSubRegLiveness) {
         V.ValidLanes = LaneBitmask::getNone();
         V.ErasableImplicitDef = true;
       }
@@ -2888,8 +2889,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         }
       }
 
-      // An IMPLICIT_DEF writes undef values.
-      if (DefMI->isImplicitDef()) {
+      // An IMPLICIT_DEF writes undef values. When tracking subregister
+      // liveness, treat it like an ordinary definition so the lane conflict
+      // checks below decide whether the join can preserve it.
+      if (DefMI->isImplicitDef() && !TrackSubRegLiveness) {
         // We normally expect IMPLICIT_DEF values to be live only until the end
         // of their block. If the value is really live longer and gets pruned in
         // another block, this flag is cleared again.
@@ -2995,7 +2998,7 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef())
+  if (DefMI->isImplicitDef() && V.ErasableImplicitDef)
     return CR_Erase;
 
   // Include the non-conflict where DefMI is a coalescable copy that kills
