@@ -21,6 +21,10 @@ using LlvmLibcTgammaBf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
+// Values in (-1, 0) are not integers. At or below -128.0f, bfloat16 has a
+// spacing of at least 1, so every finite value is an exact integer. Since the
+// Gamma function is undefined for negative integers, they are skipped. This
+// check also avoids converting large finite values to int, preventing overflow.
 static bool is_negative_integer(bfloat16 x) {
   float xf = static_cast<float>(x);
   if (xf > -1.0f)
