@@ -1827,6 +1827,20 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
     }
   }
 
+  // (X udiv Y) udiv Z --> X udiv (Y * Z), if Y * Z does not overflow.
+  // This is the variable-operand version of the (X / C1) / C2 fold in
+  // commonIDivTransforms().
+  Value *Y;
+  if (match(Op0, m_OneUse(m_UDiv(m_Value(X), m_Value(Y)))) &&
+      willNotOverflowUnsignedMul(Y, Op1, I)) {
+    Value *YZ = Builder.CreateNUWMul(Y, Op1);
+    auto *NewDiv = BinaryOperator::CreateUDiv(X, YZ);
+    // The result is exact only if both of the original divides are exact.
+    if (I.isExact() && cast<PossiblyExactOperator>(Op0)->isExact())
+      NewDiv->setIsExact();
+    return NewDiv;
+  }
+
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
   // This also handles non-constant values where the sign bit is known to be
   // set.

@@ -91,15 +91,16 @@ struct DepthwiseConv2DIsMul : public OpRewritePattern<tosa::DepthwiseConv2DOp> {
                 .getResult();
 
     Type resultETy = resultType.getElementType();
-
     if (inputETy != resultETy) {
       inputType = inputType.clone(resultETy);
-      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input);
+      input = tosa::CastOp::create(rewriter, op.getLoc(), inputType, input,
+                                   /*input_unsigned*/ false);
     }
 
     if (weightETy != resultETy) {
       weightType = weightType.clone(resultETy);
-      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight);
+      weight = tosa::CastOp::create(rewriter, op.getLoc(), weightType, weight,
+                                    /*input_unsigned*/ false);
     }
 
     if (iZp != 0 || wZp != 0) {

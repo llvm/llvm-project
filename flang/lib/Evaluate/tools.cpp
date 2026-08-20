@@ -1382,76 +1382,89 @@ bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
 
 namespace {
 
-template <int KIND> using Real = Type<common::TypeCategory::Real, KIND>;
+template <common::TypeCategory CAT, int KIND> using Numeric = Type<CAT, KIND>;
 
-template <int KIND> using RealExpr = Expr<Real<KIND>>;
+template <common::TypeCategory CAT, int KIND>
+using NumericExpr = Expr<Numeric<CAT, KIND>>;
 
-template <int KIND> struct SignedRealTerm {
-  RealExpr<KIND> expr;
+template <common::TypeCategory CAT, int KIND> struct SignedNumericTerm {
+  NumericExpr<CAT, KIND> expr;
   bool isPositive;
 };
 
-template <int KIND> struct SignedRealExpr {
-  RealExpr<KIND> expr;
+template <common::TypeCategory CAT, int KIND> struct SignedNumericExpr {
+  NumericExpr<CAT, KIND> expr;
   bool isPositive;
 };
 
-template <int KIND>
-static void flattenTopLevelAddSubtract(const RealExpr<KIND> &expr,
-    llvm::SmallVectorImpl<SignedRealTerm<KIND>> &terms,
+struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
+  using Base = AnyTraverse<HasConversionHelper>;
+  HasConversionHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename TO, common::TypeCategory FROM>
+  bool operator()(const Convert<TO, FROM> &) const {
+    return true;
+  }
+};
+
+template <common::TypeCategory CAT, int KIND>
+static void flattenTopLevelAddSubtract(const NumericExpr<CAT, KIND> &expr,
+    llvm::SmallVectorImpl<SignedNumericTerm<CAT, KIND>> &terms,
     bool isPositive = true) {
-  // Only flatten real Add and Subtract nodes. Every other node, including
+  // Only flatten Add and Subtract nodes. Every other node, including
   // Parentheses, is one opaque signed term whose tree is preserved.
-  if (const auto *add = std::get_if<Add<Real<KIND>>>(&expr.u)) {
+  if (const auto *add = std::get_if<Add<Numeric<CAT, KIND>>>(&expr.u)) {
     flattenTopLevelAddSubtract(add->left(), terms, isPositive);
     flattenTopLevelAddSubtract(add->right(), terms, isPositive);
     return;
   }
-  if (const auto *subtract = std::get_if<Subtract<Real<KIND>>>(&expr.u)) {
+  if (const auto *subtract =
+          std::get_if<Subtract<Numeric<CAT, KIND>>>(&expr.u)) {
     flattenTopLevelAddSubtract(subtract->left(), terms, isPositive);
     flattenTopLevelAddSubtract(subtract->right(), terms, !isPositive);
     return;
   }
-  terms.push_back(SignedRealTerm<KIND>{expr, isPositive});
+  terms.push_back(SignedNumericTerm<CAT, KIND>{expr, isPositive});
 }
 
-template <int KIND>
-static SignedRealExpr<KIND> buildRightAssociatedSignedFold(
-    llvm::MutableArrayRef<SignedRealTerm<KIND>> terms) {
+template <common::TypeCategory CAT, int KIND>
+static SignedNumericExpr<CAT, KIND> buildRightAssociatedSignedFold(
+    llvm::MutableArrayRef<SignedNumericTerm<CAT, KIND>> terms) {
   assert(!terms.empty() && "cannot build empty signed fold");
   const bool isPositive{terms.front().isPositive};
-  RealExpr<KIND> result{std::move(terms.back().expr)};
+  NumericExpr<CAT, KIND> result{std::move(terms.back().expr)};
   for (std::size_t i{terms.size() - 1}; i > 0; --i) {
-    SignedRealTerm<KIND> &term{terms[i - 1]};
+    SignedNumericTerm<CAT, KIND> &term{terms[i - 1]};
     const bool useAdd{term.isPositive == terms[i].isPositive};
     if (useAdd)
-      result = RealExpr<KIND>{
-          Add<Real<KIND>>{std::move(term.expr), std::move(result)}};
+      result = NumericExpr<CAT, KIND>{
+          Add<Numeric<CAT, KIND>>{std::move(term.expr), std::move(result)}};
     else
-      result = RealExpr<KIND>{
-          Subtract<Real<KIND>>{std::move(term.expr), std::move(result)}};
+      result = NumericExpr<CAT, KIND>{Subtract<Numeric<CAT, KIND>>{
+          std::move(term.expr), std::move(result)}};
   }
-  return SignedRealExpr<KIND>{std::move(result), isPositive};
+  return SignedNumericExpr<CAT, KIND>{std::move(result), isPositive};
 }
 
-template <int KIND>
-static SignedRealExpr<KIND> buildSignedAdd(
-    SignedRealExpr<KIND> left, SignedRealExpr<KIND> right) {
+template <common::TypeCategory CAT, int KIND>
+static SignedNumericExpr<CAT, KIND> buildSignedAdd(
+    SignedNumericExpr<CAT, KIND> left, SignedNumericExpr<CAT, KIND> right) {
   if (left.isPositive == right.isPositive) {
-    return SignedRealExpr<KIND>{
-        RealExpr<KIND>{
-            Add<Real<KIND>>{std::move(left.expr), std::move(right.expr)}},
+    return SignedNumericExpr<CAT, KIND>{
+        NumericExpr<CAT, KIND>{Add<Numeric<CAT, KIND>>{
+            std::move(left.expr), std::move(right.expr)}},
         left.isPositive};
   }
   if (left.isPositive) {
-    return SignedRealExpr<KIND>{
-        RealExpr<KIND>{
-            Subtract<Real<KIND>>{std::move(left.expr), std::move(right.expr)}},
+    return SignedNumericExpr<CAT, KIND>{
+        NumericExpr<CAT, KIND>{Subtract<Numeric<CAT, KIND>>{
+            std::move(left.expr), std::move(right.expr)}},
         true};
   }
   // Prefer Y-X to introducing a unary negation for -X+Y.
-  return SignedRealExpr<KIND>{RealExpr<KIND>{Subtract<Real<KIND>>{
-                                  std::move(right.expr), std::move(left.expr)}},
+  return SignedNumericExpr<CAT, KIND>{
+      NumericExpr<CAT, KIND>{Subtract<Numeric<CAT, KIND>>{
+          std::move(right.expr), std::move(left.expr)}},
       true};
 }
 
@@ -1460,37 +1473,63 @@ static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
   return std::nullopt;
 }
 
-template <int KIND>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const RealExpr<KIND> &expr) {
-  if (!std::get_if<Add<Real<KIND>>>(&expr.u) &&
-      !std::get_if<Subtract<Real<KIND>>>(&expr.u))
+template <common::TypeCategory CAT, int KIND>
+static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
+    const NumericExpr<CAT, KIND> &expr) {
+  if (const auto *convert =
+          std::get_if<Convert<Numeric<CAT, KIND>, CAT>>(&expr.u)) {
+    std::optional<Expr<SomeKind<CAT>>> rewritten = common::visit(
+        [&](const auto &typedExpr) -> std::optional<Expr<SomeKind<CAT>>> {
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeKind<CAT>>{std::move(*result)};
+          return std::nullopt;
+        },
+        convert->left().u);
+    if (!rewritten)
+      return std::nullopt;
+    return NumericExpr<CAT, KIND>{
+        Convert<Numeric<CAT, KIND>, CAT>{std::move(*rewritten)}};
+  }
+
+  // Only a conversion around the complete expression is supported. Keep
+  // conversions embedded in a mixed-kind tree attached to their original
+  // operations until those cases have their own correctness coverage.
+  if (HasConversionHelper{}(expr))
     return std::nullopt;
 
-  llvm::SmallVector<SignedRealTerm<KIND>, 8> terms;
+  if (!std::get_if<Add<Numeric<CAT, KIND>>>(&expr.u) &&
+      !std::get_if<Subtract<Numeric<CAT, KIND>>>(&expr.u))
+    return std::nullopt;
+
+  llvm::SmallVector<SignedNumericTerm<CAT, KIND>, 8> terms;
   flattenTopLevelAddSubtract(expr, terms);
   if (terms.size() <= 2)
     return std::nullopt;
 
-  llvm::MutableArrayRef<SignedRealTerm<KIND>> head{terms.data(), 2};
-  llvm::MutableArrayRef<SignedRealTerm<KIND>> tail{
+  llvm::MutableArrayRef<SignedNumericTerm<CAT, KIND>> head{terms.data(), 2};
+  llvm::MutableArrayRef<SignedNumericTerm<CAT, KIND>> tail{
       terms.data() + 2, terms.size() - 2};
-  SignedRealExpr<KIND> headExpr = buildRightAssociatedSignedFold<KIND>(head);
-  SignedRealExpr<KIND> tailExpr = buildRightAssociatedSignedFold<KIND>(tail);
-  SignedRealExpr<KIND> result =
-      buildSignedAdd<KIND>(std::move(tailExpr), std::move(headExpr));
+  SignedNumericExpr<CAT, KIND> headExpr = buildRightAssociatedSignedFold(head);
+  SignedNumericExpr<CAT, KIND> tailExpr = buildRightAssociatedSignedFold(tail);
+  SignedNumericExpr<CAT, KIND> result =
+      buildSignedAdd(std::move(tailExpr), std::move(headExpr));
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
-  return Expr<SomeType>{std::move(result.expr)};
+  return std::move(result.expr);
 }
 
 template <common::TypeCategory CAT>
 static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
     const Expr<SomeKind<CAT>> &expr) {
-  if constexpr (CAT == common::TypeCategory::Real) {
+  // Keep the supported categories explicit: integer reassociation requires a
+  // separate intermediate-range policy.
+  if constexpr (CAT == common::TypeCategory::Real ||
+      CAT == common::TypeCategory::Complex) {
     return common::visit(
         [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          return tryBuildSplitSumExpressionTree(typedExpr);
+          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
+            return Expr<SomeType>{std::move(*result)};
+          return std::nullopt;
         },
         expr.u);
   }
@@ -2761,7 +2800,8 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 }
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
-  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived);
+  return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
+      !(derived && derived->IsVectorType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

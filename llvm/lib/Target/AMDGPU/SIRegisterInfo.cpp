@@ -1623,7 +1623,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   // SPILL_SCRATCH_DWORDx4 $vgpr2_vgpr3_vgpr4_vgpr5
   // SPILL_SCRATCH_DWORDx2 $vgpr6_vgpr7
   bool IsRegMisaligned = false;
-  if (!IsBlock && !IsAGPR && RegWidth > 4) {
+  if (!IsBlock && !IsAGPR && RegWidth > 4 && IsFlat) {
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
     int VDataIdx =
@@ -3260,10 +3260,18 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                   : RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
                                                   MI, false, 0, !UseSGPR);
 
-      if (!TmpSReg || (!TmpReg && !UseSGPR)) {
-        assert(!FrameReg && "there is a frame register!");
+      // If no SGPR was scavenged but a frame register is available, fall
+      // through to reuse it as the temporary (computed in place, restored
+      // after). Only bail out when there is no frame register, or a VGPR
+      // operand is needed but none could be scavenged.
+      if ((!TmpSReg && !FrameReg) || (!TmpReg && !UseSGPR)) {
         int SVOpcode = AMDGPU::getFlatScratchInstSVfromSS(MI->getOpcode());
         if (ST.hasFlatScratchSVSMode() && SVOpcode != -1) {
+          // SV form encodes only the offset in vaddr; an SS-form scratch op
+          // keeps its FI in the SGPR saddr, so this is only reached with no
+          // frame register.
+          assert(!FrameReg &&
+                 "SV-form fallback cannot encode a frame register");
           Register TmpVGPR = RS->scavengeRegisterBackwards(
               AMDGPU::VGPR_32RegClass, MI, false, 0, /*AllowSpill=*/true);
 

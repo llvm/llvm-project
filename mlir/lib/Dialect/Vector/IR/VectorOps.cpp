@@ -5377,6 +5377,10 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
+  // Scalable dimensions are `vscale` times larger at runtime, so the static
+  // size is only a lower bound and cannot prove that the transfer fits.
+  if (op.getVectorType().getScalableDims()[resultIdx])
+    return false;
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
   if (!cstOp.has_value())
@@ -8511,6 +8515,15 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
 void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
   results.add<InterleaveDeinterleaveFolder>(context);
+}
+
+OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
+  // interleave(splat(x), splat(x)) -> widened splat(x)
+  auto splat = dyn_cast_if_present<SplatElementsAttr>(adaptor.getLhs());
+  if (!splat || adaptor.getLhs() != adaptor.getRhs())
+    return {};
+  return SplatElementsAttr::get(getResultVectorType(),
+                                splat.getSplatValue<Attribute>());
 }
 
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {

@@ -1245,6 +1245,14 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   // Skip unreferenced non-preemptible ifunc.
   if (!(flags & (NEEDS_GOT | NEEDS_PLT | HAS_DIRECT_RELOC)))
     return true;
+  // We only support one kind of GOT entry, and IPLT entries currently always
+  // use non-AUTH GOT entries.
+  if ((flags & NEEDS_GOT) && (flags & NEEDS_GOT_AUTH)) {
+    auto diag = Err(ctx);
+    diag << "AUTH GOT entry for non-preemptible ifunc '" << sym.getName()
+         << "' requested, but R_AARCH64_AUTH_IRELATIVE is not supported yet";
+    return true;
+  }
 
   sym.isInIplt = true;
 
@@ -1267,11 +1275,8 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT) {
-      assert(!(flags & NEEDS_GOT_AUTH) &&
-             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
+    if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
-    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;

@@ -82,6 +82,7 @@ add_llvm_unittest(ADTTests
   SmallStringTest.cpp
   SmallVectorExtrasTest.cpp
   SmallVectorTest.cpp
+  SortedVectorMapTest.cpp
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp

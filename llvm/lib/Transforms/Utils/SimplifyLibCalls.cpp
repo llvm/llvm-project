@@ -2052,6 +2052,47 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
   return optimizeDoubleFP(CI, B, true, TLI, isPrecise);
 }
 
+/// Shrink double -> float for llvm.sincos.
+static Value *optimizeSinCosDoubleFP(CallInst *CI, IRBuilderBase &B) {
+  auto *RetTy = dyn_cast<StructType>(CI->getType());
+  if (!RetTy || RetTy->getNumElements() != 2 ||
+      !RetTy->getElementType(0)->getScalarType()->isDoubleTy())
+    return nullptr;
+
+  Value *X = valueHasFloatPrecision(CI->getArgOperand(0));
+  if (!X)
+    if (auto *Ext = dyn_cast<FPExtInst>(CI->getArgOperand(0)))
+      if (Ext->getOperand(0)->getType()->getScalarType()->isFloatTy())
+        X = Ext->getOperand(0);
+  if (!X)
+    return nullptr;
+
+  for (User *U : CI->users()) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    if (!EV)
+      return nullptr;
+    for (User *EVU : EV->users()) {
+      auto *Cast = dyn_cast<FPTruncInst>(EVU);
+      if (!Cast || !Cast->getType()->getScalarType()->isFloatTy())
+        return nullptr;
+    }
+  }
+
+  IRBuilderBase::FastMathFlagGuard Guard(B);
+  B.setFastMathFlags(CI->getFastMathFlags());
+
+  Value *NewCall = B.CreateIntrinsic(Intrinsic::sincos, X->getType(), X);
+  cast<Instruction>(NewCall)->setMetadata(
+      LLVMContext::MD_fpmath, CI->getMetadata(LLVMContext::MD_fpmath));
+  Value *Res = PoisonValue::get(RetTy);
+  for (unsigned I = 0; I != 2; ++I) {
+    Value *Ext = B.CreateFPExt(B.CreateExtractValue(NewCall, I),
+                               RetTy->getElementType(I));
+    Res = B.CreateInsertValue(Res, Ext, I);
+  }
+  return Res;
+}
+
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
 Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
   Value *Real, *Imag;
@@ -2470,7 +2511,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // powf(x, itofp(y)) -> powi(x, y)
-  if (AllowApprox && (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
+  // The powi exponent must be a scalar integer, so a vector y is not usable.
+  if (AllowApprox && !Expo->getType()->isVectorTy() &&
+      (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
     if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return copyFlags(*Pow, createPowWithIntegerExponent(Base, ExpoI, M, B));
   }
@@ -4238,6 +4281,10 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
     case Intrinsic::cos:
       if (UnsafeFPShrink)
         return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
+      return nullptr;
+    case Intrinsic::sincos:
+      if (UnsafeFPShrink)
+        return optimizeSinCosDoubleFP(CI, Builder);
       return nullptr;
     default:
       return nullptr;

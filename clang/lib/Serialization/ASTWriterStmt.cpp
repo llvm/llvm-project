@@ -2110,6 +2110,15 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   Code = serialization::EXPR_EXPR_WITH_CLEANUPS;
 }
 
+void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumTemplateArgs());
+  AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
+  Record.AddDeclarationNameInfo(E->getNameInfo());
+  Record.AddTemplateName(E->getTemplateName());
+  Code = serialization::EXPR_DEPENDENT_TEMPLATE_ID;
+}
+
 void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
@@ -2793,10 +2802,18 @@ void ASTStmtWriter::VisitOMPScanDirective(OMPScanDirective *D) {
   Code = serialization::STMT_OMP_SCAN_DIRECTIVE;
 }
 
-void ASTStmtWriter::VisitOMPOrderedDirective(OMPOrderedDirective *D) {
+void ASTStmtWriter::VisitOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
-  Code = serialization::STMT_OMP_ORDERED_DIRECTIVE;
+  Code = serialization::STMT_OMP_ORDERED_STANDALONE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPTeamsDirective(OMPTeamsDirective *D) {

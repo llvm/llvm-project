@@ -10280,11 +10280,22 @@ TreeTransform<Derived>::TransformOMPScanDirective(OMPScanDirective *D) {
 }
 
 template <typename Derived>
-StmtResult
-TreeTransform<Derived>::TransformOMPOrderedDirective(OMPOrderedDirective *D) {
+StmtResult TreeTransform<Derived>::TransformOMPOrderedStandaloneDirective(
+    OMPOrderedStandaloneDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
-      OMPD_ordered, DirName, nullptr, D->getBeginLoc());
+      OMPD_ordered_standalone, DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPOrderedBlockAssocDirective(
+    OMPOrderedBlockAssocDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      OMPD_ordered_blockassoc, DirName, nullptr, D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
   return Res;
@@ -16519,6 +16530,36 @@ TreeTransform<Derived>::TransformCXXUnresolvedConstructExpr(
   // FIXME: we're faking the locations of the commas
   return getDerived().RebuildCXXUnresolvedConstructExpr(
       T, E->getLParenLoc(), Args, E->getRParenLoc(), E->isListInitialization());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformDependentTemplateIdExpr(
+    DependentTemplateIdExpr *E) {
+
+  NestedNameSpecifierLoc Loc;
+  TemplateName Name = getDerived().TransformTemplateName(
+      Loc, /*Template Keyword=*/SourceLocation(), E->getTemplateName(),
+      E->getNameLoc());
+  if (Name.isNull())
+    return ExprError();
+
+  TemplateDecl *TD = Name.getAsTemplateDecl();
+
+  assert(TD && "A dependent template id always refers to a template decl");
+
+  TemplateArgumentListInfo TransArgs(E->getLAngleLoc(), E->getRAngleLoc());
+  if (getDerived().TransformTemplateArguments(
+          E->template_arguments().data(), E->getNumTemplateArgs(), TransArgs))
+    return ExprError();
+
+  CXXScopeSpec SS;
+
+  LookupResult R(SemaRef, E->getNameInfo(), Sema::LookupOrdinaryName);
+  R.addDecl(TD);
+  R.resolveKind();
+  return getDerived().RebuildTemplateIdExpr(
+      SS, /*Template Keyword=*/SourceLocation(), R,
+      /*RequiresADL=*/false, &TransArgs);
 }
 
 template<typename Derived>

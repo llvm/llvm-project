@@ -11,8 +11,8 @@ define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
 ; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[START2]], [[END1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START2]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[END1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2

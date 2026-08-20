@@ -488,11 +488,12 @@ private:
   ComplexRendererFns
   selectCVTFixedPointVecBase(const MachineOperand &Root,
                              bool isReciprocal = false) const;
+  void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
+                                   const MachineInstr &MI, int OpIdx) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
-
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -4476,8 +4477,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
-  const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
-  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  bool ShouldUseImm = mi_match(RHS, MRI, m_PosZeroFP());
 
   auto IsEqualityPred = [](CmpInst::Predicate P) {
     return P == CmpInst::FCMP_OEQ || P == CmpInst::FCMP_ONE ||
@@ -4485,8 +4485,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   };
   if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
     // Try commuting the operands.
-    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
-    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+    if (mi_match(LHS, MRI, m_PosZeroFP())) {
       ShouldUseImm = true;
       std::swap(LHS, RHS);
     }
@@ -7368,23 +7367,19 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
 
   // We need a GEP.
-  MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  Register Base, Offset;
+  if (!mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Offset))))
     return std::nullopt;
 
   // If this is used more than once, let's not bother folding.
   // TODO: Check if they are memory ops. If they are, then we can still fold
   // without having to recompute anything.
-  if (!MRI.hasOneNonDBGUse(Gep->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(Root.getReg()))
     return std::nullopt;
 
   // Base is the GEP's LHS, offset is its RHS.
-  return {{[=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(1).getReg());
-           },
-           [=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(2).getReg());
-           },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(Offset); },
            [=](MachineInstrBuilder &MIB) {
              // Need to add both immediates here to make sure that they are both
              // added to the instruction.
@@ -7963,6 +7958,13 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
   return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+}
+
+void AArch64InstructionSelector::renderFixedPointScalarXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx == 3 && MI.getOperand(OpIdx).isImm() &&
+         "Expected vecshift immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,

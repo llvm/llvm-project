@@ -44,11 +44,12 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
     : ABIVer(DeviceLibABIVersion::fromCodeObjectVersion(
           tools::getAMDGPUCodeObjectVersion(D, DriverArgs))) {
   const auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(Kind);
 
   IsOpenMP = DeviceOffloadingKind == Action::OFK_OpenMP;
 
-  const bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  const bool HasWave32 = Features.test(llvm::AMDGPU::FEAT_SUPPORTS_WAVE32);
   Wave64 =
       !HasWave32 || DriverArgs.hasFlag(options::OPT_mwavefrontsize64,
                                        options::OPT_mno_wavefrontsize64, false);
@@ -61,8 +62,8 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
   const bool DefaultDAZ =
       (Kind == llvm::AMDGPU::GK_NONE)
           ? false
-          : !((ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
-              (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32));
+          : !(Features.test(llvm::AMDGPU::FEAT_FAST_FMAF) &&
+              Features.test(llvm::AMDGPU::FEAT_FAST_DENORMAL_F32));
   // TODO: There are way too many flags that change this. Do we need to
   // check them all?
   DAZ = IsKnownOffloading
@@ -533,6 +534,10 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                             !DriverArgs.hasArg(options::OPT_nohipwrapperinc);
   bool HasHipStdPar = DriverArgs.hasArg(options::OPT_hipstdpar);
 
+  if (DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false))
+    return;
+
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
     // HIP header includes standard library wrapper headers under clang
     // cuda_wrappers directory. Since these wrapper headers include_next
@@ -733,8 +738,10 @@ AMDGPUToolChain::AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
   // each tool invocation.
   checkAMDGPUCodeObjectVersion(D, Args);
 
+  bool UsesLLVMOffloading = Args.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
   if (Triple.getOS() == llvm::Triple::AMDHSA &&
-      Triple.getEnvironment() != llvm::Triple::LLVM)
+      Triple.getEnvironment() != llvm::Triple::LLVM && !UsesLLVMOffloading)
     RocmInstallation->detectDeviceLibrary();
 
   if (HostTC)
@@ -855,13 +862,14 @@ bool AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
   if (Kind == llvm::AMDGPU::GK_NONE)
     return false;
 
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(Kind);
 
   // Default to enabling f32 denormals by default on subtargets where fma is
   // fast with denormals
   const bool BothDenormAndFMAFast =
-      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_FMA_F32) &&
-      (ArchAttr & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+      Features.test(llvm::AMDGPU::FEAT_FAST_FMAF) &&
+      Features.test(llvm::AMDGPU::FEAT_FAST_DENORMAL_F32);
   return !BothDenormAndFMAFast;
 }
 
@@ -903,8 +911,8 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
 
 bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
                                llvm::AMDGPU::GPUKind Kind) {
-  const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
-  bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
+  bool HasWave32 = llvm::AMDGPU::getFeatureBitset(Kind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32);
 
   return !HasWave32 || DriverArgs.hasFlag(
     options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
@@ -913,7 +921,10 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 void AMDGPUToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
-  if (DeviceOffloadingKind == Action::OFK_HIP) {
+  bool UsesLLVMOffloading = DriverArgs.hasFlag(
+      options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
+  if (DeviceOffloadingKind == Action::OFK_HIP ||
+      (DeviceOffloadingKind == Action::OFK_Cuda && UsesLLVMOffloading)) {
     CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
     if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
@@ -1299,8 +1310,12 @@ void AMDGPUToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
     if (DriverArgs.hasFlag(options::OPT_offload_inc,
                            options::OPT_no_offload_inc, true) &&
         !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
-        !DriverArgs.hasArg(options::OPT_nobuiltininc))
-      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
+        !DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+      SmallString<128> P(getDriver().ResourceDir);
+      llvm::sys::path::append(P, "include", "hip_wrappers");
+      CC1Args.push_back("-internal-isystem");
+      CC1Args.push_back(DriverArgs.MakeArgString(P));
+    }
     return;
   }
 

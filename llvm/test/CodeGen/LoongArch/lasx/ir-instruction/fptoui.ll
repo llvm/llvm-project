@@ -67,8 +67,9 @@ define void @fptoui_v4f32_v4i64(ptr %res, ptr %in){
 ; CHECK-LABEL: fptoui_v4f32_v4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vftintrz.wu.s $vr0, $vr0
-; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr0
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvfcvtl.d.s $xr0, $xr0
+; CHECK-NEXT:    xvftintrz.lu.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x float>, ptr %in

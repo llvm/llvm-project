@@ -1,17 +1,15 @@
 add_libc_test(
   parser_test
-  UNIT_TEST_ONLY # Fails to link on GPUs
   SUITE
     libc-support-tests
   SRCS
     parser_test.cpp
-  LINK_LIBRARIES
-    LibcPrintfHelpers
   DEPENDS
     libc.src.__support.printf_core.parser
     libc.src.__support.printf_core.core_structs
     libc.src.__support.CPP.string_view
     libc.src.__support.arg_list
+    libc.test.UnitTest.PrintfMatcher
 )
 
 add_libc_test(

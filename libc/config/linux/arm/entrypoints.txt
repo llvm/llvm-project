@@ -192,6 +192,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
     libc.src.stdlib.malloc
 
+    # stdio.h entrypoints
+    libc.src.stdio.tmpfile
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
@@ -248,6 +251,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.lseek
     libc.src.unistd.pipe
     libc.src.unistd.pipe2
+    libc.src.unistd.read
     libc.src.unistd.readlink
     libc.src.unistd.readlinkat
     libc.src.unistd.rmdir
@@ -353,6 +357,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
+    libc.src.math.atan2f128
     libc.src.math.atan
     libc.src.math.atanf
     libc.src.math.atanhf
@@ -361,6 +366,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cbrtbf16
     libc.src.math.ceil
     libc.src.math.ceilf
+    libc.src.math.ceilf128
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -394,12 +400,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ffmal
     libc.src.math.floor
     libc.src.math.floorf
+    libc.src.math.floorf128
     libc.src.math.floorl
     libc.src.math.fma
     libc.src.math.fmabf16
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf128
     libc.src.math.fmaximum
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
@@ -415,6 +423,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminf128
     libc.src.math.fminimum
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
@@ -461,6 +470,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llrintl
     libc.src.math.llround
     libc.src.math.llroundf
+    libc.src.math.llroundf128
     libc.src.math.llroundl
     libc.src.math.log
     libc.src.math.log10
@@ -478,6 +488,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.lrintl
     libc.src.math.lround
     libc.src.math.lroundf
+    libc.src.math.lroundf128
     libc.src.math.lroundl
     libc.src.math.modf
     libc.src.math.modff
@@ -487,6 +498,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
+    libc.src.math.nearbyintf128
     libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
@@ -512,7 +524,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.rintf
     libc.src.math.rintl
     libc.src.math.round
+    libc.src.math.roundevenf128
     libc.src.math.roundf
+    libc.src.math.roundf128
     libc.src.math.roundl
     libc.src.math.scalbln
     libc.src.math.scalblnf
@@ -533,6 +547,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sinhf
     libc.src.math.sqrt
     libc.src.math.sqrtf
+    libc.src.math.sqrtf128
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf

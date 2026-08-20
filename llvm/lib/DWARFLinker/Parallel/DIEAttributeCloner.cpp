@@ -525,6 +525,12 @@ size_t DIEAttributeCloner::cloneScalarAttr(
       !OutUnit.isCompileUnit())
     return 0;
 
+  // A compile unit's high_pc comes from the unit's own linked range and spans
+  // every symbol in it.
+  if (AttrSpec.Attr == dwarf::DW_AT_high_pc &&
+      InputDieEntry->getTag() != dwarf::DW_TAG_compile_unit)
+    Value = constrainHighPC(Value, /*IsLength=*/true);
+
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
   // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
@@ -549,12 +555,29 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   return Result.second;
 }
 
+static bool expressionDependsOnOriginUnit(const DWARFExpression &Expr) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  for (const DWARFExpression::Operation &Op : Expr) {
+    switch (Op.getCode()) {
+    case dwarf::DW_OP_addr:
+    case dwarf::DW_OP_addrx:
+    case dwarf::DW_OP_constx:
+      return true;
+    default:
+      break;
+    }
+
+    if (llvm::is_contained(Op.getDescription().Op, Encoding::BaseTypeRef))
+      return true;
+  }
+
+  return false;
+}
+
 size_t DIEAttributeCloner::cloneBlockAttr(
     const DWARFFormValue &Val,
     const DWARFAbbreviationDeclaration::AttributeSpec &AttrSpec) {
-
-  if (OutUnit.isTypeUnit())
-    return 0;
 
   size_t NumberOfPatchesAtStart = PatchesOffsets.size();
 
@@ -568,6 +591,12 @@ size_t DIEAttributeCloner::cloneBlockAttr(
     DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
+
+    // A type unit is shared by every compile unit that references the type, so
+    // an expression resolving against one origin unit has no single correct
+    // value there.
+    if (OutUnit.isTypeUnit() && expressionDependsOnOriginUnit(Expr))
+      return 0;
 
     InUnit.cloneDieAttrExpression(Expr, Buffer, DebugInfoOutputSection,
                                   VarAddressAdjustment, PatchesOffsets);
@@ -656,6 +685,8 @@ size_t DIEAttributeCloner::cloneAddressAttr(
     else
       return 0;
   } else {
+    if (AttrSpec.Attr == dwarf::DW_AT_high_pc)
+      Addr = constrainHighPC(*Addr, /*IsLength=*/false);
     if (VarAddressAdjustment)
       *Addr += *VarAddressAdjustment;
     else if (FuncAddressAdjustment)
@@ -671,6 +702,19 @@ size_t DIEAttributeCloner::cloneAddressAttr(
       .addScalarAttribute(AttrSpec.Attr, dwarf::Form::DW_FORM_addrx,
                           OutUnit.getAsCompileUnit()->getDebugAddrIndex(*Addr))
       .second;
+}
+
+uint64_t DIEAttributeCloner::constrainHighPC(uint64_t HighPC, bool IsLength) {
+  if (!FuncAddressAdjustment)
+    return HighPC;
+  std::optional<uint64_t> LowPC =
+      dwarf::toAddress(InUnit.find(InputDieEntry, dwarf::DW_AT_low_pc));
+  if (!LowPC)
+    return HighPC;
+  uint64_t Constrained =
+      InUnit.getContaingFile().Addresses->constrainCodeRangeHighPC(
+          *LowPC, IsLength ? *LowPC + HighPC : HighPC, *FuncAddressAdjustment);
+  return IsLength ? Constrained - *LowPC : Constrained;
 }
 
 unsigned DIEAttributeCloner::finalizeAbbreviations(bool HasChildrenToClone) {
