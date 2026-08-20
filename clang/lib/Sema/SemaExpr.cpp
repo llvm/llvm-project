@@ -4133,6 +4133,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
           Ty = Context.getIntTypeForBitwidth(Width,
                                              /*Signed=*/!Literal.isUnsigned);
         }
+        // To maintain consistency with MSVC, we chose to truncate directly
+        // without issuing any warnings.
         ResultVal = ResultVal.zextOrTrunc(Width);
       }
 
