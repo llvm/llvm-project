@@ -491,6 +491,12 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allIntScalarsAndVectors);
 
+  // lrint/llrint round using the current rounding mode, which for
+  // unconstrained FP operations is round-to-nearest-even. The generic
+  // lowering expands them into G_FRINT + G_FPTOSI, which are selected as
+  // OpenCL.std rint / GLSL.std.450 RoundEven followed by OpConvertFToS.
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT}).lower();
+
   // FP conversions.
   getActionDefinitionsBuilder({G_FPTRUNC, G_FPEXT})
       .legalForCartesianProduct(allFloatScalarsAndVectors);
