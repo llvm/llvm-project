@@ -78,6 +78,7 @@ typedef bool (*ExpressionCancelCallback)(lldb::ExpressionEvaluationPhase phase,
 typedef void *ScriptObjectPtr;
 
 typedef uint64_t addr_t;
+typedef uint64_t addr_space_t;
 typedef int32_t callback_token_t;
 typedef uint64_t user_id_t;
 typedef uint64_t pid_t;

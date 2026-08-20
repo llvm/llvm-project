@@ -60,8 +60,9 @@ struct SeedBundleTest : public testing::Test {
 class SeedBundleForTest : public sandboxir::SeedBundle {
 public:
   using sandboxir::SeedBundle::SeedBundle;
-  void insert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
+  bool tryInsert(sandboxir::Instruction *I, ScalarEvolution &SE) override {
     insertAt(Seeds.end(), I);
+    return true;
   }
 };
 
@@ -203,9 +204,9 @@ bb:
 
   // Single instruction constructor; test insert out of memory order
   sandboxir::StoreSeedBundle SB(S3);
-  SB.insert(S1, SE);
-  SB.insert(S2, SE);
-  SB.insert(S0, SE);
+  EXPECT_TRUE(SB.tryInsert(S1, SE));
+  EXPECT_TRUE(SB.tryInsert(S2, SE));
+  EXPECT_TRUE(SB.tryInsert(S0, SE));
   EXPECT_THAT(SB, testing::ElementsAre(S0, S1, S2, S3));
 
   // Instruction list constructor; test list out of order
@@ -220,6 +221,65 @@ bb:
   Loads.push_back(L0);
   sandboxir::LoadSeedBundle LB(std::move(Loads), SE);
   EXPECT_THAT(LB, testing::ElementsAre(L0, L1, L2, L3));
+}
+
+TEST_F(SeedBundleTest, TryInsert) {
+  parseIR(C, R"IR(
+define void @foo(float %val, ptr %ptr, i32 %arg, ptr %ptrY) {
+bb:
+  %gep0 = getelementptr float, ptr %ptr, i32 0
+  %gep1 = getelementptr float, ptr %ptr, i32 1
+  %gep2 = getelementptr float, ptr %ptr, i32 2
+  %gepX = getelementptr float, ptr %ptr, i32 %arg
+
+  store float %val, ptr %gep0
+  store float %val, ptr %gep1
+  store float %val, ptr %gepX
+  store float %val, ptr %ptrY
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+
+  DominatorTree DT(LLVMF);
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
+  TargetLibraryInfo TLI(TLII);
+  DataLayout DL(M->getDataLayout());
+  LoopInfo LI(DT);
+  AssumptionCache AC(LLVMF);
+  ScalarEvolution SE(LLVMF, TLI, AC, DT, LI);
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto *BB = &*F.begin();
+  auto It = std::next(BB->begin(), 4);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *SX = cast<sandboxir::StoreInst>(&*It++);
+  auto *SY = cast<sandboxir::StoreInst>(&*It++);
+
+  {
+    sandboxir::StoreSeedBundle Seeds(S0);
+    EXPECT_TRUE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SX, SE));
+    ExpectThatElementsAre(Seeds, {S0, S1});
+    EXPECT_FALSE(Seeds.tryInsert(SY, SE));
+    ExpectThatElementsAre(Seeds, {S0, S1});
+  }
+  {
+    sandboxir::StoreSeedBundle Seeds(SX);
+    EXPECT_FALSE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(S0, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SY, SE));
+    ExpectThatElementsAre(Seeds, {SX});
+  }
+  {
+    sandboxir::StoreSeedBundle Seeds(SY);
+    EXPECT_FALSE(Seeds.tryInsert(S1, SE));
+    EXPECT_FALSE(Seeds.tryInsert(S0, SE));
+    EXPECT_FALSE(Seeds.tryInsert(SX, SE));
+    ExpectThatElementsAre(Seeds, {SY});
+  }
 }
 
 TEST_F(SeedBundleTest, Container) {

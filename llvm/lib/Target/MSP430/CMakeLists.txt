@@ -41,6 +41,7 @@ add_llvm_target(MSP430CodeGen
   MSP430Desc
   MSP430Info
   ObjCARC
+  Passes
   Scalar
   SelectionDAG
   Support

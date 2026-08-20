@@ -18,6 +18,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Policy.h"
 
 #include "../PythonDataObjects.h"
 #include "../SWIGPythonBridge.h"
@@ -50,7 +51,8 @@ public:
     };
 
     AbstractMethodCheckerCases checker_case;
-    std::variant<std::monostate, InvalidArgumentCountPayload> payload;
+    std::variant<std::monostate, InvalidArgumentCountPayload, std::string>
+        payload;
   };
 
   llvm::Expected<FileSpec> GetScriptedModulePath() override {
@@ -145,9 +147,10 @@ public:
 
       auto arg_info_or_err = callable.GetArgInfo();
       if (!arg_info_or_err) {
-        llvm::consumeError(arg_info_or_err.takeError());
-        SET_CASE_AND_CONTINUE(method_name,
-                              AbstractMethodCheckerCases::eUnknownArgumentCount)
+        checker[method_name] = {
+            AbstractMethodCheckerCases::eUnknownArgumentCount,
+            ExtractPythonError(arg_info_or_err.takeError())};
+        continue;
       }
 
       PythonCallable::ArgInfo arg_info = *arg_info_or_err;
@@ -193,6 +196,10 @@ public:
       else
         return create_error("Missing scripting object.");
     }
+
+    std::optional<PolicyStack::Guard> policy_guard;
+    if (!UserCanRunDirectly())
+      policy_guard = PolicyStack::Get().PushScriptedExtensionCall();
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
@@ -263,21 +270,28 @@ public:
 
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
-              llvm::consumeError(expected_return_object.takeError());
-              expected_return_object = init(args...);
+              if (!expected_return_object)
+                llvm::consumeError(expected_return_object.takeError());
+              expected_return_object = init.Call(args...);
             },
             std::tuple_cat(transformed_args, std::make_tuple(dict)));
       } else {
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
-              llvm::consumeError(expected_return_object.takeError());
-              expected_return_object = init(args...);
+              if (!expected_return_object)
+                llvm::consumeError(expected_return_object.takeError());
+              expected_return_object = init.Call(args...);
             },
             transformed_args);
       }
 
       if (!expected_return_object)
-        return expected_return_object.takeError();
+        // Drain the Python exception into a plain string while the GIL is
+        // still held: `PythonException` owns raw `PyObject*` references, and
+        // `py_lock` (and the GIL it holds) is released as this function
+        // returns, before the caller gets a chance to touch the error.
+        return llvm::createStringError(
+            ExtractPythonError(expected_return_object.takeError()));
       result = expected_return_object.get();
     }
 
@@ -323,13 +337,16 @@ public:
                                    obj_class_name.GetString(),
                                    method_checker.first)));
         break;
-      case AbstractMethodCheckerCases::eUnknownArgumentCount:
+      case AbstractMethodCheckerCases::eUnknownArgumentCount: {
+        const std::string *py_error =
+            std::get_if<std::string>(&method_checker.second.payload);
         abstract_method_errors = llvm::joinErrors(
             std::move(abstract_method_errors),
             std::move(create_error(
-                "Abstract method {0}.{1} has unknown argument count.",
-                obj_class_name.GetString(), method_checker.first)));
-        break;
+                "abstract method {0}.{1} has unknown argument count: {2}",
+                obj_class_name.GetString(), method_checker.first,
+                py_error ? *py_error : "<no further information>")));
+      } break;
       case AbstractMethodCheckerCases::eInvalidArgumentCount: {
         auto &payload_variant = method_checker.second.payload;
         if (!std::holds_alternative<
@@ -401,6 +418,10 @@ public:
       return ErrorWithMessage<T>(caller_signature, "missing script class name",
                                  error);
 
+    std::optional<PolicyStack::Guard> policy_guard;
+    if (!UserCanRunDirectly())
+      policy_guard = PolicyStack::Get().PushScriptedExtensionCall();
+
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
 
@@ -453,15 +474,26 @@ public:
         llvm::createStringError("not initialized");
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
-          llvm::consumeError(expected_return_object.takeError());
-          expected_return_object = method(args...);
+          if (!expected_return_object)
+            llvm::consumeError(expected_return_object.takeError());
+          expected_return_object = method.Call(args...);
         },
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
+      // TODO: Stringify `args` and include them in the message so users
+      // can see what was passed to the failing call (e.g.
+      // `read_memory_at_address(0x500000000, 4)`). Requires a SFINAE
+      // helper that falls back to a placeholder for types without a
+      // format_provider / operator<<.
+      error = Status::FromErrorString(ExtractPythonError(std::move(e)).c_str());
+
       return ErrorWithMessage<T>(
-          caller_signature, "python static method could not be called", error);
+          caller_signature,
+          llvm::formatv("python exception in {0} method '{1}'", class_name,
+                        method_name)
+              .str(),
+          error);
     }
 
     PythonObject py_return = std::move(expected_return_object.get());
@@ -478,6 +510,23 @@ public:
   }
 
 protected:
+  /// Extract detailed error message including Python backtrace if available.
+  ///
+  /// This helper processes llvm::Error objects that may contain PythonException
+  /// instances, extracting full Python backtraces when available.
+  ///
+  /// \param error The llvm::Error to extract information from.
+  /// \return A string containing the error message, including full Python
+  ///         backtrace if the error was a PythonException.
+  static std::string ExtractPythonError(llvm::Error error) {
+    std::string error_msg;
+    llvm::handleAllErrors(
+        std::move(error),
+        [&](python::PythonException &E) { error_msg = E.ReadBacktrace(); },
+        [&](const llvm::ErrorInfoBase &E) { error_msg = E.message(); });
+    return error_msg;
+  }
+
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
     return p.CreateStructuredObject();
@@ -495,6 +544,10 @@ protected:
     if (!m_object_instance_sp)
       return ErrorWithMessage<T>(caller_signature, "python object ill-formed",
                                  error);
+
+    std::optional<PolicyStack::Guard> policy_guard;
+    if (!UserCanRunDirectly())
+      policy_guard = PolicyStack::Get().PushScriptedExtensionCall();
 
     Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                    Locker::FreeLock);
@@ -538,15 +591,29 @@ protected:
                   std::make_index_sequence<sizeof...(Args) + 1>{},
                   [&implementor, &method_name,
                    &expected_return_object](auto &&...call_args) {
-                    llvm::consumeError(expected_return_object.takeError());
+                    if (!expected_return_object)
+                      llvm::consumeError(expected_return_object.takeError());
                     expected_return_object = implementor.CallMethod(
                         method_name.data(), call_args...);
                   });
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
-      return ErrorWithMessage<T>(caller_signature,
-                                 "python method could not be called", error);
+      // TODO: Stringify `args` and include them in the message so users
+      // can see what was passed to the failing call (e.g.
+      // `read_memory_at_address(0x500000000, 4)`). Requires a SFINAE
+      // helper that falls back to a placeholder for types without a
+      // format_provider / operator<<.
+      error = Status::FromErrorString(ExtractPythonError(std::move(e)).c_str());
+
+      return ErrorWithMessage<T>(
+          caller_signature,
+          llvm::formatv("python exception in {0} method '{1}'",
+                        GetScriptedMetadata()
+                            ? GetScriptedMetadata()->GetClassName()
+                            : "<unknown>",
+                        method_name)
+              .str(),
+          error);
     }
 
     PythonObject py_return = std::move(expected_return_object.get());

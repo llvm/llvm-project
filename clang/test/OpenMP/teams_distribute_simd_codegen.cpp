@@ -207,7 +207,7 @@ int main (int argc, char **argv) {
 
 
 
-// OMP5_50-DAG: !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP5_50-DAG: !{!"llvm.loop.vectorize.disable"}
 #endif // CK4
 #endif
 // CHECK1-LABEL: define {{[^@]+}}@_Z21teams_argument_globali

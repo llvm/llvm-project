@@ -8,6 +8,7 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
 #include <detail/global_objects.hpp>
@@ -66,7 +67,10 @@ QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
       MDevice(deviceImpl),
       MContext(MDevice.getPlatformImpl().getDefaultContext()) {
-  callAndThrow(olCreateQueue, MDevice.getOLHandle(), &MOffloadQueue);
+  assert(MContext.getOLHandleRef() &&
+         "Queue must be associated with a valid offload context");
+  callAndThrow(olCreateQueue, MContext.getOLHandleRef(), MDevice.getOLHandle(),
+               &MOffloadQueue);
 }
 
 QueueImpl::~QueueImpl() {
@@ -196,6 +200,32 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,
                NumBytes);
+  return createEvent();
+}
+
+EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
+                                 const std::vector<EventImplPtr> &DepEvents) {
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+
+  if (NumBytes == 0) {
+    handleEventDependencies(DepEvents);
+    return createEvent();
+  }
+  if (!Ptr) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in prefetch operation");
+  }
+
+  constexpr std::size_t Count = 1;
+  const void *Mems[] = {Ptr};
+  const std::size_t Sizes[] = {NumBytes};
+
+  constexpr ol_mem_migration_flags_t Flag =
+      OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
+
   return createEvent();
 }
 

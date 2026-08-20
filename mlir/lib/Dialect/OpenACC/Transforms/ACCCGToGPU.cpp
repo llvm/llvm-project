@@ -1412,6 +1412,47 @@ std::pair<SmallVector<mlir::acc::GPUParallelDimAttr>,
 ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
                                                     Block *block) {
   MLIRContext *ctx = computeRegion->getContext();
+
+  mlir::acc::GPUParallelDimAttr routineParDim;
+  if (isInsideACCSpecializedRoutine(computeRegion)) {
+    FunctionOpInterface funcOp =
+        computeRegion->getParentOfType<FunctionOpInterface>();
+    routineParDim = getSpecializedRoutineDim(funcOp, defaultPolicy);
+  }
+
+  // The active set is precomputed separately from the ownership par_dims for
+  // privatizations; prefer that attribute when present. The inactive dims are
+  // the launch dims which are not active.
+  if (isa<acc::PrivateLocalOp, acc::PrivatizeOp>(op)) {
+    if (mlir::acc::ActiveParDimsAttr precomputedActiveParDims =
+            getActiveParDimsAttr(op)) {
+      mlir::acc::GPUParallelDimAttr lowestParDim =
+          mlir::acc::GPUParallelDimAttr::threadXDim(ctx);
+
+      SmallVector<mlir::acc::GPUParallelDimAttr> launchParDims;
+      if (routineParDim) {
+        for (mlir::acc::GPUParallelDimAttr parDim = routineParDim;
+             parDim.getOrder() >= lowestParDim.getOrder();
+             parDim = parDim.getOneLower()) {
+          mlir::acc::insertParDim(launchParDims, parDim);
+        }
+      } else {
+        launchParDims = computeRegion.getLaunchParDims();
+      }
+
+      SmallVector<mlir::acc::GPUParallelDimAttr> activeParDims(
+          precomputedActiveParDims.getArray());
+      SmallVector<mlir::acc::GPUParallelDimAttr> inactiveParDims;
+      for (mlir::acc::GPUParallelDimAttr launchParDim : launchParDims) {
+        if (launchParDim.getOrder() < lowestParDim.getOrder())
+          break;
+        if (!llvm::is_contained(activeParDims, launchParDim))
+          inactiveParDims.push_back(launchParDim);
+      }
+      return std::pair{activeParDims, inactiveParDims};
+    }
+  }
+
   SmallVector<mlir::acc::GPUParallelDimAttr> ancestorParDims =
       getAncestorParDims(op);
   // Preserve whether there were any structural ancestor par-dims before
@@ -1421,11 +1462,7 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
   bool noStructuralAncestorParDims =
       llvm::none_of(ancestorParDims, [](auto pd) { return !pd.isSeq(); });
 
-  mlir::acc::GPUParallelDimAttr routineParDim;
-  if (isInsideACCSpecializedRoutine(computeRegion)) {
-    FunctionOpInterface funcOp =
-        computeRegion->getParentOfType<FunctionOpInterface>();
-    routineParDim = getSpecializedRoutineDim(funcOp, defaultPolicy);
+  if (routineParDim) {
     if (routineParDim.isThreadX()) {
       mlir::acc::insertParDim(ancestorParDims,
                               mlir::acc::GPUParallelDimAttr::threadYDim(ctx));

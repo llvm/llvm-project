@@ -50,6 +50,7 @@ add_orc_rt_unittest(CoreTests
   SimpleSymbolTableTest.cpp
   StandaloneMachOUnwindInfoRegistrarTest.cpp
   StringExtrasTest.cpp
+  StringPoolTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp
@@ -63,7 +64,10 @@ add_orc_rt_unittest(CoreTests
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 target_compile_options(CoreTests PRIVATE ${ORC_RT_COMPILE_FLAGS})
-target_link_libraries(CoreTests PRIVATE orc-rt-executor)
+target_link_libraries(CoreTests PRIVATE
+  orc-rt-executor
+  orc-rt-executor-impl-headers
+  )
 
 # Build a shared library for NativeDylibManager tests.
 add_library(NativeDylibManagerTestLib SHARED

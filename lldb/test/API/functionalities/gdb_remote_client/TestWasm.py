@@ -408,6 +408,45 @@ class TestWasm(GDBRemoteTestBase):
 
     @skipIfAsan
     @skipIfXmlSupportMissing
+    def test_max_backtrace_depth(self):
+        """Test that a Wasm backtrace stops at the depth the target sets, so
+        that a stack recursing without end is not walked to its end."""
+
+        yaml_path = "simple.yaml"
+        yaml_base, _ = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact(yaml_base)
+        self.yaml2obj(yaml_path, obj_path)
+
+        call_stacks = [
+            WasmCallStack(
+                [WasmStackFrame(0x019C), WasmStackFrame(0x01E5), WasmStackFrame(0x01FE)]
+            ),
+        ]
+        self.server.responder = MyResponder(obj_path, "test_wasm", call_stacks)
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+        self.assertTrue(thread.GetFrameAtIndex(0).IsValid())
+
+        # A depth set after a stop still applies to the frames a backtrace has
+        # not reported yet, which is when a user lowers it.
+        self.runCmd("settings set target.process.thread.max-backtrace-depth 2")
+
+        # The stub reported three frames, and the innermost two are the ones
+        # kept.
+        self.assertEqual(2, thread.GetNumFrames())
+        self.assertEqual(thread.GetFrameAtIndex(0).GetPC(), LOAD_ADDRESS | 0x019C)
+        self.assertEqual(thread.GetFrameAtIndex(1).GetPC(), LOAD_ADDRESS | 0x01E5)
+        self.assertFalse(thread.GetFrameAtIndex(2).IsValid())
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
     def test_read_global(self):
         """Test that a WebAssembly global can be read through the address its
         module gives it, and that a read it cannot serve fails instead of
@@ -462,3 +501,52 @@ class TestWasm(GDBRemoteTestBase):
         # Likewise for a global that does not exist.
         process.ReadMemory(globals_addr + 99, 4, error)
         self.assertFalse(error.Success())
+
+    @skipIfXmlSupportMissing
+    def test_non_wasm_process(self):
+        """Test that the plugin falls back to plain GDB remote debugging when
+        it is requested by name for a process that isn't WebAssembly."""
+
+        class NonWasmResponder(MockGDBServerResponder):
+            def qHostInfo(self):
+                return "triple:%s;ptrsize:8;endian:little;" % hex_encode_bytes(
+                    "x86_64-unknown-linux-gnu"
+                )
+
+            def qfThreadInfo(self):
+                return "m1"
+
+            def haltReason(self):
+                return "T02thread:1;threads:1;thread-pcs:10001bc00;"
+
+            def qXferRead(self, obj, annex, offset, length):
+                if annex == "target.xml":
+                    return (
+                        """<?xml version="1.0"?>
+                        <target version="1.0">
+                          <architecture>i386:x86-64</architecture>
+                          <feature name="org.gnu.gdb.i386.core">
+                            <reg name="rip" bitsize="64" regnum="0" type="code_ptr" group="general"/>
+                          </feature>
+                        </target>""",
+                        False,
+                    )
+                return None, False
+
+        self.server.responder = NonWasmResponder()
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        self.assertEqual(process.GetPluginName(), "wasm")
+        self.assertIn("x86_64", target.GetTriple())
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+        self.assertEqual(thread.GetFrameAtIndex(0).GetPC(), 0x10001BC00)
+        self.assertNotIn(
+            "qWasmCallStack", "".join(self.server.responder.packetLog.get_received())
+        )
