@@ -138,6 +138,57 @@ define <vscale x 2 x i64> @broadcast_quad_i64(<2 x i64> %a) {
   ret <vscale x 2 x i64> %out
 }
 
+; vscale_range tests
+
+define <vscale x 2 x i64> @broadcast_v4i32_to_nxv2i32(<4 x i32> %a) vscale_range(2,8) {
+; CHECK-LABEL: broadcast_v4i32_to_nxv2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i32> @llvm.vector.broadcast.nxv2i32.v4i32(<4 x i32> %a)
+  %out.legal = zext <vscale x 2 x i32> %out to <vscale x 2 x i64>
+  ret <vscale x 2 x i64> %out.legal
+}
+
+; wider-than-NEON fixed-length source
+define <vscale x 2 x i64> @broadcast_v4i64_to_nxv2i64(<vscale x 2 x i64> %a.legal) vscale_range(2,8) {
+; CHECK-LABEL: broadcast_v4i64_to_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    uzp2 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    uzp1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov z1.q, q2
+; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    ret
+  %a = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %a.legal, i64 0)
+  %r = call <vscale x 2 x i64> @llvm.vector.broadcast.nxv2i64.v4i64(<4 x i64> %a)
+  ret <vscale x 2 x i64> %r
+}
+
+; wider-than-NEON fixed-length source and wide destination
+define <vscale x 4 x i32> @broadcast_v4i64_to_nxv4i64(<vscale x 2 x i64> %a.legal) vscale_range(2,8) {
+; CHECK-LABEL: broadcast_v4i64_to_nxv4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    uzp2 v2.2d, v0.2d, v1.2d
+; CHECK-NEXT:    uzp1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov z1.q, q2
+; CHECK-NEXT:    mov z0.q, q0
+; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s
+; CHECK-NEXT:    ret
+  %a = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %a.legal, i64 0)
+  %r = call <vscale x 4 x i64> @llvm.vector.broadcast.nxv4i64.v4i64(<4 x i64> %a)
+  %r.legal = trunc <vscale x 4 x i64> %r to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %r.legal
+}
+
 ; FP / BFP types
 
 define <vscale x 8 x half> @broadcast_quad_f16(<8 x half> %a) {
