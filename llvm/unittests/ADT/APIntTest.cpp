@@ -2902,9 +2902,9 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(GreatestCommonDivisor(One, Two), One);
       EXPECT_EQ(GreatestCommonDivisor(Two, Two), Two);
 
-      EXPECT_EQ(SGreatestCommonDivisor(Zero, MinusTwo), MinusTwo);
+      EXPECT_EQ(SGreatestCommonDivisor(Zero, MinusTwo), Two);
       EXPECT_EQ(SGreatestCommonDivisor(MinusOne, MinusTwo), One);
-      EXPECT_EQ(SGreatestCommonDivisor(One, MinusTwo), MinusOne);
+      EXPECT_EQ(SGreatestCommonDivisor(One, MinusTwo), One);
       EXPECT_EQ(GreatestCommonDivisor(MinusTwo, MinusTwo), MinusTwo);
 
       // Test some corner cases near the highest representable value.
@@ -2915,7 +2915,7 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(GreatestCommonDivisor(Two, Max), One);
       EXPECT_EQ(GreatestCommonDivisor(Max, Max), Max);
 
-      EXPECT_EQ(SGreatestCommonDivisor(Zero, Max), Max);
+      EXPECT_EQ(SGreatestCommonDivisor(Zero, Max), One);
       EXPECT_EQ(SGreatestCommonDivisor(MinusOne, Max), One);
       EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, Max), One);
       EXPECT_EQ(SGreatestCommonDivisor(Max, Max), One);
@@ -2925,8 +2925,8 @@ TEST(APIntTest, GCD) {
       EXPECT_EQ(SGreatestCommonDivisor(Zero, SMin), SMin);
       EXPECT_EQ(SGreatestCommonDivisor(MinusOne, SMin), One);
       EXPECT_EQ(SGreatestCommonDivisor(MinusTwo, SMin), Two);
-      EXPECT_EQ(SGreatestCommonDivisor(One, SMin), MinusOne);
-      EXPECT_EQ(SGreatestCommonDivisor(Two, SMin), MinusTwo);
+      EXPECT_EQ(SGreatestCommonDivisor(One, SMin), One);
+      EXPECT_EQ(SGreatestCommonDivisor(Two, SMin), Two);
       EXPECT_EQ(SGreatestCommonDivisor(SMin, SMin), SMin);
 
       APInt MaxOver2 = Max.udiv(Two);
