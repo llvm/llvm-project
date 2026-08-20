@@ -213,27 +213,33 @@ define void @gather_sequence_crash(<2 x float> %arg, ptr %arg1, float %arg2, ptr
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr float, ptr [[ARG4]], i64 6
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP24]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[ARG5:%.*]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr float, ptr [[ARG4]], i64 5
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd float 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr float, ptr [[ARG4]], i64 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = fadd float 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr [[TMP30]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[TMP30]], align 4
 ; CHECK-NEXT:    br label [[BB33:%.*]]
 ; CHECK:       bb33:
 ; CHECK-NEXT:    br label [[BB34:%.*]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr float, ptr [[ARG4]], i64 3
+; CHECK-NEXT:    [[ARG3:%.*]] = getelementptr float, ptr [[ARG4]], i64 2
 ; CHECK-NEXT:    [[TMP37:%.*]] = load float, ptr [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP38:%.*]] = fadd float 0.000000e+00, [[TMP37]]
 ; CHECK-NEXT:    store float [[TMP38]], ptr [[TMP35]], align 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr float, ptr [[ARG4]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[TMP39]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[TMP39]], align 4
-; CHECK-NEXT:    [[TMP44:%.*]] = load float, ptr [[ARG3:%.*]], align 4
-; CHECK-NEXT:    [[TMP45:%.*]] = load float, ptr [[ARG4]], align 4
+; CHECK-NEXT:    [[TMP44:%.*]] = load float, ptr [[ARG3]], align 4
+; CHECK-NEXT:    [[TMP41:%.*]] = fadd float 0.000000e+00, [[TMP44]]
+; CHECK-NEXT:    store float [[TMP41]], ptr [[ARG3]], align 4
+; CHECK-NEXT:    [[TMP45:%.*]] = load float, ptr [[TMP39]], align 4
 ; CHECK-NEXT:    [[TMP46:%.*]] = fadd float 0.000000e+00, [[TMP45]]
-; CHECK-NEXT:    store float [[TMP46]], ptr [[ARG4]], align 4
+; CHECK-NEXT:    store float [[TMP46]], ptr [[TMP39]], align 4
+; CHECK-NEXT:    [[TMP47:%.*]] = load float, ptr [[ARG6:%.*]], align 4
+; CHECK-NEXT:    [[TMP48:%.*]] = load float, ptr [[ARG4]], align 4
+; CHECK-NEXT:    [[TMP49:%.*]] = fadd float 0.000000e+00, [[TMP48]]
+; CHECK-NEXT:    store float [[TMP49]], ptr [[ARG4]], align 4
 ; CHECK-NEXT:    call void @quux()
 ; CHECK-NEXT:    br label [[BB47:%.*]]
 ; CHECK:       bb47:

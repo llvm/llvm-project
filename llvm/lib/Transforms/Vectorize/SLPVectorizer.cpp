@@ -1013,8 +1013,7 @@ public:
   /// \returns true if widening the store chain anchored at \p BaseStore into a
   /// vector store of \p VF elements would break store-to-load forwarding for a
   /// nearby loop-carried load (a short, misaligned backward dependence). Used
-  /// to add an STLF penalty to the store entry's cost. Result is memoized in
-  /// StlfConflictCache.
+  /// to add an STLF penalty to the store entry's cost.
   bool findStoreLoadForwardingConflict(StoreInst *BaseStore, unsigned VF);
 
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
@@ -1252,9 +1251,6 @@ public:
     TreeEntryToStridedPtrInfoMap.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
-    // Loads/stores may be reconstructed on the next vectorization attempt, so
-    // stale STLF decisions must not carry over.
-    StlfConflictCache.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -5699,11 +5695,6 @@ private:
   DemandedBits *DB;
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
-
-  /// Cached STLF conflict decisions keyed by (base store of chain, VF), to
-  /// avoid re-walking the tree when the store entry is costed repeatedly.
-  /// Cleared on each buildTree() via deleteTree().
-  SmallDenseMap<std::pair<const StoreInst *, unsigned>, bool> StlfConflictCache;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
@@ -28292,67 +28283,41 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
 
   StoreInst *FirstStore = BaseStore;
 
-  // Memoize per (store, VF); the entry is re-costed repeatedly.
-  auto Key = std::make_pair(FirstStore, VF);
-  auto CacheIt = StlfConflictCache.find(Key);
-  if (CacheIt != StlfConflictCache.end())
-    return CacheIt->second;
-
-  auto CacheAndReturn = [&](const bool Result) -> bool {
-    StlfConflictCache[Key] = Result;
-    // No conflict at VF implies none at any smaller VF that divides VF, so seed
-    // those entries too. The recency window is VF-independent (so it stays
-    // satisfied for any smaller width), and the distance remains a multiple of
-    // V * ElementSize only for divisors of VF. This covers the power-of-2
-    // ladder (each smaller power of 2 divides the larger) and any
-    // non-power-of-2 VF the caller may probe. Conflicts do not propagate
-    // downward.
-    if (!Result)
-      for (unsigned V = 2; V < VF; ++V)
-        if (VF % V == 0)
-          StlfConflictCache.try_emplace(std::make_pair(FirstStore, V), false);
-    return Result;
-  };
-
   Type *ValueTy = FirstStore->getValueOperand()->getType();
   TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
   if (StoreSize.isScalable())
-    return CacheAndReturn(false);
+    return false;
   uint64_t ElementSize = StoreSize.getFixedValue();
   if (ElementSize == 0)
-    return CacheAndReturn(false);
+    return false;
 
   // Store-to-load forwarding hazards are a loop-carried concern.
   const Loop *StoreL = LI->getLoopFor(FirstStore->getParent());
   if (!StoreL)
-    return CacheAndReturn(false);
+    return false;
 
   uint64_t VectorStoreBytes = VF * ElementSize;
   LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
                     << " ElementSize=" << ElementSize
                     << " VectorStoreBytes=" << VectorStoreBytes << "\n");
 
-  // Enumerate candidate loads directly from the tree's load and gather nodes: a
-  // conflicting load is either widened (a load node) or packed into a gather
-  // leaf (e.g. a splat), so scanning those node kinds is sufficient.
+  // A store-to-load forwarding hazard can involve any load in the loop that
+  // reads the widened store's base, not only loads that became SLP tree nodes.
+  // A conflicting load may feed a scalar store, sit below a gather/splat leaf,
+  // or be vectorized in a different tree, so it need not appear as a load node
+  // of the chain being costed. Enumerate every simple load in the store's loop
+  // that shares the store base.
   Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
   SmallPtrSet<LoadInst *, 8> CandidateLoads;
-  for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
-    const TreeEntry *TE = TEPtr.get();
-    if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
-      continue;
-    if (!TE->isGather() &&
-        !(TE->hasState() && TE->getOpcode() == Instruction::Load))
-      continue;
-    for (Value *V : TE->Scalars)
-      if (auto *LoadI = dyn_cast<LoadInst>(V))
+  for (BasicBlock *BB : StoreL->blocks())
+    for (Instruction &I : *BB)
+      if (auto *LoadI = dyn_cast<LoadInst>(&I))
         if (LoadI->isSimple() &&
             getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
           CandidateLoads.insert(LoadI);
-  }
 
   if (CandidateLoads.empty())
-    return CacheAndReturn(false);
+    return false;
 
   // For each candidate load, the widened chain becomes one wide store at the
   // base; check whether the load straddles two such wide stores.
@@ -28400,11 +28365,11 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
                         << " bytes, load width " << LoadElementSize
                         << " bytes, misalignment "
                         << (Distance % VectorStoreBytes) << "\n");
-      return CacheAndReturn(true);
+      return true;
     }
   }
 
-  return CacheAndReturn(false);
+  return false;
 }
 
 std::optional<bool>

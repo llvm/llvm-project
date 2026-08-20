@@ -20,7 +20,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <utility>
@@ -1600,15 +1599,6 @@ bool TargetTransformInfo::isUniform(const Instruction *I,
 }
 
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
-
-InstructionCost TargetTransformInfoImplBase::getStoreLoadForwardingConflictCost(
-    Type *VecTy, TargetTransformInfo::TargetCostKind CostKind) const {
-  // No subtarget scheduling model is available here, so fall back to the same
-  // default store-to-load forwarding penalty the scheduling model uses. Targets
-  // with a real scheduling model go through BasicTTIImpl and use their own
-  // StoreLoadForwardingPenalty instead.
-  return InstructionCost(MCSchedModel::DefaultStoreLoadForwardingPenalty);
-}
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 

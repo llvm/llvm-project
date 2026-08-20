@@ -417,37 +417,70 @@ for.end:
 ;
 ; Test 7: Loads that feed scalar arithmetic below a gather/splat leaf.
 ;
-; A[i-5] and A[i-7] would be misaligned to a 16-byte vector store, but they
-; only feed the scalar %sum, which is then broadcast. Candidate loads are
-; enumerated from the tree's load and gather nodes, so loads sitting below a
-; gather leaf (here, under %sum) are not seen and no penalty is charged; the
-; chain vectorizes. This documents the reachability limit of the node-based
-; enumeration.
+; A[i-5] and A[i-7] are misaligned to a 16-byte vector store (distances 20 and
+; 28 bytes, both %16 != 0) but only feed the scalar %sum, which is broadcast, so
+; they never become load tree nodes of the chain. Candidate loads are now
+; enumerated from all simple loads in the store's loop, not just tree nodes, so
+; these loads are seen and the chain is kept scalar under STLF-ON.
 ;
 define void @stlf_multiple_conflicting_loads(ptr noalias %A, i64 %n) {
-; CHECK-LABEL: define void @stlf_multiple_conflicting_loads(
-; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK5_IDX:%.*]] = sub i64 [[I]], 5
-; CHECK-NEXT:    [[BACK5_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK5_IDX]]
-; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[BACK5_GEP]], align 4
-; CHECK-NEXT:    [[BACK7_IDX:%.*]] = sub i64 [[I]], 7
-; CHECK-NEXT:    [[BACK7_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK7_IDX]]
-; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[BACK7_GEP]], align 4
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[T5]], [[T7]]
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUM]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret void
+; STLF-ON-LABEL: define void @stlf_multiple_conflicting_loads(
+; STLF-ON-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-ON-NEXT:  [[ENTRY:.*]]:
+; STLF-ON-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-ON:       [[FOR_BODY]]:
+; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-ON-NEXT:    [[BACK5_IDX:%.*]] = sub i64 [[I]], 5
+; STLF-ON-NEXT:    [[BACK5_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK5_IDX]]
+; STLF-ON-NEXT:    [[T5:%.*]] = load i32, ptr [[BACK5_GEP]], align 4
+; STLF-ON-NEXT:    [[BACK7_IDX:%.*]] = sub i64 [[I]], 7
+; STLF-ON-NEXT:    [[BACK7_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK7_IDX]]
+; STLF-ON-NEXT:    [[T7:%.*]] = load i32, ptr [[BACK7_GEP]], align 4
+; STLF-ON-NEXT:    [[SUM:%.*]] = add nsw i32 [[T5]], [[T7]]
+; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[SUM]], 1
+; STLF-ON-NEXT:    [[T2:%.*]] = add nsw i32 [[SUM]], 2
+; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[SUM]], 3
+; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[SUM]], 4
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; STLF-ON-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
+; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
+; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
+; STLF-ON-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
+; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
+; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
+; STLF-ON-NEXT:    store i32 [[T2]], ptr [[GEP1]], align 4
+; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP2]], align 4
+; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
+; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-ON-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-ON:       [[FOR_END]]:
+; STLF-ON-NEXT:    ret void
+;
+; STLF-OFF-LABEL: define void @stlf_multiple_conflicting_loads(
+; STLF-OFF-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-OFF-NEXT:  [[ENTRY:.*]]:
+; STLF-OFF-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-OFF:       [[FOR_BODY]]:
+; STLF-OFF-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-OFF-NEXT:    [[BACK5_IDX:%.*]] = sub i64 [[I]], 5
+; STLF-OFF-NEXT:    [[BACK5_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK5_IDX]]
+; STLF-OFF-NEXT:    [[T5:%.*]] = load i32, ptr [[BACK5_GEP]], align 4
+; STLF-OFF-NEXT:    [[BACK7_IDX:%.*]] = sub i64 [[I]], 7
+; STLF-OFF-NEXT:    [[BACK7_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK7_IDX]]
+; STLF-OFF-NEXT:    [[T7:%.*]] = load i32, ptr [[BACK7_GEP]], align 4
+; STLF-OFF-NEXT:    [[SUM:%.*]] = add nsw i32 [[T5]], [[T7]]
+; STLF-OFF-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; STLF-OFF-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUM]], i64 0
+; STLF-OFF-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; STLF-OFF-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
+; STLF-OFF-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; STLF-OFF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-OFF-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-OFF-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-OFF:       [[FOR_END]]:
+; STLF-OFF-NEXT:    ret void
 ;
 entry:
   br label %for.body
