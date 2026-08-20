@@ -56,9 +56,9 @@ func.func @vector_maskedload(%arg0 : memref<4x5xf32>) -> vector<4xf32> {
 
 // CHECK-LABEL:  @vector_maskedload_with_alignment
 //       CHECK:       memref.load
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 //       CHECK:       memref.load
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 func.func @vector_maskedload_with_alignment(%arg0 : memref<4x5xf32>) -> vector<4xf32> {
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index
@@ -112,9 +112,9 @@ func.func @vector_maskedstore(%arg0 : memref<4x5xf32>, %arg1 : vector<4xf32>) {
 
 // CHECK-LABEL:  @vector_maskedstore_with_alignment
 //       CHECK:       memref.store
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 //       CHECK:       memref.store
-//       CHECK-SAME:  {alignment = 8 : i64}
+//       CHECK-SAME:  alignment(8)
 func.func @vector_maskedstore_with_alignment(%arg0 : memref<4x5xf32>, %arg1 : vector<4xf32>) {
   %idx_0 = arith.constant 0 : index
   %idx_1 = arith.constant 1 : index

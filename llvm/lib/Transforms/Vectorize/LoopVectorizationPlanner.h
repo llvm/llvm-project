@@ -375,15 +375,22 @@ public:
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
     VPlan &Plan = getPlan();
-    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
+    unsigned MinEC = EC.getKnownMinValue();
     if (EC.isScalable()) {
       VPValue *VScale = createVScale(Ty);
-      RuntimeEC = EC.getKnownMinValue() == 1
-                      ? VScale
-                      : createOverflowingOp(Instruction::Mul,
-                                            {VScale, RuntimeEC}, {true, false});
+      if (MinEC == 1)
+        return VScale;
+      // TODO: Move this optimization into createOverflowingOp directly.
+      if (isPowerOf2_32(MinEC)) {
+        VPValue *ShtAmt = Plan.getConstantInt(Ty, Log2_32(MinEC));
+        return createOverflowingOp(Instruction::Shl, {VScale, ShtAmt},
+                                   {true, false});
+      }
+      VPValue *MulAmt = Plan.getConstantInt(Ty, MinEC);
+      return createOverflowingOp(Instruction::Mul, {VScale, MulAmt},
+                                 {true, false});
     }
-    return RuntimeEC;
+    return Plan.getConstantInt(Ty, MinEC);
   }
 
   /// Convert \p Current to \p Start + \p Current * \p Step.
@@ -740,6 +747,9 @@ public:
   /// \return The loop being analyzed.
   const Loop *getLoop() const { return TheLoop; }
 
+  /// \return The vectorization hints for the loop being analyzed.
+  const LoopVectorizeHints &getHints() const { return *Hints; }
+
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
@@ -864,8 +874,6 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
-  const LoopVectorizeHints &Hints;
-
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
@@ -898,9 +906,9 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, VFSelectionContext &Config,
       InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      const LoopVectorizeHints &Hints, OptimizationRemarkEmitter *ORE)
+      OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -975,10 +983,6 @@ public:
   /// based on its trip count.
   void addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
                                 ElementCount MinProfitableTripCount) const;
-
-  /// Returns true if \p Plan requires a scalar epilogue after the vector
-  /// loop. Asserts that the VPlan decision matches the legacy cost model.
-  bool requiresScalarEpilogue(VPlan &Plan, ElementCount VF) const;
 
   /// Attach the runtime checks of \p RTChecks to \p Plan.
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,

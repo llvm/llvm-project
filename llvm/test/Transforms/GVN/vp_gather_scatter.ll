@@ -5,7 +5,7 @@
 define <vscale x 8 x i32> @foo(<vscale x 8 x ptr> %p, <vscale x 8 x i32> %x, <vscale x 8 x i1> %mask, i32 %vl) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> [[P:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i32 [[VL:%.*]])
-; CHECK-NEXT:    [[B:%.*]] = call <vscale x 8 x i32> @llvm.vp.add.nxv8i32(<vscale x 8 x i32> [[A]], <vscale x 8 x i32> [[X:%.*]], <vscale x 8 x i1> [[MASK]], i32 [[VL]])
+; CHECK-NEXT:    [[B:%.*]] = add <vscale x 8 x i32> [[A]], [[X:%.*]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32> [[B]], <vscale x 8 x ptr> [[P]], <vscale x 8 x i1> [[MASK]], i32 [[VL]])
 ; CHECK-NEXT:    [[C:%.*]] = call <vscale x 8 x i32> @llvm.vp.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> [[P]], <vscale x 8 x i1> [[MASK]], i32 [[VL]])
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[C]]

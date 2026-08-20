@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -585,10 +586,12 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   bool isMain = false;
   if (funcName == fir::NameUniquer::doProgramEntry()) {
     isMain = true;
-    mlir::StringAttr bindcName =
-        funcOp->getAttrOfType<mlir::StringAttr>(fir::getSymbolAttrName());
-    if (bindcName)
-      funcName = bindcName;
+    // The main program symbol name is uppercased in the cooked character stream
+    // so that it cannot clash with any other symbol. Go through the presentable
+    // name so that the PROGRAM name is spelled the same way here as every other
+    // name in the debug information.
+    funcName =
+        mlir::StringAttr::get(context, fir::getPresentableFunctionName(funcOp));
   }
 
   llvm::SmallVector<mlir::LLVM::DITypeAttr> types;

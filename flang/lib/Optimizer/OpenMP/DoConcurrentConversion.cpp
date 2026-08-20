@@ -621,7 +621,8 @@ private:
     mlir::FlatSymbolRefAttr mapperId;
     if (requiresImplcitMapper) {
       std::string mapperIdName =
-          recordType.getName().str() + llvm::omp::OmpDefaultMapperName;
+          Fortran::utils::openmp::getCanonicalDefaultDeclareMapperName(
+              recordType);
       // TODO Add a mangler callback once nested record types are supported.
       mapperId = Fortran::utils::openmp::getOrGenImplicitDefaultDeclareMapper(
           builder, liveIn.getLoc(), recordType, mapperIdName);
