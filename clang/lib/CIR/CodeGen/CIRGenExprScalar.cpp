@@ -616,7 +616,8 @@ public:
     return VisitUnaryPrePostIncDec(e);
   }
 
-  mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value, QualType type);
+  mlir::Value emitFixedPointIncDec(const UnaryOperator *e, mlir::Value value,
+                                   QualType type);
   mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv) {
     if (cgf.getLangOpts().OpenMP)
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/dec OpenMP");
@@ -2308,7 +2309,8 @@ struct FixedPointBuilder {
       // We have to cast the RHS to the matching int type, but we have to do so
       // through unsigned so we can ensure we get zext.
       auto rhsIntTy = mlir::cast<cir::IntType>(rhs.getType());
-      auto rhsUnsignedTy = cir::IntType::get(builder.getContext(), rhsIntTy.getWidth(), /*isSigned=*/false);
+      auto rhsUnsignedTy = cir::IntType::get(
+          builder.getContext(), rhsIntTy.getWidth(), /*isSigned=*/false);
 
       mlir::Value rhsUnsigned =
           builder.createCast(cir::CastKind::integral, rhs, rhsUnsignedTy);
@@ -2790,7 +2792,6 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
   // TODO: This misses out on the sanitizer check below.
   if (ops.isFixedPointOp())
     return emitFixedPointBinOp(ops);
-
 
   // CIR accepts shift between different types, meaning nothing special
   // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
