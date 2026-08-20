@@ -157,10 +157,9 @@ class TestSwiftPlaygrounds(TestBase):
         options.SetLanguage(lldb.eLanguageTypeSwift)
         self.frame().EvaluateExpression("import PlaygroundsRuntime", options)
         ret = self.frame().EvaluateExpression("get_output()", options)
-        err = res.GetError()
         is_error = res.GetError().Fail() and not (
-            res.GetError().GetType() == 1 and res.GetError().GetError() == 0x1001
-        )
+                     res.GetError().GetType() == 1 and
+                     res.GetError().GetError() == 0x1001)
         playground_output = ret.GetSummary()
         with recording(self, self.TraceOn()) as sbuf:
             print("playground result: ", file=sbuf)
