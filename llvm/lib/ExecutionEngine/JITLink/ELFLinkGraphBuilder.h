@@ -349,6 +349,19 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
       continue;
     }
 
+    // Skip compressed sections: JITLink does not support them. The section
+    // content is compressed, while relocation offsets refer to the
+    // uncompressed data, so relocations cannot be applied to the block
+    // content.
+    if (Sec.sh_flags & ELF::SHF_COMPRESSED) {
+      LLVM_DEBUG({
+        dbgs() << "    " << SecIndex << ": \"" << *Name
+               << "\" is compressed: "
+                  "No graph section will be created.\n";
+      });
+      continue;
+    }
+
     LLVM_DEBUG({
       dbgs() << "    " << SecIndex << ": Creating section for \"" << *Name
              << "\"\n";
@@ -620,6 +633,10 @@ Error ELFLinkGraphBuilder<ELFT>::forEachRelaRelocation(
     LLVM_DEBUG(dbgs() << "    skipped (fixup section excluded explicitly)\n\n");
     return Error::success();
   }
+  if ((*FixupSection)->sh_flags & ELF::SHF_COMPRESSED) {
+    LLVM_DEBUG(dbgs() << "    skipped (compressed fixup section)\n\n");
+    return Error::success();
+  }
 
   // Lookup the link-graph node corresponding to the target section name.
   auto *BlockToFix = getGraphBlock(RelSect.sh_info);
@@ -668,6 +685,10 @@ Error ELFLinkGraphBuilder<ELFT>::forEachRelRelocation(
   }
   if (excludeSection(**FixupSection)) {
     LLVM_DEBUG(dbgs() << "    skipped (fixup section excluded explicitly)\n\n");
+    return Error::success();
+  }
+  if ((*FixupSection)->sh_flags & ELF::SHF_COMPRESSED) {
+    LLVM_DEBUG(dbgs() << "    skipped (compressed fixup section)\n\n");
     return Error::success();
   }
 

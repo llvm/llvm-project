@@ -1,0 +1,74 @@
+# REQUIRES: asserts
+# RUN: yaml2obj -o %t.o %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec %t.o 2>&1 \
+# RUN:              | FileCheck %s
+#
+# Check that SHF_COMPRESSED sections are skipped when building the link
+# graph. JITLink does not support compressed sections: the section content
+# stored in the file is compressed, while relocation offsets refer to the
+# uncompressed data. Applying such relocations to a block built from the
+# compressed content would write out of bounds.
+
+# CHECK: ".debug_addr" is compressed: No graph section will be created.
+# CHECK: .debug_addr:
+# CHECK-NEXT: skipped (compressed fixup section)
+
+---
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [SHF_ALLOC, SHF_EXECINSTR]
+    AddressAlign: 0x10
+    Content: C3662E0F1F84000000000090
+  - Name: .debug_addr
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    AddressAlign: 0x1
+    # Elf_Chdr header followed by (fake) compressed payload. The file-level
+    # content of a compressed section is only 0x1A bytes, while relocations
+    # into it refer to offsets in the uncompressed data.
+    Content: 04000000000000000800000000000000010000000000000078563412
+  - Name: .rela.debug_addr
+    Type: SHT_RELA
+    Flags: [SHF_INFO_LINK]
+    Link: .symtab
+    AddressAlign: 0x8
+    Info: .debug_addr
+    Relocations:
+      - Offset: 0x40
+        Symbol: foo
+        Type: R_X86_64_64
+  - Name: .note.GNU-stack
+    Type: SHT_PROGBITS
+    AddressAlign: 0x1
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .text
+      - Name: .debug_addr
+      - Name: .rela.debug_addr
+      - Name: .note.GNU-stack
+      - Name: .symtab
+Symbols:
+  - Name: .text
+    Type: STT_SECTION
+    Section: .text
+  - Name: foo
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Size: 0x6
+  - Name: main
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x6
+    Size: 0x6
+...
