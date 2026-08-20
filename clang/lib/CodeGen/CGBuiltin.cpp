@@ -1078,6 +1078,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
+  assert(EmittedE && "emitted must not be null");
 
   const MemberExpr *ME =
       dyn_cast<MemberExpr>(E->getSubExpr()->IgnoreParenNoopCasts(getContext()));
@@ -1183,7 +1184,6 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //  For the _or_null variants, a null pointer describes no accessible memory:
   //    count = ptr->array ? count : 0;
   if (CountAttributedTy->isOrNull()) {
-    assert(EmittedE && "emitBuiltinObjectSize always passes a non-null value");
     Value *Ptr = nullptr;
     if (!Idx) {
       //  1) 'ptr->array'
