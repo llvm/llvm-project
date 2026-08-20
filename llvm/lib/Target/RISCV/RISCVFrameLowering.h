@@ -88,8 +88,9 @@ public:
   // Order local stack objects by access density so frequently accessed objects
   // are placed close to the stack addressing base. This hook is only called by
   // PEI when optimizing and StackSymbolOrdering is enabled.
-  void orderFrameObjects(const MachineFunction &MF,
-                         SmallVectorImpl<int> &ObjectsToAllocate) const override;
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineFunction &MF, uint64_t Offset,
