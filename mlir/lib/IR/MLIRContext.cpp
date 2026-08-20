@@ -282,9 +282,9 @@ public:
   std::unique_ptr<TransientScopeState> transientState;
 
   /// Cache recording which uniqued types and attributes are provably free of a
-  /// transitive SymbolRefAttr. Filled on demand by symbol-table verification
-  /// and never invalidated; reads `threadingIsEnabled` live to guard its set.
-  /// See SymbolRefContainmentCache.h.
+  /// transitive SymbolRefAttr. Filled on demand by symbol-table verification;
+  /// cleared when a transient scope ends, since storage interned during the
+  /// scope is freed then.
   SymbolRefContainmentCache symbolRefContainmentCache{threadingIsEnabled};
 
 public:
@@ -785,6 +785,10 @@ void MLIRContext::endTransientScope() {
   ctxImpl.attributeUniquer.endTransientScope();
   ctxImpl.affineUniquer.endTransientScope();
   ctxImpl.distinctAttributeAllocator.endTransientScope();
+
+  // Transiently allocated uniqued storage is freed here and its addresses may
+  // be recycled, so the containment memo must not survive the scope.
+  ctxImpl.symbolRefContainmentCache.clear();
 
   ctxImpl.transientState.reset();
 }

@@ -10,12 +10,16 @@
 // may transitively contain a SymbolRefAttr. Symbol-table verification consults
 // it to prune its symbol-use walk to the subtrees that can carry a symbol use.
 //
-// Uniqued type and attribute storage is immortal, and immutable in everything
-// the cache reads -- mutable-storage kinds are never read or recorded -- so a
-// recorded answer never goes stale, and two live objects can never share an
-// address. One DenseSet of opaque pointers therefore keys both kinds without
-// arguing them disjoint -- the attribute side already pools two allocators, the
-// uniquer and the DistinctAttr allocator, on that same argument.
+// A recorded answer is a pure function of immutable structure --
+// mutable-storage kinds are never read or recorded -- so it never goes stale.
+// Outside a transient scope, uniqued storage is also immortal, so two live
+// objects can never share an address. A transient scope frees the storage it
+// allocated when it ends; the context clears this cache at that point, before
+// any freed address can be recycled into a different object that would inherit
+// a stale answer. One DenseSet of opaque pointers therefore keys both kinds
+// without arguing them disjoint -- the attribute side already pools two
+// allocators, the uniquer and the DistinctAttr allocator, on that same
+// argument.
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +58,19 @@ public:
 
   bool mayContainSymbolRefs(Type type) { return compute(type); }
   bool mayContainSymbolRefs(Attribute attr) { return compute(attr); }
+
+  /// Drop every recorded fact. The cache is a pure memo of proven-clear
+  /// objects, so forgetting them all is always correct and only costs a
+  /// recomputation on next encounter. The context calls this when a transient
+  /// scope ends and its transiently allocated storage is freed, before any
+  /// address can be recycled into a different object that would inherit a stale
+  /// answer.
+  void clear() {
+    std::optional<llvm::sys::SmartScopedWriter<true>> guard;
+    if (shouldLock())
+      guard.emplace(mutex);
+    clearSet.clear();
+  }
 
 private:
   // A type is never itself a SymbolRefAttr; an attribute is one exactly when
@@ -94,13 +111,13 @@ private:
     std::optional<llvm::sys::SmartScopedReader<true>> guard;
     if (shouldLock())
       guard.emplace(mutex);
-    return clear.contains(key);
+    return clearSet.contains(key);
   }
   void markClear(const void *key) {
     std::optional<llvm::sys::SmartScopedWriter<true>> guard;
     if (shouldLock())
       guard.emplace(mutex);
-    clear.insert(key);
+    clearSet.insert(key);
   }
 
   /// The set is serialized only while the context runs multithreaded;
@@ -118,7 +135,7 @@ private:
   // including every mutable-storage kind, whose contents are never read -- is
   // left out and recomputed on each encounter, so no fact that could later go
   // stale is ever stored.
-  llvm::DenseSet<const void *> clear;
+  llvm::DenseSet<const void *> clearSet;
 };
 
 /// Return the given context's symbol-reference containment cache. Defined in
