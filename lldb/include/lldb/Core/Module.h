@@ -1037,7 +1037,7 @@ public:
     bool m_match_name_after_lookup = false;
 
   private:
-    LookupInfo(ConstString name, ConstString lookup_name,
+    LookupInfo(ConstString name, ConstString lookup_name_override,
                lldb::FunctionNameType name_type_mask,
                lldb::LanguageType lang_type);
   };
