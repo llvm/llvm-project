@@ -1,21 +1,22 @@
-name: libc pre-commit code coverage
+name: Libc Patch Code Coverage
 
 permissions:
   contents: read
-  pull-requests: write # Required to post/update pre-commit coverage comments
+  pull-requests: write # Required to post/update patch coverage comments
 
 on:
   workflow_dispatch:
   push:
     branches:
       - pre-commit-bot
+      - libc-coverage-ci-bots
       - main
     paths:
       - 'libc/src/**'
       - 'libc/include/**'
       - 'libc/test/**'
       - 'libc/CMakeLists.txt'
-      - '.github/workflows/libc-pre-commit-coverage.yml'
+      - '.github/workflows/libc-patch-coverage.yml'
       - '!libc/docs/**'
       - '!libc/benchmarks/**'
       - '!libc/fuzzing/**'
@@ -27,7 +28,7 @@ on:
       - 'libc/include/**'
       - 'libc/test/**'
       - 'libc/CMakeLists.txt'
-      - '.github/workflows/libc-pre-commit-coverage.yml'
+      - '.github/workflows/libc-patch-coverage.yml'
       - '!libc/docs/**'
       - '!libc/benchmarks/**'
       - '!libc/fuzzing/**'

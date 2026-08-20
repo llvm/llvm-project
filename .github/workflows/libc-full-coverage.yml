@@ -1,4 +1,4 @@
-name: libc post-commit code coverage
+name: Libc Full Codebase Coverage
 
 permissions:
   contents: write # Required to publish live HTML dashboard to gh-pages branch
@@ -19,7 +19,7 @@ on:
       - post-commit-bot
     paths:
       - 'libc/**'
-      - '.github/workflows/libc-post-commit-coverage.yml'
+      - '.github/workflows/libc-full-coverage.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -127,13 +127,6 @@ jobs:
         # 3. Run Full Coverage Analyzer
         python3 libc/utils/coverage/full_report.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
-
-    - name: Upload HTML Coverage Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: libc-coverage-html-report
-        path: ./coverage_html
-        retention-days: 14
 
     - name: Deploy Coverage Dashboard to GitHub Pages
       if: github.repository != 'llvm/llvm-project'
