@@ -238,8 +238,26 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
     }
   }
 
-  if (!DefToRename || (MIMustBeKiller && KillerIns != &MI))
+  if (!DefToRename || !KillerIns || (MIMustBeKiller && KillerIns != &MI))
     return false;
+
+  // Conservative tied-operand guard.  The rename moves a value from OldReg to a
+  // fresh register across the whole window [DefToRename, KillerIns], but a tied
+  // def/use pair is pinned to a single physical register.  If a tied operand
+  // overlapping OldReg couples something we must rename (a def, or a use that
+  // reads the renamed value) with something we must not (a use whose incoming
+  // value is defined before the window), no single register satisfies both and
+  // renaming would silently corrupt the untouched side.  We don't distinguish
+  // those cases here, so bail whenever any operand overlapping OldReg in the
+  // window is tied.  Upgrade path: only bail when the tied partner falls on the
+  // opposite side of the RedefinedRegs predicate used in the rename loops below.
+  for (MachineBasicBlock::iterator It = DefToRename->getIterator(),
+                                   End = std::next(KillerIns->getIterator());
+       It != End; ++It)
+    for (const MachineOperand &Operand : It->operands())
+      if (Operand.isReg() && Operand.isTied() &&
+          TRI->regsOverlap(Operand.getReg(), OldReg))
+        return false;
 
   // Now, perform the rename between (DefToRename, KillerIns)
 
