@@ -1,5 +1,10 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -fixup-bw-eliminate-redundant-zext=0 | FileCheck %s
 ; rdar://8051990
+
+; The zero-extend below is removed later on, by X86FixupBWInsts, which can
+; prove from the widened load that it is a no-op. That is disabled here so
+; that this keeps testing what it was written to test, that ISel does not
+; remove it: without the extra instruction the two outcomes are the same.
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin11"
