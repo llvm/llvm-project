@@ -4158,8 +4158,13 @@ namespace {
     }
 
     llvm::SmallPtrSet<QualType, 4> UninitializedBaseClasses;
-    for (const auto &I : RD->bases())
+    for (const auto &I : RD->bases()) {
+      // Virtual bases are initialized from the most derived class, so an
+      // abstract base class constructor can assume it to be initialized.
+      if (I.isVirtual() && RD->isAbstract())
+        continue;
       UninitializedBaseClasses.insert(I.getType().getCanonicalType());
+    }
 
     if (UninitializedFields.empty() && UninitializedBaseClasses.empty())
       return;
