@@ -1,5 +1,5 @@
 """
-Test lldb-dap saving a core file and attaching to it.
+Test lldb-dap saving a core minidump file and attaching to it.
 """
 
 from pathlib import Path
