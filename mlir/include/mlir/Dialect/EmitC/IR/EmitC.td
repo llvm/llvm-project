@@ -794,12 +794,12 @@ def EmitC_CallOp : EmitC_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
     }
 
     bool hasSideEffects() {

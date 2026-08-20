@@ -147,7 +147,8 @@ public:
     std::vector<std::pair<StringRef, StringRef>> fieldNames;
     classOp.walk([&](FieldOp fieldOp) {
       for (const auto &attr : includedFieldAttrs) {
-        auto arrayAttr = dyn_cast_if_present<ArrayAttr>(fieldOp->getAttr(attr));
+        auto arrayAttr =
+            dyn_cast_if_present<ArrayAttr>(fieldOp->getDiscardableAttr(attr));
 
         if (!arrayAttr)
           continue;
