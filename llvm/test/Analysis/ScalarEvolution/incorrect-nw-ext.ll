@@ -46,7 +46,7 @@ define void @zext.nw() {
 ; CHECK-NEXT:    %i.inc = add i8 %i, -128
 ; CHECK-NEXT:    --> {127,+,-128}<%loop> U: [127,0) S: [127,0) Exits: -1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.zext = zext i8 %i to i16
-; CHECK-NEXT:    --> {255,+,-128}<nw><%loop> U: [127,256) S: [127,256) Exits: 127 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> (127 + (zext i8 {-128,+,-128}<nw><%loop> to i16))<nuw><nsw> U: [127,256) S: [127,383) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %counter.inc = add i8 %counter, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: 2 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @zext.nw

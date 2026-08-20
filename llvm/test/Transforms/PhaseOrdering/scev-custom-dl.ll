@@ -141,7 +141,7 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:  Classifying expressions for: @test_loop_idiom_recogize
 ; CHECK-NEXT:    %indvar = phi i32 [ 0, %bb1.thread ], [ %indvar.next, %bb1 ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,256) S: [0,256) Exits: 255 LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %i.0.reg2mem.0 = sub nuw nsw i32 255, %indvar
+; CHECK-NEXT:    %i.0.reg2mem.0 = sub nsw i32 255, %indvar
 ; CHECK-NEXT:    --> {255,+,-1}<nsw><%bb1> U: [0,256) S: [0,256) Exits: 0 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %0 = getelementptr [4 x i8], ptr %alp, i32 %i.0.reg2mem.0
 ; CHECK-NEXT:    --> {(1020 + %alp),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %alp LoopDispositions: { %bb1: Computable }
