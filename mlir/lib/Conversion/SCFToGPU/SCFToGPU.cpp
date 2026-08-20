@@ -714,7 +714,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       if (!externalValues.empty())
         return failure();
       // Replace by gpu.all_reduce.
-      auto gpuRedOp = gpu::AllReduceOp::create(rewriter, loc, newValue);
+      auto gpuRedOp = gpu::AllReduceOp::create(
+          rewriter, loc, newValue, /*op=*/nullptr, /*uniform=*/false);
       cloningMap.map(parentLoop->getResult(0), gpuRedOp.getResult());
       // Copy region.
       rewriter.inlineRegionBefore(reduceOp.getRegion(0), gpuRedOp.getRegion(),
