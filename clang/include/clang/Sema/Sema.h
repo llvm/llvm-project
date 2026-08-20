@@ -2559,6 +2559,18 @@ public:
   ///
   /// \returns True iff no diagnostic where emitted, false otherwise.
   bool BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E);
+
+  /// Warn when a variable definition gives static, thread, or automatic
+  /// storage duration to a struct type whose flexible array member has a
+  /// `counted_by` attribute (-Wcounted-by-static-allocation). The attribute
+  /// promises that the count field describes the size of the trailing array,
+  /// which can only be kept when the object is dynamically allocated with a
+  /// size derived from the count.
+  ///
+  /// \param VD The variable declaration to check
+  ///
+  /// \returns True iff no diagnostic were emitted, false otherwise.
+  bool BoundsSafetyCheckCountedByFAMInStaticStorage(const VarDecl *VD);
   ///@}
 
   //

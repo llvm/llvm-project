@@ -5478,6 +5478,27 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
   return nullptr;
 }
 
+const FieldDecl *RecordDecl::findFlexibleArrayMember() const {
+  if (!hasFlexibleArrayMember() || isUnion())
+    return nullptr;
+
+  const FieldDecl *Last = nullptr;
+  for (const FieldDecl *FD : fields())
+    Last = FD;
+  while (Last) {
+    const RecordDecl *FieldRD = Last->getType()->getAsRecordDecl();
+    if (!FieldRD || FieldRD->isUnion())
+      break;
+    Last = nullptr;
+    for (const FieldDecl *FD : FieldRD->fields())
+      Last = FD;
+  }
+
+  if (Last && Last->getType()->isIncompleteArrayType())
+    return Last;
+  return nullptr;
+}
+
 unsigned RecordDecl::getODRHash() {
   if (hasODRHash())
     return RecordDeclBits.ODRHash;

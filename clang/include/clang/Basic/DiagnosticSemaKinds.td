@@ -7241,6 +7241,15 @@ def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
 
+def warn_counted_by_attr_fam_static_storage : Warning<
+  "flexible array member %0 with '%1' attribute in an object with "
+  "%select{automatic|thread|static}2 storage duration; the count in %3 "
+  "cannot grow or shrink the fixed-size allocation">,
+  InGroup<CountedByStaticAllocation>, DefaultIgnore;
+def note_counted_by_intended_for_dynamic_allocation : Note<
+  "'%0' is intended for dynamically allocated objects, where the size of the "
+  "allocation can be computed from the count">;
+
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_invalid_arg
     : Error<"'__builtin_counted_by_ref' argument must reference a member with "

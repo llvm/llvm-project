@@ -412,4 +412,63 @@ bool Sema::BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E) {
   return false;
 }
 
+bool Sema::BoundsSafetyCheckCountedByFAMInStaticStorage(const VarDecl *VD) {
+  if (getDiagnostics().isIgnored(diag::warn_counted_by_attr_fam_static_storage,
+                                 VD->getLocation()))
+    return true;
+
+  if (VD->isInvalidDecl())
+    return true;
+
+  // Any object with a VarDecl is a fixed-size allocation; only heap objects
+  // (which have no VarDecl) can honor the count. Diagnose once per object:
+  // skip non-defining declarations, and all but the first tentative definition.
+  if (!VD->isThisDeclarationADefinition())
+    return true;
+  for (const VarDecl *Prev = VD->getPreviousDecl(); Prev;
+       Prev = Prev->getPreviousDecl())
+    if (Prev->isThisDeclarationADefinition())
+      return true;
+
+  // Arrays of such structs are still fixed-size allocations.
+  const RecordDecl *RD =
+      Context.getBaseElementType(VD->getType())->getAsRecordDecl();
+  if (!RD || RD->isInvalidDecl())
+    return true;
+
+  const FieldDecl *FAM = RD->findFlexibleArrayMember();
+  if (!FAM)
+    return true;
+  const auto *CATy = FAM->getType()->getAs<CountAttributedType>();
+  if (!CATy)
+    return true;
+  const FieldDecl *CountFD = FAM->findCountedByField();
+  if (!CountFD)
+    return true;
+
+  unsigned StorageKind;
+  switch (VD->getStorageDuration()) {
+  case SD_Automatic:
+    StorageKind = 0;
+    break;
+  case SD_Thread:
+    StorageKind = 1;
+    break;
+  case SD_Static:
+    StorageKind = 2;
+    break;
+  case SD_FullExpression:
+  case SD_Dynamic:
+    llvm_unreachable("variable with full-expression or dynamic storage");
+  }
+
+  Diag(VD->getLocation(), diag::warn_counted_by_attr_fam_static_storage)
+      << FAM << CATy->getAttributeName(/*WithMacroPrefix=*/true) << StorageKind
+      << CountFD;
+  Diag(FAM->getLocation(),
+       diag::note_counted_by_intended_for_dynamic_allocation)
+      << CATy->getAttributeName(/*WithMacroPrefix=*/true);
+  return false;
+}
+
 } // namespace clang

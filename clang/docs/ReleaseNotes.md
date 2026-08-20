@@ -238,6 +238,13 @@ features cannot lower the translation-unit ABI level;
 
 - More consistent rendering of Unicode characters in diagnostic messages.
 
+- Added `-Wcounted-by-static-allocation` (off by default) which warns when a
+  variable with static, thread, or automatic storage duration has a struct type
+  whose flexible array member is annotated with `__counted_by`. The annotation
+  promises that the count field describes the size of the trailing array, which
+  can only be kept when the object is dynamically allocated with a size derived
+  from the count. (#GH206541)
+
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 

@@ -4497,6 +4497,14 @@ public:
     RecordDeclBits.HasFlexibleArrayMember = V;
   }
 
+  /// Find this record's flexible array member, or null if it has none.
+  ///
+  /// A struct-typed last field (named or anonymous) is descended into, since
+  /// its flexible array member then lies at this record's tail. Unions are
+  /// neither descended into nor searched, so this may return null even when
+  /// hasFlexibleArrayMember() is true.
+  const FieldDecl *findFlexibleArrayMember() const;
+
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
   /// there must be no objects of this type declared, e.g.,
