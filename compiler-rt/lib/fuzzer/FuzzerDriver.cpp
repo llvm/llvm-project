@@ -19,7 +19,7 @@
 #include "FuzzerPlatform.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
-#if LIBFUZZER_APPLE
+#if LIBFUZZER_APPLE && TARGET_OS_OSX
 #include <libproc.h>
 #endif
 #include <algorithm>
@@ -655,7 +655,7 @@ ReadCorpora(const std::vector<std::string> &CorpusDirs,
 int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   using namespace fuzzer;
   assert(argc && argv && "Argument pointers cannot be nullptr");
-#if LIBFUZZER_APPLE
+#if LIBFUZZER_APPLE && TARGET_OS_OSX
   // Let the kernel kill us when OOM
   proc_setpcontrol(PROC_SETPC_TERMINATE);
 #endif
