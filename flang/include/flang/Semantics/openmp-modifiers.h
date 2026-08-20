@@ -12,6 +12,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -303,23 +304,34 @@ bool verifyVersions(const std::optional<std::list<UnionTy>> &modifiers,
     }
     // Find the next higher version that allows this modifier on this clause.
     const auto &versions{desc.getVersions()};
-    unsigned since{~0u};
+    unsigned since{~0u}, until{0u};
     for (unsigned v : versions) {
-      if (v > version && desc.getClauses(v).test(id)) {
-        since = v;
-        break;
+      if (desc.getClauses(v).test(id)) {
+        if (v < version) {
+          until = std::max(until, v);
+        } else if (v > version) {
+          since = std::min(since, v);
+        }
       }
     }
-    if (since == ~0u) {
+    if (since == ~0u && until == 0u) {
       // This shouldn't really happen, but have it just in case.
       semaCtx.Say(m.source,
           "'%s' modifier is not supported on %s clause"_err_en_US,
           desc.getName().str(),
           parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-    } else if (version < since) {
+    } else if (since != ~0u && version < since) {
       semaCtx.Say(m.source,
-          "'%s' modifier is not supported in OpenMP v%d.%d, try -fopenmp-version=%d"_warn_en_US,
-          desc.getName().str(), version / 10, version % 10, since);
+          "'%s' modifier is not supported in %s on %s clause, %s"_warn_en_US,
+          desc.getName().str(), omp::ThisVersion(version),
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)),
+          omp::TryVersion(since));
+      result = false;
+    } else if (until != 0u && version > until) {
+      semaCtx.Say(m.source,
+          "'%s' modifier is no longer supported in %s on %s clause"_warn_en_US,
+          desc.getName().str(), omp::ThisVersion(version),
+          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
       result = false;
     }
   }

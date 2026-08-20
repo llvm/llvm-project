@@ -8,14 +8,14 @@ end
 
 subroutine f01(x)
   integer :: x(10)
-!WARNING: 'iterator' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'iterator' modifier is not supported in OpenMP v4.5 on FROM clause, try -fopenmp-version=51
   !$omp target update from(iterator(i = 1:5): x(i))
 end
 
 subroutine f02(x)
   integer :: x(10)
-!WARNING: 'motion-modifier' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
-!WARNING: 'iterator' modifier is not supported in OpenMP v4.5, try -fopenmp-version=51
+!WARNING: 'motion-modifier' modifier is not supported in OpenMP v4.5 on FROM clause, try -fopenmp-version=51
+!WARNING: 'iterator' modifier is not supported in OpenMP v4.5 on FROM clause, try -fopenmp-version=51
   !$omp target update from(present, iterator(i = 1:5): x(i))
 end
 

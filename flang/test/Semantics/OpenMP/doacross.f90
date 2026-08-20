@@ -12,9 +12,7 @@ subroutine f00(x)
 !ERROR: Iteration vector may not be specified with SOURCE dependence type
       !$omp ordered doacross(source: i)
 !ERROR: The number of variables in the SINK iteration vector does not match the parameter specified in ORDERED clause
-!ERROR: 'dependence-type' should be the last modifier
-!ERROR: 'dependence-type' modifier cannot occur multiple times
-      !$omp ordered doacross(sink, sink: i)
+      !$omp ordered doacross(sink: i)
       x(i, j) = 0
     enddo
   enddo

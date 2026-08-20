@@ -3287,27 +3287,6 @@ void OmpStructureChecker::CheckTaskDependenceType(
   }
 }
 
-void OmpStructureChecker::CheckDependenceType(
-    const parser::OmpDependenceType::Value &x) {
-  // Common checks for dependence-type (DEPEND and UPDATE clauses).
-  unsigned version{context_.langOptions().OpenMPVersion};
-  unsigned deprecatedIn{~0u};
-
-  switch (x) {
-  case parser::OmpDependenceType::Value::Source:
-  case parser::OmpDependenceType::Value::Sink:
-    deprecatedIn = 52;
-    break;
-  }
-
-  if (version >= deprecatedIn) {
-    context_.Say(GetContext().clauseSource,
-        "%s dependence type is deprecated in %s"_warn_en_US,
-        parser::ToUpperCaseLetters(parser::OmpDependenceType::EnumToString(x)),
-        ThisVersion(deprecatedIn));
-  }
-}
-
 void OmpStructureChecker::Enter(
     const parser::OpenMPSimpleStandaloneConstruct &x) {
   const auto &dir{std::get<parser::OmpDirectiveName>(x.v.t)};
@@ -5091,7 +5070,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
 
   if (doaDep) {
     CheckDoacross(*doaDep, llvm::omp::Clause::OMPC_depend);
-    CheckDependenceType(doaDep->GetDepType());
   } else {
     using Modifier = parser::OmpDependClause::TaskDep::Modifier;
     auto &modifiers{std::get<std::optional<std::list<Modifier>>>(taskDep->t)};
@@ -5437,12 +5415,8 @@ void OmpStructureChecker::Enter(
     const parser::OmpClause::UpdateDependObjects &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  auto *depType = std::get_if<parser::OmpDependenceType>(&x.v.u);
   auto *taskType = std::get_if<parser::OmpTaskDependenceType>(&x.v.u);
-
-  if (depType) {
-    CheckDependenceType(depType->v);
-  } else if (taskType) {
+  if (taskType) {
     CheckTaskDependenceType(taskType->v);
   }
 
