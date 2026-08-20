@@ -25518,16 +25518,36 @@ static bool canEmitConjunctionForCCMP(SelectionDAG &DAG, SDValue Val,
     return false;
   unsigned Opcode = Val.getOpcode();
   if (Opcode == ISD::SETCC) {
-    EVT VT = Val.getOperand(0).getValueType();
+    SDValue LHS = Val.getOperand(0), RHS = Val.getOperand(1);
+    EVT VT = LHS.getValueType();
     if (!VT.isInteger())
       return false;
     CanNegate = true;
     MustBeFirst = false;
+    // A SETCC leaf whose flag source will be folded by EmitTest onto an
+    // OR/ADD/XOR node cannot appear in a non-root slot of a CCMP chain:
+    // CCMP is a subtract and CTEST is an AND, so neither can reproduce this
+    // leaf's SF/ZF. Force such a leaf to the chain root, where its flag
+    // source becomes a plain flag-setting instruction and its EFLAGS feed
+    // the next CCMP. This happens for icmp-vs-0 (and the icmp-vs-{-1,1}
+    // forms TranslateX86CC rewrites into icmp-vs-0) whose LHS is an
+    // OR/ADD/XOR the DAG will re-use for flags.
+    if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+      ISD::CondCode CC = cast<CondCodeSDNode>(Val.getOperand(2))->get();
+      bool VsZero = C->isZero() || (CC == ISD::SETGT && C->isAllOnes()) ||
+                    (CC == ISD::SETLT && C->isOne());
+      if (VsZero && LHS.hasOneUse()) {
+        unsigned LOpc = LHS.getOpcode();
+        MustBeFirst =
+            (LOpc == ISD::OR || LOpc == ISD::ADD || LOpc == ISD::XOR) &&
+            isProfitableToUseFlagOp(LHS);
+      }
+    }
     // Designate this operation as a preferred first operation if the flags of a
     // corresponding SUB node can be reused. The root comparison is emitted as a
     // plain CMP, which can share EFLAGS with an existing SUB; a CCMP cannot.
-    PreferFirst = DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT),
-                                    {Val.getOperand(0), Val.getOperand(1)});
+    PreferFirst = MustBeFirst ||
+                  DAG.doesNodeExist(ISD::SUB, DAG.getVTList(VT), {LHS, RHS});
     return true;
   }
   // Protect against exponential runtime and stack overflow.
@@ -25600,16 +25620,30 @@ static SDValue emitConjunctionForCCMPRec(SDValue Val, X86::CondCode &OutCC,
     if (!CCOp)
       return Flags;
 
-    // Otherwise produce a CCMP. The CCMP executes (and updates EFLAGS) only
-    // when Predicate holds; when it is skipped it forces the default condition
+    // Otherwise produce a CCMP or CTEST. It executes (and updates EFLAGS)
+    // only when Predicate holds; when skipped it forces the default condition
     // flags, which must make OutCC evaluate to false. That default is encoded
     // from the opposite of X86CC.
     SDNode *FlagsNode = Flags.getNode();
+    unsigned FOpc = FlagsNode->getOpcode();
+    unsigned CCOpc;
+    switch (FOpc) {
+    case X86ISD::CMP:
+    case X86ISD::SUB:
+      CCOpc = X86ISD::CCMP;
+      break;
+    case X86ISD::AND:
+      CCOpc = X86ISD::CTEST;
+      break;
+    default:
+      llvm_unreachable(
+          "non-root CCMP chain leaf has unsupported flag-producing opcode");
+    }
     X86::CondCode DCFCode = X86::GetOppositeBranchCondition(X86CC);
     SDValue CFlags = DAG.getTargetConstant(
         X86::getCCMPCondFlagsFromCondCode(DCFCode), DL, MVT::i8);
     SDValue SrcCC = DAG.getTargetConstant(Predicate, DL, MVT::i8);
-    return DAG.getNode(X86ISD::CCMP, DL, MVT::i32,
+    return DAG.getNode(CCOpc, DL, MVT::i32,
                        {FlagsNode->getOperand(0), FlagsNode->getOperand(1),
                         CFlags, SrcCC, CCOp});
   }
