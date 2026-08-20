@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 using namespace llvm;
@@ -37,8 +39,9 @@ int printGPUsByKFD(StringRef NodePath) {
   std::error_code EC;
   sys::fs::directory_iterator Begin(NodePath, EC), End;
 
-  // Check if we could construct the directory_iterator, which can fail if
-  // there is no KFD driver (e.g., WSL)
+  // Fail if the sysfs topology does not exist so that the caller can fall
+  // back to the HIP runtime. This can happen when the amdgpu kernel module
+  // is not loaded (e.g., WSL).
   if (EC)
     return 1;
 
@@ -79,8 +82,8 @@ int printGPUsByKFD(StringRef NodePath) {
   // Sort the devices by their node to make sure it prints in order.
   llvm::sort(Devices, [](auto &L, auto &R) { return L.first < R.first; });
   for (const auto &[Node, GFXVersion] : Devices)
-    std::fprintf(stdout, "gfx%ld%ld%lx\n", getMajor(GFXVersion),
-                 getMinor(GFXVersion), getStep(GFXVersion));
+    outs() << "gfx" << getMajor(GFXVersion) << getMinor(GFXVersion)
+           << format_hex_no_prefix(getStep(GFXVersion), 1) << '\n';
 
   return 0;
 }

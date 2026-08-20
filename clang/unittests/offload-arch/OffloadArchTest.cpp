@@ -15,7 +15,6 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <algorithm>
-#include <cstdio>
 #include <string>
 
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
@@ -147,7 +146,7 @@ void addGPUNode(StringRef Dir, unsigned Node, StringRef GFXVersion) {
 int printGPUsByKFDCapturingStdout(StringRef NodePath, std::string &Output) {
   testing::internal::CaptureStdout();
   int Result = printGPUsByKFD(NodePath);
-  std::fflush(stdout);
+  outs().flush();
   Output = testing::internal::GetCapturedStdout();
   return Result;
 }
