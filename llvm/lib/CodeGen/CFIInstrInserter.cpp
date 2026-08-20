@@ -416,8 +416,7 @@ bool CFIInstrInserterImpl::insertCFIInstrs(MachineFunction &MF) {
   BitVector SetDifference;
   for (MachineBasicBlock &MBB : MF) {
     // Skip the first MBB in a function
-    if (MBB.getNumber() == MF.front().getNumber())
-      continue;
+    if (MBB.getNumber() == MF.front().getNumber()) continue;
 
     const MBBCFAInfo &MBBInfo = MBBVector[MBB.getNumber()];
     auto MBBI = MBBInfo.MBB->begin();
