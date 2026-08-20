@@ -4472,7 +4472,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_TYPE_TRAIT:
       S = TypeTraitExpr::CreateDeserialized(
           Context, Record[ASTStmtReader::NumExprFields],
-          Record[ASTStmtReader::NumExprFields + 1]);
+          Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_ARRAY_TYPE_TRAIT:
