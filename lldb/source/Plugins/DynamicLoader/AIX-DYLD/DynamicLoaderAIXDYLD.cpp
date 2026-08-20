@@ -242,121 +242,180 @@ bool DynamicLoaderAIXDYLD::IsCoreFile() const {
 }
 
 void DynamicLoaderAIXDYLD::FillCoreLoaderData(lldb_private::DataExtractor &data,
-        uint64_t loader_offset, uint64_t loader_size ) {
-    
+        uint64_t loader_offset, uint64_t loader_size) {
+
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
-    static char *buffer = (char *)malloc(loader_size);
-    if (buffer == NULL) {
-        LLDB_LOG(log, "Buffer allocation failed error: {0}", std::strerror(errno));
-        return;
-    }
-    struct ld_info ldinfo[64] = {};
-    struct ld_info *ptr;
-    int i = 0;
-    
-    ByteOrder byteorder = data.GetByteOrder();
-    data.ExtractBytes(loader_offset, loader_size, eByteOrderBig, buffer);
-    ldinfo[0].ldinfo_next = 1;
-    
-    while (ldinfo[i++].ldinfo_next != 0) {
-        
-        ptr = (struct ld_info *)buffer;
-        ldinfo[i].ldinfo_next = ptr->ldinfo_next;
-        ldinfo[i].ldinfo_flags = ptr->ldinfo_flags;
-        ldinfo[i].ldinfo_core = ptr->ldinfo_core;
-        ldinfo[i].ldinfo_textorg = ptr->ldinfo_textorg;
-        ldinfo[i].ldinfo_textsize = ptr->ldinfo_textsize;
-        ldinfo[i].ldinfo_dataorg = ptr->ldinfo_dataorg;
-        ldinfo[i].ldinfo_datasize = ptr->ldinfo_datasize;
-        
-        char *filename = &ptr->ldinfo_filename[0];
-        char *membername = filename + (strlen(filename) + 1);
-        strcpy(ldinfo[i].ldinfo_filename, filename);
-        
-        buffer += ptr->ldinfo_next;
-        struct ld_info *ptr2 = &(ldinfo[i]);
-        char *pathName = ptr2->ldinfo_filename;
-        char pathWithMember[PATH_MAX] = {0};
-        if (strlen(membername) > 0) {
-            sprintf(pathWithMember, "%s(%s)", pathName, membername);
-        } else {
-            sprintf(pathWithMember, "%s", pathName);
+
+    // Parse the ld_info chain directly from the DataExtractor
+    lldb::offset_t base_offset = loader_offset;
+    const lldb::offset_t loader_end = loader_offset + loader_size;
+    uint64_t textorg, textsize, dataorg, datasize;
+    uint32_t next;
+    uint64_t flags, core_offset;
+
+    while (true) {
+        // ensure the entry start is within the loader section
+        if (base_offset + 48 > loader_end) {
+            LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s(): loader section "
+                    "exhausted or chain corrupt at offset %" PRIu64,
+                    __FUNCTION__, (uint64_t)base_offset);
+            break;
         }
-        
+        lldb::offset_t offset = base_offset;
+
+        // struct ld_info (64-bit):
+        //   uint   ldinfo_next        (4 bytes)
+        //   uint   ldinfo_flags       (4 bytes)
+        //   ulong  ldinfo_core        (8 bytes)
+        //   void * ldinfo_textorg     (8 bytes)
+        //   ulong  ldinfo_textsize    (8 bytes)
+        //   void * ldinfo_dataorg     (8 bytes)
+        //   ulong  ldinfo_datasize    (8 bytes)  = Total 48 bytes
+        //   char   ldinfo_filename[2] (path member)
+        next         = data.GetU32(&offset);
+        flags        = data.GetU32(&offset);
+        core_offset  = data.GetU64(&offset);
+        textorg      = data.GetU64(&offset);
+        textsize     = data.GetU64(&offset);
+        dataorg      = data.GetU64(&offset);
+        datasize     = data.GetU64(&offset);
+
+        if (textsize == 0 || textorg == 0)
+            LLDB_LOGF(log, "Warning: text information might be incomplete");
+        if (datasize == 0 || dataorg == 0)
+            LLDB_LOGF(log, "Warning: data information might be incomplete");
+
+        char filename[PATH_MAX]   = {0};
+        char membername[PATH_MAX] = {0};
+        size_t s1 = 0, s2 = 0;
+        uint8_t byte;
+        while ((byte = data.GetU8(&offset)) != '\0' && s1 < PATH_MAX - 1)
+            filename[s1++] = static_cast<char>(byte);
+        filename[s1] = '\0';
+        while ((byte = data.GetU8(&offset)) != '\0' && s2 < PATH_MAX - 1)
+            membername[s2++] = static_cast<char>(byte);
+        membername[s2] = '\0';
+
+        char pathWithMember[PATH_MAX] = {0};
+        if (s2 > 0)
+            snprintf(pathWithMember, sizeof(pathWithMember),
+                     "%s(%s)", filename, membername);
+        else
+            snprintf(pathWithMember, sizeof(pathWithMember),"%s", filename);
+
+        LLDB_LOGF(log, "Module: %s", pathWithMember);
         FileSpec file(pathWithMember);
         ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());
-        LLDB_LOGF(log, "Module :%s", pathWithMember);
-        if (ModuleSP module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, true /* notify */)) {
-            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr2->ldinfo_textorg, false, 1);
-            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr2->ldinfo_dataorg, false, 2);
+        if (ModuleSP module_sp =
+                m_process->GetTarget().GetOrCreateModule(module_spec,
+                                                         true /* notify */)) {
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS,
+                                       (lldb::addr_t)textorg, false, 1);
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS,
+                                       (lldb::addr_t)dataorg, false, 2);
             // FIXME: .tdata, .bss
         }
-        if (ptr2->ldinfo_next == 0) {
-            ptr2 = nullptr;
-        } 
+
+        if (next == 0)
+            break;
+        // ensure the advanced offset stays within the loader section
+        // before the next iteration reads from it
+        if (base_offset + next >= loader_end) {
+            LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s(): ldinfo_next (%" PRIu32
+                           ") walks outside loader section; stopping.",
+                      __FUNCTION__, next);
+            break;
+        }
+        base_offset += next;
+
     }
-    free(buffer);
 }
 
 void DynamicLoaderAIXDYLD::FillCoreLoader32Data(lldb_private::DataExtractor &data,
-        uint64_t loader_offset, uint64_t loader_size ) {
-    
+        uint64_t loader_offset, uint64_t loader_size) {
+
     Log *log = GetLog(LLDBLog::DynamicLoader);
     LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s()", __FUNCTION__);
-    static char *buffer = (char *)malloc(loader_size);
-    if (buffer == NULL) {
-        LLDB_LOG(log, "Buffer allocation failed error: {0}", std::strerror(errno));
-        return;
-    }
-    char *ptr = buffer, filename[PATH_MAX] = {0}, membername[32] = {0};
-    uint64_t dataorg, textorg, datasize, textsize, core_offset;
-    int next = 1;
-    lldb::offset_t base_offset = loader_offset;
-    while (next != 0)
-    {
-        lldb::offset_t offset = base_offset;
-        next = data.GetU32(&offset);
-        core_offset = data.GetU32(&offset);
-        textorg = data.GetU32(&offset);
-        textsize = data.GetU32(&offset);
-        if (textsize == 0 || textorg == 0) {
-            LLDB_LOGF(log, "Warning: text information might be incomplete");
-        }
-        dataorg = data.GetU32(&offset);
-        datasize = data.GetU32(&offset);
-        if (datasize == 0 || dataorg == 0) {
-            LLDB_LOGF(log, "Warning: data information might be incomplete");
-        }
 
-        size_t s1_index = 0, s2_index = 0;
+    lldb::offset_t base_offset = loader_offset;
+    const lldb::offset_t loader_end = loader_offset + loader_size;
+    uint64_t dataorg, textorg, datasize, textsize, core_offset;
+    uint32_t next;
+
+    while (true) {
+        // ensure the entry start is within the loader section
+        if (base_offset + 24 > loader_end) {
+            LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s(): loader section "
+                    "exhausted or chain corrupt at offset %" PRIu64,
+                    __FUNCTION__, (uint64_t)base_offset);
+            break;
+        }
+        lldb::offset_t offset = base_offset;
+        // struct ld_info (32-bit):
+        //   uint  ldinfo_next      (4 bytes)
+        //   uint  ldinfo_core      (4 bytes)
+        //   void* ldinfo_textorg   (4 bytes)
+        //   uint  ldinfo_textsize  (4 bytes)
+        //   void* ldinfo_dataorg   (4 bytes)
+        //   uint  ldinfo_datasize  (4 bytes) = Total 24 bytes
+        //   char  ldinfo_filename[2] (path member)
+        next        = data.GetU32(&offset);
+        core_offset = data.GetU32(&offset);
+        textorg     = data.GetU32(&offset);
+        textsize    = data.GetU32(&offset);
+        dataorg  = data.GetU32(&offset);
+        datasize = data.GetU32(&offset);
+        
+        if (textsize == 0 || textorg == 0)
+            LLDB_LOGF(log, "Warning: text information might be incomplete");
+        if (datasize == 0 || dataorg == 0)
+            LLDB_LOGF(log, "Warning: data information might be incomplete");
+
+        char filename[PATH_MAX]   = {0};
+        char membername[PATH_MAX] = {0};
+        size_t s1 = 0, s2 = 0;
         uint8_t byte;
 
-        while ((byte = data.GetU8(&offset)) != '\0') {
-            filename[s1_index++] = static_cast<char>(byte);
-        }
-        filename[s1_index] = '\0';
-        while ((byte = data.GetU8(&offset)) != '\0') {
-            membername[s2_index++] = static_cast<char>(byte);
-        }
-        membername[s2_index] = '\0';
-        base_offset += next;
+        while ((byte = data.GetU8(&offset)) != '\0' && s1 < PATH_MAX - 1)
+            filename[s1++] = static_cast<char>(byte);
+        filename[s1] = '\0';
+        while ((byte = data.GetU8(&offset)) != '\0' && s2 < PATH_MAX - 1)
+            membername[s2++] = static_cast<char>(byte);
+        membername[s2] = '\0';
+
         char pathWithMember[PATH_MAX] = {0};
-        if (strlen(membername) > 0) {
-            sprintf(pathWithMember, "%s(%s)", filename, membername);
-        } else {
-            sprintf(pathWithMember, "%s", filename);
-        }
-        
+        if (s2 > 0)
+            snprintf(pathWithMember, sizeof(pathWithMember),
+                     "%s(%s)", filename, membername);
+        else
+            snprintf(pathWithMember, sizeof(pathWithMember),
+                     "%s", filename);
+
         FileSpec file(pathWithMember);
         ModuleSpec module_spec(file, m_process->GetTarget().GetArchitecture());
-        if (ModuleSP module_sp = m_process->GetTarget().GetOrCreateModule(module_spec, true /* notify */)) {
-            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)textorg, false, 1);
-            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS, (lldb::addr_t)dataorg, false, 2);
+        if (ModuleSP module_sp =
+                m_process->GetTarget().GetOrCreateModule(module_spec,
+                                                         true /* notify */)) {
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS,
+                                       (lldb::addr_t)textorg, false, 1);
+            UpdateLoadedSectionsByType(module_sp, LLDB_INVALID_ADDRESS,
+                                       (lldb::addr_t)dataorg, false, 2);
             // FIXME: .tdata, .bss
         }
+
+        if (next == 0)
+            break;
+        // ensure the advanced offset stays within the loader section
+        // before the next iteration reads from it
+        if (base_offset + next >= loader_end) {
+            LLDB_LOGF(log, "DynamicLoaderAIXDYLD::%s(): ldinfo_next (%" PRIu32
+                           ") walks outside loader section; stopping.",
+                      __FUNCTION__, next);
+            break;
+        }
+        base_offset += next;
     }
-    free(buffer);
 }
 
 void DynamicLoaderAIXDYLD::DidAttach() {
