@@ -10170,16 +10170,22 @@ void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
     return;
   }
 
+  const auto *Old = FD->getAttr<AbiTagAttr>();
   SmallVector<StringRef, 4> Tags;
-  if (const auto *Old = FD->getAttr<AbiTagAttr>())
+  if (Old)
     llvm::append_range(Tags, Old->tags());
   if (llvm::is_contained(Tags, Tag))
     return;
   Tags.push_back(Tag);
 
-  auto *Attr = AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size());
+  // Keep a location on the attribute, so that diagnostics about it still point
+  // at something: the written attribute if there is one, else the function.
+  AbiTagAttr *Merged =
+      Old ? AbiTagAttr::Create(Context, Tags.data(), Tags.size(), *Old)
+          : AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size(),
+                                       FD->getLocation());
   FD->dropAttr<AbiTagAttr>();
-  FD->addAttr(Attr);
+  FD->addAttr(Merged);
 }
 
 NamedDecl*
