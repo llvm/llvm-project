@@ -185,10 +185,9 @@ define i1 @and_icmp_eq_non_constant(i64 %x0, i64 %x1, i64 %y0, i64 %y1) {
 ;
 ; RV64ZICOND-LABEL: and_icmp_eq_non_constant:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    xor a4, a1, a3
 ; RV64ZICOND-NEXT:    sltu a0, a0, a2
-; RV64ZICOND-NEXT:    seqz a2, a4
-; RV64ZICOND-NEXT:    and a0, a0, a2
+; RV64ZICOND-NEXT:    xor a2, a1, a3
+; RV64ZICOND-NEXT:    czero.nez a0, a0, a2
 ; RV64ZICOND-NEXT:    sltu a1, a1, a3
 ; RV64ZICOND-NEXT:    or a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
@@ -223,10 +222,9 @@ define i1 @and_icmp_ne_non_constant(i64 %x0, i64 %x1, i64 %y0, i64 %y1) {
 ;
 ; RV64ZICOND-LABEL: and_icmp_ne_non_constant:
 ; RV64ZICOND:       # %bb.0:
-; RV64ZICOND-NEXT:    xor a4, a1, a3
 ; RV64ZICOND-NEXT:    sltu a0, a0, a2
-; RV64ZICOND-NEXT:    snez a2, a4
-; RV64ZICOND-NEXT:    and a0, a0, a2
+; RV64ZICOND-NEXT:    xor a2, a1, a3
+; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
 ; RV64ZICOND-NEXT:    sltu a1, a1, a3
 ; RV64ZICOND-NEXT:    or a0, a1, a0
 ; RV64ZICOND-NEXT:    ret
