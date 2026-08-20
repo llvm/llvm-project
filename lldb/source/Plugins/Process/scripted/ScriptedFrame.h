@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H
 
 #include "ScriptedThread.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
@@ -25,7 +25,7 @@ public:
   ScriptedFrame(lldb::ThreadSP thread_sp,
                 lldb::ScriptedFrameInterfaceSP interface_sp,
                 lldb::user_id_t frame_idx, lldb::addr_t pc,
-                SymbolContext &sym_ctx, lldb::RegisterContextSP reg_ctx_sp,
+                SymbolContext &sym_ctx,
                 StructuredData::GenericSP script_object_sp = nullptr);
 
   ~ScriptedFrame() override;
@@ -64,19 +64,23 @@ public:
   lldb::RegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
+                                bool include_synthetic_vars,
                                 lldb_private::Status *error_ptr) override;
 
   lldb::VariableListSP
-  GetInScopeVariableList(bool get_file_globals,
+  GetInScopeVariableList(bool get_file_globals, bool include_synthetic_vars,
                          bool must_have_valid_location = false) override;
 
   lldb::ValueObjectSP
   GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
                                  lldb::DynamicValueType use_dynamic) override;
 
+  lldb::ValueObjectSP FindVariable(ConstString name) override;
+
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull) override;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || StackFrame::isA(ClassID);
@@ -86,19 +90,19 @@ public:
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedFrameInterfaceSP GetInterface() const;
-  static llvm::Expected<lldb::RegisterContextSP>
-  CreateRegisterContext(ScriptedFrameInterface &interface, Thread &thread,
-                        lldb::user_id_t frame_id);
+  llvm::Expected<lldb::RegisterContextSP> CreateRegisterContext();
 
-  // Populate m_variable_list_sp from the scripted frame interface. Right now
-  // this doesn't take any options because the implementation can't really do
-  // anything with those options anyway, so there's no point.
-  void PopulateVariableListFromInterface();
+  // Populate m_variable_list_sp from the scripted frame interface. The boolean
+  // controls if we should try to fabricate Variable objects for each of the
+  // ValueObjects that we have. This defaults to 'true' because this is a
+  // scripted frame, so kind of the whole point is to provide synthetic
+  // variables to the user.
+  void PopulateVariableListFromInterface(bool include_synthetic_vars = true);
 
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
 
-  std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
+  llvm::Expected<lldb::DynamicRegisterInfoSP> GetDynamicRegisterInfo();
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;
@@ -109,4 +113,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SCRIPTED_FRAME_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_SCRIPTED_SCRIPTEDFRAME_H

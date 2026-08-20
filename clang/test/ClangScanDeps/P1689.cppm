@@ -59,7 +59,7 @@
 // RUN:      -MT impl_part.o.ddi -MD -MF impl_part.dep
 // RUN: cat impl_part.dep \
 // RUN:   | sed 's:\\\\\?:/:g' \
-// RUN:   | FileCheck impl_part.cppm -DPREFIX=%/t --check-prefix=%if system-darwin %{CHECK-MAKE-RELATIVE-DARWIN %} %else %{CHECK-MAKE-RELATIVE %}
+// RUN:   | FileCheck impl_part.cppm -DPREFIX=%/t --check-prefix=%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}  %{CHECK-MAKE-RELATIVE-DARWIN %} %else %{CHECK-MAKE-RELATIVE %}
 
 
 //--- P1689.json.in

@@ -64,7 +64,7 @@ protected:
     const std::string CheckNameInMessage = " [" + Error.DiagnosticName + "]";
     Message.consume_back(CheckNameInMessage);
 
-    auto TidyMessage =
+    const auto TidyMessage =
         Loc.isValid()
             ? tooling::DiagnosticMessage(Message, Loc.getManager(), Loc)
             : tooling::DiagnosticMessage(Message);
@@ -73,7 +73,7 @@ protected:
     // into a real CharRange for the diagnostic printer later.
     // Whatever we store here gets decoupled from the current SourceManager, so
     // we **have to** know the exact position and length of the highlight.
-    auto ToCharRange = [this, &Loc](const CharSourceRange &SourceRange) {
+    const auto ToCharRange = [this, &Loc](const CharSourceRange &SourceRange) {
       if (SourceRange.isCharRange())
         return SourceRange;
       assert(SourceRange.isTokenRange());
@@ -83,7 +83,7 @@ protected:
     };
 
     // We are only interested in valid ranges.
-    auto ValidRanges =
+    const auto ValidRanges =
         llvm::make_filter_range(Ranges, [](const CharSourceRange &R) {
           return R.getAsRange().isValid();
         });
@@ -312,6 +312,10 @@ std::string ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
   return "";
 }
 
+bool ClangTidyContext::isCompilerDiagnostic(unsigned DiagnosticID) const {
+  return !CheckNamesByDiagnosticID.contains(DiagnosticID);
+}
+
 ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     ClangTidyContext &Ctx, DiagnosticsEngine *ExternalDiagEngine,
     bool RemoveIncompatibleErrors, bool GetFixesFromNotes,
@@ -470,7 +474,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   }
 
   if (Info.hasSourceManager())
-    checkFilters(Info.getLocation(), Info.getSourceManager());
+    checkFilters(Info.getLocation(), Info.getID(), Info.getSourceManager());
 
   for (const auto &Error : SuppressionErrors)
     Context.diag(Error);
@@ -495,78 +499,80 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
 
 void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
   // Acquire a diagnostic ID also in the external diagnostics engine.
-  auto DiagLevelAndFormatString =
+  const auto DiagLevelAndFormatString =
       Context.getDiagLevelAndFormatString(Info.getID(), Info.getLocation());
   const unsigned ExternalID =
       ExternalDiagEngine->getDiagnosticIDs()->getCustomDiagID(
           DiagLevelAndFormatString.first, DiagLevelAndFormatString.second);
 
   // Forward the details.
-  auto Builder = ExternalDiagEngine->Report(Info.getLocation(), ExternalID);
+  const auto Builder =
+      ExternalDiagEngine->Report(Info.getLocation(), ExternalID);
   for (const FixItHint &Hint : Info.getFixItHints())
     Builder << Hint;
-  for (auto Range : Info.getRanges())
+  for (const auto Range : Info.getRanges())
     Builder << Range;
   for (unsigned Index = 0; Index < Info.getNumArgs(); ++Index) {
     const DiagnosticsEngine::ArgumentKind Kind = Info.getArgKind(Index);
     switch (Kind) {
-    case clang::DiagnosticsEngine::ak_std_string:
+    case DiagnosticsEngine::ak_std_string:
       Builder << Info.getArgStdStr(Index);
       break;
-    case clang::DiagnosticsEngine::ak_c_string:
+    case DiagnosticsEngine::ak_c_string:
       Builder << Info.getArgCStr(Index);
       break;
-    case clang::DiagnosticsEngine::ak_sint:
+    case DiagnosticsEngine::ak_sint:
       Builder << Info.getArgSInt(Index);
       break;
-    case clang::DiagnosticsEngine::ak_uint:
+    case DiagnosticsEngine::ak_uint:
       Builder << Info.getArgUInt(Index);
       break;
-    case clang::DiagnosticsEngine::ak_tokenkind:
+    case DiagnosticsEngine::ak_tokenkind:
       Builder << static_cast<tok::TokenKind>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_identifierinfo:
+    case DiagnosticsEngine::ak_identifierinfo:
       Builder << Info.getArgIdentifier(Index);
       break;
-    case clang::DiagnosticsEngine::ak_qual:
+    case DiagnosticsEngine::ak_qual:
       Builder << Qualifiers::fromOpaqueValue(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_qualtype:
+    case DiagnosticsEngine::ak_qualtype:
       Builder << QualType::getFromOpaquePtr(
           reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
-    case clang::DiagnosticsEngine::ak_declarationname:
+    case DiagnosticsEngine::ak_declarationname:
       Builder << DeclarationName::getFromOpaqueInteger(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_nameddecl:
+    case DiagnosticsEngine::ak_nameddecl:
       Builder << reinterpret_cast<const NamedDecl *>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_nestednamespec:
+    case DiagnosticsEngine::ak_nestednamespec:
       Builder << NestedNameSpecifier::getFromVoidPointer(
           reinterpret_cast<void *>(Info.getRawArg(Index)));
       break;
-    case clang::DiagnosticsEngine::ak_declcontext:
+    case DiagnosticsEngine::ak_declcontext:
       Builder << reinterpret_cast<DeclContext *>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_qualtype_pair:
+    case DiagnosticsEngine::ak_qualtype_pair:
       assert(false); // This one is not passed around.
       break;
-    case clang::DiagnosticsEngine::ak_attr:
+    case DiagnosticsEngine::ak_attr:
       Builder << reinterpret_cast<Attr *>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_attr_info:
+    case DiagnosticsEngine::ak_attr_info:
       Builder << reinterpret_cast<AttributeCommonInfo *>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_addrspace:
+    case DiagnosticsEngine::ak_addrspace:
       Builder << static_cast<LangAS>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_expr:
+    case DiagnosticsEngine::ak_expr:
       Builder << reinterpret_cast<const Expr *>(Info.getRawArg(Index));
     }
   }
 }
 
 void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
+                                               unsigned DiagnosticID,
                                                const SourceManager &Sources) {
   // Invalid location may mean a diagnostic in a command line, don't skip these.
   if (!Location.isValid()) {
@@ -575,9 +581,17 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
     return;
   }
 
-  if (!Context.getOptions().SystemHeaders.value_or(false) &&
-      (Sources.isInSystemHeader(Location) || Sources.isInSystemMacro(Location)))
-    return;
+  if (!Context.getOptions().SystemHeaders.value_or(false)) {
+    if (Context.isCompilerDiagnostic(DiagnosticID)) {
+      if (Context.DiagEngine->getDiagnosticIDs()->shouldSuppressAsSystemWarning(
+              DiagnosticID, Location, *Context.DiagEngine))
+        return;
+    } else {
+      if (Sources.isInSystemHeader(Location) ||
+          Sources.isInSystemMacro(Location))
+        return;
+    }
+  }
 
   // FIXME: We start with a conservative approach here, but the actual type of
   // location needed depends on the check (in particular, where this check wants

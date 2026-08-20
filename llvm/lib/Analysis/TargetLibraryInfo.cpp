@@ -142,12 +142,9 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
-  // There is really no runtime library on AMDGPU, apart from
-  // __kmpc_alloc/free_shared.
+  // There is really no runtime library on AMDGPU.
   if (T.isAMDGPU()) {
     TLI.disableAllFunctions();
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
     return;
   }
 
@@ -785,8 +782,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     // Miscellaneous other functions not provided.
     TLI.setUnavailable(LibFunc_atomic_load);
     TLI.setUnavailable(LibFunc_atomic_store);
-    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
-    TLI.setUnavailable(LibFunc___kmpc_free_shared);
     TLI.setUnavailable(LibFunc_dunder_strndup);
     TLI.setUnavailable(LibFunc_bcmp);
     TLI.setUnavailable(LibFunc_bcopy);
@@ -834,8 +829,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_putc_unlocked);
     TLI.setAvailable(LibFunc_putchar_unlocked);
 
-    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
-    TLI.setUnavailable(LibFunc___kmpc_free_shared);
     TLI.setUnavailable(LibFunc_dunder_strndup);
     TLI.setUnavailable(LibFunc_memccpy_chk);
     TLI.setUnavailable(LibFunc_strlen_chk);
@@ -875,8 +868,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     //    TLI.setAvailable(llvm::LibFunc_memcpy);
     //    TLI.setAvailable(llvm::LibFunc_memset);
 
-    TLI.setAvailable(llvm::LibFunc___kmpc_alloc_shared);
-    TLI.setAvailable(llvm::LibFunc___kmpc_free_shared);
   } else {
     TLI.setUnavailable(LibFunc_nvvm_reflect);
   }
@@ -974,26 +965,24 @@ static StringRef sanitizeFunctionName(StringRef funcName) {
 static DenseMap<StringRef, LibFunc>
 buildIndexMap(const llvm::StringTable &StandardNames) {
   DenseMap<StringRef, LibFunc> Indices;
-  unsigned Idx = 0;
+  unsigned Idx = 1; // 0 is NotLibFunc.
   Indices.reserve(LibFunc::NumLibFuncs);
   for (const auto &Func : StandardNames)
     Indices[Func] = static_cast<LibFunc>(Idx++);
   return Indices;
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(StringRef funcName, LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(StringRef funcName) const {
   funcName = sanitizeFunctionName(funcName);
   if (funcName.empty())
-    return false;
+    return NotLibFunc;
 
   static const DenseMap<StringRef, LibFunc> Indices =
       buildIndexMap(StandardNamesStrTable);
 
-  if (auto Loc = Indices.find(funcName); Loc != Indices.end()) {
-    F = Loc->second;
-    return true;
-  }
-  return false;
+  if (auto Loc = Indices.find(funcName); Loc != Indices.end())
+    return Loc->second;
+  return NotLibFunc;
 }
 
 // Return true if ArgTy matches Ty.
@@ -1197,35 +1186,34 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   return Idx == NumParams + 1 && !FTy.isFunctionVarArg();
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(const Function &FDecl,
-                                       LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(const Function &FDecl) const {
   // Intrinsics don't overlap w/libcalls; if our module has a large number of
   // intrinsics, this ends up being an interesting compile time win since we
   // avoid string normalization and comparison.
-  if (FDecl.isIntrinsic()) return false;
+  if (FDecl.isIntrinsic())
+    return NotLibFunc;
 
   const Module *M = FDecl.getParent();
   assert(M && "Expecting FDecl to be connected to a Module.");
 
   if (FDecl.LibFuncCache == Function::UnknownLibFunc)
-    if (!getLibFunc(FDecl.getName(), FDecl.LibFuncCache))
-      FDecl.LibFuncCache = NotLibFunc;
+    FDecl.LibFuncCache = getLibFunc(FDecl.getName());
 
   if (FDecl.LibFuncCache == NotLibFunc)
-    return false;
+    return NotLibFunc;
 
-  F = FDecl.LibFuncCache;
-  return isValidProtoForLibFunc(*FDecl.getFunctionType(), F, *M);
+  if (!isValidProtoForLibFunc(*FDecl.getFunctionType(), FDecl.LibFuncCache, *M))
+    return NotLibFunc;
+
+  return FDecl.LibFuncCache;
 }
 
-bool TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty,
-                                       LibFunc &F) const {
+LibFunc TargetLibraryInfoImpl::getLibFunc(unsigned int Opcode, Type *Ty) const {
   // Must be a frem instruction with float or double arguments.
   if (Opcode != Instruction::FRem || (!Ty->isDoubleTy() && !Ty->isFloatTy()))
-    return false;
+    return NotLibFunc;
 
-  F = Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
-  return true;
+  return Ty->isDoubleTy() ? LibFunc_fmod : LibFunc_fmodf;
 }
 
 void TargetLibraryInfoImpl::disableAllFunctions() {
@@ -1452,7 +1440,7 @@ unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
   if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
       M.getModuleFlag("wchar_size")))
     return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return 0;
+  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

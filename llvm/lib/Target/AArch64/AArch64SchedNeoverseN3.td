@@ -19,7 +19,8 @@ def NeoverseN3Model : SchedMachineModel {
     let CompleteModel         =   1;
 
     list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
-        [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC]);
+                                                      SVE2p1Unsupported.F,
+        [HasSVE2p1, HasSVEB16B16, HasSVEBFSCALE, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1814,7 +1815,8 @@ def : InstRW<[N3Write_4c_1V1], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[N3Write_4c_2V0], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$")>;
+def : InstRW<[N3Write_2c_1V], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ$",
+                                         "^(EON|NAND|NOR)_ZZZ$")>;
 
 // Count/reverse bits
 def : InstRW<[N3Write_2c_1V], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
@@ -2157,7 +2159,7 @@ def : InstRW<[N3Write_2c_1V], (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                                          "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
+def : InstRW<[N3Write_3c_1V], (instregex "^(FSCALE|FMULX)_(ZPmZ|ZPZZ)_[HSD]",
                                          "^FMULX_ZPZZ_[HSD]",
                                          "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
                                          "^FMUL_ZPZ[IZ]_[HSD]")>;

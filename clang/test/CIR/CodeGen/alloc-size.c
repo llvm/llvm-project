@@ -9,9 +9,7 @@
 
 typedef unsigned long size_t;
 
-// CIR: cir.func{{.*}}@my_malloc(!s32i){{.*}} attributes {allocsize = array<i32: 0>}
 extern void *my_malloc(int) __attribute__((alloc_size(1)));
-// CIR: cir.func{{.*}}@my_calloc(!s32i, !s32i){{.*}} attributes {allocsize = array<i32: 0, 1>}
 extern void *my_calloc(int, int) __attribute__((alloc_size(1, 2)));
 
 // CIR-LABEL: @call_direct
@@ -24,6 +22,9 @@ void call_direct(void) {
   // CIR: cir.call @my_calloc(%{{.*}}) {allocsize = array<i32: 0, 1>}
   // LLVM: call ptr @my_calloc(i32{{.*}} 1, i32{{.*}} 16) [[DIRECT_CALLOC_ATTR:#[0-9]+]]
 }
+
+// CIR: cir.func{{.*}}@my_malloc(!s32i {llvm.noundef}){{.*}} attributes {allocsize = array<i32: 0>{{[,}]}}
+// CIR: cir.func{{.*}}@my_calloc(!s32i {llvm.noundef}, !s32i {llvm.noundef}){{.*}} attributes {allocsize = array<i32: 0, 1>{{[,}]}}
 
 extern void *(*malloc_function_pointer)(void *, int)__attribute__((alloc_size(2)));
 extern void *(*calloc_function_pointer)(void *, int, int)__attribute__((alloc_size(2, 3)));

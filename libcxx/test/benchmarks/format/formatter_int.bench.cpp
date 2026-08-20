@@ -26,7 +26,7 @@ static std::array<T, 1000> generate(std::uniform_int_distribution<T> distributio
 }
 
 template <class T>
-static void BM_Basic(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_Basic(benchmark::State& state) {
   std::array data{generate<T>()};
   std::array<char, 100> output;
 
@@ -34,15 +34,15 @@ static void BM_Basic(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK(BM_Basic<uint32_t>);
-BENCHMARK(BM_Basic<int32_t>);
-BENCHMARK(BM_Basic<uint64_t>);
-BENCHMARK(BM_Basic<int64_t>);
+BENCHMARK(BM_Basic<uint32_t>)->Name("std::format(uint32_t)");
+BENCHMARK(BM_Basic<int32_t>)->Name("std::format(int32_t)");
+BENCHMARK(BM_Basic<uint64_t>)->Name("std::format(uint64_t)");
+BENCHMARK(BM_Basic<int64_t>)->Name("std::format(int64_t)");
 
 // Ideally the low values of a 128-bit value are all dispatched to a 64-bit routine.
 #ifndef TEST_HAS_NO_INT128
 template <class T>
-static void BM_BasicLow(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_BasicLow(benchmark::State& state) {
   using U = std::conditional_t<std::is_signed_v<T>, int64_t, uint64_t>;
   std::array data{
       generate<T>(std::uniform_int_distribution<T>{std::numeric_limits<U>::min(), std::numeric_limits<U>::max()})};
@@ -52,11 +52,11 @@ static void BM_BasicLow(benchmark::State& state) {
     for (auto value : data)
       benchmark::DoNotOptimize(std::format_to(output.begin(), "{}", value));
 }
-BENCHMARK(BM_BasicLow<__uint128_t>);
-BENCHMARK(BM_BasicLow<__int128_t>);
+BENCHMARK(BM_BasicLow<__uint128_t>)->Name("std::format(__uint128_t) (lower 64 bits only)");
+BENCHMARK(BM_BasicLow<__int128_t>)->Name("std::format(__int128_t) (lower 64 bits only)");
 
-BENCHMARK(BM_Basic<__uint128_t>);
-BENCHMARK(BM_Basic<__int128_t>);
+BENCHMARK(BM_Basic<__uint128_t>)->Name("std::format(__uint128_t)");
+BENCHMARK(BM_Basic<__int128_t>)->Name("std::format(__int128_t)");
 #endif
 
 template <class>
@@ -71,7 +71,7 @@ inline constexpr std::string to_string<uint64_t> = "uint64_t";
 int main(int argc, char** argv) {
   auto bm = []<class IntT>(std::type_identity<IntT>, std::string fmt) {
     benchmark::RegisterBenchmark(
-        "std::format(" + to_string<IntT> + ") (fmt: " + fmt + ")", [fmt](benchmark::State& state) {
+        "std::format(" + to_string<IntT> + ") (fmt: " + fmt + ")", [fmt](benchmark::State& state) TEST_ALIGN_BENCHMARK {
           std::array data = generate<IntT>();
           std::array<char, 512> output;
 

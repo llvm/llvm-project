@@ -42,7 +42,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 
     ParentDecl->getCaptureFields(LC, LTC);
 
-    for (auto Cap : LC) {
+    for (const auto &Cap : LC) {
       unsigned Offset = R->getField(Cap.second)->Offset;
       this->LambdaCaptures[Cap.first] = {
           Offset, Cap.second->getType()->isReferenceType()};
@@ -55,18 +55,13 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   }
 
   bool IsValid = !FuncDecl->isInvalidDecl();
-  // Register parameters with their offset.
-  unsigned ParamIndex = 0;
-  unsigned Drop = Func->hasRVO() +
-                  (Func->hasThisPointer() && !Func->isThisPointerExplicit());
-
-  for (const auto &ParamDesc : llvm::drop_begin(Func->ParamDescriptors, Drop)) {
+  // Register parameters and their index.
+  for (unsigned ParamIndex = 0, N = Func->getNumWrittenParams();
+       ParamIndex != N; ++ParamIndex) {
     const ParmVarDecl *PD = FuncDecl->getParamDecl(ParamIndex);
     if (PD->isInvalidDecl())
       IsValid = false;
-    this->Params.insert(
-        {PD, {ParamDesc.Offset, Ctx.canClassify(PD->getType())}});
-    ++ParamIndex;
+    this->Params.insert({PD, {ParamIndex, Ctx.canClassify(PD->getType())}});
   }
 
   Func->setDefined(true);
@@ -97,7 +92,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
-  NextLocalOffset += align(D->getAllocSize());
+  NextLocalOffset += align(Block::InlineDescMD + D->getAllocSize());
   return {Location, D};
 }
 
@@ -218,24 +213,24 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (LocOverride)
-    SrcMap.emplace_back(Code.size(), *LocOverride);
+    SrcMap.push(Code.size(), *LocOverride);
   else if (SI)
-    SrcMap.emplace_back(Code.size(), SI);
+    SrcMap.push(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));
   return Success;
 }
 
-bool ByteCodeEmitter::jumpTrue(const LabelTy &Label) {
-  return emitJt(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
+  return emitJt(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jumpFalse(const LabelTy &Label) {
-  return emitJf(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
+  return emitJf(getOffset(Label), SI);
 }
 
-bool ByteCodeEmitter::jump(const LabelTy &Label) {
-  return emitJmp(getOffset(Label), SourceInfo{});
+bool ByteCodeEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  return emitJmp(getOffset(Label), SI);
 }
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {

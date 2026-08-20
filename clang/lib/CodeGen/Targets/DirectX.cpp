@@ -71,15 +71,30 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown;
     assert((!IsRawBuffer || !IsTexture) && "A resource cannot be both a raw "
                                            "buffer and a texture.");
+    bool IsMultiSampledTexture = IsTexture && ResAttrs.isMultiSampled();
     llvm::StringRef TypeName = "dx.TypedBuffer";
     if (IsRawBuffer)
       TypeName = "dx.RawBuffer";
+    else if (IsMultiSampledTexture)
+      TypeName = "dx.MSTexture";
     else if (IsTexture)
       TypeName = "dx.Texture";
 
-    SmallVector<unsigned, 4> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
-                                         llvm::dxil::ResourceClass::UAV,
-                                     /*IsROV*/ ResAttrs.IsROV};
+    // The second int operand is overloaded: dx.Texture holds IsROV there,
+    // dx.MSTexture holds the sample count. A sample count of 0 means the count
+    // comes from the bound resource at runtime, which is also what a
+    // Texture2DMS<T> written without an explicit N lowers to.
+    unsigned SampleCount = 0;
+    if (const Expr *SCE = ResAttrs.SampleCountExpr) {
+      std::optional<llvm::APSInt> Count =
+          SCE->getIntegerConstantExpr(CGM.getContext());
+      if (Count && Count->isNonNegative())
+        SampleCount = Count->getZExtValue();
+    }
+    SmallVector<unsigned, 4> Ints = {
+        /*IsWriteable*/ ResAttrs.ResourceClass ==
+            llvm::dxil::ResourceClass::UAV,
+        IsMultiSampledTexture ? SampleCount : /*IsROV*/ ResAttrs.IsROV};
     if (!IsRawBuffer) {
       const clang::Type *ElemType = ContainedTy->getUnqualifiedDesugaredType();
       if (ElemType->isVectorType())
@@ -97,7 +112,12 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::Texture1D;
         break;
       case llvm::dxil::ResourceDimension::Dim2D:
-        RK = llvm::dxil::ResourceKind::Texture2D;
+        if (ResAttrs.isMultiSampled())
+          RK = ResAttrs.IsArray ? llvm::dxil::ResourceKind::Texture2DMSArray
+                                : llvm::dxil::ResourceKind::Texture2DMS;
+        else
+          RK = ResAttrs.IsArray ? llvm::dxil::ResourceKind::Texture2DArray
+                                : llvm::dxil::ResourceKind::Texture2D;
         break;
       case llvm::dxil::ResourceDimension::Dim3D:
         RK = llvm::dxil::ResourceKind::Texture3D;
@@ -106,7 +126,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::TextureCube;
         break;
       default:
-        llvm_unreachable("Unsupported resource dimension for textur.");
+        llvm_unreachable("Unsupported resource dimension for texture.");
       }
       Ints.push_back(static_cast<unsigned>(RK));
     }

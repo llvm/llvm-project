@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "symbolfilepdb" in {
+let Definition = "symbolfilepdb", Path = "plugin.symbol-file.pdb" in {
   def Reader: Property<"reader", "Enum">,
     Global,
     DefaultEnumValue<"ePDBReaderDefault">,

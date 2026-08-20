@@ -68,7 +68,7 @@ entry:
   ret i32 %call
 }
 
-define i32 @strlen_test_fp_strict(ptr noundef %str) nounwind {
+define i32 @strlen_test_fp_strict(ptr noundef %str) strictfp nounwind {
 ; CHECK-AIX-32-P9-LABEL: strlen_test_fp_strict:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
@@ -312,7 +312,7 @@ define ptr @test_memccpy(ptr noalias noundef %dst, ptr noalias noundef %src, i32
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
 ; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .memccpy[PR]
+; CHECK-AIX-32-P9-NEXT:    bl .___memccpy[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
 ; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)

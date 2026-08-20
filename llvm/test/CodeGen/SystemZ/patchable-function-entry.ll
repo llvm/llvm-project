@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=s390x-ibm-linux %s -o - | FileCheck %s
 ; RUN: llc -mtriple=s390x-ibm-linux -function-sections %s -o - | FileCheck %s
-; RUN: llc -mtriple=s390x-ibm-linux -function-sections %s -o - | FileCheck %s
 ; RUN: llc -mtriple=s390x-ibm-linux -no-integrated-as -binutils-version=2.35 %s -o - | FileCheck --check-prefix=NOLINK %s
 ; RUN: llc -mtriple=s390x-ibm-linux -no-integrated-as -binutils-version=2.36 %s -o - | FileCheck %s
+; RUN: llc -mtriple=s390x-ibm-linux -mcpu=zEC12 %s -o - | FileCheck %s --check-prefix=ZEC12
 
 ;; GNU ld < 2.36 did not support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
 ; NOLINK-NOT: "awo"
@@ -98,5 +98,23 @@ define void @prefix() "patchable-function-entry"="0" "patchable-function-prefix"
 ; CHECK:      .section __patchable_function_entries,"awo",@progbits,prefix{{$}}
 ; CHECK:      .p2align        3, 0x0
 ; CHECK-NEXT: .quad   .Ltmp1
+  ret void
+}
+
+;; Make sure patchable function entry is not moved around.
+declare void @f4_1(i64)
+
+define void @f4_2() "patchable-function-entry"="3" {
+; ZEC12-LABEL: f4_2:
+; ZEC12-NEXT:  [[ENTRY:.Lfunc_begin[0-9]+]]:
+; ZEC12:       # %bb.0:
+; ZEC12-NEXT:  nopr
+; ZEC12-NEXT:  nopr
+; ZEC12-NEXT:  nopr
+; ZEC12-NEXT:  lghi
+; ZEC12:       .section __patchable_function_entries,"awo",@progbits,f4_2
+; ZEC12-NEXT:  .p2align 3, 0x0
+; ZEC12-NEXT:  .quad [[ENTRY]]
+  tail call void (i64) @f4_1(i64 1)
   ret void
 }

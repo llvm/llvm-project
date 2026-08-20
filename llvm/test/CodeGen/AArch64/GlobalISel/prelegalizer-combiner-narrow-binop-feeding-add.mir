@@ -11,20 +11,20 @@ body:             |
     ; CHECK-LABEL: name: add_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[ADD]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -36,20 +36,20 @@ body:             |
     ; CHECK-LABEL: name: sub_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[SUB]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_SUB %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_SUB %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -61,20 +61,20 @@ body:             |
     ; CHECK-LABEL: name: mul_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[MUL]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i32) = G_MUL [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[MUL]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_MUL %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_MUL %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -86,20 +86,20 @@ body:             |
     ; CHECK-LABEL: name: and_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[AND]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[AND]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_AND %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_AND %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -111,19 +111,19 @@ body:             |
     ; CHECK-LABEL: name: or_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: %binop:_(s64) = G_SUB %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_OR %binop, %mask_32
-    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: %binop:_(i64) = G_SUB %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: %and:_(i64) = G_OR %binop, %mask_32
+    ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_SUB %binop_lhs, %binop_rhs
-    %and:_(s64) = G_OR %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_SUB %binop_lhs, %binop_rhs
+    %and:_(i64) = G_OR %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -135,20 +135,20 @@ body:             |
     ; CHECK-LABEL: name: xor_64_mask_32
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[XOR]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_XOR %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_XOR %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -160,21 +160,21 @@ body:             |
     ; CHECK-LABEL: name: walk_thru_copy
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %binop_lhs(s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC %binop_rhs(s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %binop_lhs(i64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC %binop_rhs(i64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[ADD]](i32)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %copy:_(s64) = COPY %binop
-    %and:_(s64) = G_AND %copy, %mask_32
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %copy:_(i64) = COPY %binop
+    %and:_(i64) = G_AND %copy, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -186,19 +186,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_zext_not_free_add_64_mask_16
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %mask_16:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_AND %binop, %mask_16
-    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %mask_16:_(i64) = G_CONSTANT i64 65535
+    ; CHECK-NEXT: %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: %and:_(i64) = G_AND %binop, %mask_16
+    ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_16:_(s64) = G_CONSTANT i64 65535
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_16
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_16:_(i64) = G_CONSTANT i64 65535
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_16
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -210,19 +210,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_zext_not_free_add_64_mask_8
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %mask_8:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_AND %binop, %mask_8
-    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %mask_8:_(i64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: %and:_(i64) = G_AND %binop, %mask_8
+    ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_8:_(s64) = G_CONSTANT i64 255
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_8
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_8:_(i64) = G_CONSTANT i64 255
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_8
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -234,19 +234,19 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_not_a_mask
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %not_a_mask:_(s64) = G_CONSTANT i64 26
-    ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_AND %binop, %not_a_mask
-    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %not_a_mask:_(i64) = G_CONSTANT i64 26
+    ; CHECK-NEXT: %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: %and:_(i64) = G_AND %binop, %not_a_mask
+    ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %not_a_mask:_(s64) = G_CONSTANT i64 26
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %not_a_mask
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %not_a_mask:_(i64) = G_CONSTANT i64 26
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %not_a_mask
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -258,21 +258,18 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_more_than_one_use
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %not_a_mask:_(s64) = G_CONSTANT i64 26
-    ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(s64) = G_AND %binop, %not_a_mask
-    ; CHECK-NEXT: %or:_(s64) = G_OR %and, %binop
-    ; CHECK-NEXT: $x0 = COPY %or(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: $x0 = COPY %binop(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %not_a_mask:_(s64) = G_CONSTANT i64 26
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %not_a_mask
-    %or:_(s64) = G_OR %and, %binop
-    $x0 = COPY %or(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %not_a_mask:_(i64) = G_CONSTANT i64 26
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %not_a_mask
+    %or:_(i64) = G_OR %and, %binop
+    $x0 = COPY %or(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -284,21 +281,21 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_vector
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: %binop_rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: %mask_elt:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: %mask:_(<2 x s64>) = G_BUILD_VECTOR %mask_elt(s64), %mask_elt(s64)
-    ; CHECK-NEXT: %binop:_(<2 x s64>) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: %and:_(<2 x s64>) = G_AND %binop, %mask
-    ; CHECK-NEXT: $q0 = COPY %and(<2 x s64>)
+    ; CHECK-NEXT: %binop_lhs:_(<2 x i64>) = COPY $q0
+    ; CHECK-NEXT: %binop_rhs:_(<2 x i64>) = COPY $q1
+    ; CHECK-NEXT: %mask_elt:_(i64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: %mask:_(<2 x i64>) = G_BUILD_VECTOR %mask_elt(i64), %mask_elt(i64)
+    ; CHECK-NEXT: %binop:_(<2 x i64>) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: %and:_(<2 x i64>) = G_AND %binop, %mask
+    ; CHECK-NEXT: $q0 = COPY %and(<2 x i64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %binop_lhs:_(<2 x s64>) = COPY $q0
-    %binop_rhs:_(<2 x s64>) = COPY $q1
-    %mask_elt:_(s64) = G_CONSTANT i64 4294967295
-    %mask:_(<2 x s64>) = G_BUILD_VECTOR %mask_elt, %mask_elt
-    %binop:_(<2 x s64>) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(<2 x s64>) = G_AND %binop, %mask
-    $q0 = COPY %and(<2 x s64>)
+    %binop_lhs:_(<2 x i64>) = COPY $q0
+    %binop_rhs:_(<2 x i64>) = COPY $q1
+    %mask_elt:_(i64) = G_CONSTANT i64 4294967295
+    %mask:_(<2 x i64>) = G_BUILD_VECTOR %mask_elt, %mask_elt
+    %binop:_(<2 x i64>) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(<2 x i64>) = G_AND %binop, %mask
+    $q0 = COPY %and(<2 x i64>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -310,17 +307,17 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_add_64_mask_64
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %binop_lhs:_(s64) = COPY $x0
-    ; CHECK-NEXT: %binop_rhs:_(s64) = COPY $x1
-    ; CHECK-NEXT: %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    ; CHECK-NEXT: $x0 = COPY %binop(s64)
+    ; CHECK-NEXT: %binop_lhs:_(i64) = COPY $x0
+    ; CHECK-NEXT: %binop_rhs:_(i64) = COPY $x1
+    ; CHECK-NEXT: %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    ; CHECK-NEXT: $x0 = COPY %binop(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %binop_lhs:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_64:_(s64) = G_CONSTANT i64 18446744073709551615
-    %binop:_(s64) = G_ADD %binop_lhs, %binop_rhs
-    %and:_(s64) = G_AND %binop, %mask_64
-    $x0 = COPY %and(s64)
+    %binop_lhs:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_64:_(i64) = G_CONSTANT i64 18446744073709551615
+    %binop:_(i64) = G_ADD %binop_lhs, %binop_rhs
+    %and:_(i64) = G_AND %binop, %mask_64
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0
 ...
 ---
@@ -332,15 +329,15 @@ body:             |
     ; CHECK-LABEL: name: dont_combine_copy_from_physreg
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy_from_physreg:_(s64) = COPY $x0
-    ; CHECK-NEXT: %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    ; CHECK-NEXT: %and:_(s64) = G_AND %copy_from_physreg, %mask_32
-    ; CHECK-NEXT: $x0 = COPY %and(s64)
+    ; CHECK-NEXT: %copy_from_physreg:_(i64) = COPY $x0
+    ; CHECK-NEXT: %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    ; CHECK-NEXT: %and:_(i64) = G_AND %copy_from_physreg, %mask_32
+    ; CHECK-NEXT: $x0 = COPY %and(i64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
-    %copy_from_physreg:_(s64) = COPY $x0
-    %binop_rhs:_(s64) = COPY $x1
-    %mask_32:_(s64) = G_CONSTANT i64 4294967295
-    %copy:_(s64) = COPY %copy_from_physreg
-    %and:_(s64) = G_AND %copy, %mask_32
-    $x0 = COPY %and(s64)
+    %copy_from_physreg:_(i64) = COPY $x0
+    %binop_rhs:_(i64) = COPY $x1
+    %mask_32:_(i64) = G_CONSTANT i64 4294967295
+    %copy:_(i64) = COPY %copy_from_physreg
+    %and:_(i64) = G_AND %copy, %mask_32
+    $x0 = COPY %and(i64)
     RET_ReallyLR implicit $x0

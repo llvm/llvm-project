@@ -78,8 +78,8 @@ mlirRewriterBaseGetContext(MlirRewriterBase rewriter);
 //===----------------------------------------------------------------------===//
 
 // These do not include functions using Block::iterator or Region::iterator, as
-// they are not exposed by the C API yet. Similarly for methods using
-// `InsertPoint` directly.
+// they are not exposed by the C API yet. `InsertPoint` is exposed as
+// `MlirRewriterBaseInsertPoint` below.
 
 /// Reset the insertion point to no location.  Creating an operation without a
 /// set insertion point is an error, but this can still be useful when the
@@ -133,6 +133,25 @@ mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 MLIR_CAPI_EXPORTED MlirOperation
 mlirRewriterBaseGetOperationAfterInsertion(MlirRewriterBase rewriter);
 
+/// A saved insertion point: a (block, operationAfter) pair. `operationAfter` is
+/// the operation that subsequent insertions go before. If `operationAfter` is
+/// null, the insertion point is at the end of `block`. If `block` is null, the
+/// insertion point is not set (cleared).
+typedef struct MlirRewriterBaseInsertPoint {
+  MlirBlock block;
+  MlirOperation operationAfter;
+} MlirRewriterBaseInsertPoint;
+
+/// Returns the current insertion point of the rewriter so that it can be
+/// restored later with mlirRewriterBaseRestoreInsertionPoint.
+MLIR_CAPI_EXPORTED MlirRewriterBaseInsertPoint
+mlirRewriterBaseSaveInsertionPoint(MlirRewriterBase rewriter);
+
+/// Restores a previously saved insertion point.
+MLIR_CAPI_EXPORTED void
+mlirRewriterBaseRestoreInsertionPoint(MlirRewriterBase rewriter,
+                                      MlirRewriterBaseInsertPoint insertPoint);
+
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 //===----------------------------------------------------------------------===//
@@ -160,6 +179,11 @@ mlirRewriterBaseClone(MlirRewriterBase rewriter, MlirOperation op);
 /// empty.
 MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithoutRegions(
     MlirRewriterBase rewriter, MlirOperation op);
+
+/// Clones the given operation using the rewriter and the provided IRMapping.
+/// The mapping is updated with the results of the cloned operation.
+MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithMapping(
+    MlirRewriterBase rewriter, MlirOperation op, MlirIRMapping mapping);
 
 /// Clone the blocks that belong to "region" before the given position in
 /// another region "parent".
@@ -490,6 +514,21 @@ MLIR_CAPI_EXPORTED MlirPatternRewriter
 mlirConversionPatternRewriterAsPatternRewriter(
     MlirConversionPatternRewriter rewriter);
 
+/// Apply a signature conversion to each block in the given region.
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirConversionPatternRewriterConvertRegionTypes(
+    MlirConversionPatternRewriter rewriter, MlirRegion region,
+    MlirTypeConverter typeConverter);
+
+/// Replace the given operation with multiple value ranges -- one range per
+/// result of `op` -- and erase it. `nRanges` must equal the number of results
+/// of `op`. `rangeSizes[i]` is the number of values in the i-th range, and
+/// `values` is the flat concatenation of all ranges (its length is the sum of
+/// `rangeSizes[0..nRanges)`).
+MLIR_CAPI_EXPORTED void mlirConversionPatternRewriterReplaceOpWithMultiple(
+    MlirConversionPatternRewriter rewriter, MlirOperation op, intptr_t nRanges,
+    intptr_t *rangeSizes, MlirValue *values);
+
 //===----------------------------------------------------------------------===//
 /// ConversionTarget API
 //===----------------------------------------------------------------------===//
@@ -522,6 +561,50 @@ MLIR_CAPI_EXPORTED void
 mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
                                       MlirStringRef dialectName);
 
+/// Result of a dynamic legality callback.
+typedef enum {
+  /// The operation instance is legal.
+  MLIR_CONVERSION_TARGET_LEGALITY_LEGAL,
+  /// The operation instance is illegal.
+  MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL,
+  /// The callback has no opinion on this instance. The decision is deferred to
+  /// other registered callbacks (legality callbacks are composed) or, failing
+  /// that, to the operation's static legality action.
+  MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION
+} MlirConversionTargetLegality;
+
+/// Callback for dynamic legality checks. Returns the legality of the given
+/// operation instance (see MlirConversionTargetLegality).
+typedef MlirConversionTargetLegality (
+    *MlirConversionTargetDynamicLegalityCallback)(MlirOperation op,
+                                                  void *userData);
+
+/// Register the given operation as dynamically legal, with a callback to
+/// determine per-instance legality. The callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalOp(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Register the given dialect as dynamically legal, with a callback to
+/// determine per-instance legality for all operations in the dialect. The
+/// callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalDialect(
+    MlirConversionTarget target, MlirStringRef dialectName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark the given operation as recursively legal. The optional callback (may
+/// be NULL) determines whether a specific instance is recursively legal; a NULL
+/// callback marks the operation as unconditionally recursively legal.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkOpRecursivelyLegal(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark unknown operations as dynamically legal, with a callback. The callback
+/// must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+    MlirConversionTarget target,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
 //===----------------------------------------------------------------------===//
 /// TypeConverter API
 //===----------------------------------------------------------------------===//
@@ -533,18 +616,127 @@ MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate(void);
 MLIR_CAPI_EXPORTED void
 mlirTypeConverterDestroy(MlirTypeConverter typeConverter);
 
-/// Callback type for type conversion functions.
-/// Returns failure or sets convertedType to MlirType{NULL} to indicate failure.
-/// If failure is returned, the converter is allowed to try another
-/// conversion function to perform the conversion.
-typedef MlirLogicalResult (*MlirTypeConverterConversionCallback)(
-    MlirType type, MlirType *convertedType, void *userData);
+/// Outcome of a type conversion callback. Mirrors the three states of the
+/// underlying C++ `std::optional<LogicalResult>` conversion result.
+typedef enum MlirTypeConverterConversionStatus {
+  /// The type was converted successfully.
+  MlirTypeConverterConversionStatusSuccess = 0,
+  /// The conversion failed; no further conversion function will be tried.
+  MlirTypeConverterConversionStatusFailure = 1,
+  /// The conversion was declined; another registered conversion function may be
+  /// tried.
+  MlirTypeConverterConversionStatusDeclined = 2,
+} MlirTypeConverterConversionStatus;
+
+/// Callback type for type conversion functions. On success the callback sets
+/// `*convertedType` to the converted type and returns
+/// MlirTypeConverterConversionStatusSuccess. Returning
+/// MlirTypeConverterConversionStatusDeclined leaves the type unconverted and
+/// allows another registered conversion function to be tried; returning
+/// MlirTypeConverterConversionStatusFailure fails the conversion without trying
+/// any further function.
+typedef MlirTypeConverterConversionStatus (
+    *MlirTypeConverterConversionCallback)(MlirType type,
+                                          MlirType *convertedType,
+                                          void *userData);
 
 /// Add a type conversion function to the given TypeConverter.
 MLIR_CAPI_EXPORTED void
 mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
                                MlirTypeConverterConversionCallback convertType,
                                void *userData);
+
+/// Opaque accumulator for the result types of a 1:N type conversion. It is
+/// passed to a MlirTypeConverter1ToNConversionCallback, which appends converted
+/// types to it via mlirTypeConverterConversionResultsAppend.
+typedef struct MlirTypeConverterConversionResults {
+  void *ptr;
+} MlirTypeConverterConversionResults;
+
+/// Append a converted result type to the given 1:N conversion result
+/// accumulator.
+MLIR_CAPI_EXPORTED void mlirTypeConverterConversionResultsAppend(
+    MlirTypeConverterConversionResults results, MlirType type);
+
+/// Callback type for 1:N type conversion functions. For the given `type`, the
+/// callback appends zero or more converted result types to `results` (via
+/// mlirTypeConverterConversionResultsAppend) and returns a status. On
+/// MlirTypeConverterConversionStatusSuccess the appended types make up the
+/// conversion: appending a single type is a 1:1 conversion, appending several
+/// is a 1:N conversion, and appending none erases the type. Returning
+/// MlirTypeConverterConversionStatusDeclined lets another conversion function
+/// be tried; MlirTypeConverterConversionStatusFailure fails the conversion
+/// without trying another. Any types appended before a non-success status are
+/// discarded.
+typedef MlirTypeConverterConversionStatus (
+    *MlirTypeConverter1ToNConversionCallback)(
+    MlirType type, MlirTypeConverterConversionResults results, void *userData);
+
+/// Add a 1:N type conversion function to the given TypeConverter.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAdd1ToNConversion(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverter1ToNConversionCallback convertType, void *userData);
+
+/// Convert the given type using the given TypeConverter. This is the 1:1
+/// convenience form: it returns the single converted type, or a null MlirType
+/// on failure or if the type converts to anything other than exactly one type
+/// (e.g. a 1:N conversion registered via mlirTypeConverterAdd1ToNConversion, or
+/// an erasure to zero types).
+MLIR_CAPI_EXPORTED MlirType
+mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
+
+/// Callback type for source materializations. Given a builder (passed as a
+/// rewriter), the desired output type, the input values, and a location, the
+/// callback must build a cast-like operation that produces a single value of
+/// `outputType` and return it. Returning a null MlirValue indicates failure, in
+/// which case another registered materialization may be attempted.
+typedef MlirValue (*MlirTypeConverterSourceMaterializationCallback)(
+    MlirRewriterBase rewriter, MlirType outputType, intptr_t nInputs,
+    MlirValue *inputs, MlirLocation loc, void *userData);
+
+/// Callback type for 1:1 target materializations. Behaves like
+/// MlirTypeConverterSourceMaterializationCallback, but additionally receives
+/// `originalType`: the original type of the SSA value being materialized.
+///
+/// Note: This callback is single-output. For the 1:N (multiple-output) form,
+/// use MlirTypeConverter1ToNTargetMaterializationCallback.
+typedef MlirValue (*MlirTypeConverterTargetMaterializationCallback)(
+    MlirRewriterBase rewriter, MlirType outputType, intptr_t nInputs,
+    MlirValue *inputs, MlirLocation loc, MlirType originalType, void *userData);
+
+/// Register a source materialization with the given TypeConverter. This is
+/// invoked when a replacement value must be converted back to its original
+/// source type because some uses persist beyond the main conversion.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterSourceMaterializationCallback callback, void *userData);
+
+/// Register a target materialization with the given TypeConverter. This is
+/// invoked when a value must be converted to a target type according to a
+/// pattern's type converter.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterTargetMaterializationCallback callback, void *userData);
+
+/// Callback type for 1:N target materializations. Like
+/// MlirTypeConverterTargetMaterializationCallback, but produces a value for
+/// each of the `nOutputTypes` requested output types instead of a single value.
+/// On success the callback must fill `outputs` -- a caller-allocated array of
+/// length `nOutputTypes` -- with that many non-null values; succeeding while
+/// leaving any entry null asserts. Returning failure signals that this
+/// materialization declined (so another may be attempted); in that case
+/// `outputs` is ignored. `originalType` carries the original type of the value
+/// being materialized and may be a null MlirType.
+typedef MlirLogicalResult (*MlirTypeConverter1ToNTargetMaterializationCallback)(
+    MlirRewriterBase rewriter, intptr_t nOutputTypes, MlirType *outputTypes,
+    intptr_t nInputs, MlirValue *inputs, MlirLocation loc,
+    MlirType originalType, MlirValue *outputs, void *userData);
+
+/// Register a 1:N target materialization with the given TypeConverter.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAdd1ToNTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverter1ToNTargetMaterializationCallback callback,
+    void *userData);
 
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
@@ -565,6 +757,18 @@ typedef struct {
                                        MlirValue *operands,
                                        MlirConversionPatternRewriter rewriter,
                                        void *userData);
+  /// Optional callback corresponding to the 1:N
+  /// ConversionPattern::matchAndRewrite(Operation *, ArrayRef<ValueRange>, ...)
+  /// overload, used when one or more operands are remapped to several values
+  /// (e.g. under a 1:N type conversion). `operands` is the flat concatenation
+  /// of all operand ranges; there are `nRanges` ranges (one per original
+  /// operand) and `rangeSizes[i]` is the number of values in the i-th range.
+  /// When this is non-null it takes precedence; when null, the driver falls
+  /// back to the 1:1 `matchAndRewrite` above.
+  MlirLogicalResult (*matchAndRewrite1ToN)(
+      MlirConversionPattern pattern, MlirOperation op, intptr_t nRanges,
+      intptr_t *rangeSizes, intptr_t nOperands, MlirValue *operands,
+      MlirConversionPatternRewriter rewriter, void *userData);
 } MlirConversionPatternCallbacks;
 
 /// Create a conversion pattern that matches the operation with the given
@@ -617,6 +821,10 @@ MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePatternCreate(
 /// Create an empty MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED MlirRewritePatternSet
 mlirRewritePatternSetCreate(MlirContext context);
+
+/// Get the context associated with a MlirRewritePatternSet.
+MLIR_CAPI_EXPORTED MlirContext
+mlirRewritePatternSetGetContext(MlirRewritePatternSet set);
 
 /// Destruct the given MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetDestroy(MlirRewritePatternSet set);

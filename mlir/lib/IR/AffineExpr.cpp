@@ -738,7 +738,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // and readable form.
 
   // Process '(expr floordiv c) * (-c)'.
-  if (!rBinOpExpr)
+  if (!rBinOpExpr || rBinOpExpr.getKind() != AffineExprKind::Mul)
     return nullptr;
 
   auto lrhs = rBinOpExpr.getLHS();
@@ -746,10 +746,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
 
   AffineExpr llrhs, rlrhs;
 
-  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q, where q is a
-  // symbolic expression.
+  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q,
+  // where q is a symbolic expression.
   auto lrhsBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  // Check rrhsConstOpExpr = -1.
+  // Check rrhsConstOpExpr = -1 as part of ((expr floordiv q) * q)) * (-1).
   auto rrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rrhs);
   if (rrhsConstOpExpr && rrhsConstOpExpr.getValue() == -1 && lrhsBinOpExpr &&
       lrhsBinOpExpr.getKind() == AffineExprKind::Mul) {
@@ -906,19 +906,28 @@ AffineExpr AffineExpr::operator-() const {
 }
 
 // Delegate to operator+.
-AffineExpr AffineExpr::operator-(int64_t v) const { return *this + (-v); }
+AffineExpr AffineExpr::operator-(int64_t v) const {
+  // Use unsigned negation to avoid signed integer overflow for INT64_MIN.
+  return *this + static_cast<int64_t>(-static_cast<uint64_t>(v));
+}
 AffineExpr AffineExpr::operator-(AffineExpr other) const {
+  if (auto constOther = dyn_cast<AffineConstantExpr>(other))
+    return *this - constOther.getValue();
   return *this + (-other);
 }
 
 static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
-  auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
+  // For the defined cases, simplify x floordiv x is 1.
+  if (lhs == rhs && (!rhsConst || rhsConst.getValue() >= 1))
+    return getAffineConstantExpr(1, lhs.getContext());
+
+  // All other simplifications further below are for the RHS constant case.
   if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst) {
+  if (auto lhsConst = dyn_cast<AffineConstantExpr>(lhs)) {
     if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
     return getAffineConstantExpr(
@@ -971,13 +980,17 @@ AffineExpr AffineExpr::floorDiv(AffineExpr other) const {
 }
 
 static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
-  auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
+  // For the defined cases, simplify x ceildiv x is 1.
+  if (lhs == rhs && (!rhsConst || rhsConst.getValue() >= 1))
+    return getAffineConstantExpr(1, lhs.getContext());
+
+  // All other simplifications further below are for the RHS constant case.
   if (!rhsConst || rhsConst.getValue() == 0)
     return nullptr;
 
-  if (lhsConst) {
+  if (auto lhsConst = dyn_cast<AffineConstantExpr>(lhs)) {
     if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
     return getAffineConstantExpr(
@@ -1018,14 +1031,18 @@ AffineExpr AffineExpr::ceilDiv(AffineExpr other) const {
 }
 
 static AffineExpr simplifyMod(AffineExpr lhs, AffineExpr rhs) {
-  auto lhsConst = dyn_cast<AffineConstantExpr>(lhs);
   auto rhsConst = dyn_cast<AffineConstantExpr>(rhs);
 
+  // For the defined cases, simplify x % x to 0.
+  if (lhs == rhs && (!rhsConst || rhsConst.getValue() >= 1))
+    return getAffineConstantExpr(0, lhs.getContext());
+
   // mod w.r.t zero or negative numbers is undefined and preserved as is.
+  // All other simplifications further below are for the RHS constant case.
   if (!rhsConst || rhsConst.getValue() < 1)
     return nullptr;
 
-  if (lhsConst) {
+  if (auto lhsConst = dyn_cast<AffineConstantExpr>(lhs)) {
     // mod never overflows.
     return getAffineConstantExpr(mod(lhsConst.getValue(), rhsConst.getValue()),
                                  lhs.getContext());

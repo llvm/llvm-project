@@ -32,7 +32,7 @@ namespace lldb_dap {
 // possible targets for a given source line can be retrieved via the
 // `stepInTargets` request.
 Error StepInRequestHandler::Run(const StepInArguments &args) const {
-  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+  if (dap.ProcessIsNotStopped())
     return make_error<NotStoppedError>();
 
   SBThread thread = dap.GetLLDBThread(args.threadId);

@@ -7,6 +7,7 @@ set(
     "builtin_ceil_floor_rint_trunc"
     "builtin_fmax_fmin"
     "builtin_fmaxf16_fminf16"
+    "builtin_isnan"
     "builtin_round"
     "builtin_roundeven"
     "float16"
@@ -16,6 +17,7 @@ set(
     "cfloat16"
     "cfloat128"
     "ext_vector_type"
+    "stdc_fenv_access"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -65,8 +67,14 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
+  elseif(${feature} STREQUAL "stdc_fenv_access")
+    if(MSVC)
+      list(APPEND compile_options "/WX")
+    else()
+      list(APPEND compile_options "-Wall -Werror")
+    endif()
   elseif(${feature} MATCHES "^builtin_" OR
-         ${feature} STREQUAL "float16_conversion")
+      ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
     set(link_options -nostdlib)
     # The compiler might handle calls to math builtins by generating calls to
@@ -110,7 +118,7 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     elseif(${feature} STREQUAL "float16_conversion")
       add_compile_definitions(__LIBC_USE_FLOAT16_CONVERSION)
     elseif(${feature} STREQUAL "float128")
-      set(LIBC_TYPES_HAS_FLOAT128 TRUE)
+      set(LIBC_TYPES_HAS_NATIVE_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
     elseif(${feature} STREQUAL "cfloat16")
@@ -123,12 +131,16 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN TRUE)
     elseif(${feature} STREQUAL "builtin_fmaxf16_fminf16")
       set(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16 TRUE)
+    elseif(${feature} STREQUAL "builtin_isnan")
+      set(LIBC_COMPILER_HAS_BUILTIN_ISNAN TRUE)
     elseif(${feature} STREQUAL "builtin_round")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUND TRUE)
     elseif(${feature} STREQUAL "builtin_roundeven")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN TRUE)
     elseif(${feature} STREQUAL "ext_vector_type")
       set(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE TRUE)
+    elseif(${feature} STREQUAL "stdc_fenv_access")
+      set(LIBC_COMPILER_HAS_STDC_FENV_ACCESS TRUE)
     endif()
   endif()
 endforeach()
@@ -149,3 +161,6 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-all, gcc-8+
+check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)

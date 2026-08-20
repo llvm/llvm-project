@@ -404,6 +404,29 @@ transform::LoopUnrollOp::applyToOne(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// LoopUnrollFullOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopUnrollFullOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  LogicalResult result(failure());
+  if (scf::ForOp scfFor = dyn_cast<scf::ForOp>(op))
+    result = loopUnrollFull(scfFor);
+  else if (AffineForOp affineFor = dyn_cast<AffineForOp>(op))
+    result = loopUnrollFull(affineFor);
+  else
+    return emitSilenceableError()
+           << "failed to fully unroll, incorrect type of payload";
+
+  if (failed(result))
+    return emitSilenceableError() << "failed to fully unroll";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopUnrollAndJamOp
 //===----------------------------------------------------------------------===//
 
@@ -447,6 +470,52 @@ transform::LoopCoalesceOp::applyToOne(transform::TransformRewriter &rewriter,
                                        << "failed to coalesce";
     return diag;
   }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopCoalesceNestedOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure transform::LoopCoalesceNestedOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *op,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  auto forOp = dyn_cast<scf::ForOp>(op);
+  if (!forOp) {
+    return emitSilenceableError() << "expected scf.for operation";
+  }
+
+  // Collect nested loops (including imperfectly nested ones)
+  SmallVector<scf::ForOp> nestedLoops;
+  scf::ForOp currentLoop = forOp;
+
+  while (currentLoop) {
+    nestedLoops.push_back(currentLoop);
+    Block &body = currentLoop.getRegion().front();
+
+    // Look for the next nested loop
+    scf::ForOp nextLoop = nullptr;
+    for (Operation &bodyOp : body) {
+      if (auto innerFor = dyn_cast<scf::ForOp>(&bodyOp)) {
+        nextLoop = innerFor;
+        break;
+      }
+    }
+
+    currentLoop = nextLoop;
+  }
+
+  // Need at least 2 loops to coalesce
+  if (nestedLoops.size() < 2) {
+    return emitSilenceableError() << "need at least 2 nested loops to coalesce";
+  }
+
+  // Call coalesceLoops directly
+  if (failed(coalesceLoops(rewriter, nestedLoops))) {
+    return emitSilenceableError() << "failed to coalesce nested loops";
+  }
+
+  results.push_back(nestedLoops.front());
   return DiagnosedSilenceableFailure::success();
 }
 

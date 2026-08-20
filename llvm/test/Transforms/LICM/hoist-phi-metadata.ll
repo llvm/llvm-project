@@ -51,7 +51,7 @@ end:
 !1 = !DIFile(filename: "t", directory: "/")
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "triangle_phi", linkageName: "triangle_phi", scope: !1, file: !1, line: 1, unit: !0)
+!4 = distinct !DISubprogram(name: "triangle_phi", linkageName: "triangle_phi", scope: !1, file: !1, line: 1, unit: !0, type: !10)
 !5 = !DILocation(line: 1, column: 22, scope: !4)
 !6 = !DILocation(line: 2, column: 22, scope: !4)
 !7 = !DILocation(line: 3, column: 22, scope: !4)
@@ -62,9 +62,11 @@ end:
 ; CHECK: [[META1:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 5, i32 7}
 ; CHECK: [[DBG3]] = !DILocation(line: 2, column: 22, scope: [[META4:![0-9]+]])
-; CHECK: [[META4]] = distinct !DISubprogram(name: "triangle_phi", linkageName: "triangle_phi", scope: [[META5:![0-9]+]], file: [[META5]], line: 1, spFlags: DISPFlagDefinition, unit: [[META6:![0-9]+]])
+; CHECK: [[META4]] = distinct !DISubprogram(name: "triangle_phi", linkageName: "triangle_phi", scope: [[META5:![0-9]+]], file: [[META5]], line: 1, type: [[TYPE:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META6:![0-9]+]])
 ; CHECK: [[META5]] = !DIFile(filename: "{{.*}}t", directory: {{.*}})
 ; CHECK: [[META6]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META5]], isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CHECK: [[DBG7]] = !DILocation(line: 3, column: 22, scope: [[META4]])
 ; CHECK: [[PROF8]] = !{!"branch_weights", i32 13, i32 11}
 ;.
+!10 = !DISubroutineType(types: !11)
+!11 = !{null}

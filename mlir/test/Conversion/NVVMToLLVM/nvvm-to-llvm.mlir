@@ -62,19 +62,19 @@ llvm.func @init_mbarrier_try_wait(%barrier : !llvm.ptr, %ticks : i32, %phase : i
 
 // CHECK-LABEL: @async_cp
 func.func @async_cp(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
   return
 }
 
 // CHECK-LABEL: @async_cp_zfill
 func.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache =  cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache =  ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
-  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 4, cache = ca, %{{.*}} : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 4, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   return
 }
 
@@ -82,33 +82,33 @@ func.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) 
 func.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.ptr) {
   // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}}
   nvvm.cp.async.mbarrier.arrive %bar_gen : !llvm.ptr
-  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}} {noinc = true}
-  nvvm.cp.async.mbarrier.arrive %bar_gen {noinc = true} : !llvm.ptr
+  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}}  noinc = true
+  nvvm.cp.async.mbarrier.arrive %bar_gen  noinc = true : !llvm.ptr
   // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}}
   nvvm.cp.async.mbarrier.arrive %bar_shared : !llvm.ptr<3>
-  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}} {noinc = true}
-  nvvm.cp.async.mbarrier.arrive %bar_shared {noinc = true} : !llvm.ptr<3>
+  // CHECK: nvvm.cp.async.mbarrier.arrive %{{.*}}  noinc = true
+  nvvm.cp.async.mbarrier.arrive %bar_shared  noinc = true : !llvm.ptr<3>
   llvm.return
 }
 
 // CHECK-LABEL: @tma_load_3d_all
 func.func @tma_load_3d_all(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<7>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$9 cp.async.bulk.tensor.3d.shared::cluster.global.mbarrier::complete_tx::bytes.im2col.multicast::cluster.L2::cache_hint [$0], [$1, {$2,$3,$4} ], [$5],{$6}, $7, $8;", "l,l,r,r,r,r,h,h,l,b"
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p {mode = #nvvm.tma_load_mode<im2col>} : !llvm.ptr<7>, !llvm.ptr
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2] im2col[%off0] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p  mode = im2col : !llvm.ptr<7>, !llvm.ptr
   return
 }
 
 // CHECK-LABEL: @tma_load_4d_all
 func.func @tma_load_4d_all(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<7>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %off0: i16, %off1: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$11 cp.async.bulk.tensor.4d.shared::cluster.global.mbarrier::complete_tx::bytes.im2col.multicast::cluster.L2::cache_hint [$0], [$1, {$2,$3,$4,$5} ], [$6],{$7,$8}, $9, $10;", "l,l,r,r,r,r,r,h,h,h,l,b"
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0,%off1] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p {mode = #nvvm.tma_load_mode<im2col>} : !llvm.ptr<7>, !llvm.ptr
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3] im2col[%off0,%off1] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p  mode = im2col : !llvm.ptr<7>, !llvm.ptr
   return
 }
 
 // CHECK-LABEL: @tma_load_5d_all
 func.func @tma_load_5d_all(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<7>, %barrier: !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %crd4: i32, %off0: i16, %off1: i16, %off2: i16, %ctamask : i16, %cacheHint : i64, %p : i1) {
   // CHECK: lvm.inline_asm has_side_effects asm_dialect = att "@$13 cp.async.bulk.tensor.5d.shared::cluster.global.mbarrier::complete_tx::bytes.im2col.multicast::cluster.L2::cache_hint [$0], [$1, {$2,$3,$4,$5,$6} ], [$7],{$8,$9,$10}, $11, $12;", "l,l,r,r,r,r,r,r,h,h,h,h,l,b"
-  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd4] im2col[%off0,%off1,%off2] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p {mode = #nvvm.tma_load_mode<im2col>} : !llvm.ptr<7>, !llvm.ptr
+  nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd4] im2col[%off0,%off1,%off2] multicast_mask = %ctamask l2_cache_hint = %cacheHint predicate = %p  mode = im2col : !llvm.ptr<7>, !llvm.ptr
   return
 }
 
@@ -185,35 +185,35 @@ func.func @tma_load_multicast5d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<7>,
 // CHECK-LABEL: @tma_store_1d
 func.func @tma_store_1d(%tmaDescriptor: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$3 cp.async.bulk.tensor.1d.global.shared::cta.bulk_group [$0, {$2} ], [$1];", "l,r,r,b"
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0], predicate=%p : !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0] predicate =%p : !llvm.ptr, !llvm.ptr<3>
   return
 }
 
 // CHECK-LABEL: @tma_store_2d
 func.func @tma_store_2d(%tmaDescriptor: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %crd1: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$4 cp.async.bulk.tensor.2d.global.shared::cta.bulk_group [$0, {$2, $3} ], [$1];", "l,r,r,r,b"
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1], predicate=%p : !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1] predicate =%p : !llvm.ptr, !llvm.ptr<3>
   return
 }
 
 // CHECK-LABEL: @tma_store_3d
 func.func @tma_store_3d(%tmaDescriptor: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$5 cp.async.bulk.tensor.3d.global.shared::cta.bulk_group [$0, {$2, $3, $4} ], [$1];", "l,r,r,r,r,b"
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2], predicate=%p : !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2] predicate =%p : !llvm.ptr, !llvm.ptr<3>
   return
 }
 
 // CHECK-LABEL: @tma_store_4d
 func.func @tma_store_4d(%tmaDescriptor: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %p : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$6 cp.async.bulk.tensor.4d.global.shared::cta.bulk_group [$0, {$2, $3, $4, $5} ], [$1];", "l,r,r,r,r,r,b"
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2,%crd3], predicate=%p : !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2,%crd3] predicate =%p : !llvm.ptr, !llvm.ptr<3>
   return
 }
 
 // CHECK-LABEL: @tma_store_5d
 func.func @tma_store_5d(%tmaDescriptor: !llvm.ptr, %src : !llvm.ptr<3>, %crd0: i32, %crd1: i32, %crd2: i32, %crd3: i32, %crd4: i32, %p : i1) {
   // CHECK-NEXT: llvm.inline_asm has_side_effects asm_dialect = att "@$7 cp.async.bulk.tensor.5d.global.shared::cta.bulk_group [$0, {$2, $3, $4, $5, $6} ], [$1];", "l,r,r,r,r,r,r,b"
-  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4], predicate=%p : !llvm.ptr, !llvm.ptr<3>
+  nvvm.cp.async.bulk.tensor.global.shared.cta %tmaDescriptor, %src, box[%crd0,%crd1,%crd2,%crd3,%crd4] predicate =%p : !llvm.ptr, !llvm.ptr<3>
   return
 }
 
@@ -573,27 +573,14 @@ func.func @cp_async_bulk_commit() {
 func.func @cp_async_bulk_wait_group() {
   // CHECK: nvvm.cp.async.bulk.wait_group 1
   // CHECK: nvvm.cp.async.bulk.wait_group 0
-  // CHECK: nvvm.cp.async.bulk.wait_group 5 {read}
-  // CHECK: nvvm.cp.async.bulk.wait_group 0 {read}
+  // CHECK: nvvm.cp.async.bulk.wait_group 5  read
+  // CHECK: nvvm.cp.async.bulk.wait_group 0  read
   nvvm.cp.async.bulk.wait_group 1
   nvvm.cp.async.bulk.wait_group 0
-  nvvm.cp.async.bulk.wait_group 5 {read}
-  nvvm.cp.async.bulk.wait_group 0 {read}
+  nvvm.cp.async.bulk.wait_group 5  read
+  nvvm.cp.async.bulk.wait_group 0  read
   func.return
 }
-
-// -----
-
-// CHECK-LABEL: @llvm_nvvm_barrier_arrive
-// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
-llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive 0, $0;", "r" %[[numberOfThreads]] : (i32) -> ()
-  nvvm.barrier.arrive number_of_threads = %numberOfThreads
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive $0, $1;", "r,r" %[[barId]], %[[numberOfThreads]] : (i32, i32) -> ()
-  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
-  llvm.return
-}
-
 
 // -----
 
@@ -610,13 +597,46 @@ llvm.func @init_mbarrier(
 }
 // -----
 
+llvm.func @init_mbarrier_memory_clobber(
+    %barrier_gen : !llvm.ptr,
+    %count : i32,
+    %pred : i1) {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}"
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b,~{memory}"
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true, predicate = %pred
+  llvm.return
+}
+// -----
+
+llvm.func @memory_clobber_no_operands() {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.sc.cta;", "~{memory}"
+  nvvm.inline_ptx "fence.sc.cta;" memory_clobber = true
+  llvm.return
+}
+// -----
+
 llvm.func @ex2(%input : f32, %pred : i1) {
   // CHECK: %{{.*}} = llvm.inline_asm has_side_effects asm_dialect = att "ex2.approx.ftz.f32 $0, $1;", "=f,f" %{{.*}} : (f32) -> f32
   %0 = nvvm.inline_ptx "ex2.approx.ftz.f32 {$w0}, {$r0};" ro (%input : f32) -> f32
   
-  // CHECK: %{{.*}} =  llvm.inline_asm has_side_effects asm_dialect = att "@$1 ex2.approx.ftz.f32 $0, $1;", "=f,f,b" %{{.*}}, %{{.*}} : (f32, i1) -> f32
+  // CHECK: %{{.*}} =  llvm.inline_asm has_side_effects asm_dialect = att "@$2 ex2.approx.ftz.f32 $0, $1;", "=f,f,b" %{{.*}}, %{{.*}} : (f32, i1) -> f32
   %1 = nvvm.inline_ptx "ex2.approx.ftz.f32 {$w0}, {$r0};" ro (%input : f32), predicate = %pred  -> f32
   llvm.return
+}
+
+// CHECK-LABEL: @multi_return_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @multi_return_pred(%a : i32, %b : i32, %pred : i1) -> i32 {
+  // CHECK: %[[S1:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$4 {.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}", "=r,=r,r,r,b" %[[arg0]], %[[arg1]], %[[pred]] : (i32, i32, i1) -> !llvm.struct<(i32, i32)>
+  // CHECK: %[[S2:.+]] = llvm.extractvalue %[[S1]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: %[[S3:.+]] = llvm.extractvalue %[[S1]][1] : !llvm.struct<(i32, i32)>
+  // CHECK: %[[S4:.+]] = llvm.add %[[S2]], %[[S3]] : i32
+  // CHECK: llvm.return %[[S4]] : i32
+   %r1, %r2 = nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$w0}, {$r0},{$r1}, p; selp.s32 {$w1}, {$r0},{$r1}, p;}"
+                  ro (%a, %b : i32,i32), predicate = %pred -> i32,i32
+   %r3 = llvm.add %r1, %r2 : i32
+   llvm.return %r3 : i32
 }
 
 // CHECK-LABEL: @multi_return(
@@ -651,6 +671,38 @@ llvm.func @inline_ptx_multi_rw(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) ->
    llvm.return %r4 : f32
 }
 
+// CHECK-LABEL: @inline_ptx_multi_rw_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @inline_ptx_multi_rw_pred(%a : i32, %b : i32, %rw_c : f32, %rw_d : f32, %pred : i1) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$4 {.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}",
+// CHECK-SAME: "=f,=f,r,r,b,0,1"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]], %[[pred]]
+// CHECK-SAME: : (f32, f32, i32, i32, i1) -> !llvm.struct<(f32, f32)>
+// CHECK: %[[S1:.+]] = llvm.extractvalue %[[S0]][0] : !llvm.struct<(f32, f32)>
+// CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(f32, f32)>
+// CHECK: %[[S3:.+]] = llvm.fadd %[[S1]], %[[S2]] : f32
+// CHECK: llvm.return %[[S3]] : f32
+    nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
+    ro (%a, %b : i32,i32)
+    rw (%rw_c, %rw_d: f32,f32), predicate = %pred
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   llvm.return %r4 : f32
+}
+
+// CHECK-LABEL: @inline_ptx_multi_rw_memory_clobber(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32)
+llvm.func @inline_ptx_multi_rw_memory_clobber(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{.reg .pred p; setp.ge.s32 p, $2, $3; selp.s32 $0, $2,$3, p; selp.s32 $1, $2,$3, p;}",
+// CHECK-SAME: "=f,=f,r,r,0,1,~{memory}"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]]
+// CHECK-SAME: : (f32, f32, i32, i32) -> !llvm.struct<(f32, f32)>
+    nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
+    ro (%a, %b : i32,i32)
+    rw (%rw_c, %rw_d: f32,f32) memory_clobber = true
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   llvm.return %r4 : f32
+}
+
 // CHECK-LABEL: @inline_ptx_multi_rw_r(
 // CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32)
 llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) -> f32 {
@@ -671,6 +723,33 @@ llvm.func @inline_ptx_multi_rw_r(%a : i32, %b : i32,  %rw_c : f32, %rw_d : f32) 
   %wo0, %wo1 = nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p; selp.s32 {$w0}, {$r0},{$r1}, p; selp.s32 {$w1}, {$r0},{$r1}, p;}"
       ro (%a, %b : i32,i32) 
       rw (%rw_c, %rw_d: f32,f32) -> i32,i32
+   %r3 = llvm.add %wo0, %wo1 : i32
+   %r3f = llvm.sitofp %r3 : i32 to f32
+   %r4 = llvm.fadd %rw_c, %rw_d : f32
+   %r5 = llvm.fadd %r3f, %rw_d : f32
+   llvm.return %r5 : f32
+}
+
+// CHECK-LABEL: @inline_ptx_multi_rw_r_pred(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: i32, %[[arg1:[a-zA-Z0-9_]+]]: i32, %[[arg2:[a-zA-Z0-9_]+]]: f32, %[[arg3:[a-zA-Z0-9_]+]]: f32, %[[pred:[a-zA-Z0-9_]+]]: i1)
+llvm.func @inline_ptx_multi_rw_r_pred(%a : i32, %b : i32, %rw_c : f32, %rw_d : f32, %pred : i1) -> f32 {
+// CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "@$6 {.reg .pred p; setp.ge.s32 p, $4, $5; selp.s32 $0, $4,$5, p; selp.s32 $1, $4,$5, p; selp.s32 $2, $4,$5, p; selp.s32 $3, $4,$5, p;}",
+// CHECK-SAME: "=f,=f,=r,=r,r,r,b,0,1"
+// CHECK-SAME: %[[arg2]], %[[arg3]], %[[arg0]], %[[arg1]], %[[pred]] :
+// CHECK-SAME: (f32, f32, i32, i32, i1) -> !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S1:.+]] = llvm.extractvalue %[[S0]][0] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S2:.+]] = llvm.extractvalue %[[S0]][1] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S3:.+]] = llvm.extractvalue %[[S0]][2] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S4:.+]] = llvm.extractvalue %[[S0]][3] : !llvm.struct<(f32, f32, i32, i32)>
+// CHECK: %[[S5:.+]] = llvm.add %[[S3]], %[[S4]] : i32
+// CHECK: %[[S6:.+]] = llvm.sitofp %[[S5]] : i32 to f32
+// CHECK: %[[S7:.+]] = llvm.fadd %[[S1]], %[[S2]] : f32
+// CHECK: %[[S8:.+]] = llvm.fadd %[[S6]], %[[S2]] : f32
+// CHECK: llvm.return %[[S8]] : f32
+
+  %wo0, %wo1 = nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p; selp.s32 {$w0}, {$r0},{$r1}, p; selp.s32 {$w1}, {$r0},{$r1}, p;}"
+      ro (%a, %b : i32,i32)
+      rw (%rw_c, %rw_d: f32,f32), predicate = %pred -> i32,i32
    %r3 = llvm.add %wo0, %wo1 : i32
    %r3f = llvm.sitofp %r3 : i32 to f32
    %r4 = llvm.fadd %rw_c, %rw_d : f32
@@ -711,4 +790,39 @@ llvm.func @cvt_i8_bf16(%a : i8)  {
                           ro(%za : i16) 
                           -> i16
   llvm.return  
+}
+
+
+// CHECK-LABEL: @inline_ptx_single_rw_no_result(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: f32, %[[arg1:[a-zA-Z0-9_]+]]: f32)
+llvm.func @inline_ptx_single_rw_no_result(%a : f32, %b : f32) -> f32 {
+  // Single read-write operand and no declared results: the inline asm result
+  // value represents the post-asm value of the RW operand and must replace
+  // its uses (without trying to replace the wrapper op's non-existent result).
+  // CHECK: %[[C:.+]] = llvm.fadd %[[arg0]], %[[arg1]] : f32
+  // CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "asm1 ", "=f,0" %[[C]] : (f32) -> f32
+  // CHECK: %[[R:.+]] = llvm.fadd %[[S0]], %[[arg0]] : f32
+  // CHECK: llvm.return %[[R]] : f32
+  %c = llvm.fadd %a, %b : f32
+  nvvm.inline_ptx "asm1 " rw(%c : f32)
+  %a2 = llvm.fadd %c, %a : f32
+  llvm.return %a2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @inline_ptx_preserves_special_register
+llvm.func @inline_ptx_preserves_special_register() -> i32 {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mov.u32 $0, %laneid;", "=r"
+  %0 = nvvm.inline_ptx "mov.u32 {$w0}, %laneid;" -> i32
+  llvm.return %0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @inline_ptx_special_register_trailing_digit
+llvm.func @inline_ptx_special_register_trailing_digit() -> i32 {
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mov.u32 $0, %pm0;", "=r"
+  %0 = nvvm.inline_ptx "mov.u32 {$w0}, %pm0;" -> i32
+  llvm.return %0 : i32
 }

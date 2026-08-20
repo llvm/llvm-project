@@ -9,7 +9,6 @@
 #include "IncludeSorter.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include <algorithm>
 #include <optional>
 
 namespace clang::tidy {
@@ -83,18 +82,16 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
         CanonicalInclude.split("/public/");
     StringRef FileCopy = CanonicalFile;
     if (FileCopy.consume_front(Parts.first) &&
-        FileCopy.consume_back(Parts.second)) {
-      // Determine the kind of this inclusion.
-      if (FileCopy == "/internal/" || FileCopy == "/proto/")
-        return IncludeSorter::IK_MainTUInclude;
-    }
+        FileCopy.consume_back(Parts.second) &&
+        // Determine the kind of this inclusion.
+        (FileCopy == "/internal/" || FileCopy == "/proto/"))
+      return IncludeSorter::IK_MainTUInclude;
   }
-  if (Style == IncludeSorter::IS_Google_ObjC) {
-    if (IncludeFile.ends_with(".generated.h") ||
-        IncludeFile.ends_with(".proto.h") ||
-        IncludeFile.ends_with(".pbobjc.h")) {
-      return IncludeSorter::IK_GeneratedInclude;
-    }
+  if (Style == IncludeSorter::IS_Google_ObjC &&
+      (IncludeFile.ends_with(".generated.h") ||
+       IncludeFile.ends_with(".proto.h") ||
+       IncludeFile.ends_with(".pbobjc.h"))) {
+    return IncludeSorter::IK_GeneratedInclude;
   }
   return IncludeSorter::IK_NonSystemInclude;
 }
@@ -103,7 +100,7 @@ static int compareHeaders(StringRef LHS, StringRef RHS,
                           IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
-        std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
+        llvm::mismatch(LHS, RHS);
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
       if ((*Mismatch.first == '.') && (*Mismatch.second == '+'))
         return -1;
@@ -143,25 +140,29 @@ void IncludeSorter::addInclude(StringRef FileName, bool IsAngled,
 
 std::optional<FixItHint>
 IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
+  const StringRef LineEnding =
+      SourceMgr->getBufferData(CurrentFileID).detectEOL();
   std::string IncludeStmt;
   if (Style == IncludeStyle::IS_Google_ObjC) {
-    IncludeStmt = IsAngled
-                      ? llvm::Twine("#import <" + FileName + ">\n").str()
-                      : llvm::Twine("#import \"" + FileName + "\"\n").str();
+    IncludeStmt =
+        IsAngled
+            ? llvm::Twine("#import <" + FileName + ">" + LineEnding).str()
+            : llvm::Twine("#import \"" + FileName + "\"" + LineEnding).str();
   } else {
-    IncludeStmt = IsAngled
-                      ? llvm::Twine("#include <" + FileName + ">\n").str()
-                      : llvm::Twine("#include \"" + FileName + "\"\n").str();
+    IncludeStmt =
+        IsAngled
+            ? llvm::Twine("#include <" + FileName + ">" + LineEnding).str()
+            : llvm::Twine("#include \"" + FileName + "\"" + LineEnding).str();
   }
   if (SourceLocations.empty()) {
     // If there are no includes in this file, add it in the first line.
     // FIXME: insert after the file comment or the header guard, if present.
-    IncludeStmt.append("\n");
+    IncludeStmt.append(LineEnding);
     return FixItHint::CreateInsertion(
         SourceMgr->getLocForStartOfFile(CurrentFileID), IncludeStmt);
   }
 
-  auto IncludeKind =
+  const auto IncludeKind =
       determineIncludeKind(CanonicalFile, FileName, IsAngled, Style);
 
   if (!IncludeBucket[IncludeKind].empty()) {
@@ -202,7 +203,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
     const std::string &LastInclude = IncludeBucket[NonEmptyKind].back();
     const SourceRange LastIncludeLocation =
         IncludeLocations[LastInclude].back();
-    IncludeStmt = '\n' + IncludeStmt;
+    IncludeStmt.insert(0, LineEnding);
     return FixItHint::CreateInsertion(LastIncludeLocation.getEnd(),
                                       IncludeStmt);
   }
@@ -210,7 +211,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   const std::string &FirstInclude = IncludeBucket[NonEmptyKind][0];
   const SourceRange FirstIncludeLocation =
       IncludeLocations[FirstInclude].back();
-  IncludeStmt.append("\n");
+  IncludeStmt.append(LineEnding);
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
 }

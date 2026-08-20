@@ -42,14 +42,14 @@
 ; TYPEUNITS-NOT:  NULL
 ; TYPEUNITS:      DW_TAG_enumerator
 ; TYPEUNITS-NOT:  {{DW_TAG|NULL}}
-; TYPEUNITS:      DW_AT_name [DW_FORM_strx1] (indexed (00000005) string = "b")
+; TYPEUNITS:      DW_AT_name [DW_FORM_strx1] (indexed (00000007) string = "b")
 ; TYPEUNITS-NOT:  contents:
 ; TYPEUNITS:      DW_TAG_type_unit
 ; TYPEUNITS-NOT:  {{DW_TAG|NULL}}
 ; TYPEUNITS:      DW_AT_str_offsets_base [DW_FORM_sec_offset] (0x[[CU1_STROFF]])
 ; TYPEUNITS-NOT:  NULL
 ; TYPEUNITS:      DW_TAG_enumeration_type
-; TYPEUNITS:      DW_AT_name [DW_FORM_strx1] (indexed (0000000d) string = "E2")
+; TYPEUNITS:      DW_AT_name [DW_FORM_strx1] (indexed (0000000e) string = "E2")
 ; TYPEUNITS-NOT:  contents:
 ; TYPEUNITS:      DW_TAG_type_unit
 ; TYPEUNITS-NOT:  {{DW_TAG|NULL}}
@@ -73,7 +73,7 @@
 ; BOTH-NOT:    NULL
 ; BOTH:        DW_TAG_variable
 ; BOTH-NOT:    {{DW_TAG|NULL}}
-; BOTH:        DW_AT_name [DW_FORM_strx1] (indexed (00000009) string = "glob2")
+; BOTH:        DW_AT_name [DW_FORM_strx1] (indexed (0000000a) string = "glob2")
 ;
 ; CU 3
 ; BOTH-NOT:    contents:
@@ -104,7 +104,8 @@
 ; BOTH-NEXT:      {{.*:}}
 ; BOTH-NEXT:      {{.*:}}
 ; BOTH-NEXT:      {{.*:}}
-; The string with index 9 should be "glob2"
+; BOTH-NEXT:      {{.*:}}
+; The string with index 10 (0xa) should be "glob2"
 ; BOTH-NEXT:      {{.*:}} [[GLOB2OFF]]
 ;
 ; ModuleID = 'test.bc'

@@ -87,3 +87,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=shadow-call-stack -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SCS-MINIMAL
 // CHECK-SCS-MINIMAL: "-fsanitize=shadow-call-stack"
 // CHECK-SCS-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=safe-stack -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SAFESTACK-MINIMAL
+// CHECK-SAFESTACK-MINIMAL: "-fsanitize=safe-stack"
+// CHECK-SAFESTACK-MINIMAL: "-fsanitize-minimal-runtime"

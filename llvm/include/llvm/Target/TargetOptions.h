@@ -119,8 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoInfsFPMath(false), NoNaNsFPMath(false), NoTrappingFPMath(true),
-        NoSignedZerosFPMath(false), EnableAIXExtendedAltivecABI(false),
+      : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -133,11 +132,11 @@ public:
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false),
+        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
+        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
+        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
@@ -155,28 +154,10 @@ public:
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};
 
-  /// NoInfsFPMath - This flag is enabled when the
-  /// -enable-no-infs-fp-math flag is specified on the command line. When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// assume the FP arithmetic arguments and results are never +-Infs.
-  unsigned NoInfsFPMath : 1;
-
-  /// NoNaNsFPMath - This flag is enabled when the
-  /// -enable-no-nans-fp-math flag is specified on the command line. When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// assume the FP arithmetic arguments and results are never NaNs.
-  unsigned NoNaNsFPMath : 1;
-
   /// NoTrappingFPMath - This flag is enabled when the
   /// -enable-no-trapping-fp-math is specified on the command line. This
   /// specifies that there are no trap handlers to handle exceptions.
   unsigned NoTrappingFPMath : 1;
-
-  /// NoSignedZerosFPMath - This flag is enabled when the
-  /// -enable-no-signed-zeros-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to treat the sign of a zero
-  /// argument or result as insignificant.
-  unsigned NoSignedZerosFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -292,6 +273,10 @@ public:
   /// Set if the target supports default outlining behaviour.
   unsigned SupportsDefaultOutlining : 1;
 
+  /// Enable Machine verifier at the end of default codegen pipelines. (Only
+  /// used with NPM)
+  unsigned EnableDefaultMachineVerifier : 1;
+
   /// Emit address-significance table.
   unsigned EmitAddrsig : 1;
 
@@ -372,14 +357,6 @@ public:
 
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
-
-  /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
-  /// on the command line. This setting may either be Default, Soft, or Hard.
-  /// Default selects the target's default behavior. Soft selects the ABI for
-  /// software floating point, but does not indicate that FP hardware may not
-  /// be used. Such a combination is unfortunately popular (e.g.
-  /// arm-apple-darwin). Hard presumes that the normal FP ABI is used.
-  FloatABI::ABIType FloatABIType = FloatABI::Default;
 
   /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
   /// This controls the creation of fused FP ops that store intermediate

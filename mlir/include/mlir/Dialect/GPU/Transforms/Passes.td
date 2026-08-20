@@ -14,7 +14,6 @@ include "mlir/Pass/PassBase.td"
 def GpuLaunchSinkIndexComputationsPass
     : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
-  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
 def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
@@ -66,7 +65,6 @@ def GpuEliminateBarriers
     PPoPP 2023 and implementation in Polygeist.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect",
     "mlir::memref::MemRefDialect",
     "mlir::scf::SCFDialect"
   ];
@@ -84,7 +82,7 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
     `gpu.launch`.
   }];
   let dependentDialects = [
-    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect"
   ];
 }
@@ -146,7 +144,7 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"+ptx60\"",
+           /*default=*/"\"\"",
            "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",

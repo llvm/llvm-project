@@ -32,8 +32,8 @@ static const char *symbolLookupCallback(void *DisInfo, uint64_t ReferenceValue,
   return nullptr;
 }
 
-static constexpr char TripleName[] = "amdgcn--amdpal";
-static constexpr char CPUName[] = "gfx1030";
+static constexpr char TripleName[] = "amdgpu10.30--amdpal";
+static constexpr char CPUName[] = "";
 
 // Basic smoke test.
 TEST(AMDGPUDisassembler, Basic) {
@@ -79,12 +79,13 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
     GTEST_SKIP();
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
 
   int AsmPrinterVariant = MAI->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(
@@ -150,12 +151,13 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
     GTEST_SKIP();
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
 
   // Define custom UC_VERSION before initializing disassembler.
   const uint8_t UC_VERSION_GFX10_DEFAULT = 0x04;

@@ -439,6 +439,8 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
 
 [[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
   switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRA:
   case AArch64::TLSDESC_CALLSEQ:
   case AArch64::TLSDESC_AUTH_CALLSEQ:
   case AArch64::ADJCALLSTACKDOWN:
@@ -475,6 +477,9 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
     auto FirstTerminatorInsertPt = MBB.getFirstTerminator();
     auto FirstNonPhiInsertPt = MBB.getFirstNonPHI();
     for (MachineInstr &MI : reverse(MBB)) {
+      if (MI.isDebugInstr())
+        continue;
+
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = getPhysLiveRegs(LiveUnits);
@@ -490,7 +495,6 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       auto [NeededState, InsertPt] = getInstNeededZAState(*TRI, MI, SMEFnAttrs);
       assert((InsertPt == MBBI || isCallStartOpcode(InsertPt->getOpcode())) &&
              "Unexpected state change insertion point!");
-      // TODO: Do something to avoid state changes where NZCV is live.
       if (MBBI == FirstTerminatorInsertPt)
         Block.PhysLiveRegsAtExit = PhysLiveRegs;
       if (MBBI == FirstNonPhiInsertPt)
@@ -583,6 +587,9 @@ MachineSMEABI::findStateChangeInsertionPoint(
   setPhysLiveRegs(LiveUnits, PhysLiveRegs);
   auto BestCandidate = std::make_pair(InsertPt, PhysLiveRegs);
   for (MachineBasicBlock::iterator I = InsertPt; I != PrevStateChangeI; --I) {
+    if (I->isDebugInstr())
+      continue;
+
     // Don't move before/into a call (which may have a state change before it).
     if (I->getOpcode() == TII->getCallFrameDestroyOpcode() || I->isCall())
       break;
@@ -1129,13 +1136,14 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   // This section handles: LOCAL_COMMITTED -> (OFF|LOCAL_SAVED)
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::LOCAL_SAVED):
-    // These transistions are a no-op.
+    // These transitions are a no-op.
     break;
 
   // This section handles: LOCAL_(SAVED|COMMITTED) -> ACTIVE[_ZT0_SAVED]
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE_ZT0_SAVED):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE):
+  case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE_ZT0_SAVED):
     if (HasZAState)
       emitZARestore(Context, MBB, InsertPt, PhysLiveRegs);
     else
@@ -1144,7 +1152,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
       emitZT0SaveRestore(Context, MBB, InsertPt, /*IsSave=*/false);
     break;
 
-  // This section handles transistions to OFF (not previously covered)
+  // This section handles transitions to OFF (not previously covered)
   case transitionFrom(ZAState::ACTIVE).to(ZAState::OFF):
   case transitionFrom(ZAState::ACTIVE_ZT0_SAVED).to(ZAState::OFF):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::OFF):
@@ -1161,20 +1169,33 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   }
 }
 
+/// Returns true if private ZA setup can be elided. This occurs when there is
+/// no instruction within the function that requires ZA to be active.
+static bool canElidePrivateZASetup(const FunctionInfo &FnInfo) {
+  for (const BlockInfo &BlockInfo : FnInfo.Blocks) {
+    for (const InstInfo &InstInfo : BlockInfo.Insts) {
+      if (InstInfo.NeededState == ZAState::ACTIVE ||
+          InstInfo.NeededState == ZAState::ACTIVE_ZT0_SAVED)
+        return false;
+    }
+  }
+  return true;
+}
+
 } // end anonymous namespace
 
 INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
                 false, false)
 
 bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
-  if (!Subtarget->hasSME())
-    return false;
-
   AFI = MF.getInfo<AArch64FunctionInfo>();
   SMEAttrs SMEFnAttrs = AFI->getSMEFnAttrs();
   if (!SMEFnAttrs.hasZAState() && !SMEFnAttrs.hasZT0State() &&
       !SMEFnAttrs.hasAgnosticZAInterface())
+    return false;
+
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget->hasSME() && !SMEFnAttrs.hasAgnosticZAInterface())
     return false;
 
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
@@ -1191,6 +1212,9 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
+
+  if (SMEFnAttrs.hasPrivateZAInterface() && canElidePrivateZASetup(FnInfo))
+    return false;
 
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 

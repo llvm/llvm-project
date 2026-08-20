@@ -2,7 +2,7 @@
 
 
 func.func @test_invalid_arg_materialization(
-  // expected-error@below {{failed to legalize unresolved materialization from () to ('i16') that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved source materialization from () to ('i16') that remained live after conversion (no matching callback)}}
   %arg0: i16) {
   // expected-note@below{{see existing live user here}}
   "foo.return"(%arg0) : (i16) -> ()
@@ -21,7 +21,7 @@ func.func @test_valid_arg_materialization(%arg0: i64) {
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved source materialization from ('f64') to ('f16') that remained live after conversion (no matching callback)}}
   %result = "test.type_producer"() : () -> f16
   // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
@@ -30,7 +30,7 @@ func.func @test_invalid_result_materialization() {
 // -----
 
 func.func @test_invalid_result_materialization() {
-  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved source materialization from ('f64') to ('f16') that remained live after conversion (no matching callback)}}
   %result = "test.type_producer"() : () -> f16
   // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
@@ -50,7 +50,7 @@ func.func @test_transitive_use_materialization() {
 // -----
 
 func.func @test_transitive_use_invalid_materialization() {
-  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved source materialization from ('f64') to ('f16') that remained live after conversion (no matching callback)}}
   %result = "test.another_type_producer"() : () -> f16
   // expected-note@below{{see existing live user here}}
   "foo.return"(%result) : (f16) -> ()
@@ -102,7 +102,7 @@ func.func @test_block_argument_not_converted() {
 // Make sure argument type changes aren't implicitly forwarded.
 func.func @test_signature_conversion_no_converter() {
   "test.signature_conversion_no_converter"() ({
-  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f32') that remained live after conversion}}
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f32') that remained live after conversion (no type converter specified)}}
   ^bb0(%arg0: f32):
     // expected-note@below{{see existing live user here}}
     "test.type_consumer"(%arg0) : (f32) -> ()
@@ -164,4 +164,39 @@ func.func @test_unstructured_cf_conversion(%arg0: f32, %c: i1) {
 ^bb2(%arg2: f32):
   "test.bar"(%arg2) : (f32) -> ()
   return
+}
+
+// -----
+
+// Test that gpu.func with workgroup arguments (which are extra block arguments
+// beyond the function type inputs) does not crash during signature conversion.
+// See https://github.com/llvm/llvm-project/issues/184744
+
+// CHECK-LABEL: gpu.func @func_with_workgroup_args
+// CHECK-SAME: (%{{.*}}: memref<?xi32>, %{{.*}}: i32) workgroup(%{{.*}} : memref<512xi32>)
+gpu.module @cuda_events {
+  gpu.func @func_with_workgroup_args(%arg0: memref<?xi32>, %arg1: i32)
+      workgroup(%workgroup_mem: memref<512xi32>)
+      kernel {
+    %idx = arith.constant 0 : index
+    %val = memref.load %arg0[%idx] : memref<?xi32>
+    memref.store %val, %arg0[%idx] : memref<?xi32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Test that the order of materialization legalization is deterministic.
+// Multiple unresolvable materializations are created; the first one (in
+// insertion/walk order) should always fail first. With a DenseMap for
+// unresolvedMaterializations, the processing order would depend on pointer
+// hashes and could differ with LLVM_ENABLE_REVERSE_ITERATION.
+
+func.func @test_deterministic_materialization_order() {
+  // expected-error@below {{failed to legalize unresolved source materialization from ('f64') to ('f16') that remained live after conversion (no matching callback)}}
+  %a = "test.type_producer"() : () -> f16
+  %b = "test.type_producer"() : () -> f16
+  // expected-note@below {{see existing live user here}}
+  "foo.return"(%a, %b) : (f16, f16) -> ()
 }

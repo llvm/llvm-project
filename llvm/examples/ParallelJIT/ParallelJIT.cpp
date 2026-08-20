@@ -105,7 +105,7 @@ static Function *CreateFibFunction(Module *M) {
 
   // Create the "if (arg < 2) goto exitbb"
   Value *CondInst = new ICmpInst(BB, ICmpInst::ICMP_SLE, ArgX, Two, "cond");
-  BranchInst::Create(RetBB, RecurseBB, CondInst, BB);
+  CondBrInst::Create(CondInst, RetBB, RecurseBB, BB);
 
   // Create: ret int 1
   ReturnInst::Create(Context, One, RetBB);

@@ -32,19 +32,21 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "The GPU compilation format used by the tests.")
   set(ARM_SME_ABI_ROUTINES_SHLIB "" CACHE STRING
       "Path to a shared library containing Arm SME ABI routines, required for Arm SME integration tests.")
-  option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
-  option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
+  option(MLIR_RUN_X86_TESTS "Run X86 tests.")
+  option(MLIR_RUN_X86_AMX_TESTS "Run X86 AMX tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
   option(MLIR_RUN_CUDA_SM80_LT_TESTS "Run CUDA A100 structured sparsity tests.")
   option(MLIR_RUN_CUDA_SM90_TESTS "Run CUDA H100 tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
+  option(MLIR_RUN_ARM_I8MM_TESTS "Run Arm I8MM tests.")
 
   # Check whether an emulator is required - if yes then make sure that it's
   # been set.
   check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
   check_emulator(MLIR_RUN_ARM_SME_TESTS "HWCAP2_SME" ARM_EMULATOR_EXECUTABLE)
+  check_emulator(MLIR_RUN_ARM_I8MM_TESTS "HWCAP2_I8MM" ARM_EMULATOR_EXECUTABLE)
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
@@ -69,18 +71,21 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
+  LLVM_HAS_AMDGPU_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
+  MLIR_ENABLE_PYTHON_STABLE_ABI
   MLIR_ENABLE_CUDA_RUNNER
-  MLIR_ENABLE_ROCM_CONVERSIONS
   MLIR_ENABLE_ROCM_RUNNER
   MLIR_ENABLE_SPIRV_CPU_RUNNER
   MLIR_ENABLE_VULKAN_RUNNER
   MLIR_INCLUDE_INTEGRATION_TESTS
-  MLIR_RUN_AMX_TESTS
+  MLIR_RUN_X86_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
-  MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_X86_TESTS
   MLIR_RUN_ARM_SVE_TESTS
   MLIR_RUN_ARM_SME_TESTS
+  MLIR_RUN_ARM_I8MM_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
@@ -92,12 +97,28 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "SHLIBDIR"
+  "LLVM_LIT_TOOLS_DIR"
+  "MLIR_BINARY_DIR"
+  "MLIR_CMAKE_DIR"
+  "MLIR_LIB_DIR"
+  "MLIR_SOURCE_DIR"
+  "MLIR_TOOLS_DIR"
   )
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.cfg.py
+  PATHS
+  "LLVM_TOOLS_DIR"
+  "MLIR_BINARY_DIR"
+  "MLIR_SOURCE_DIR"
   )
 
 set(MLIR_TEST_DEPENDS
@@ -124,7 +145,14 @@ set(MLIR_TEST_DEPENDS
   tblgen-to-irdl
   )
 if(NOT MLIR_STANDALONE_BUILD)
-  list(APPEND MLIR_TEST_DEPENDS FileCheck count not split-file yaml2obj)
+  list(APPEND MLIR_TEST_DEPENDS
+    FileCheck
+    count
+    llvm-strings
+    not
+    split-file
+    yaml2obj
+    )
 endif()
 # Examples/standalone/test.toy (vis-a-vis the standalone example) depends on these.
 if(LLVM_INCLUDE_EXAMPLES)

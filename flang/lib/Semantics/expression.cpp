@@ -162,6 +162,8 @@ public:
 
   bool CheckConformance();
   bool CheckAssignmentConformance();
+  bool CheckConsequentTypesAndRanks(
+      const ActualArgument::ConditionalArg &condArg);
   bool CheckForNullPointer(const char *where = "as an operand here");
   bool CheckForAssumedRank(const char *where = "as an operand here");
 
@@ -1482,6 +1484,12 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
   const auto &name{sc.Component().source};
   if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
     const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
+    if (dtSpec && dtSpec->IsEnumerationType()) {
+      Say(name,
+          "Component reference is not allowed for enumeration type '%s'"_err_en_US,
+          dtSpec->typeSymbol().name());
+      return std::nullopt;
+    }
     if (isTypeParamInquiry) {
       if (auto *designator{UnwrapExpr<Designator<SomeDerived>>(*dtExpr)}) {
         if (std::optional<DynamicType> dyType{DynamicType::From(*sym)}) {
@@ -1497,14 +1505,24 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
         Say(name,
             "A type parameter inquiry must be applied to a designator"_err_en_US);
       }
-    } else if (!dtSpec || !dtSpec->scope()) {
+    } else if (!dtSpec || !dtSpec->GetScope()) {
       CHECK(context_.AnyFatalError() || !foldingContext_.messages().empty());
       return std::nullopt;
     } else if (std::optional<DataRef> dataRef{
                    ExtractDataRef(std::move(*dtExpr))}) {
+      // The base may use a forked DerivedTypeSpec (e.g. OpenACC use_device with
+      // CUDA) while the parse tree still points at host-associated component
+      // symbols; resolve the component in the base type's instantiated scope.
+      const semantics::Scope &typeScope{DEREF(dtSpec->GetScope())};
+      Symbol *compSym{sym};
+      if (sym && sym->owner().IsDerivedType() && &sym->owner() != &typeScope) {
+        if (Symbol * via{typeScope.FindComponent(sym->name())}) {
+          compSym = via;
+        }
+      }
       auto restorer{GetContextualMessages().SetLocation(name)};
       if (auto component{
-              CreateComponent(std::move(*dataRef), *sym, *dtSpec->scope())}) {
+              CreateComponent(std::move(*dataRef), *compSym, typeScope)}) {
         return Designate(DataRef{std::move(*component)});
       } else {
         Say(name, "Component is not in scope of derived TYPE(%s)"_err_en_US,
@@ -2431,6 +2449,14 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
         result.Add(symbol, Expr<SomeType>{ProcedureDesignator{**proc->init()}});
       } else if (IsAllocatableOrPointer(symbol)) {
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
+        if (IsPointer(symbol)) {
+          AttachDeclaration(
+              Warn(common::LanguageFeature::DefaultStructConstructorNullPointer,
+                  typeName,
+                  "Structure constructor lacks a value for pointer component '%s', NULL() assumed"_warn_en_US,
+                  symbol.name()),
+              symbol);
+        }
       } else {
         AttachDeclaration(
             Say(typeName,
@@ -2441,6 +2467,78 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
     }
   }
 
+  return AsMaybeExpr(Expr<SomeDerived>{std::move(result)});
+}
+
+// F2023 R771: enumeration-constructor is enumeration-type-spec (
+// scalar-int-expr ) The scalar-int-expr shall have a value that is positive and
+// less than or equal to the number of enumerators in the enumeration type.
+MaybeExpr ExpressionAnalyzer::AnalyzeEnumerationConstructor(
+    parser::CharBlock typeName, const semantics::DerivedTypeSpec &spec,
+    const std::list<parser::ComponentSpec> &components) {
+  const semantics::Symbol &typeSymbol{spec.typeSymbol()};
+  const auto &typeDetails{typeSymbol.get<semantics::DerivedTypeDetails>()};
+  int enumeratorCount{typeDetails.enumeratorCount()};
+  // Validate: exactly one positional argument, no keywords
+  if (components.size() != 1) {
+    Say(typeName,
+        "Enumeration constructor for '%s' requires exactly one argument"_err_en_US,
+        typeName);
+    return std::nullopt;
+  }
+  const auto &component{components.front()};
+  if (std::get<std::optional<parser::Keyword>>(component.t)) {
+    Say(typeName,
+        "Enumeration constructor for '%s' may not have a keyword argument"_err_en_US,
+        typeName);
+    return std::nullopt;
+  }
+  // Analyze the argument as a scalar integer expression
+  const parser::Expr &argExpr{
+      std::get<parser::ComponentDataSource>(component.t).v.value()};
+  auto restorer{GetContextualMessages().SetLocation(argExpr.source)};
+  MaybeExpr analyzed{Analyze(argExpr)};
+  if (!analyzed) {
+    return std::nullopt;
+  }
+  auto folded{Fold(std::move(*analyzed))};
+  auto argType{folded.GetType()};
+  if (!argType || argType->category() != TypeCategory::Integer) {
+    Say(argExpr.source,
+        "Enumeration constructor argument must be INTEGER, but is %s"_err_en_US,
+        argType ? argType->AsFortran() : std::string{"typeless"});
+    return std::nullopt;
+  }
+  // F2023 R771: the argument shall be a scalar-int-expr.
+  if (folded.Rank() > 0) {
+    Say(argExpr.source,
+        "Enumeration constructor argument for '%s' must be scalar"_err_en_US,
+        typeName);
+    return std::nullopt;
+  }
+  // If the value is known at compile time, validate the range
+  if (auto value{ToInt64(folded)}) {
+    if (*value < 1 || *value > enumeratorCount) {
+      Say(argExpr.source,
+          "Enumeration constructor value (%jd) for '%s' must be positive and less than or equal to the number of enumerators (%d)"_err_en_US,
+          static_cast<std::intmax_t>(*value), typeName, enumeratorCount);
+      return std::nullopt;
+    }
+  }
+  // Produce an Expr<SomeDerived> with the ordinal in the __ordinal component,
+  // converted to the component's declared integer kind.
+  StructureConstructor result{spec};
+  if (const auto *scope{spec.GetScope()}) {
+    auto ordinalIter{scope->find(semantics::SourceName{
+        semantics::DerivedTypeDetails::ordinalComponentName,
+        sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+    if (ordinalIter != scope->end()) {
+      const Symbol &ordinalSymbol{*ordinalIter->second};
+      if (auto converted{ConvertToType(ordinalSymbol, std::move(folded))}) {
+        result.Add(ordinalSymbol, std::move(*converted));
+      }
+    }
+  }
   return AsMaybeExpr(Expr<SomeDerived>{std::move(result)});
 }
 
@@ -2459,6 +2557,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   }
   if (!parsedType.derivedTypeSpec) {
     return std::nullopt;
+  }
+  // F2023 R771: Enumeration constructor — enum_name(scalar-int-expr)
+  if (parsedType.derivedTypeSpec->IsEnumerationType()) {
+    return AnalyzeEnumerationConstructor(typeName, *parsedType.derivedTypeSpec,
+        std::get<std::list<parser::ComponentSpec>>(structure.t));
   }
   auto restorer{AllowNullPointer()}; // NULL() can be a valid component
   std::list<ComponentSpec> componentSpecs;
@@ -2597,7 +2700,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           sym = result.specific;
           if (!sym) {
             EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried);
+                isSubroutine, arguments, result.tried, adjustment);
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -2791,8 +2894,61 @@ static bool CheckCompatibleArguments(
 
 static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 
-// Compute the matching distance as described in section 3.2.3 of the CUDA
-// Fortran references.
+struct CudaMatchingDistance {
+  std::vector<int> perArg;
+  bool isInfinite{false};
+};
+
+// Compare CUDA matching distances using lexicographical comparison of
+// per-argument distances. This is needed to differentiate procedures that would
+// have similar total distance when summing the per-argument weights, allowing
+// the compiler to select the best match based on argument-by-argument
+// comparison.
+static int CompareCudaMatchingDistance(
+    const CudaMatchingDistance &x, const CudaMatchingDistance &y) {
+  if (x.isInfinite != y.isInfinite) {
+    return x.isInfinite ? 1 : -1;
+  }
+  if (x.isInfinite) {
+    return 0;
+  }
+  CHECK(x.perArg.size() == y.perArg.size());
+  if (std::lexicographical_compare(
+          x.perArg.begin(), x.perArg.end(), y.perArg.begin(), y.perArg.end())) {
+    return -1;
+  }
+  if (std::lexicographical_compare(
+          y.perArg.begin(), y.perArg.end(), x.perArg.begin(), x.perArg.end())) {
+    return 1;
+  }
+  return 0;
+}
+
+// Compute the matching distance for one (dummy, actual) pair as described
+// in section 3.2.3 ("Table 2: Attributed Argument Matching Distance Values")
+// of the CUDA Fortran Programming Guide. The column applied for the actual
+// depends on its CUDA data attribute and (for unattributed actuals) on the
+// active -gpu=mem:{unified,managed} mode.
+//
+// Distance values returned (smaller is a better match; INF means
+// incompatible and disqualifies the candidate):
+//
+//                       Actual argument attribute
+//                 None                              ACC      gpu=    gpu=
+//   Dummy attr   (Host)  Device  Managed  Unified  use_dev  unified  managed
+//   ----------+--------+-------+--------+--------+--------+--------+--------+
+//   None(host)|    0   |  INF  |   3    |   3    |   3    |   3    |   3    |
+//   Device    |   INF  |   0   |   2    |   2    |   0    |   2    |   2    |
+//   Managed   |   INF  |  INF  |   0    |   1    |  INF   |   1    |   0    |
+//   Unified   |   INF  |  INF  |   1    |   0    |  INF   |   0    |   1    |
+//
+// Constant and Shared actuals use the Device column (all are device memory).
+//
+// In addition: a dummy declared TYPE(*) (assumed-size/rank opaque buffer)
+// is "CUDA address space agnostic" and accepts any attributed actual at a
+// non-zero distance (3) so an explicit Device overload still wins. The
+// "ACC use_dev" column applies to actuals appearing in a surrounding
+// ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
@@ -2801,36 +2957,74 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+  // True when an unattributed actual may use the implicit CUDA memory mode
+  // matching enabled by -gpu=mem:unified or -gpu=mem:managed.
+  bool actualCanUseImplicitCudaMemoryMode{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
-      const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)};
-      if (actualLastSymbol) {
-        actualLastSymbol = &semantics::ResolveAssociations(*actualLastSymbol);
-        if (const auto *actualObject{actualLastSymbol
-                    ? actualLastSymbol
-                          ->detailsIf<semantics::ObjectEntityDetails>()
-                    : nullptr}) {
+      if (evaluate::IsVariable(*expr)) {
+        actualCanUseImplicitCudaMemoryMode = true;
+        // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
+        // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
+        // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
+        // last symbol (GetLastSymbol would only see a).
+        for (const Symbol &s : evaluate::GetSymbolVector(*expr)) {
+          if (const auto *object{
+                  s.detailsIf<semantics::ObjectEntityDetails>()}) {
+            if (auto cudaAttr{object->cudaDataAttr()}) {
+              actualDataAttr = *cudaAttr;
+            }
+          }
+        }
+      } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
+        // Propagate any explicit CUDA data attribute from the referenced
+        // symbol (e.g. a device array operand inside RESHAPE()) so that
+        // Device-attributed dummies still match. Do NOT set
+        // actualCanUseImplicitCudaMemoryMode: the expression result is a
+        // temporary, not a user variable with unified/managed storage.
+        const Symbol &resolved{
+            semantics::ResolveAssociations(*actualLastSymbol)};
+        if (const auto *actualObject{
+                resolved.detailsIf<semantics::ObjectEntityDetails>()}) {
           actualDataAttr = actualObject->cudaDataAttr();
         }
       }
     }
   }
 
+  bool dummyIsCudaAddressSpaceAgnostic{false};
   common::visit(common::visitors{
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
+                      dummyIsCudaAddressSpaceAgnostic =
+                          semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
       dummy.u);
 
+  if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
+    // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
+    // accept host or device storage. Keep a non-zero distance so an explicit
+    // DEVICE overload remains a better CUDA match.
+    return 3;
+  }
+
+  auto actualIsDeviceMemory{[&]() {
+    return actualDataAttr &&
+        (*actualDataAttr == common::CUDADataAttr::Device ||
+            *actualDataAttr == common::CUDADataAttr::Constant ||
+            *actualDataAttr == common::CUDADataAttr::Shared);
+  }};
+
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 3;
       }
       return 0;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2838,11 +3032,12 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 2;
       }
       return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2850,9 +3045,12 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 0;
@@ -2861,9 +3059,12 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 1;
@@ -2871,23 +3072,41 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
       return 0;
     }
   }
+  // An actual argument with the UseDevice attribute comes from an OpenACC
+  // host_data use_device clause: the variable itself is host-resident, but
+  // inside the host_data region it is referenced via its device address.
+  // It matches a Device dummy with distance 0, a host dummy (no attribute)
+  // with distance 3, and is incompatible with any other dummy attribute.
+  if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
+    if (!dummyDataAttr)
+      return 3;
+    if (*dummyDataAttr == common::CUDADataAttr::Device)
+      return 0;
+  }
   return cudaInfMatchingValue;
 }
 
-static int ComputeCudaMatchingDistance(
+static CudaMatchingDistance ComputeCudaMatchingDistance(
     const common::LanguageFeatureControl &features,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
-  int distance{0};
+  CudaMatchingDistance distance;
+  distance.perArg.reserve(dummies.size());
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
+    if (!actual) {
+      // Omitted optional arguments do not affect CUDA matching distances.
+      continue;
+    }
     int d{GetMatchingDistance(features, dummy, actual)};
-    if (d == cudaInfMatchingValue)
-      return d;
-    distance += d;
+    if (d == cudaInfMatchingValue) {
+      distance.isInfinite = true;
+      return distance;
+    }
+    distance.perArg.push_back(d);
   }
   return distance;
 }
@@ -2937,6 +3156,33 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
+static bool IsCUDADeviceCallable(const Symbol &symbol) {
+  const auto *subprogram{
+      symbol.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+  if (!subprogram) {
+    return false;
+  }
+  auto attrs{subprogram->cudaSubprogramAttrs()};
+  return attrs &&
+      (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice);
+}
+
+static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
+    const parser::CharBlock &callSite, semantics::SemanticsContext &context,
+    const Symbol *resolution, bool isSubroutine) {
+  if (isSubroutine ||
+      !context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) ||
+      !resolution || !IsProcedure(*resolution) ||
+      resolution->attrs().test(semantics::Attr::INTRINSIC) ||
+      !semantics::FindCUDADeviceContext(&context.FindScope(callSite))) {
+    return false;
+  }
+  // Keep use-associated names visible in device code, but do not let a
+  // host-only procedure hide a valid intrinsic with the same generic name.
+  return !IsCUDADeviceCallable(*resolution);
+}
+
 auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     const ActualArguments &actuals, const AdjustActuals &adjustActuals,
     bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
@@ -2959,7 +3205,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails && !explicitIntrinsic) {
-    int crtMatchingDistance{cudaInfMatchingValue};
+    std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
       if (isSubroutine != !IsFunction(specific1)) {
@@ -2984,23 +3230,25 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
+          CudaMatchingDistance d{ComputeCudaMatchingDistance(
+              context_.languageFeatures(), *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
-            int d{ComputeCudaMatchingDistance(
-                context_.languageFeatures(), *procedure, localActuals)};
-            if (d != crtMatchingDistance) {
-              if (d > crtMatchingDistance) {
+            if (crtMatchingDistance) {
+              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+              if (cmp > 0) {
                 continue;
+              }
+              if (cmp == 0) {
+                // 16.9.144(6): a bare NULL() is not allowed as an actual
+                // argument to a generic procedure if the specific procedure
+                // cannot be unambiguously distinguished
+                // Underspecified external procedure actual arguments can
+                // also lead to ambiguity.
+                return {nullptr, true /* due to ambiguity */, std::move(tried)};
               }
               // Matching distance is smaller than the previously matched
               // specific. Let it go through so the current procedure is picked.
-            } else {
-              // 16.9.144(6): a bare NULL() is not allowed as an actual
-              // argument to a generic procedure if the specific procedure
-              // cannot be unambiguously distinguished
-              // Underspecified external procedure actual arguments can
-              // also lead to ambiguity.
-              return {nullptr, true /* due to ambiguity */, std::move(tried)};
             }
           }
           if (!procedure->IsElemental()) {
@@ -3009,8 +3257,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           } else {
             elemental = specific;
           }
-          crtMatchingDistance = ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals);
+          crtMatchingDistance = std::move(d);
         }
       }
     }
@@ -3102,8 +3349,8 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
-    bool dueToAmbiguity, bool isSubroutine, ActualArguments &arguments,
-    const SymbolVector &tried) {
+    bool dueToAmbiguity, bool isSubroutine, const ActualArguments &arguments,
+    const SymbolVector &tried, const AdjustActuals &adjustment) {
   if (auto *msg{Say(dueToAmbiguity
               ? "The actual arguments to the generic procedure '%s' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface"_err_en_US
               : semantics::IsGenericDefinedOp(symbol)
@@ -3116,7 +3363,12 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
-          auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
+          ActualArguments adjusted{arguments};
+          if (specific.has<semantics::ProcBindingDetails>() &&
+              adjustment.has_value()) {
+            (*adjustment)(specific, adjusted);
+          }
+          auto reasons{semantics::CheckExplicitInterface(*procChars, adjusted,
               context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
@@ -3184,6 +3436,18 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
+    if (IsCudaDeviceIntrinsicShadowedByHostProcedure(
+            name.source, context_, resolution, isSubroutine)) {
+      ActualArguments localArguments{arguments};
+      if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+              CallCharacteristics{name.source.ToString(), isSubroutine},
+              localArguments, GetFoldingContext())}) {
+        CheckBadExplicitType(*specificCall, *symbol);
+        return CalleeAndArguments{
+            ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
+            std::move(specificCall->arguments)};
+      }
+    }
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
@@ -3214,8 +3478,9 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(
-            *symbol, dueToAmbiguity, isSubroutine, arguments, tried);
+        AdjustActuals noAdjustment;
+        EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine,
+            arguments, tried, noAdjustment);
       }
       return std::nullopt;
     }
@@ -3274,6 +3539,12 @@ void ExpressionAnalyzer::CheckBadExplicitType(
 
 void ExpressionAnalyzer::CheckForBadRecursion(
     parser::CharBlock callSite, const semantics::Symbol &proc) {
+  if (const Symbol *mainEntry{GetMainEntry(&proc)}) {
+    if (mainEntry != &proc) {
+      CheckForBadRecursion(callSite, *mainEntry);
+      return;
+    }
+  }
   if (const auto *scope{proc.scope()}) {
     if (scope->sourceRange().Contains(callSite)) {
       parser::Message *msg{nullptr};
@@ -3286,8 +3557,16 @@ void ExpressionAnalyzer::CheckForBadRecursion(
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
       } else if (FindCUDADeviceContext(scope)) {
-        msg = Say(
-            "Device subprogram '%s' cannot call itself"_err_en_US, callSite);
+        const auto *subp{
+            proc.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+        bool isGlobalCUDA{subp && subp->cudaSubprogramAttrs() &&
+            *subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::Global};
+        // CUDA global call diagnostics are handled by CUDA checks.
+        if (!isGlobalCUDA) {
+          msg = Say(
+              "Device subprogram '%s' cannot call itself"_err_en_US, callSite);
+        }
       }
       AttachDeclaration(msg, proc);
     }
@@ -3439,6 +3718,16 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
+        // Detect enumeration types and set the category accordingly.
+        // Use the ultimate symbol so that a USE-associated enumeration type
+        // (whose local symbol carries UseDetails) is recognized too.
+        if (const auto *dtDetails{symbol.GetUltimate()
+                    .detailsIf<semantics::DerivedTypeDetails>()}) {
+          if (dtDetails->isEnumerationType()) {
+            dtSpec.set_category(
+                semantics::DerivedTypeSpec::Category::EnumerationType);
+          }
+        }
         const semantics::DeclTypeSpec &type{
             semantics::FindOrInstantiateDerivedType(scope, std::move(dtSpec))};
         auto &mutableRef{const_cast<parser::FunctionReference &>(funcRef)};
@@ -3487,13 +3776,21 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
       ProcedureDesignator *proc{std::get_if<ProcedureDesignator>(&callee->u)};
       CHECK(proc);
       bool isKernel{false};
+      bool isBindC{false};
       if (const Symbol * procSym{proc->GetSymbol()}) {
         const Symbol &ultimate{procSym->GetUltimate()};
+        isBindC = ultimate.attrs().test(semantics::Attr::BIND_C);
         if (const auto *subpDetails{
                 ultimate.detailsIf<semantics::SubprogramDetails>()}) {
           if (auto attrs{subpDetails->cudaSubprogramAttrs()}) {
             isKernel = *attrs == common::CUDASubprogramAttrs::Global ||
                 *attrs == common::CUDASubprogramAttrs::Grid_Global;
+          }
+          // Implicitly set the CUDA subprogram attributes to GLOBAL for bind(c)
+          // subprograms that are not marked as kernel.
+          if (!isKernel && isBindC && !chevrons->empty()) {
+            const_cast<semantics::SubprogramDetails *>(subpDetails)
+                ->set_cudaSubprogramAttrs(common::CUDASubprogramAttrs::Global);
           }
         } else if (const auto *procDetails{
                        ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
@@ -3504,7 +3801,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
               procSym->name());
         }
       }
-      if (!isKernel && !chevrons->empty()) {
+      if (!isKernel && !isBindC && !chevrons->empty()) {
         Say("Kernel launch parameters in chevrons may not be used unless calling a kernel subroutine"_err_en_US);
       }
       if (CheckCall(callStmt.source, *proc, callee->arguments)) {
@@ -3551,6 +3848,19 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
             } else if (evaluate::IsCoarray(*lastWhole)) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic if it is a coarray"_err_en_US);
+            } else if (context_.langOptions().NoReallocateLHS) {
+              Warn(common::UsageWarning::IgnoredNoReallocateLHS,
+                  "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
+            }
+            const Expr<SomeType> &rhs{analyzer.GetExpr(1)};
+            if (auto rhsType{rhs.GetType()}) {
+              if (const auto *rhsDerived{GetDerivedTypeSpec(*rhsType)}) {
+                if (rhsDerived->IsVectorType()) {
+                  Say(rhsExpr.source,
+                      "Vector type '%s' may not be used as the right-hand side of a polymorphic intrinsic assignment"_err_en_US,
+                      rhsType->AsFortran());
+                }
+              }
             }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
@@ -3637,6 +3947,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
+  bool isStatementFunction{
+      procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
       procSymbol->owner().IsGlobal()) {
@@ -3704,6 +4016,18 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         Say(callSite,
             "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
             name, DEREF(pure->symbol()).name());
+      }
+    }
+    if (isStatementFunction) {
+      // Statement functions have implicit interfaces, so keyword actual
+      // arguments are not allowed. They are exempt from the explicit-interface
+      // requirements of F2023 15.4.2.2.
+      parser::ContextualMessages &messages{
+          context_.foldingContext().messages()};
+      for (auto &arg : arguments) {
+        if (arg) {
+          semantics::CheckImplicitInterfaceArgKeywords(*arg, messages);
+        }
       }
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
@@ -3820,6 +4144,112 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::PercentLoc &x) {
   parser::CharBlock loc{at.begin() + 1, 3};
   CHECK(loc == "loc");
   return MakeFunctionRef(loc, ActualArguments{std::move(*arg)});
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
+  // Chained else-expressions recurse automatically through Analyze(Expr).
+  MaybeExpr condExpr{Analyze(std::get<0>(x.t))};
+  MaybeExpr thenExpr{Analyze(std::get<1>(x.t).value())};
+  MaybeExpr elseExpr{Analyze(std::get<2>(x.t).value())};
+  if (!condExpr || !thenExpr || !elseExpr) {
+    return std::nullopt;
+  }
+  if (std::holds_alternative<BOZLiteralConstant>(thenExpr->u) ||
+      std::holds_alternative<BOZLiteralConstant>(elseExpr->u)) {
+    Say("BOZ literal constant in conditional expression must have explicit "
+        "type (e.g., INT(z'FF'), REAL(z'3F800000'))"_err_en_US);
+    return std::nullopt;
+  }
+  if (IsNullPointerOrAllocatable(&*thenExpr) ||
+      IsNullPointerOrAllocatable(&*elseExpr)) {
+    Say("NULL() not allowed in a conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  if (semantics::IsAssumedRank(*thenExpr) ||
+      semantics::IsAssumedRank(*elseExpr)) {
+    Say("An assumed-rank dummy argument may not be used as a value in a conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  if ((ExtractDataRef(thenExpr) &&
+          ExtractCoarrayRef(*ExtractDataRef(thenExpr))) ||
+      (ExtractDataRef(elseExpr) &&
+          ExtractCoarrayRef(*ExtractDataRef(elseExpr)))) {
+    Say("Conditional expression values may not be coindexed"_err_en_US);
+    return std::nullopt;
+  }
+  // F2023 C1004: then-expr and else-expr must have the same declared type,
+  // kind type parameters, and rank.
+  if (thenExpr->Rank() != elseExpr->Rank()) {
+    Say("All values in conditional expression must have the same rank; have rank %d and %d"_err_en_US,
+        thenExpr->Rank(), elseExpr->Rank());
+    return std::nullopt;
+  }
+  const std::optional<DynamicType> thenType{thenExpr->GetType()};
+  const std::optional<DynamicType> elseType{elseExpr->GetType()};
+  if (!thenType || !elseType) {
+    Say("Cannot determine type of conditional expression"_err_en_US);
+    return std::nullopt;
+  }
+  const TypeCategory thenCat{thenType->category()};
+  const TypeCategory elseCat{elseType->category()};
+  if (thenCat != elseCat ||
+      (thenCat != TypeCategory::Derived &&
+          thenType->kind() != elseType->kind())) {
+    Say("All values in conditional expression must have the same type and kind; have %s and %s"_err_en_US,
+        thenType->AsFortran(), elseType->AsFortran());
+    return std::nullopt;
+  }
+  if (thenCat == TypeCategory::Derived) {
+    if (thenType->IsUnlimitedPolymorphic() ||
+        elseType->IsUnlimitedPolymorphic()) {
+      Say("Unlimited polymorphic types (CLASS(*)) not allowed in conditional expression"_err_en_US);
+      return std::nullopt;
+    }
+    if (!AreSameDerivedType(
+            thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
+      Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
+          thenType->AsFortran(), elseType->AsFortran());
+      return std::nullopt;
+    }
+  }
+
+  // Dispatch on the else-expr to recover the concrete kind type T.
+  return common::visit(
+      common::visitors{
+          [&](Expr<SomeDerived> &&elseVal) -> MaybeExpr {
+            Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
+                std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
+            Expr<SomeDerived> thenVal{
+                std::move(std::get<Expr<SomeDerived>>(thenExpr->u))};
+            return AsGenericExpr(
+                Expr<SomeDerived>{evaluate::ConditionalExpr<SomeDerived>{
+                    std::move(cond), std::move(thenVal), std::move(elseVal)}});
+          },
+          [&](auto &&elseCatExpr) -> MaybeExpr {
+            using CategoryType = std::decay_t<decltype(elseCatExpr)>;
+            if constexpr (std::is_same_v<CategoryType, BOZLiteralConstant> ||
+                std::is_same_v<CategoryType, NullPointer> ||
+                std::is_same_v<CategoryType, ProcedureDesignator> ||
+                std::is_same_v<CategoryType, ProcedureRef>) {
+              DIE("Invalid expression type in conditional expression");
+            } else {
+              return common::visit(
+                  [&](auto &&elseKindExpr) -> MaybeExpr {
+                    using T =
+                        typename std::decay_t<decltype(elseKindExpr)>::Result;
+                    Expr<LogicalResult> cond{ConvertToType<LogicalResult>(
+                        std::move(std::get<Expr<SomeLogical>>(condExpr->u)))};
+                    Expr<T> thenVal{std::move(std::get<Expr<T>>(
+                        std::get<CategoryType>(thenExpr->u).u))};
+                    return AsGenericExpr(CategoryType{
+                        Expr<T>{evaluate::ConditionalExpr<T>{std::move(cond),
+                            std::move(thenVal), std::move(elseKindExpr)}}});
+                  },
+                  elseCatExpr.u);
+            }
+          },
+      },
+      std::move(elseExpr->u));
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {
@@ -4080,38 +4510,12 @@ static void FixMisparsedFunctionReference(
   if (auto *func{
           std::get_if<common::Indirection<parser::FunctionReference>>(&u)}) {
     parser::FunctionReference &funcRef{func->value()};
-    // Ensure that there are no argument keywords
-    for (const auto &arg :
-        std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
-      if (std::get<std::optional<parser::Keyword>>(arg.t)) {
-        return;
-      }
-    }
-    auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    if (Symbol *
-        origSymbol{common::visit(
-            common::visitors{
-                [&](parser::Name &name) { return name.symbol; },
-                [&](parser::ProcComponentRef &pcr) {
-                  return parser::UnwrapRef<parser::StructureComponent>(pcr)
-                      .Component()
-                      .symbol;
-                },
-            },
-            proc.u)}) {
-      Symbol &symbol{origSymbol->GetUltimate()};
-      if (symbol.has<semantics::ObjectEntityDetails>() ||
-          symbol.has<semantics::AssocEntityDetails>()) {
-        // Note that expression in AssocEntityDetails cannot be a procedure
-        // pointer as per C1105 so this cannot be a function reference.
-        if constexpr (common::HasMember<common::Indirection<parser::Designator>,
-                          uType>) {
-          if (CheckFuncRefToArrayElement(context, funcRef)) {
-            u = common::Indirection{funcRef.ConvertToArrayElementRef()};
-          }
-        } else {
-          DIE("can't fix misparsed function as array reference");
-        }
+    if (semantics::CheckMisparsedArrayElement(context, funcRef)) {
+      if constexpr (common::HasMember<common::Indirection<parser::Designator>,
+                        uType>) {
+        u = common::Indirection{funcRef.ConvertToArrayElementRef()};
+      } else {
+        DIE("can't fix misparsed function as array reference");
       }
     }
   }
@@ -4127,7 +4531,8 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
       std::is_same_v<PARSED, parser::Variable>) {
     FixMisparsedFunctionReference(context_, x.u);
   }
-  if (AssumedTypeDummy(x)) { // C710
+  // F2018 C710 (F2023 C715)
+  if (AssumedTypeDummy(x) && !isAssumedTypeDummyOk_) {
     Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
     ResetExpr(x);
     return std::nullopt;
@@ -4369,8 +4774,17 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
-        ToUpperCase(EnumToString(category)), kind);
+    if (const semantics::Scope *modFileScope{
+            semantics::FindModuleFileContaining(
+                context_.FindScope(GetContextualMessages().at()))};
+        modFileScope && modFileScope->parent().IsIntrinsicModules()) {
+      // Ignore usage of unsupported intrinsic type kinds in intrinsic module
+      // files.  They might be USE'd into a cross-compilation or into a
+      // compilation with a disabled REAL kind.
+    } else {
+      Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
+          ToUpperCase(EnumToString(category)), kind);
+    }
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -4572,6 +4986,128 @@ void ArgumentAnalyzer::Analyze(
               actual->set_isPercentVal();
             }
           },
+          [&](const parser::ConditionalArg &condArg) {
+            // F2023 R1526 conditional-arg analysis (recursive)
+            using EvalConsequent = ActualArgument::ConditionalArg::Consequent;
+            using EvalConditionalArg = ActualArgument::ConditionalArg;
+            using EvalTail =
+                ActualArgument::ConditionalArg::ConditionalArgPartOrConsequent;
+
+            // Analyze a single parser::Consequent into an evaluate Consequent
+            auto analyzeConsequent{[&](const parser::ConditionalArg::Consequent
+                                           &consequent) -> EvalConsequent {
+              EvalConsequent result;
+              common::visit(
+                  common::visitors{
+                      [&](const common::Indirection<parser::Expr> &expr) {
+                        // F2023 15.5.2.3-2: a consequent-arg is an actual
+                        // argument, so a bare TYPE(*) assumed-type dummy is
+                        // permitted as the whole consequent (F2018 C710 /
+                        // F2023 C715 waived).  The waiver applies only to the
+                        // consequent expression itself; an assumed-type entity
+                        // nested in a larger expression (e.g. (a) or a + 1)
+                        // remains illegal, so the allowance is not extended to
+                        // sub-expressions.
+                        auto restorer{context_.AllowAssumedTypeDummy(
+                            AssumedTypeDummy(expr.value()) != nullptr)};
+                        if (MaybeExpr valExpr{context_.Analyze(expr.value())}) {
+                          if (!valExpr->GetType()) {
+                            context_.Say(
+                                "Typeless expression is not allowed as a consequent in a conditional argument"_err_en_US);
+                            fatalErrors_ = true;
+                          } else {
+                            result =
+                                common::CopyableIndirection<Expr<SomeType>>{
+                                    std::move(*valExpr)};
+                          }
+                        } else {
+                          fatalErrors_ = true;
+                        }
+                      },
+                      [&](const parser::ConditionalArgNil &) {
+                        // .NIL. -> std::nullopt (the default)
+                      },
+                  },
+                  consequent.u);
+              return result;
+            }};
+
+            // Recursively analyze a parser::ConditionalArg into an evaluate
+            // ConditionalArg
+            auto analyzeCondArg{[&](const parser::ConditionalArg &ca,
+                                    auto &self)
+                                    -> std::optional<EvalConditionalArg> {
+              // Analyze the condition — passing ScalarLogicalExpr directly
+              // enforces both scalar (rank-0) and logical type constraints
+              // via the Analyze(Scalar<A>) and Analyze(Logical<A>) templates.
+              const auto &condition{std::get<parser::ScalarLogicalExpr>(ca.t)};
+              MaybeExpr conditionExpr{context_.Analyze(condition)};
+              if (!conditionExpr) {
+                fatalErrors_ = true;
+                return std::nullopt;
+              }
+              auto &conditionValue{
+                  std::get<Expr<SomeLogical>>(conditionExpr->u)};
+
+              // Analyze the consequent
+              EvalConsequent consequent{analyzeConsequent(
+                  std::get<parser::ConditionalArg::Consequent>(ca.t))};
+              if (fatalErrors_) {
+                return std::nullopt;
+              }
+
+              // Analyze the tail (recursive)
+              const auto &tailNode{
+                  std::get<common::Indirection<parser::ConditionalArgTail>>(
+                      ca.t)
+                      .value()};
+              EvalTail tail{EvalConsequent{}}; // default: terminal NIL
+              common::visit(
+                  common::visitors{
+                      [&](const parser::ConditionalArg &innerCA) {
+                        auto innerResult{self(innerCA, self)};
+                        if (innerResult) {
+                          tail =
+                              common::CopyableIndirection<EvalConditionalArg>{
+                                  std::move(*innerResult)};
+                        } else {
+                          fatalErrors_ = true;
+                        }
+                      },
+                      [&](const parser::ConditionalArg::Consequent &cons) {
+                        tail = analyzeConsequent(cons);
+                      },
+                  },
+                  tailNode.u);
+              if (fatalErrors_) {
+                return std::nullopt;
+              }
+
+              return EvalConditionalArg{std::move(conditionValue),
+                  std::move(consequent), std::move(tail)};
+            }};
+
+            auto result{analyzeCondArg(condArg, analyzeCondArg)};
+            if (!result) {
+              return;
+            }
+
+            // C1540: At least one consequent shall be a consequent-arg
+            if (!result->FirstNonNilConsequent()) {
+              context_.Say(
+                  "At least one consequent in a conditional argument must not be .NIL."_err_en_US);
+              fatalErrors_ = true;
+              return;
+            }
+
+            // C1538: same type and kind; C1539: same rank or assumed-rank
+            if (!CheckConsequentTypesAndRanks(*result)) {
+              fatalErrors_ = true;
+              return;
+            }
+
+            actual = ActualArgument{std::move(*result)};
+          },
       },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
@@ -4582,6 +5118,124 @@ void ArgumentAnalyzer::Analyze(
   } else {
     fatalErrors_ = true;
   }
+}
+
+// C1538: Each consequent-arg shall have the same declared type and kind
+// C1539: Each consequent-arg shall have the same rank or be assumed-rank
+bool ArgumentAnalyzer::CheckConsequentTypesAndRanks(
+    const ActualArgument::ConditionalArg &condArg) {
+  const Expr<SomeType> *refExpr{condArg.FirstNonNilConsequent()};
+  if (!refExpr) {
+    return true; // all .NIL.; caller checks separately
+  }
+  auto refType{refExpr->GetType()};
+  // A non-.NIL. consequent always has a type: typeless consequents are
+  // rejected during analysis (analyzeConsequent), which aborts before this
+  // check runs, so refType is never null here.
+  CHECK(refType);
+  int refRank{-1};
+  bool allSameRank{true};
+  bool hasAssumedRank{false};
+  bool hasNonAssumedRank{false};
+
+  // Check a single consequent against the reference type and rank
+  auto checkOne{[&](const ActualArgument::ConditionalArg::Consequent &cons)
+                    -> bool {
+    if (!cons) {
+      return true; // .NIL. is ok
+    }
+    auto thisType{cons->value().GetType()};
+    // As with refType above, a non-.NIL. consequent always has a type.
+    CHECK(thisType);
+    if (refType->category() != thisType->category() ||
+        (refType->category() != TypeCategory::Derived &&
+            refType->kind() != thisType->kind())) {
+      context_.Say(
+          "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+          refType->AsFortran(), thisType->AsFortran());
+      return false;
+    }
+    if (refType->category() == TypeCategory::Derived) {
+      // C1538: same declared type required.  Unlimited polymorphic
+      // (CLASS(*)) and assumed type (TYPE(*)) have no declared type,
+      // so mixing them with other types is invalid.
+      if (refType->IsUnlimitedPolymorphic() !=
+          thisType->IsUnlimitedPolymorphic()) {
+        context_.Say(
+            "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+            refType->AsFortran(), thisType->AsFortran());
+        return false;
+      }
+      if (refType->IsAssumedType() != thisType->IsAssumedType()) {
+        context_.Say(
+            "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+            refType->AsFortran(), thisType->AsFortran());
+        return false;
+      }
+      // AssumedType (TYPE(*)) implies IsUnlimitedPolymorphic, so checking
+      // !IsUnlimitedPolymorphic() alone excludes both CLASS(*) and TYPE(*).
+      if (!refType->IsUnlimitedPolymorphic()) {
+        const auto &resSpec{refType->GetDerivedTypeSpec()};
+        const auto &thisSpec{thisType->GetDerivedTypeSpec()};
+        // C1538: same declared type and kind type parameters.  Length type
+        // parameters may differ.  AreSameDerivedTypeIgnoringLengthParameters
+        // resolves symbol aliases (GetUltimate) and honors the structure
+        // equivalence of separately-declared SEQUENCE/BIND(C) types
+        // (F2023 7.5.2.4).
+        if (!evaluate::AreSameDerivedTypeIgnoringLengthParameters(
+                resSpec, thisSpec)) {
+          context_.Say(
+              "All consequent-args in a conditional argument must be the same derived type; have %s and %s"_err_en_US,
+              refType->AsFortran(), thisType->AsFortran());
+          return false;
+        }
+      }
+    }
+    if (semantics::IsAssumedRank(cons->value())) {
+      hasAssumedRank = true;
+    } else {
+      hasNonAssumedRank = true;
+      int thisRank{cons->value().Rank()};
+      if (refRank < 0) {
+        refRank = thisRank;
+      } else if (thisRank != refRank) {
+        allSameRank = false;
+      }
+    }
+    return true;
+  }};
+
+  // Recursively check all consequents in the tree
+  auto checkAll{
+      [&](const ActualArgument::ConditionalArg &ca, auto &self) -> bool {
+        if (!checkOne(ca.consequent())) {
+          return false;
+        }
+        return ca.VisitTail(
+            [&](const ActualArgument::ConditionalArg &inner) {
+              return self(inner, self);
+            },
+            [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+              return checkOne(cons);
+            });
+      }};
+
+  if (!checkAll(condArg, checkAll)) {
+    return false;
+  }
+
+  // C1539: final rank consistency check
+  if (hasAssumedRank && hasNonAssumedRank) {
+    context_.Say(
+        "All consequent-args in a conditional argument must have the same rank or all must be assumed-rank"_err_en_US);
+    return false;
+  }
+  if (hasNonAssumedRank && !allSameRank) {
+    context_.Say(
+        "All consequent-args in a conditional argument must have the same rank"_err_en_US);
+    return false;
+  }
+  return true;
 }
 
 bool ArgumentAnalyzer::IsIntrinsicRelational(RelationalOperator opr,
@@ -5155,7 +5809,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
         *isAmbiguous = result.failedDueToAmbiguity;
       }
       context_.EmitGenericResolutionError(*generic, result.failedDueToAmbiguity,
-          isSubroutine, actuals_, result.tried);
+          isSubroutine, actuals_, result.tried, adjustment);
     }
   }
   return nullptr;
@@ -5231,6 +5885,17 @@ void ArgumentAnalyzer::ConvertBOZAssignmentRHS(const DynamicType &lhsType) {
       lhsType.category() == TypeCategory::Unsigned ||
       lhsType.category() == TypeCategory::Real) {
     Expr<SomeType> rhs{MoveExpr(1)};
+    if (lhsType.category() == TypeCategory::Integer ||
+        lhsType.category() == TypeCategory::Unsigned) {
+      if (const auto *boz{std::get_if<BOZLiteralConstant>(&rhs.u)};
+          boz && boz->bits - boz->LEADZ() > lhsType.kind() * 8) {
+        context_.Warn(common::UsageWarning::BOZLiteralTruncation,
+            "BOZ literal constant is too large for %s(KIND=%d) assignment target; truncated"_warn_en_US,
+            lhsType.category() == TypeCategory::Unsigned ? "UNSIGNED"
+                                                         : "INTEGER",
+            lhsType.kind());
+      }
+    }
     if (MaybeExpr converted{ConvertToType(lhsType, std::move(rhs))}) {
       actuals_[1] = std::move(*converted);
     }
@@ -5281,7 +5946,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? "TYPE("s + type->AsFortran() + ')'
+        ? (type->GetDerivedTypeSpec().IsVectorType()
+                  ? type->AsFortran()
+                  : "TYPE("s + type->AsFortran() + ')')
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());
@@ -5321,94 +5988,41 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
   return analyzer.AnalyzeKindSelector(category, selector);
 }
 
-// NoteUsedSymbols()
-
-static void NoteUsedSymbol(SemanticsContext &context, const Symbol &symbol) {
-  const Symbol &root{GetAssociationRoot(symbol)};
-  switch (root.owner().kind()) {
-  case semantics::Scope::Kind::Subprogram:
-  case semantics::Scope::Kind::MainProgram:
-  case semantics::Scope::Kind::BlockConstruct:
-    if ((root.has<semantics::ObjectEntityDetails>() ||
-            IsProcedurePointer(root))) {
-      context.NoteUsedSymbol(root);
-      if (root.test(Symbol::Flag::CrayPointee)) {
-        context.NoteUsedSymbol(GetCrayPointer(root));
-      }
-    }
-    break;
-  default:
-    break;
-  }
+void NoteUsedSymbols(
+    SemanticsContext &context, const SomeExpr &expr, bool isDefinition) {
+  context.NoteUsedSymbols(
+      evaluate::CollectUsedSymbolValues(context, expr, isDefinition));
 }
 
-template <typename A>
-void NoteUsedSymbolsHelper(SemanticsContext &context, const A &x) {
-  if (context.ShouldWarn(common::UsageWarning::UnusedVariable)) {
-    for (const Symbol &symbol : CollectSymbols(x)) {
-      NoteUsedSymbol(context, symbol);
+bool CheckMisparsedArrayElement(
+    SemanticsContext &context, const parser::FunctionReference &funcRef) {
+  // Ensure that there are no argument keywords
+  for (const auto &arg :
+      std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
+    if (std::get<std::optional<parser::Keyword>>(arg.t)) {
+      return false;
     }
   }
-}
-
-void NoteUsedSymbols(SemanticsContext &context, const SomeExpr &expr) {
-  NoteUsedSymbolsHelper(context, expr);
-}
-
-static bool IsBindingUsedAsProcedure(const SomeExpr &expr) {
-  if (const auto *pd{std::get_if<evaluate::ProcedureDesignator>(&expr.u)}) {
-    if (const Symbol *symbol{pd->GetSymbol()}) {
-      return symbol->has<ProcBindingDetails>();
+  auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
+  if (const Symbol *origSymbol{common::visit(
+          common::visitors{
+              [&](const parser::Name &name) { return name.symbol; },
+              [&](const parser::ProcComponentRef &pcr) {
+                return parser::UnwrapRef<parser::StructureComponent>(pcr)
+                    .Component()
+                    .symbol;
+              },
+          },
+          proc.u)}) {
+    const Symbol &symbol{origSymbol->GetUltimate()};
+    if (symbol.has<semantics::ObjectEntityDetails>() ||
+        symbol.has<semantics::AssocEntityDetails>()) {
+      // Note that expression in AssocEntityDetails cannot be a procedure
+      // pointer as per C1105 so this cannot be a function reference.
+      return evaluate::CheckFuncRefToArrayElement(context, funcRef);
     }
   }
   return false;
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const evaluate::ProcedureRef &call) {
-  NoteUsedSymbolsHelper(context, call.proc());
-  for (const auto &maybeArg : call.arguments()) {
-    if (maybeArg) {
-      if (const auto *expr{maybeArg->UnwrapExpr()}) {
-        if (!IsBindingUsedAsProcedure(*expr)) {
-          // Ignore procedure bindings being used as actual procedures
-          // (a local extension).
-          NoteUsedSymbolsHelper(context, *expr);
-        }
-      }
-    }
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const evaluate::Assignment &assignment) {
-  if (IsBindingUsedAsProcedure(assignment.rhs)) {
-    // Don't look at the RHS, we're just using its binding (extension).
-    NoteUsedSymbolsHelper(context, assignment.lhs);
-  } else {
-    NoteUsedSymbolsHelper(context, assignment);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedExpr &typedExpr) {
-  if (typedExpr && typedExpr->v) {
-    NoteUsedSymbols(context, *typedExpr->v);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedCall &typedCall) {
-  if (typedCall) {
-    NoteUsedSymbols(context, *typedCall);
-  }
-}
-
-void NoteUsedSymbols(
-    SemanticsContext &context, const parser::TypedAssignment &typedAssignment) {
-  if (typedAssignment && typedAssignment->v) {
-    NoteUsedSymbols(context, *typedAssignment->v);
-  }
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}

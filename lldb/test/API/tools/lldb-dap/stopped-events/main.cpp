@@ -7,7 +7,7 @@ static int my_add(int a, int b) { // breakpoint
   return a + b;
 }
 
-int main(int argc, char const *argv[]) {
+static void do_test() {
   // Don't let either thread do anything until they're both ready.
   pseudo_barrier_init(g_barrier, 2);
 
@@ -24,6 +24,9 @@ int main(int argc, char const *argv[]) {
 
   t1.join();
   t2.join();
+}
 
+int main(int argc, char const *argv[]) {
+  do_test();
   return 0;
 }

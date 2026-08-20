@@ -1,6 +1,21 @@
 // RUN: %check_clang_tidy -check-suffix=,CPP20ORLATER -std=c++20-or-later %s modernize-use-structured-binding %t -- -- -I %S/Inputs/use-structured-binding/
 // RUN: %check_clang_tidy -std=c++17 %s modernize-use-structured-binding %t -- -- -I %S/Inputs/use-structured-binding/
-#include "fake_std_pair_tuple.h"
+
+#include <utility>
+#include <tuple>
+
+#include <unordered_map>
+
+template<typename T1, typename T2>
+std::pair<T1, T2> getPair();
+
+template<typename T1, typename T2>
+constexpr std::pair<T1, T2> getConstexprPair() {
+  return std::pair<T1, T2>();
+}
+
+template<typename T1, typename T2, typename T3>
+std::tuple<T1, T2, T3> getTuple();
 
 template<typename T>
 void MarkUsed(T x);
@@ -665,12 +680,12 @@ void IgnoreDirectInit() {
 }
 
 void StdMapTestCases() {
-  for (auto p : std::unordered_map<int, int>()) {
+  for (const auto p : std::unordered_map<int, int>()) {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use a structured binding to decompose a pair [modernize-use-structured-binding]
-    // CHECK-FIXES: for (auto [x, y] : std::unordered_map<int, int>()) {
+    // CHECK-FIXES: for (const auto [x, y] : std::unordered_map<int, int>()) {
     // CHECK-NEXT: // REMOVE
-    int x = p.first;
-    int y = p.second; // REMOVE
+    const int x = p.first;
+    const int y = p.second; // REMOVE
     // CHECK-FIXES: // REMOVE
   }
 }

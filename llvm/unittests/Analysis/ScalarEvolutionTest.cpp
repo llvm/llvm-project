@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -131,8 +132,8 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
-  BranchInst::Create(LoopBB, EntryBB);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  UncondBrInst::Create(LoopBB, EntryBB);
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
@@ -251,12 +252,12 @@ TEST_F(ScalarEvolutionsTest, CommutativeExprOperandOrder) {
     EXPECT_EQ(SE.getMulExpr(B, C), SE.getMulExpr(C, B));
     EXPECT_EQ(SE.getMulExpr(A, C), SE.getMulExpr(C, A));
 
-    SmallVector<const SCEV *, 3> Ops0 = {A, B, C};
-    SmallVector<const SCEV *, 3> Ops1 = {A, C, B};
-    SmallVector<const SCEV *, 3> Ops2 = {B, A, C};
-    SmallVector<const SCEV *, 3> Ops3 = {B, C, A};
-    SmallVector<const SCEV *, 3> Ops4 = {C, B, A};
-    SmallVector<const SCEV *, 3> Ops5 = {C, A, B};
+    SmallVector<SCEVUse, 3> Ops0 = {A, B, C};
+    SmallVector<SCEVUse, 3> Ops1 = {A, C, B};
+    SmallVector<SCEVUse, 3> Ops2 = {B, A, C};
+    SmallVector<SCEVUse, 3> Ops3 = {B, C, A};
+    SmallVector<SCEVUse, 3> Ops4 = {C, B, A};
+    SmallVector<SCEVUse, 3> Ops5 = {C, A, B};
 
     const SCEV *Mul0 = SE.getMulExpr(Ops0);
     const SCEV *Mul1 = SE.getMulExpr(Ops1);
@@ -287,7 +288,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *LoopBB = BasicBlock::Create(Context, "bb1", F);
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
 
   auto *Ty = Type::getInt32Ty(Context);
   SmallVector<Instruction*, 8> Muls(8), Acc(8), NextAcc(8);
@@ -330,7 +331,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
   }
 
   BasicBlock *ExitBB = BasicBlock::Create(Context, "bb2", F);
-  BranchInst::Create(LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)),
+  CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)), LoopBB, ExitBB,
                      LoopBB);
 
   Acc[0] = BinaryOperator::CreateAdd(Acc[0], Acc[1], "", ExitBB);
@@ -542,13 +543,14 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
     auto *L1 = *std::next(LI.begin());
     auto *L0 = *std::next(LI.begin(), 2);
 
-    auto GetAddRec = [&SE](const Loop *L, std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+    auto GetAddRec = [&SE](const Loop *L,
+                           std::initializer_list<const SCEV *> Ops) {
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddRecExpr(OpsCopy, L, SCEV::FlagAnyWrap);
     };
 
     auto GetAdd = [&SE](std::initializer_list<const SCEV *> Ops) {
-      SmallVector<const SCEV *, 4> OpsCopy(Ops);
+      SmallVector<SCEVUse, 4> OpsCopy(Ops.begin(), Ops.end());
       return SE.getAddExpr(OpsCopy, SCEV::FlagAnyWrap);
     };
 
@@ -669,7 +671,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
   BasicBlock *CondBB = BasicBlock::Create(Context, "for.cond", F);
   BasicBlock *EndBB = BasicBlock::Create(Context, "for.end", F);
-  BranchInst::Create(CondBB, EntryBB);
+  UncondBrInst::Create(CondBB, EntryBB);
   BasicBlock *PrevBB = EntryBB;
 
   Type *I64Ty = Type::getInt64Ty(Context);
@@ -689,11 +691,11 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
       NextBB = BasicBlock::Create(Context, "for.cond", F, EndBB);
     else
       NextBB = EndBB;
-    BranchInst::Create(IncBB, NextBB, Cmp, CondBB);
+    CondBrInst::Create(Cmp, IncBB, NextBB, CondBB);
     auto *Dec = BinaryOperator::CreateNSWAdd(
         PN, ConstantInt::get(Context, APInt(64, -1)), "dec", IncBB);
     PN->addIncoming(Dec, IncBB);
-    BranchInst::Create(CondBB, IncBB);
+    UncondBrInst::Create(CondBB, IncBB);
 
     Accum = GetElementPtrInst::Create(I8Ty, Accum, PN, "gep", EndBB);
 
@@ -703,7 +705,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   ReturnInst::Create(Context, nullptr, EndBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(Accum);
-  S = SE.getLosslessPtrToIntExpr(S);
+  S = SE.getPtrToAddrExpr(S);
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
@@ -920,13 +922,13 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstants) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt64 =
       ConstantInt::get(Context, APInt(64, 0x8000000000000000U, true));
   auto *Int64_32 = ConstantInt::get(Context, APInt(64, 32));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi =
       PHINode::Create(Type::getInt64Ty(Context), 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int64_32, "", Br->getIterator());
@@ -979,12 +981,12 @@ TEST_F(ScalarEvolutionsTest, SCEVAddRecFromPHIwithLargeConstantAccum) {
   BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
 
   // entry:
-  BranchInst::Create(LoopBB, EntryBB);
+  UncondBrInst::Create(LoopBB, EntryBB);
   // loop:
   auto *MinInt32 = ConstantInt::get(Context, APInt(32, 0x80000000U));
   auto *Int32_16 = ConstantInt::get(Context, APInt(32, 16));
-  auto *Br = BranchInst::Create(
-      LoopBB, ExitBB, PoisonValue::get(Type::getInt1Ty(Context)), LoopBB);
+  auto *Br = CondBrInst::Create(PoisonValue::get(Type::getInt1Ty(Context)),
+                                LoopBB, ExitBB, LoopBB);
   auto *Phi = PHINode::Create(Int32Ty, 2, "", Br->getIterator());
   auto *Shl = BinaryOperator::CreateShl(Phi, Int32_16, "", Br->getIterator());
   auto *AShr =
@@ -1274,6 +1276,46 @@ TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
     const SCEV *Sum = SE.getAddExpr(X, One, SCEV::FlagNUW);
     EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGE, Sum, X));
     EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, Sum, X));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ProveUMinULT) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %x, i32 %y) { "
+                          "  ret void "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *Ty = Type::getInt32Ty(F.getContext());
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *UMin = SE.getUMinExpr(X, Y);
+
+    // umin(X, Y) u< X + 1 when add is NUW.
+    const SCEV *XPlusOneNUW = SE.getAddExpr(X, SE.getOne(Ty), SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, XPlusOneNUW));
+
+    // Same via ICMP_UGT (swapped operands).
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, XPlusOneNUW, UMin));
+
+    // Check the second operand: umin(X, Y) u< Y + 5 with NUW.
+    const SCEV *Five = SE.getConstant(APInt(32, 5));
+    const SCEV *YPlus5NUW = SE.getAddExpr(Y, Five, SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, YPlus5NUW));
+
+    // Negative: without NUW, X + 2 might wrap to 0.
+    const SCEV *Two = SE.getConstant(APInt(32, 2));
+    const SCEV *XPlus2NoFlags = SE.getAddExpr(X, Two);
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, XPlus2NoFlags));
+
+    // Negative: umin(X, Y) u< X is not provable (equal when X <= Y).
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, X));
   });
 }
 
@@ -1722,14 +1764,14 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *S1 = SE.getSCEV(F->getArg(1));
   const SCEV *S2 = SE.getSCEV(F->getArg(2));
 
-  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
-  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
-  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+  const SCEV *P0 = SE.getPtrToAddrExpr(S0);
+  const SCEV *P1 = SE.getPtrToAddrExpr(S1);
+  const SCEV *P2 = SE.getPtrToAddrExpr(S2);
 
   const SCEV *M0 = SE.getNegativeSCEV(P0);
   const SCEV *M2 = SE.getNegativeSCEV(P2);
 
-  SmallVector<const SCEV *, 6> Ops = {M2, P0, M0, P1, P2};
+  SmallVector<SCEVUse, 6> Ops = {M2, P0, M0, P1, P2};
   // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
   // crash if the comparator has the specific caching bug.
   SE.getAddExpr(Ops);
@@ -1788,8 +1830,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1798,8 +1840,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1808,8 +1850,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1826,8 +1868,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
                   isa<SCEVVScale>(cast<SCEVMulExpr>(CxVS)->getOperand(0)));
 
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = CxVS;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = CxVS;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
       EXPECT_EQ(NewLHS, A);
@@ -1845,15 +1887,15 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
       EXPECT_EQ(NewLHS, A);
@@ -1862,8 +1904,8 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
       EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
       EXPECT_EQ(NewLHS, A);
@@ -1881,25 +1923,327 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_SLT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_ULT;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
     }
 
     {
       CmpPredicate NewPred = ICmpInst::ICMP_EQ;
-      const SCEV *NewLHS = VSxA;
-      const SCEV *NewRHS = VSxB;
+      SCEVUse NewLHS = VSxA;
+      SCEVUse NewRHS = VSxB;
       EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
+
+  // Cancel common constant addend: (K + A) pred (K + B) --> A pred B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *K1 = SE.getConstant(A->getType(), 42);
+    const SCEV *K2 = SE.getConstant(A->getType(), 99);
+
+    // (42 + %a)<nsw> slt (42 + %b)<nsw>  -->  %a slt %b
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNSW);
+      const SCEV *K1pB = SE.getAddExpr(K1, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K1pB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a)<nuw> ult (42 + %b)<nuw>  -->  %a ult %b
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNUW);
+      const SCEV *K1pB = SE.getAddExpr(K1, B, SCEV::FlagNUW);
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K1pB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a)<nsw> slt (99 + %b)<nsw>  -->  no simplification (K mismatch)
+    {
+      const SCEV *K1pA = SE.getAddExpr(K1, A, SCEV::FlagNSW);
+      const SCEV *K2pB = SE.getAddExpr(K2, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = K1pA;
+      SCEVUse NewRHS = K2pB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
+
+  // Cancel common constant multiplier: (C * A) pred (C * B) --> A pred B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *PosC = SE.getConstant(A->getType(), 3);
+    const SCEV *NegC = SE.getConstant(A->getType(), -3, /*isSigned=*/true);
+
+    // (3 * %a)<nsw> slt (3 * %b)<nsw>  -->  %a slt %b  (C > 0)
+    {
+      const SCEV *PosCA = SE.getMulExpr(PosC, A, SCEV::FlagNSW);
+      const SCEV *PosCB = SE.getMulExpr(PosC, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = PosCA;
+      SCEVUse NewRHS = PosCB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_SLT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (3 * %a)<nuw> ult (3 * %b)<nuw>  -->  %a ult %b  (C != 0)
+    {
+      const SCEV *PosCA = SE.getMulExpr(PosC, A, SCEV::FlagNUW);
+      const SCEV *PosCB = SE.getMulExpr(PosC, B, SCEV::FlagNUW);
+      CmpPredicate NewPred = ICmpInst::ICMP_ULT;
+      SCEVUse NewLHS = PosCA;
+      SCEVUse NewRHS = PosCB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_ULT);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (-3 * %a)<nsw> slt (-3 * %b)<nsw>  -->  no simplification (C < 0)
+    {
+      const SCEV *NegCA = SE.getMulExpr(NegC, A, SCEV::FlagNSW);
+      const SCEV *NegCB = SE.getMulExpr(NegC, B, SCEV::FlagNSW);
+      CmpPredicate NewPred = ICmpInst::ICMP_SLT;
+      SCEVUse NewLHS = NegCA;
+      SCEVUse NewRHS = NegCB;
+      EXPECT_FALSE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+    }
+  });
+
+  // Equality: cancel common constant addend without no-wrap flags.
+  // (K + A) eq/ne (K + B) --> A eq/ne B
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *K = SE.getConstant(A->getType(), 42);
+
+    const SCEV *KpA = SE.getAddExpr(K, A);
+    const SCEV *KpB = SE.getAddExpr(K, B);
+
+    // (42 + %a) eq (42 + %b)  -->  %a eq %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_EQ;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_EQ);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
+    }
+
+    // (42 + %a) ne (42 + %b)  -->  %a ne %b
+    {
+      CmpPredicate NewPred = ICmpInst::ICMP_NE;
+      SCEVUse NewLHS = KpA;
+      SCEVUse NewRHS = KpB;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(NewPred, NewLHS, NewRHS));
+      EXPECT_EQ(NewPred, ICmpInst::ICMP_NE);
+      EXPECT_EQ(NewLHS, A);
+      EXPECT_EQ(NewRHS, B);
     }
   });
 }
 
+// An operand of a SCEV expression is a SCEVUse and may carry use-specific
+// no-wrap flags. Check that SCEV::print renders the operands as uses, so such a
+// flag is visible in the printout of the expression using it.
+TEST_F(ScalarEvolutionsTest, PrintUseFlagsOfOperands) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add i32 %iv, 1
+        %c = icmp ult i32 %iv.next, 10
+        br i1 %c, label %loop, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto Rendered = [](SCEVUse U) {
+      std::string S;
+      raw_string_ostream OS(S);
+      OS << U;
+      return S;
+    };
+
+    SCEVUse A = SE.getSCEV(getArgByName(F, "a"));
+    SCEVUse B = SE.getSCEV(getArgByName(F, "b"));
+    const Loop *L = LI.getLoopFor(getInstructionByName(F, "iv")->getParent());
+
+    // Uses of (%a + %b) and (4 + %a) carrying use-specific no-wrap flags.
+    SCEVUse Add = SE.getAddExpr(A, B);
+    SCEVUse Add4 = SE.getAddExpr(A, SE.getConstant(APInt(32, 4)));
+    SCEVUse NUWAdd(Add, SCEV::FlagNUW);
+    SCEVUse NSWAdd4(Add4, SCEV::FlagNSW);
+    EXPECT_EQ(Rendered(Add), "(%a + %b)");
+    EXPECT_EQ(Rendered(Add4), "(4 + %a)");
+    EXPECT_EQ(Rendered(NUWAdd), "(%a + %b)<u nuw>");
+    EXPECT_EQ(Rendered(NSWAdd4), "(4 + %a)<u nsw>");
+
+    SCEVUse Max = SE.getUMaxExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(Max), "((4 + %a)<u nsw> umax (%a + %b)<u nuw>)");
+
+    SCEVUse UDiv = SE.getUDivExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(UDiv), "((%a + %b)<u nuw> /u (4 + %a)<u nsw>)");
+
+    SCEVUse AR = SE.getAddRecExpr(NUWAdd, NSWAdd4, L, SCEV::FlagAnyWrap);
+    EXPECT_EQ(Rendered(AR), "{(%a + %b)<u nuw>,+,(4 + %a)<u nsw>}<%loop>");
+
+    // Casts print their operand as a use as well.
+    Type *I16 = Type::getInt16Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+    EXPECT_EQ(Rendered(SE.getTruncateExpr(NUWAdd, I16)),
+              "(trunc i32 (%a + %b)<u nuw> to i16)");
+    EXPECT_EQ(Rendered(SE.getZeroExtendExpr(NSWAdd4, I64)),
+              "(zext i32 (4 + %a)<u nsw> to i64)");
+    EXPECT_EQ(Rendered(SE.getSignExtendExpr(NUWAdd, I64)),
+              "(sext i32 (%a + %b)<u nuw> to i64)");
+
+    SCEVUse Trunc = SE.getTruncateExpr(Add, I16);
+    SCEVUse NUWTrunc(Trunc, SCEV::FlagNUW);
+    EXPECT_EQ(Rendered(NUWTrunc), "(trunc i32 (%a + %b) to i16)<u nuw>");
+    EXPECT_EQ(Rendered(SE.getUDivExpr(NUWTrunc, SE.getTruncateExpr(B, I16))),
+              "((trunc i32 (%a + %b) to i16)<u nuw> /u (trunc i32 %b to i16))");
+  });
+}
+
+// An operand carrying use-specific no-wrap flags makes the expression built
+// from it distinct from the one built from the bare operand
+TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %x, i32 %y, i1 %c) {
+      entry:
+        br label %loop
+      loop:
+        br i1 %c, label %loop, label %exit
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    SCEVUse FlaggedX(X, SCEV::FlagNUW);
+    ASSERT_FALSE(LI.empty());
+    const Loop *L = *LI.begin();
+
+    // Each builder keys its uniquing on the operand uses, so the flagged
+    // operand yields a different expression for every kind of node.
+    SCEVUse FlaggedAdd = SE.getAddExpr(FlaggedX, Y);
+    EXPECT_NE(FlaggedAdd, SE.getAddExpr(X, Y));
+    EXPECT_NE(SE.getMulExpr(FlaggedX, Y), SE.getMulExpr(X, Y));
+    EXPECT_NE(SE.getUDivExpr(FlaggedX, Y), SE.getUDivExpr(X, Y));
+    EXPECT_NE(SE.getUMaxExpr(FlaggedX, Y), SE.getUMaxExpr(X, Y));
+    EXPECT_NE(SE.getAddRecExpr(FlaggedX, Y, L, SCEV::FlagAnyWrap),
+              SE.getAddRecExpr(X, Y, L, SCEV::FlagAnyWrap));
+    SmallVector<SCEVUse, 2> FlaggedSeqOps = {FlaggedX, Y};
+    SmallVector<SCEVUse, 2> BareSeqOps = {X, Y};
+    EXPECT_NE(SE.getUMinExpr(FlaggedSeqOps, /*Sequential=*/true),
+              SE.getUMinExpr(BareSeqOps, /*Sequential=*/true));
+
+    EXPECT_EQ(FlaggedAdd->getCanonical(), SE.getAddExpr(X, Y));
+    EXPECT_EQ(SE.getUDivExpr(FlaggedX, Y)->getCanonical(),
+              SE.getUDivExpr(X, Y));
+
+    // The flagged use is the operand of the expression built from it, while the
+    // canonical form's operands are all bare.
+    SmallVector<SCEVUse> FlaggedOps;
+    copy_if(FlaggedAdd->operands(), std::back_inserter(FlaggedOps),
+            [](SCEVUse Op) { return Op.hasUseFlags(); });
+    ASSERT_EQ(FlaggedOps.size(), 1u);
+    EXPECT_EQ(FlaggedOps[0], FlaggedX);
+    EXPECT_TRUE(none_of(FlaggedAdd->getCanonical()->operands(),
+                        [](SCEVUse Op) { return Op.hasUseFlags(); }));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, CastsOfUsesWithNoWrapFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Type *I16 = Type::getInt16Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    SCEVUse Add = SE.getAddExpr(SE.getSCEV(getArgByName(F, "a")),
+                                SE.getSCEV(getArgByName(F, "b")));
+    SCEVUse NUWAdd(Add, SCEV::FlagNUW);
+
+    // Check that Cast keeps the use-specific flags of NUWAdd and is a
+    // node distinct from Canon, the same cast of the canonical operand.
+    auto CheckCast = [&Add](const SCEV *Cast, const SCEV *Canon) {
+      SCEVUse Op = cast<SCEVCastExpr>(Cast)->getOperand();
+      EXPECT_EQ(Op.getPointer(), Add.getPointer());
+      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+      EXPECT_NE(Cast, Canon);
+    };
+    CheckCast(SE.getTruncateExpr(NUWAdd, I16), SE.getTruncateExpr(Add, I16));
+    CheckCast(SE.getZeroExtendExpr(NUWAdd, I64),
+              SE.getZeroExtendExpr(Add, I64));
+    CheckCast(SE.getSignExtendExpr(NUWAdd, I64),
+              SE.getSignExtendExpr(Add, I64));
+    CheckCast(SE.getCastExpr(scTruncate, NUWAdd, I16),
+              SE.getCastExpr(scTruncate, Add, I16));
+    CheckCast(SE.getCastExpr(scZeroExtend, NUWAdd, I64),
+              SE.getCastExpr(scZeroExtend, Add, I64));
+    CheckCast(SE.getCastExpr(scSignExtend, NUWAdd, I64),
+              SE.getCastExpr(scSignExtend, Add, I64));
+    CheckCast(SE.getAnyExtendExpr(NUWAdd, I64), SE.getAnyExtendExpr(Add, I64));
+  });
+}
 }  // end namespace llvm

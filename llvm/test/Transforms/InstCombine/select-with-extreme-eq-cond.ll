@@ -267,8 +267,8 @@ define i1 @compare_float_negative(half %x, half %y) {
 ; CHECK-LABEL: define i1 @compare_float_negative(
 ; CHECK-SAME: half [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq half [[X]], 0xH0000
-; CHECK-NEXT:    [[TMP3:%.*]] = fcmp one half [[Y]], 0xH0000
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq half [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp one half [[Y]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp ult half [[X]], [[Y]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[TMP2]], i1 [[TMP3]], i1 [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[RESULT]]

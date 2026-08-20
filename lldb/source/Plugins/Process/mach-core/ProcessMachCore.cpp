@@ -9,9 +9,6 @@
 #include <cerrno>
 #include <cstdlib>
 
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Threading.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,6 +26,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/UUID.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "ProcessMachCore.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -44,7 +42,6 @@
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 
 #include <memory>
-#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -265,17 +262,20 @@ bool ProcessMachCore::LoadBinaryViaLowmemUUID() {
                         uuid.GetAsString().c_str(), addr);
               // We have no address specified, only a UUID.  Load it at the file
               // address.
-              const bool value_is_offset = true;
-              const bool force_symbol_search = true;
-              const bool notify = true;
-              const bool set_address_in_target = true;
-              const bool allow_memory_image_last_resort = false;
-              if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
-                      this, llvm::StringRef(), uuid, 0, value_is_offset,
-                      force_symbol_search, notify, set_address_in_target,
-                      allow_memory_image_last_resort)) {
+              DynamicLoader::BinarySpec bin_spec;
+              bin_spec.uuid = uuid;
+              bin_spec.value = 0;
+              bin_spec.value_is_offset = true;
+              bin_spec.force_symbol_search = true;
+              bin_spec.notify = true;
+              bin_spec.set_address_in_target = true;
+              llvm::Expected<ModuleSP> module =
+                  DynamicLoader::LocateAndLoadBinary(this, bin_spec);
+              if (module)
                 m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
-              }
+              else
+                *GetTarget().GetDebugger().GetAsyncErrorStream()
+                    << llvm::toString(module.takeError()) << "\n";
               // We found metadata saying which binary should be loaded; don't
               // try an exhaustive search.
               return true;
@@ -328,17 +328,20 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
       m_dyld_all_image_infos_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
     } else {
-      const bool force_symbol_search = true;
-      const bool notify = true;
-      const bool set_address_in_target = true;
-      const bool allow_memory_image_last_resort = false;
-      if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, llvm::StringRef(), objfile_binary_uuid,
-              objfile_binary_value, objfile_binary_value_is_offset,
-              force_symbol_search, notify, set_address_in_target,
-              allow_memory_image_last_resort)) {
+      DynamicLoader::BinarySpec bin_spec;
+      bin_spec.uuid = objfile_binary_uuid;
+      bin_spec.value = objfile_binary_value;
+      bin_spec.value_is_offset = objfile_binary_value_is_offset;
+      bin_spec.force_symbol_search = true;
+      bin_spec.notify = true;
+      bin_spec.set_address_in_target = true;
+      llvm::Expected<ModuleSP> module =
+          DynamicLoader::LocateAndLoadBinary(this, bin_spec);
+      if (module)
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
-      }
+      else
+        *GetTarget().GetDebugger().GetAsyncErrorStream()
+            << llvm::toString(module.takeError()) << "\n";
     }
   }
 
@@ -385,17 +388,20 @@ bool ProcessMachCore::LoadBinariesViaMetadata() {
     } else if (ident_uuid.IsValid()) {
       // We have no address specified, only a UUID.  Load it at the file
       // address.
-      const bool value_is_offset = false;
-      const bool force_symbol_search = true;
-      const bool notify = true;
-      const bool set_address_in_target = true;
-      const bool allow_memory_image_last_resort = false;
-      if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
-              this, llvm::StringRef(), ident_uuid, ident_binary_addr,
-              value_is_offset, force_symbol_search, notify,
-              set_address_in_target, allow_memory_image_last_resort)) {
+      DynamicLoader::BinarySpec bin_spec;
+      bin_spec.uuid = ident_uuid;
+      bin_spec.value = ident_binary_addr;
+      bin_spec.force_symbol_search = true;
+      bin_spec.notify = true;
+      bin_spec.set_address_in_target = true;
+      llvm::Expected<ModuleSP> module =
+          DynamicLoader::LocateAndLoadBinary(this, bin_spec);
+      if (module) {
         found_binary_spec_in_metadata = true;
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
+      } else {
+        *GetTarget().GetDebugger().GetAsyncErrorStream()
+            << llvm::toString(module.takeError()) << "\n";
       }
     }
 
@@ -715,15 +721,17 @@ bool ProcessMachCore::IsAlive() { return true; }
 bool ProcessMachCore::WarnBeforeDetach() const { return false; }
 
 // Process Memory
-size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+size_t ProcessMachCore::ReadMemory(const ProcessAddress &process_addr,
+                                   void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
   return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
-size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ProcessMachCore::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   size_t bytes_read = 0;
 
@@ -783,23 +791,21 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
       region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
       const Flags permissions(permission_entry->data);
-      region_info.SetReadable(permissions.Test(ePermissionsReadable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
-      region_info.SetWritable(permissions.Test(ePermissionsWritable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+      region_info.SetReadable(
+          permissions.Test(ePermissionsReadable) ? eLazyBoolYes : eLazyBoolNo);
+      region_info.SetWritable(
+          permissions.Test(ePermissionsWritable) ? eLazyBoolYes : eLazyBoolNo);
       region_info.SetExecutable(permissions.Test(ePermissionsExecutable)
-                                    ? MemoryRegionInfo::eYes
-                                    : MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eYes);
+                                    ? eLazyBoolYes
+                                    : eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
-      region_info.SetReadable(MemoryRegionInfo::eNo);
-      region_info.SetWritable(MemoryRegionInfo::eNo);
-      region_info.SetExecutable(MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eNo);
+      region_info.SetReadable(eLazyBoolNo);
+      region_info.SetWritable(eLazyBoolNo);
+      region_info.SetExecutable(eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolNo);
     }
     return Status();
   } else {
@@ -823,22 +829,18 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
 
   region_info.GetRange().SetRangeBase(load_addr);
   region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  region_info.SetReadable(MemoryRegionInfo::eNo);
-  region_info.SetWritable(MemoryRegionInfo::eNo);
-  region_info.SetExecutable(MemoryRegionInfo::eNo);
-  region_info.SetMapped(MemoryRegionInfo::eNo);
+  region_info.SetReadable(eLazyBoolNo);
+  region_info.SetWritable(eLazyBoolNo);
+  region_info.SetExecutable(eLazyBoolNo);
+  region_info.SetMapped(eLazyBoolNo);
   return Status();
 }
 
 void ProcessMachCore::Clear() { m_thread_list.Clear(); }
 
 void ProcessMachCore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {

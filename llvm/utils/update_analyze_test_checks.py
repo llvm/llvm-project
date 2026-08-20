@@ -41,27 +41,6 @@ import re
 from UpdateTestChecks import common
 
 
-def extract_vplan(raw_output):
-    """
-    Extract a VPlan block from loop-vectorize debug output using brace-depth
-    tracking.
-    TODO: Remove once only -vplan-print-after is supported.
-    """
-    result = []
-    brace_depth = 0
-    for line in raw_output.splitlines():
-        if not brace_depth and line.startswith("VPlan 'Initial VPlan"):
-            brace_depth = 1
-            result.append(line)
-            continue
-        if brace_depth:
-            brace_depth += line.count("{") - line.count("}")
-            result.append(line)
-            if brace_depth == 0:
-                break
-    return "\n".join(result) if result else None
-
-
 def update_test(opt_basename: str, ti: common.TestInfo):
     triple_in_ir = None
     for l in ti.input_lines:
@@ -76,11 +55,11 @@ def update_test(opt_basename: str, ti: common.TestInfo):
             common.warn("Skipping unparsable RUN line: " + l)
             continue
 
-        (tool_cmd, filecheck_cmd) = tuple([cmd.strip() for cmd in l.split("|", 1)])
+        tool_cmd, filecheck_cmd, preprocess_cmd = common.split_run_line(l)
         common.verify_filecheck_prefixes(filecheck_cmd)
 
         if not tool_cmd.startswith(opt_basename + " "):
-            common.warn("WSkipping non-%s RUN line: %s" % (opt_basename, l))
+            common.warn("Skipping non-%s RUN line: %s" % (opt_basename, l))
             continue
 
         if not filecheck_cmd.startswith("FileCheck "):
@@ -93,7 +72,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         # FIXME: We should use multiple check prefixes to common check lines. For
         # now, we just ignore all but the last.
-        prefix_list.append((check_prefixes, tool_cmd_args))
+        prefix_list.append((check_prefixes, tool_cmd_args, preprocess_cmd))
 
     ginfo = common.make_analyze_generalizer(version=1)
     builder = common.FunctionTestBuilder(
@@ -114,39 +93,34 @@ def update_test(opt_basename: str, ti: common.TestInfo):
         ginfo=ginfo,
     )
 
-    for prefixes, opt_args in prefix_list:
+    for prefixes, opt_args, preprocess_cmd in prefix_list:
         common.debug("Extracted opt cmd:", opt_basename, opt_args, file=sys.stderr)
         common.debug("Extracted FileCheck prefixes:", str(prefixes), file=sys.stderr)
 
-        raw_tool_outputs = common.invoke_tool(ti.args.opt_binary, opt_args, ti.path)
-
-        # Detect VPlan output for LV pass. Don't use VPlan mode if filters are
-        # active since the user is likely filtering to specific LV debug lines
-        # (e.g., cost model).
-        is_vplan_output = (
-            not ti.args.filters
-            and re.search(r"VPlan 'Initial VPlan", raw_tool_outputs) is not None
+        raw_tool_outputs = common.invoke_tool(
+            ti.args.opt_binary,
+            opt_args,
+            ti.path,
+            preprocess_cmd=preprocess_cmd,
+            verbose=ti.args.verbose,
         )
 
         regex_map = {
             r"Printing analysis ": common.ANALYZE_FUNCTION_RE,
             r"(LV|LDist|HashRecognize): Checking a loop in ": common.LOOP_PASS_DEBUG_RE,
+            r"VPlan for loop in ": common.VPLAN_RE,
         }
 
         for split_by, regex in regex_map.items():
             if re.search(split_by, raw_tool_outputs) is None:
                 continue
             for raw_tool_output in re.split(split_by, raw_tool_outputs):
-                if is_vplan_output:
-                    vplan_output = extract_vplan(raw_tool_output)
-                    if not vplan_output:
-                        continue
-                    # Reconstruct minimal output: function header line + VPlan
-                    func_header = raw_tool_output.split("\n")[0]
-                    raw_tool_output = "\n".join([func_header, vplan_output])
-
                 # For VPlan mode, don't scrub whitespace - preserve exact alignment
-                scrubber = (lambda body: body) if is_vplan_output else common.scrub_body
+                scrubber = (
+                    (lambda body: body)
+                    if regex == common.VPLAN_RE
+                    else common.scrub_body
+                )
                 builder.process_run_line(
                     regex,
                     scrubber,
@@ -160,10 +134,12 @@ def update_test(opt_basename: str, ti: common.TestInfo):
 
         builder.processed_prefixes(prefixes)
 
+    check_label_prefix = "VPlan for loop in " if regex == common.VPLAN_RE else ""
+
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
-    prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
+    prefix_set = set([prefix for prefixes, _, _ in prefix_list for prefix in prefixes])
     common.debug("Rewriting FileCheck prefixes:", str(prefix_set), file=sys.stderr)
     output_lines = []
 
@@ -190,6 +166,7 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                     func_name,
                     ginfo,
                     is_filtered=builder.is_filtered(),
+                    check_label_prefix=check_label_prefix,
                 )
             )
             is_in_function_start = False

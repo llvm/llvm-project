@@ -56,6 +56,8 @@ void SCEVDivision::divide(ScalarEvolution &SE, const SCEV *Numerator,
                           const SCEV *Denominator, const SCEV **Quotient,
                           const SCEV **Remainder) {
   assert(Numerator && Denominator && "Uninitialized SCEV");
+  assert(Numerator->getType() == Denominator->getType() &&
+         "Numerator and Denominator must have the same type");
 
   SCEVDivision D(SE, Numerator, Denominator);
 
@@ -109,13 +111,8 @@ void SCEVDivision::visitConstant(const SCEVConstant *Numerator) {
   if (const SCEVConstant *D = dyn_cast<SCEVConstant>(Denominator)) {
     APInt NumeratorVal = Numerator->getAPInt();
     APInt DenominatorVal = D->getAPInt();
-    uint32_t NumeratorBW = NumeratorVal.getBitWidth();
-    uint32_t DenominatorBW = DenominatorVal.getBitWidth();
-
-    if (NumeratorBW > DenominatorBW)
-      DenominatorVal = DenominatorVal.sext(NumeratorBW);
-    else if (NumeratorBW < DenominatorBW)
-      NumeratorVal = NumeratorVal.sext(DenominatorBW);
+    assert(NumeratorVal.getBitWidth() == DenominatorVal.getBitWidth() &&
+           "Numerator and Denominator must have the same bit width");
 
     APInt QuotientVal(NumeratorVal.getBitWidth(), 0);
     APInt RemainderVal(NumeratorVal.getBitWidth(), 0);
@@ -141,14 +138,15 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
   if (Ty != StartQ->getType() || Ty != StartR->getType() ||
       Ty != StepQ->getType() || Ty != StepR->getType())
     return cannotDivide(Numerator);
+
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              Numerator->getNoWrapFlags());
+                              SCEV::NoWrapFlags::FlagAnyWrap);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               Numerator->getNoWrapFlags());
+                               SCEV::NoWrapFlags::FlagAnyWrap);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs, Rs;
+  SmallVector<SCEVUse, 2> Qs, Rs;
   Type *Ty = Denominator->getType();
 
   for (const SCEV *Op : Numerator->operands()) {
@@ -174,7 +172,7 @@ void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
 }
 
 void SCEVDivision::visitMulExpr(const SCEVMulExpr *Numerator) {
-  SmallVector<const SCEV *, 2> Qs;
+  SmallVector<SCEVUse, 2> Qs;
   Type *Ty = Denominator->getType();
 
   bool FoundDenominatorTerm = false;

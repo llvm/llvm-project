@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -54,6 +55,42 @@ static cl::opt<unsigned>
 
 GCNSubtarget::~GCNSubtarget() = default;
 
+static AMDGPUSubtarget::Generation computeDefaultGeneration(const Triple &TT) {
+  // Legacy triples without a subarch default to the first target that supports
+  // flat addressing for HSA, otherwise the first amdgcn target.
+  if (TT.getSubArch() == Triple::NoSubArch)
+    return TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
+                                        : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+
+  switch (AMDGPU::getMajorSubArch(TT.getSubArch())) {
+  case Triple::AMDGPUSubArch6:
+    return AMDGPUSubtarget::SOUTHERN_ISLANDS;
+  case Triple::AMDGPUSubArch7:
+    return AMDGPUSubtarget::SEA_ISLANDS;
+  case Triple::AMDGPUSubArch8:
+  case Triple::AMDGPUSubArch810:
+    return AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  case Triple::AMDGPUSubArch9:
+  case Triple::AMDGPUSubArch908:
+  case Triple::AMDGPUSubArch90A:
+  case Triple::AMDGPUSubArch9_4:
+    return AMDGPUSubtarget::GFX9;
+  case Triple::AMDGPUSubArch10_1:
+  case Triple::AMDGPUSubArch10_3:
+    return AMDGPUSubtarget::GFX10;
+  case Triple::AMDGPUSubArch11:
+  case Triple::AMDGPUSubArch11_7:
+    return AMDGPUSubtarget::GFX11;
+  case Triple::AMDGPUSubArch12:
+  case Triple::AMDGPUSubArch12_5:
+    return AMDGPUSubtarget::GFX12;
+  case Triple::AMDGPUSubArch13:
+    return AMDGPUSubtarget::GFX13;
+  default:
+    reportFatalUsageError("invalid subarch for amdgpu");
+  }
+}
+
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                                             StringRef GPU,
                                                             StringRef FS) {
@@ -66,7 +103,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
+  SmallString<256> FullFS("+load-store-opt,+enable-ds128,");
 
   // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
   // default
@@ -94,8 +131,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // the first amdgcn target that supports flat addressing. Other OSes defaults
   // to the first amdgcn target.
   if (Gen == AMDGPUSubtarget::INVALID) {
-    Gen = TT.getOS() == Triple::AMDHSA ? AMDGPUSubtarget::SEA_ISLANDS
-                                       : AMDGPUSubtarget::SOUTHERN_ISLANDS;
+    Gen = computeDefaultGeneration(TT);
     // Assume wave64 for the unknown target, if not explicitly set.
     if (getWavefrontSizeLog2() == 0)
       WavefrontSizeLog2 = 6;
@@ -140,17 +176,25 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
-  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(this);
+  if (FlatOffsetBitWidth == 0)
+    FlatOffsetBitWidth = 13;
+
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  // LDS Allocation Granularity calculated in bytes from dwords
+  LDSAllocationGranularity =
+      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
 
-  TargetID.setTargetIDFromFeaturesString(FS);
+  // InstCacheLineSize is set from TableGen subtarget features
+  // (FeatureInstCacheLineSize64 / FeatureInstCacheLineSize128).
+  // Fall back to 64 if no feature was specified (e.g. generic targets).
+  if (InstCacheLineSize == 0)
+    InstCacheLineSize = 64;
 
-  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
-                    << TargetID.getXnackSetting() << '\n');
-  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
-                    << TargetID.getSramEccSetting() << '\n');
+  assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
+         "InstCacheLineSize must be a power of 2");
 
   return *this;
 }
@@ -164,19 +208,45 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   }
 }
 
+// TODO: Validate subarch for subtarget
+
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                           const GCNTargetMachine &TM)
+                           const GCNTargetMachine &TM, bool BufferOOBRelaxed,
+                           bool TBufferOOBRelaxed,
+                           AMDGPU::TargetIDSetting XnackSetting,
+                           AMDGPU::TargetIDSetting SramEccSetting)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(*this),
+    TargetID(AMDGPU::createAMDGPUTargetID(*this, "")),
     InstrItins(getInstrItineraryForCPU(GPU)),
+    BufferOOBRelaxed(BufferOOBRelaxed),
+    TBufferOOBRelaxed(TBufferOOBRelaxed),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
-    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
+    // Frame index expansion sometimes assumes the low bit of SP is 0
+    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
+                  /*TransAl=*/Align(4)) {
+
   // clang-format on
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+
+  // Apply the module flag's xnack setting if the target supports on/off modes.
+  // Targets without on/off mode support have xnack always on and ignore module
+  // flags.
+  if (hasXNACKOnOffModes())
+    TargetID.setXnackSetting(XnackSetting);
+
+  // Apply the module flag's sramecc setting if the target supports it.
+  if (supportsSRAMECC())
+    TargetID.setSramEccSetting(SramEccSetting);
+
+  LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
+                    << TargetID.getXnackSetting() << '\n');
+  LLVM_DEBUG(dbgs() << "sramecc setting for subtarget: "
+                    << TargetID.getSramEccSetting() << '\n');
+
+  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
+  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 
@@ -186,7 +256,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   Legalizer = std::make_unique<AMDGPULegalizerInfo>(*this, TM);
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
-      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo);
 }
 
 const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
@@ -326,6 +396,13 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // SIRegisterInfo::getRegPressureSetLimit()
   Policy.ShouldTrackPressure = true;
 
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  if (AMDGPU::getSchedStrategy(F) == "coexec") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    return;
+  }
+
   // Enabling both top down and bottom up scheduling seems to give us less
   // register spills than just using one of these approaches on its own.
   Policy.OnlyTopDown = false;
@@ -395,14 +472,13 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
-                                                   getGeneration());
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(*this, SGPRs);
 }
 
 unsigned
 GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
                                        unsigned DynamicVGPRBlockSize) const {
-  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs,
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(*this, NumVGPRs,
                                                        DynamicVGPRBlockSize);
 }
 
@@ -440,17 +516,12 @@ std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  // Temporarily check both the attribute and the subtarget feature until the
-  // latter is removed.
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
-  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  MaxOcc = std::min({MaxOcc, SGPROcc, VGPROcc});
   return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
@@ -554,12 +625,7 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is removed.
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
-
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
   return getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
@@ -576,7 +642,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
-  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = getAddressableNumArchVGPRs();
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -611,7 +677,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+    MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
@@ -627,6 +693,114 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);
 }
 
+// Check to which source operand UseOpIdx points to and return a pointer to the
+// operand of the corresponding source modifier.
+// Return nullptr if UseOpIdx either doesn't point to src0/1/2 or if there is no
+// operand for the corresponding source modifier.
+static const MachineOperand *
+getVOP3PSourceModifierFromOpIdx(const MachineInstr &UseI, int UseOpIdx,
+                                const SIInstrInfo &InstrInfo) {
+  AMDGPU::OpName UseName =
+      AMDGPU::getOperandIdxName(UseI.getOpcode(), UseOpIdx);
+  switch (UseName) {
+  case AMDGPU::OpName::src0:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src0_modifiers);
+  case AMDGPU::OpName::src1:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src1_modifiers);
+  case AMDGPU::OpName::src2:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src2_modifiers);
+  default:
+    return nullptr;
+  }
+}
+
+// Get the subreg idx of the subreg that is used by the given instruction
+// operand, considering the given op_sel modifier.
+// Return 0 if the whole register is used or as a conservative fallback.
+static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
+                                      const SIInstrInfo &InstrInfo,
+                                      const MachineInstr &I,
+                                      const MachineOperand &Op) {
+  if (!InstrInfo.isVOP3P(I) || InstrInfo.isWMMA(I) || InstrInfo.isSWMMAC(I))
+    return AMDGPU::NoSubRegister;
+
+  const MachineOperand *OpMod =
+      getVOP3PSourceModifierFromOpIdx(I, Op.getOperandNo(), InstrInfo);
+  if (!OpMod)
+    return AMDGPU::NoSubRegister;
+
+  // Note: the FMA_MIX* and MAD_MIX* instructions have different semantics for
+  // the op_sel and op_sel_hi source modifiers:
+  // - op_sel: selects low/high operand bits as input to the operation;
+  //           has only meaning for 16-bit source operands
+  // - op_sel_hi: specifies the size of the source operands (16 or 32 bits);
+  //              a value of 0 indicates 32 bit, 1 indicates 16 bit
+  // For the other VOP3P instructions, the semantics are:
+  // - op_sel: selects low/high operand bits as input to the operation which
+  //           results in the lower-half of the destination
+  // - op_sel_hi: selects the low/high operand bits as input to the operation
+  //              which results in the higher-half of the destination
+  int64_t OpSel = OpMod->getImm() & SISrcMods::OP_SEL_0;
+  int64_t OpSelHi = OpMod->getImm() & SISrcMods::OP_SEL_1;
+
+  // Check if all parts of the register are being used (= op_sel and op_sel_hi
+  // differ for VOP3P or op_sel_hi=0 for VOP3PMix). In that case we can return
+  // early.
+  if ((!InstrInfo.isVOP3PMix(I) && (!OpSel || !OpSelHi) &&
+       (OpSel || OpSelHi)) ||
+      (InstrInfo.isVOP3PMix(I) && !OpSelHi))
+    return AMDGPU::NoSubRegister;
+
+  const MachineRegisterInfo &MRI = I.getParent()->getParent()->getRegInfo();
+  const TargetRegisterClass *RC = TRI.getRegClassForOperandReg(MRI, Op);
+
+  if (unsigned SubRegIdx = OpSel ? AMDGPU::sub1 : AMDGPU::sub0;
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
+    return SubRegIdx;
+  if (unsigned SubRegIdx = OpSel ? AMDGPU::hi16 : AMDGPU::lo16;
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
+    return SubRegIdx;
+
+  return AMDGPU::NoSubRegister;
+}
+
+Register GCNSubtarget::getRealSchedDependency(const MachineInstr &DefI,
+                                              int DefOpIdx,
+                                              const MachineInstr &UseI,
+                                              int UseOpIdx) const {
+  const SIRegisterInfo *TRI = getRegisterInfo();
+  const MachineOperand &DefOp = DefI.getOperand(DefOpIdx);
+  const MachineOperand &UseOp = UseI.getOperand(UseOpIdx);
+  Register DefReg = DefOp.getReg();
+  Register UseReg = UseOp.getReg();
+
+  // If the registers aren't restricted to a sub-register, there is no point in
+  // further analysis. This check makes only sense for virtual registers because
+  // physical registers may form a tuple and thus be part of a superregister
+  // although they are not a subregister themselves (vgpr0 is a "subreg" of
+  // vgpr0_vgpr1 without being a subreg in itself).
+  unsigned DefSubRegIdx = DefOp.getSubReg();
+  if (DefReg.isVirtual() && DefSubRegIdx == AMDGPU::NoSubRegister)
+    return DefReg;
+  unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseI, UseOp);
+  if (UseReg.isVirtual() && UseSubRegIdx == AMDGPU::NoSubRegister)
+    return DefReg;
+
+  if (!TRI->checkSubRegInterference(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
+    return Register(); // No real dependency
+
+  // UseReg might be smaller or larger than DefReg, depending on the subreg and
+  // on whether DefReg is a subreg, too. -> Find the smaller one.  This does not
+  // apply to virtual registers because we cannot construct a subreg for them.
+  if (DefReg.isVirtual())
+    return DefReg;
+  MCRegister DefMCReg =
+      DefSubRegIdx ? TRI->getSubReg(DefReg, DefSubRegIdx) : DefReg.asMCReg();
+  MCRegister UseMCReg =
+      UseSubRegIdx ? TRI->getSubReg(UseReg, UseSubRegIdx) : UseReg.asMCReg();
+  return TRI->isSubRegisterEq(DefMCReg, UseMCReg) ? UseMCReg : DefMCReg;
+}
+
 void GCNSubtarget::adjustSchedDependency(
     SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
     const TargetSchedModel *SchedModel) const {
@@ -636,6 +810,26 @@ void GCNSubtarget::adjustSchedDependency(
 
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
+
+  // Check for false latency on $tensorcnt / $asynccnt dependencies
+  if (Dep.getReg() == AMDGPU::TENSORcnt || Dep.getReg() == AMDGPU::ASYNCcnt) {
+    unsigned UseOp = UseI->getOpcode();
+    // Do not adjust latency for load->s_wait
+    bool IsBarrierCase =
+        InstrInfo.isLDSDMA(*DefI) &&
+        (UseOp == AMDGPU::S_WAIT_TENSORCNT || UseOp == AMDGPU::S_WAIT_ASYNCCNT);
+    if (!IsBarrierCase) {
+      Dep.setLatency(1);
+      return;
+    }
+  }
+
+  if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
+    Dep.setReg(Reg);
+  } else {
+    Dep = SDep(Def, SDep::Artificial);
+    return; // This is not a data dependency anymore.
+  }
 
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();

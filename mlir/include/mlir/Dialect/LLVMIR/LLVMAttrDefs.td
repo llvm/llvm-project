@@ -97,6 +97,28 @@ def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionEntryCountAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_FunctionEntryCountAttr
+    : LLVM_Attr<"FunctionEntryCount", "function_entry_count"> {
+  let summary = "LLVM function entry count profile metadata";
+  let description = [{
+    Models function-level `!prof` entry-count metadata. The `entry_count` field
+    stores the unsigned 64-bit counter bit pattern. The `count_type` field
+    defaults to real and selects whether the metadata is emitted as
+    `"function_entry_count"` or `"synthetic_function_entry_count"`. The optional
+    `imports` field stores the trailing import GUID operands used by ThinLTO
+    sample PGO.
+  }];
+  let parameters = (ins "uint64_t":$entry_count,
+                        DefaultValuedParameter<"ProfileCountType",
+                                               "ProfileCountType::Real">:$count_type,
+                        OptionalArrayRefParameter<"uint64_t">:$imports);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 
@@ -335,7 +357,16 @@ def LLVM_DIEncodingParameter : LLVM_DIParameter<
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language", /*errorCase=*/"0"
+  "language", /*default=*/"0", "Language", /*errorCase=*/"0"
+>;
+
+// Source-language dialect values are defined by LLVM's
+// dwarf::LanguageDialectAttribute enum in llvm/BinaryFormat/Dwarf.h. LLVM
+// represents "no source-language dialect" as 0; the LLVM IR printer omits the
+// `dialect:` field for that value.
+def LLVM_DILanguageDialectParameter : LLVM_DIParameter<
+  "language dialect", /*default=*/"0", "LanguageDialect",
+  /*errorCase=*/"~0U"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
@@ -392,7 +423,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     LLVM_DIEncodingParameter:$encoding
   );
@@ -417,30 +448,69 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
-                                       /*traits=*/[], "DIScopeAttr"> {
+                                       [LLVM_DIRecursiveTypeAttrInterface],
+                                       "DIScopeAttr"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    // DIRecursiveTypeAttrInterface specific parameters.
+    OptionalParameter<"DistinctAttr">:$recId,
+    OptionalParameter<"bool">:$isRecSelf,
+    // DICompileUnitAttr specific parameters.
+    OptionalParameter<"DistinctAttr">:$id,
     LLVM_DILanguageParameter:$sourceLanguage,
-    "DIFileAttr":$file,
+    LLVM_DILanguageDialectParameter:$sourceLanguageDialect,
+    OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"StringAttr">:$producer,
-    "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"bool">:$isOptimized,
+    OptionalParameter<"DIEmissionKind">:$emissionKind,
+    OptionalParameter<"bool">:$isDebugInfoForProfiling,
     OptionalParameter<"DINameTableKind">:$nameTableKind,
-    OptionalParameter<"StringAttr">:$splitDebugFilename
+    OptionalParameter<"StringAttr">:$splitDebugFilename,
+    OptionalArrayRefParameter<"DINodeAttr">:$importedEntities
   );
   let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage,
+      "unsigned":$sourceLanguageDialect, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
+    ), [{
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, sourceLanguageDialect, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
+    }]>,
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
+      CArg<"bool", "false">:$isDebugInfoForProfiling,
       CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
-      CArg<"StringAttr", "{}">:$splitDebugFilename
+      CArg<"StringAttr", "{}">:$splitDebugFilename,
+      CArg<"ArrayRef<DINodeAttr>", "{}">:$importedEntities
     ), [{
-      return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
+      return $_get(id.getContext(), /*recId=*/nullptr, /*isRecSelf=*/false, id,
+                   sourceLanguage, /*sourceLanguageDialect=*/0, file, producer,
+                   isOptimized, emissionKind, isDebugInfoForProfiling,
+                   nameTableKind, splitDebugFilename, importedEntities);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get a copy of this attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided `recId`.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;
@@ -471,6 +541,8 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
     OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalParameter<"StringAttr">:$identifier,
+    OptionalParameter<"DIDerivedTypeAttr">:$discriminator,
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
@@ -480,12 +552,13 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
       "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
       "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "StringAttr":$identifier, "DIDerivedTypeAttr":$discriminator,
       "ArrayRef<DINodeAttr>":$elements
     ), [{
-      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
+      return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
                    alignInBits, dataLocation, rank, allocated,
-                   associated, elements);
+                   associated, identifier, discriminator, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -515,15 +588,19 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
   let parameters = (ins
     LLVM_DITagParameter:$tag,
     OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"uint32_t">:$line,
+    OptionalParameter<"DIScopeAttr">:$scope,
     OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"DINodeAttr">:$extraData
+    OptionalParameter<"Attribute">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;
@@ -680,36 +757,34 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
                                       "DILocalScopeAttr"> {
   let parameters = (ins
-    // DIRecursiveTypeAttrInterface specific parameters.
-    OptionalParameter<"DistinctAttr">:$recId,
-    OptionalParameter<"bool">:$isRecSelf,
-    // DISubprogramAttr specific parameters.
-    OptionalParameter<"DistinctAttr">:$id,
-    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"StringAttr">:$linkageName,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"unsigned">:$line,
-    OptionalParameter<"unsigned">:$scopeLine,
-    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
-    OptionalArrayRefParameter<"DINodeAttr">:$annotations
-  );
-  let builders = [
-    AttrBuilder<(ins
-      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
-      "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
-      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
-    ), [{
+      // DIRecursiveTypeAttrInterface specific parameters.
+      OptionalParameter<"DistinctAttr">:$recId,
+      OptionalParameter<"bool">:$isRecSelf,
+      // DISubprogramAttr specific parameters.
+      OptionalParameter<"DistinctAttr">:$id,
+      OptionalParameter<"DICompileUnitAttr">:$compileUnit,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"StringAttr">:$linkageName,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"unsigned">:$line,
+      OptionalParameter<"unsigned">:$scopeLine,
+      OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
+      OptionalParameter<"DISubroutineTypeAttr">:$type,
+      OptionalArrayRefParameter<"Attribute">:$retainedNodes,
+      OptionalArrayRefParameter<"DINodeAttr">:$annotations);
+  let builders = [AttrBuilder<
+      (ins "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+          "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
+          "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+          "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+          "ArrayRef<Attribute>":$retainedNodes,
+          "ArrayRef<DINodeAttr>":$annotations),
+      [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
                    subprogramFlags, type, retainedNodes, annotations);
-    }]>
-  ];
+    }]>];
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.
@@ -913,7 +988,7 @@ def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
                                      /*traits=*/[], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
-    "StringAttr":$name,
+    OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
     OptionalParameter<"DIVariableAttr">:$stringLength,
@@ -941,6 +1016,18 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
   let builders = [
     TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
   ];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DenormalFPEnvAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
+  let parameters = (ins "DenormalModeKind":$default_output_mode,
+                        "DenormalModeKind":$default_input_mode,
+                        "DenormalModeKind":$float_output_mode,
+                        "DenormalModeKind":$float_input_mode);
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -1543,14 +1630,16 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
 //===----------------------------------------------------------------------===//
 
 def ModuleFlagAttr
-    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag",
+                [DeclareAttrInterfaceMethods<LLVM_ModuleFlagAttrInterface>]> {
   let summary = "LLVM module flag metadata";
   let description = [{
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
     and third is the value of the flag. Supported keys and values include:
-      - Arbitrary `key`s holding integer constants or strings.
+      - Arbitrary `key`s holding integer constants, integer-like dialect
+        attributes, strings, or non-empty string arrays.
       - Domain specific keys (e.g "CG Profile"), holding lists of supported
         module flag values (e.g. `llvm.cgprofile_entry`).
 
@@ -1670,5 +1759,146 @@ def UWTableKindAttr : LLVM_Attr<"UWTableKind", "uwtableKind"> {
   let parameters = (ins "uwtable::UWTableKind":$uwtableKind);
   let assemblyFormat = "`<` $uwtableKind `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// Metadata Attributes
+//===----------------------------------------------------------------------===//
+//
+// These attributes model LLVM IR metadata nodes (llvm::Metadata and its
+// subclasses). They can be nested to form arbitrary metadata trees and are
+// translated to their LLVM IR counterparts during MLIR-to-LLVM-IR conversion.
+
+def LLVM_MDStringAttr : LLVM_Attr<"MDString", "md_string"> {
+  let summary = "LLVM metadata string";
+  let description = [{
+    Wraps a string as an LLVM metadata node, corresponding to
+    `llvm::MDString` in LLVM IR.
+
+    Example:
+    ```mlir
+    #llvm.md_string<"foo.buffer">
+    ```
+  }];
+  let parameters = (ins "StringAttr":$value);
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
+  let summary = "LLVM constant-as-metadata";
+  let description = [{
+    Wraps an attribute as an LLVM metadata node, corresponding to
+    `llvm::ConstantAsMetadata` wrapping a `llvm::Constant*` in LLVM IR.
+    Currently, only integers/IntegerAttrs supported.
+
+    Example:
+    ```mlir
+    #llvm.md_const<42 : i32>
+    ```
+  }];
+  let parameters = (ins "Attribute":$value);
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
+  let summary = "LLVM global value-as-metadata";
+  let description = [{
+    References a symbol-backed global value as LLVM metadata, corresponding to
+    `llvm::ValueAsMetadata::get(value)` in LLVM IR.
+
+    Example:
+    ```mlir
+    #llvm.md_global_value<@my_kernel>
+    ```
+  }];
+  let parameters = (ins "FlatSymbolRefAttr":$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
+def LLVM_MDNullAttr : LLVM_Attr<"MDNull", "md_null"> {
+  let summary = "LLVM null pointer as metadata";
+  let description = [{
+    Wraps a null pointer constant as an LLVM metadata node, corresponding to
+    `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantPointerNull` in LLVM
+    IR. `addressSpace` is the address space of the null pointer, so that
+    `ptr null` and `ptr addrspace(1) null` remain distinguishable.
+
+    Example:
+    ```mlir
+    #llvm.md_null<0>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
+}
+
+def LLVM_MDAddrSpaceCastAttr
+    : LLVM_Attr<"MDAddrSpaceCast", "md_addrspacecast"> {
+  let summary = "LLVM addrspacecast constant expression as metadata";
+  let description = [{
+    Wraps an `addrspacecast` constant expression as an LLVM metadata node,
+    corresponding to `llvm::ConstantAsMetadata` wrapping a `llvm::ConstantExpr`
+    with an `addrspacecast` opcode in LLVM IR. `arg` is the metadata attribute
+    for the pointer being cast and `addressSpace` is the address space of the
+    resulting pointer.
+
+    Example:
+    ```mlir
+    #llvm.md_addrspacecast<#llvm.md_global_value<@my_global>, 0>
+    ```
+  }];
+  let parameters = (ins "Attribute":$arg, "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $arg `,` $addressSpace `>`";
+  let genVerifyDecl = 1;
+}
+
+def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
+  let summary = "LLVM metadata node";
+  let description = [{
+    Represents an LLVM metadata node. The operands
+    can be any combination of metadata attributes: `#llvm.md_string`,
+    `#llvm.md_const`, `#llvm.md_global_value`, `#llvm.md_null`,
+    `#llvm.md_addrspacecast`, or nested `#llvm.md_node`.
+
+    Example:
+    ```mlir
+    #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>
+    #llvm.md_node<>
+    ```
+  }];
+  let parameters = (ins OptionalArrayRefParameter<"Attribute">:$operands);
+  let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
+}
+
+def LLVM_MDNodeArrayAttr
+    : TypedArrayAttrBase<LLVM_MDNodeAttr,
+                         "array of #llvm.md_node attributes">;
+
+def LLVM_FunctionMetadataAttr
+    : LLVM_Attr<"FunctionMetadata", "func_metadata"> {
+  let summary = "LLVM function metadata attachment";
+  let description = [{
+    Models one LLVM IR function metadata attachment. LLVM IR allows several
+    attachments with the same metadata kind, so function metadata is represented
+    as an ordered list of these entries instead of a dictionary.
+
+    Example:
+    ```mlir
+    #llvm.func_metadata<"type", <#llvm.md_string<"id">>>
+    ```
+  }];
+  let parameters = (ins "StringAttr":$metadataName, "MDNodeAttr":$node);
+  let assemblyFormat = "`<` $metadataName `,` $node `>`";
+  let genVerifyDecl = 1;
+}
+
+def LLVM_FunctionMetadataArrayAttr
+    : TypedArrayAttrBase<LLVM_FunctionMetadataAttr,
+                         "array of #llvm.func_metadata attributes">;
+
+def LLVM_AnyMDAttr : AnyAttrOf<[
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
+    LLVM_MDNullAttr, LLVM_MDAddrSpaceCastAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, md_null, "
+    "md_addrspacecast, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

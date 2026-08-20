@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -38,7 +39,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
@@ -63,6 +63,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -161,6 +162,21 @@ static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
   return STI.getFrameLowering()->getStackAlign();
 }
 
+static FramePointerKind getFramePointerPolicy(const Function &F) {
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
+    return FramePointerKind::None;
+
+  StringRef FP = FPAttr.getValueAsString();
+  return StringSwitch<FramePointerKind>(FP)
+      .Case("all", FramePointerKind::All)
+      .Case("non-leaf", FramePointerKind::NonLeaf)
+      .Case("non-leaf-no-reserve", FramePointerKind::NonLeafNoReserve)
+      .Case("reserved", FramePointerKind::Reserved)
+      .Case("none", FramePointerKind::None)
+      .Default(FramePointerKind::None);
+}
+
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
@@ -202,6 +218,7 @@ void MachineFunction::init() {
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
+  FrameInfo->setFramePointerPolicy(getFramePointerPolicy(F));
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -210,11 +227,6 @@ void MachineFunction::init() {
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
-
-  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
-  if (!F.hasOptSize())
-    Alignment = std::max(Alignment,
-                         STI.getTargetLowering()->getPrefFunctionAlignment());
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
@@ -234,14 +246,14 @@ void MachineFunction::init() {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
   }
 
-  if (isScopedEHPersonality(classifyEHPersonality(
-          F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
-    WasmEHInfo = new (Allocator) WasmEHFuncInfo();
+  if (!Target.isCompatibleDataLayout(getDataLayout())) {
+    report_fatal_error(
+        formatv("Can't create a MachineFunction using a Module with a "
+                "Target-incompatible DataLayout attached\n  Target "
+                "DataLayout: {0}\n  Module DataLayout: {1}\n",
+                Target.createDataLayout().getStringRepresentation(),
+                getDataLayout().getStringRepresentation()));
   }
-
-  assert(Target.isCompatibleDataLayout(getDataLayout()) &&
-         "Can't create a MachineFunction using a Module with a "
-         "Target-incompatible DataLayout attached\n");
 
   PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());
 }
@@ -250,6 +262,22 @@ void MachineFunction::initTargetMachineFunctionInfo(
     const TargetSubtargetInfo &STI) {
   assert(!MFInfo && "MachineFunctionInfo already set");
   MFInfo = Target.createMachineFunctionInfo(Allocator, F, &STI);
+}
+
+MachineFunctionInfo *MachineFunction::cloneInfoFrom(
+    const MachineFunction &OrigMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
+  assert(!MFInfo && "new function already has MachineFunctionInfo");
+  if (!OrigMF.MFInfo)
+    return nullptr;
+
+  MachineFunctionInfo *ClonedInfo =
+      OrigMF.MFInfo->clone(Allocator, *this, Src2DstMBB);
+  if (!ClonedInfo)
+    return nullptr;
+
+  RegInfo->copyPendingVirtRegMapEntriesFrom(OrigMF.getRegInfo());
+  return ClonedInfo;
 }
 
 MachineFunction::~MachineFunction() {
@@ -299,11 +327,6 @@ void MachineFunction::clear() {
     WinEHInfo->~WinEHFuncInfo();
     Allocator.Deallocate(WinEHInfo);
   }
-
-  if (WasmEHInfo) {
-    WasmEHInfo->~WasmEHFuncInfo();
-    Allocator.Deallocate(WasmEHInfo);
-  }
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
@@ -330,10 +353,33 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
+Align MachineFunction::getPreferredAlignment() const {
+  Align PrefAlignment;
+
+  if (MaybeAlign A = F.getPreferredAlignment())
+    PrefAlignment = *A;
+  else if (!F.hasOptSize())
+    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
+  else
+    PrefAlignment = Align(1);
+
+  return std::max(PrefAlignment, getAlignment());
+}
+
 [[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
+}
+
+void MachineFunction::replaceFrameInstRegister(MCRegister FromReg,
+                                               MCRegister ToReg) {
+  const MCRegisterInfo *MCRI = Ctx.getRegisterInfo();
+  unsigned DwarfFromReg = MCRI->getDwarfRegNum(FromReg, false);
+  unsigned DwarfToReg = MCRI->getDwarfRegNum(ToReg, false);
+
+  for (MCCFIInstruction &Inst : FrameInstructions)
+    Inst.replaceRegister(DwarfFromReg, DwarfToReg);
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
@@ -375,7 +421,6 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
-  MBBNumberingEpoch++;
 }
 
 int64_t MachineFunction::estimateFunctionSizeInBytes() {
@@ -521,25 +566,23 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-    Align BaseAlignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SyncScope::ID SSID, AtomicOrdering Ordering,
-    AtomicOrdering FailureOrdering) {
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
+    AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   assert((!Size.hasValue() ||
           Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
          "Unexpected an unknown size to be represented using "
          "LocationSize::beforeOrAfter()");
   return new (Allocator)
-      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, AAInfo, Ranges, SSID,
+      MachineMemOperand(PtrInfo, F, Size, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
-    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-    Align base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges,
-    SyncScope::ID SSID, AtomicOrdering Ordering,
-    AtomicOrdering FailureOrdering) {
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
+    AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   return new (Allocator)
-      MachineMemOperand(PtrInfo, f, MemTy, base_alignment, AAInfo, Ranges, SSID,
+      MachineMemOperand(PtrInfo, F, MemTy, BaseAlignment, Metadata, SSID,
                         Ordering, FailureOrdering);
 }
 
@@ -551,18 +594,20 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
           Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
          "Unexpected an unknown size to be represented using "
          "LocationSize::beforeOrAfter()");
-  return new (Allocator)
-      MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
-                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
-  return new (Allocator)
-      MachineMemOperand(PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
-                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(),
+      MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -580,8 +625,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   // are anymore.
   return new (Allocator) MachineMemOperand(
       PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
-      MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMOMetadata(MMO->getAAInfo(), /*Ranges=*/nullptr, MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -592,8 +638,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
              MachinePointerInfo(MMO->getPseudoValue(), MMO->getOffset());
 
   return new (Allocator) MachineMemOperand(
-      MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(), AAInfo,
-      MMO->getRanges(), MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(),
+      MMOMetadata(AAInfo, MMO->getRanges(), MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
 
@@ -602,8 +649,9 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
                                       MachineMemOperand::Flags Flags) {
   return new (Allocator) MachineMemOperand(
       MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign(),
-      MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMOMetadata(MMO->getAAInfo(), MMO->getRanges(), MMO->getMemCacheHint()),
+      MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
@@ -700,6 +748,9 @@ bool MachineFunction::needsFrameMoves() const {
 }
 
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
+  if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
+    CallTarget = Node;
+
   // Numeric callee_type ids are only for indirect calls.
   if (!CB.isIndirectCall())
     return;
@@ -710,8 +761,8 @@ MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
 
   for (const MDOperand &Op : CalleeTypeList->operands()) {
     MDNode *TypeMD = cast<MDNode>(Op);
-    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
-    // Compute numeric type id from generalized type id string
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(0));
+    // Compute numeric type id from type id string
     uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
     IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
     CalleeTypeIds.push_back(
@@ -809,7 +860,7 @@ MCSymbol *MachineFunction::getJTISymbol(unsigned JTI, MCContext &Ctx,
   assert(JTI < JumpTableInfo->getJumpTables().size() && "Invalid JTI!");
 
   StringRef Prefix = isLinkerPrivate ? DL.getLinkerPrivateGlobalPrefix()
-                                     : DL.getPrivateGlobalPrefix();
+                                     : DL.getInternalSymbolPrefix();
   SmallString<60> Name;
   raw_svector_ostream(Name)
     << Prefix << "JTI" << getFunctionNumber() << '_' << JTI;
@@ -819,7 +870,7 @@ MCSymbol *MachineFunction::getJTISymbol(unsigned JTI, MCContext &Ctx,
 /// Return a function-local symbol to represent the PIC base.
 MCSymbol *MachineFunction::getPICBaseSymbol() const {
   const DataLayout &DL = getDataLayout();
-  return Ctx.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return Ctx.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                Twine(getFunctionNumber()) + "$pb");
 }
 
@@ -1618,7 +1669,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 // ProfileSummaryInfo::getEntryCount().
 //===----------------------------------------------------------------------===//
 template <>
-std::optional<Function::ProfileCount>
+std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();

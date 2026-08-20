@@ -5,22 +5,25 @@
 # floating-point exception, and there is an instruction for barrier event. In
 # this case the order of them must not change.
 #
-# FIXME: Currently the following dependencies are missed.
-#
-# Loop carried edges from SU(7)
-#   Order
-#     SU(2)
-#     SU(3)
-#     SU(4)
-#     SU(5)
+# SU(2): May raise FP exception
+# SU(3): May raise FP exception
+# SU(4): Store
+# SU(5): Barrier
+# SU(7): Barrier
 
 # CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: Loop carried edges from SU(7)
+# CHECK-NEXT:   Order
+# CHECK-NEXT:     SU(2)
+# CHECK-NEXT:     SU(3)
+# CHECK-NEXT:     SU(4)
+# CHECK-NEXT:     SU(5)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |
   @x = dso_local global i32 0, align 4
 
-  define dso_local void @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) {
+  define dso_local void @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) #2 {
   entry:
     %cmp6 = icmp sgt i32 %n, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup

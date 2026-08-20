@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; now non-vectorizable.
 
 ;CHECK-NOT: <4 x i32>
-define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) nounwind uwtable {
+define void @parallel_loop(ptr nocapture %a, ptr nocapture %b) {
 entry:
   %indvars.iv.next.reg2mem = alloca i64
   %indvars.iv.reg2mem = alloca i64
@@ -16,7 +16,7 @@ entry:
   store i64 0, ptr %indvars.iv.reg2mem
   br label %for.body
 
-for.body:                                         ; preds = %for.body.for.body_crit_edge, %entry
+for.body:
   %indvars.iv.reload = load i64, ptr %indvars.iv.reg2mem
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv.reload
   %0 = load i32, ptr %arrayidx, align 4, !llvm.access.group !4
@@ -37,12 +37,12 @@ for.body:                                         ; preds = %for.body.for.body_c
   %exitcond = icmp eq i32 %lftr.wideiv, 512
   br i1 %exitcond, label %for.end, label %for.body.for.body_crit_edge, !llvm.loop !3
 
-for.body.for.body_crit_edge:                      ; preds = %for.body
+for.body.for.body_crit_edge:
   %indvars.iv.next.reload2 = load i64, ptr %indvars.iv.next.reg2mem
   store i64 %indvars.iv.next.reload2, ptr %indvars.iv.reg2mem
   br label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 

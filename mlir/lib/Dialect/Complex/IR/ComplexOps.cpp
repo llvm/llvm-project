@@ -261,11 +261,11 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
     if (getLhs() == sub.getRhs())
       return sub.getLhs();
 
-  // complex.add(a, complex.constant<0.0, 0.0>) -> a
+  // complex.add(a, complex.constant<-0.0, -0.0>) -> a
   if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
     auto arrayAttr = constantOp.getValue();
-    if (llvm::cast<FloatAttr>(arrayAttr[0]).getValue().isZero() &&
-        llvm::cast<FloatAttr>(arrayAttr[1]).getValue().isZero()) {
+    if (llvm::cast<FloatAttr>(arrayAttr[0]).getValue().isNegZero() &&
+        llvm::cast<FloatAttr>(arrayAttr[1]).getValue().isNegZero()) {
       return getLhs();
     }
   }
@@ -303,18 +303,6 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
   // complex.neg(complex.neg(a)) -> a
   if (auto negOp = getOperand().getDefiningOp<NegOp>())
     return negOp.getOperand();
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
-// LogOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult LogOp::fold(FoldAdaptor adaptor) {
-  // complex.log(complex.exp(a)) -> a
-  if (auto expOp = getOperand().getDefiningOp<ExpOp>())
-    return expOp.getOperand();
 
   return {};
 }
@@ -371,35 +359,38 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
-  auto rhs = adaptor.getRhs();
-  auto lhs = adaptor.getLhs();
+  Attribute rhs = adaptor.getRhs();
+  Attribute lhs = adaptor.getLhs();
 
-  // We can't fold without knowing that LHS isn't NaN
-  if (!rhs || !lhs)
-    return {};
+  // complex.div(complex.constant<NaN, NaN>, a) -> complex.constant<NaN, NaN>
+  // complex.div(complex.constant<NaN, a>, b) -> complex.constant<NaN, NaN>
+  // complex.div(complex.constant<a, NaN>, b) -> complex.constant<NaN, NaN>
+  bool isLhsComplexHasNan = false;
+  ArrayAttr lhsArrayAttr = dyn_cast_if_present<ArrayAttr>(lhs);
+  if (lhsArrayAttr && lhsArrayAttr.size() == 2) {
+    APFloat lhsReal = cast<FloatAttr>(lhsArrayAttr[0]).getValue();
+    APFloat lhsImag = cast<FloatAttr>(lhsArrayAttr[1]).getValue();
+    isLhsComplexHasNan = lhsReal.isNaN() || lhsImag.isNaN();
+    if (isLhsComplexHasNan) {
+      Attribute nanValue = lhsReal.isNaN() ? lhsArrayAttr[0] : lhsArrayAttr[1];
+      return ArrayAttr::get(getContext(), {nanValue, nanValue});
+    }
+  }
 
-  ArrayAttr rhsArrayAttr = dyn_cast<ArrayAttr>(rhs);
+  ArrayAttr rhsArrayAttr = dyn_cast_if_present<ArrayAttr>(rhs);
   if (!rhsArrayAttr || rhsArrayAttr.size() != 2)
     return {};
 
-  ArrayAttr lhsArrayAttr = dyn_cast<ArrayAttr>(lhs);
-  if (!lhsArrayAttr || lhsArrayAttr.size() != 2)
-    return {};
-
+  // Fold only if RHS is complex.constant<1.0, 0.0>
   APFloat rhsImag = cast<FloatAttr>(rhsArrayAttr[1]).getValue();
-  if (!rhsImag.isZero())
+  APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();
+  if (!rhsImag.isZero() || rhsReal != APFloat(rhsReal.getSemantics(), 1))
     return {};
 
-  APFloat lhsReal = cast<FloatAttr>(lhsArrayAttr[0]).getValue();
-  APFloat lhsImag = cast<FloatAttr>(lhsArrayAttr[1]).getValue();
-  if (lhsReal.isNaN() || lhsImag.isNaN()) {
-    Attribute nanValue = lhsReal.isNaN() ? lhsArrayAttr[0] : lhsArrayAttr[1];
-    return ArrayAttr::get(getContext(), {nanValue, nanValue});
-  }
-
-  // complex.div(a, complex.constant<1.0, 0.0>) -> a
-  APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();
-  if (rhsReal == APFloat(rhsReal.getSemantics(), 1))
+  // Fold to LHS if it doesn't contains NaNs or fast math flag nan is set
+  // complex.div(a, complex.constant<1.0, 0.0>) fastmath<nnan> -> a
+  if ((lhsArrayAttr && !isLhsComplexHasNan) ||
+      arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan))
     return getLhs();
 
   return {};

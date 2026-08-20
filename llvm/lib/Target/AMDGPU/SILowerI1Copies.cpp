@@ -23,7 +23,7 @@
 
 #include "SILowerI1Copies.h"
 #include "AMDGPU.h"
-#include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "llvm/CodeGen/MachineIDFSSAUpdater.h"
 #include "llvm/InitializePasses.h"
 
 #define DEBUG_TYPE "si-i1-copies"
@@ -36,7 +36,7 @@ insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
 
 namespace {
 
-class Vreg1LoweringHelper : public PhiLoweringHelper {
+class Vreg1LoweringHelper : public AMDGPU::PhiLoweringHelper {
 public:
   Vreg1LoweringHelper(MachineFunction *MF, MachineDominatorTree *DT,
                       MachinePostDominatorTree *PDT);
@@ -50,14 +50,14 @@ public:
       SmallVectorImpl<MachineInstr *> &Vreg1Phis) const override;
   void collectIncomingValuesFromPhi(
       const MachineInstr *MI,
-      SmallVectorImpl<Incoming> &Incomings) const override;
+      SmallVectorImpl<AMDGPU::Incoming> &Incomings) const override;
   void replaceDstReg(Register NewReg, Register OldReg,
                      MachineBasicBlock *MBB) override;
   void buildMergeLaneMasks(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, const DebugLoc &DL,
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
-  void constrainAsLaneMask(Incoming &In) override;
+  void constrainAsLaneMask(AMDGPU::Incoming &In) override;
 
   bool lowerCopiesFromI1();
   bool lowerCopiesToI1();
@@ -80,6 +80,11 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
 
   return Changed;
 }
+
+} // end anonymous namespace
+
+namespace llvm {
+namespace AMDGPU {
 
 /// Helper class that determines the relationship between incoming values of a
 /// phi in the control flow graph to determine where an incoming value can
@@ -125,7 +130,8 @@ public:
 
   ArrayRef<MachineBasicBlock *> predecessors() const { return Predecessors; }
 
-  void analyze(MachineBasicBlock &DefBlock, ArrayRef<Incoming> Incomings) {
+  void analyze(MachineBasicBlock &DefBlock,
+               ArrayRef<AMDGPU::Incoming> Incomings) {
     assert(Stack.empty());
     ReachableMap.clear();
     Predecessors.clear();
@@ -275,10 +281,10 @@ public:
   /// Add undef values dominating the loop and the optionally given additional
   /// blocks, so that the SSA updater doesn't have to search all the way to the
   /// function entry.
-  void addLoopEntries(unsigned LoopLevel, MachineSSAUpdater &SSAUpdater,
+  void addLoopEntries(unsigned LoopLevel, MachineIDFSSAUpdater &SSAUpdater,
                       MachineRegisterInfo &MRI,
                       MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs,
-                      ArrayRef<Incoming> Incomings = {}) {
+                      ArrayRef<AMDGPU::Incoming> Incomings = {}) {
     assert(LoopLevel < CommonDominators.size());
 
     MachineBasicBlock *Dom = CommonDominators[LoopLevel];
@@ -286,14 +292,14 @@ public:
       Dom = DT.findNearestCommonDominator(Dom, Incoming.Block);
 
     if (!inLoopLevel(*Dom, LoopLevel, Incomings)) {
-      SSAUpdater.AddAvailableValue(
+      SSAUpdater.addAvailableValue(
           Dom, insertUndefLaneMask(Dom, &MRI, LaneMaskRegAttrs));
     } else {
       // The dominator is part of the loop or the given blocks, so add the
       // undef value to unreachable predecessors instead.
       for (MachineBasicBlock *Pred : Dom->predecessors()) {
         if (!inLoopLevel(*Pred, LoopLevel, Incomings))
-          SSAUpdater.AddAvailableValue(
+          SSAUpdater.addAvailableValue(
               Pred, insertUndefLaneMask(Pred, &MRI, LaneMaskRegAttrs));
       }
     }
@@ -301,7 +307,7 @@ public:
 
 private:
   bool inLoopLevel(MachineBasicBlock &MBB, unsigned LoopLevel,
-                   ArrayRef<Incoming> Incomings) const {
+                   ArrayRef<AMDGPU::Incoming> Incomings) const {
     auto DomIt = Visited.find(&MBB);
     if (DomIt != Visited.end() && DomIt->second <= LoopLevel)
       return true;
@@ -367,11 +373,11 @@ private:
   }
 };
 
-} // End anonymous namespace.
+} // namespace AMDGPU
+} // namespace llvm
 
-Register
-llvm::createLaneMaskReg(MachineRegisterInfo *MRI,
-                        MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
+Register llvm::AMDGPU::createLaneMaskReg(
+    MachineRegisterInfo *MRI, MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs) {
   return MRI->createVirtualRegister(LaneMaskRegAttrs);
 }
 
@@ -381,7 +387,7 @@ insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
   MachineFunction &MF = *MBB->getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  Register UndefReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+  Register UndefReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
   BuildMI(*MBB, MBB->getFirstTerminator(), {}, TII->get(AMDGPU::IMPLICIT_DEF),
           UndefReg);
   return UndefReg;
@@ -439,39 +445,101 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
   return Changed;
 }
 
-PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
-                                     MachineDominatorTree *DT,
-                                     MachinePostDominatorTree *PDT)
-    : MF(MF), DT(DT), PDT(PDT) {
+AMDGPU::PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
+                                             MachineDominatorTree *DT,
+                                             MachinePostDominatorTree *PDT)
+    : MF(MF), DT(DT), PDT(PDT), ST(&MF->getSubtarget<GCNSubtarget>()),
+      LMC(&AMDGPU::LaneMaskConstants::get(*ST)) {
   MRI = &MF->getRegInfo();
 
-  ST = &MF->getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
-  IsWave32 = ST->isWave32();
+}
 
-  if (IsWave32) {
-    ExecReg = AMDGPU::EXEC_LO;
-    MovOp = AMDGPU::S_MOV_B32;
-    AndOp = AMDGPU::S_AND_B32;
-    OrOp = AMDGPU::S_OR_B32;
-    XorOp = AMDGPU::S_XOR_B32;
-    AndN2Op = AMDGPU::S_ANDN2_B32;
-    OrN2Op = AMDGPU::S_ORN2_B32;
+void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
+    Register DstReg, MachineBasicBlock &MBB,
+    SmallVectorImpl<Incoming> &Incomings, MachineIDFSSAUpdater &SSAUpdater,
+    LoopFinder &LF, PhiIncomingAnalysis &PIA) {
+  LF.initialize(MBB);
+
+  // Sort the incomings such that incoming values that dominate other incoming
+  // values are sorted earlier. This allows us to do some amount of on-the-fly
+  // constant folding.
+  // Incoming with smaller DFSNumIn goes first, DFSNumIn is 0 for entry block.
+  llvm::sort(Incomings, [this](Incoming LHS, Incoming RHS) {
+    return DT->getNode(LHS.Block)->getDFSNumIn() <
+           DT->getNode(RHS.Block)->getDFSNumIn();
+  });
+
+  // Values in a loop that are observed outside the loop receive a simple but
+  // conservatively correct treatment.
+  SmallVector<MachineBasicBlock *, 4> DomBlocks = {&MBB};
+  for (MachineInstr &Use : MRI->use_instructions(DstReg))
+    DomBlocks.push_back(Use.getParent());
+
+  MachineBasicBlock *PostDomBound = PDT->findNearestCommonDominator(DomBlocks);
+
+  // FIXME: This fails to find irreducible cycles. If we have a def (other
+  // than a constant) in a pair of blocks that end up looping back to each
+  // other, it will be mishandle. Due to structurization this shouldn't occur
+  // in practice.
+  unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
+
+  SSAUpdater.addUseBlock(&MBB);
+
+  if (FoundLoopLevel) {
+    LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
+                      Incomings);
+
+    for (auto &Incoming : Incomings) {
+      SSAUpdater.addUseBlock(Incoming.Block);
+      Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+      SSAUpdater.addAvailableValue(Incoming.Block, Incoming.UpdatedReg);
+    }
+
+    SSAUpdater.calculate();
+
+    for (auto &Incoming : Incomings) {
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      buildMergeLaneMasks(
+          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
+          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+    }
   } else {
-    ExecReg = AMDGPU::EXEC;
-    MovOp = AMDGPU::S_MOV_B64;
-    AndOp = AMDGPU::S_AND_B64;
-    OrOp = AMDGPU::S_OR_B64;
-    XorOp = AMDGPU::S_XOR_B64;
-    AndN2Op = AMDGPU::S_ANDN2_B64;
-    OrN2Op = AMDGPU::S_ORN2_B64;
+    // The value is not observed from outside a loop. Use a more accurate
+    // lowering.
+    PIA.analyze(MBB, Incomings);
+
+    for (MachineBasicBlock *PredMBB : PIA.predecessors())
+      SSAUpdater.addAvailableValue(
+          PredMBB, insertUndefLaneMask(PredMBB, MRI, LaneMaskRegAttrs));
+
+    for (auto &Incoming : Incomings) {
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      if (PIA.isSource(IMBB)) {
+        constrainAsLaneMask(Incoming);
+        SSAUpdater.addAvailableValue(&IMBB, Incoming.Reg);
+      } else {
+        SSAUpdater.addUseBlock(&IMBB);
+        Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+        SSAUpdater.addAvailableValue(&IMBB, Incoming.UpdatedReg);
+      }
+    }
+
+    SSAUpdater.calculate();
+
+    for (auto &Incoming : Incomings) {
+      if (!Incoming.UpdatedReg.isValid())
+        continue;
+
+      MachineBasicBlock &IMBB = *Incoming.Block;
+      buildMergeLaneMasks(
+          IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
+          SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+    }
   }
 }
 
-bool PhiLoweringHelper::lowerPhis() {
-  MachineSSAUpdater SSAUpdater(*MF);
-  LoopFinder LF(*DT, *PDT);
-  PhiIncomingAnalysis PIA(*PDT, TII);
+bool AMDGPU::PhiLoweringHelper::lowerPhis() {
   SmallVector<MachineInstr *, 4> Vreg1Phis;
   SmallVector<Incoming, 4> Incomings;
 
@@ -479,15 +547,12 @@ bool PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
+  LoopFinder LF(*DT, *PDT);
+  PhiIncomingAnalysis PIA(*PDT, TII);
+
   DT->updateDFSNumbers();
-  MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
-    if (&MBB != PrevMBB) {
-      LF.initialize(MBB);
-      PrevMBB = &MBB;
-    }
-
     LLVM_DEBUG(dbgs() << "Lower PHI: " << *MI);
 
     Register DstReg = MI->getOperand(0).getReg();
@@ -496,83 +561,14 @@ bool PhiLoweringHelper::lowerPhis() {
 
     collectIncomingValuesFromPhi(MI, Incomings);
 
-    // Sort the incomings such that incoming values that dominate other incoming
-    // values are sorted earlier. This allows us to do some amount of on-the-fly
-    // constant folding.
-    // Incoming with smaller DFSNumIn goes first, DFSNumIn is 0 for entry block.
-    llvm::sort(Incomings, [this](Incoming LHS, Incoming RHS) {
-      return DT->getNode(LHS.Block)->getDFSNumIn() <
-             DT->getNode(RHS.Block)->getDFSNumIn();
-    });
-
 #ifndef NDEBUG
     PhiRegisters.insert(DstReg);
 #endif
 
-    // Phis in a loop that are observed outside the loop receive a simple but
-    // conservatively correct treatment.
-    std::vector<MachineBasicBlock *> DomBlocks = {&MBB};
-    for (MachineInstr &Use : MRI->use_instructions(DstReg))
-      DomBlocks.push_back(Use.getParent());
+    MachineIDFSSAUpdater SSAUpdater(*DT, *MF, DstReg);
+    mergeIncomingLaneMasks(DstReg, MBB, Incomings, SSAUpdater, LF, PIA);
 
-    MachineBasicBlock *PostDomBound =
-        PDT->findNearestCommonDominator(DomBlocks);
-
-    // FIXME: This fails to find irreducible cycles. If we have a def (other
-    // than a constant) in a pair of blocks that end up looping back to each
-    // other, it will be mishandle. Due to structurization this shouldn't occur
-    // in practice.
-    unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
-
-    SSAUpdater.Initialize(DstReg);
-
-    if (FoundLoopLevel) {
-      LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
-                        Incomings);
-
-      for (auto &Incoming : Incomings) {
-        Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-        SSAUpdater.AddAvailableValue(Incoming.Block, Incoming.UpdatedReg);
-      }
-
-      for (auto &Incoming : Incomings) {
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
-      }
-    } else {
-      // The phi is not observed from outside a loop. Use a more accurate
-      // lowering.
-      PIA.analyze(MBB, Incomings);
-
-      for (MachineBasicBlock *MBB : PIA.predecessors())
-        SSAUpdater.AddAvailableValue(
-            MBB, insertUndefLaneMask(MBB, MRI, LaneMaskRegAttrs));
-
-      for (auto &Incoming : Incomings) {
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        if (PIA.isSource(IMBB)) {
-          constrainAsLaneMask(Incoming);
-          SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
-        } else {
-          Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-          SSAUpdater.AddAvailableValue(&IMBB, Incoming.UpdatedReg);
-        }
-      }
-
-      for (auto &Incoming : Incomings) {
-        if (!Incoming.UpdatedReg.isValid())
-          continue;
-
-        MachineBasicBlock &IMBB = *Incoming.Block;
-        buildMergeLaneMasks(
-            IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
-      }
-    }
-
-    Register NewReg = SSAUpdater.GetValueInMiddleOfBlock(&MBB);
+    Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
     if (NewReg != DstReg) {
       replaceDstReg(NewReg, DstReg, &MBB);
       MI->eraseFromParent();
@@ -585,8 +581,7 @@ bool PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  MachineSSAUpdater SSAUpdater(*MF);
-  LoopFinder LF(*DT, *PDT);
+  AMDGPU::LoopFinder LF(*DT, *PDT);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : *MF) {
@@ -622,7 +617,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
 
       if (!SrcReg.isVirtual() || (!isLaneMaskReg(SrcReg) && !isVreg1(SrcReg))) {
         assert(TII->getRegisterInfo().getRegSizeInBits(SrcReg, *MRI) == 32);
-        Register TmpReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
+        Register TmpReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_CMP_NE_U32_e64), TmpReg)
             .addReg(SrcReg)
             .addImm(0);
@@ -643,12 +638,14 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
           PDT->findNearestCommonDominator(DomBlocks);
       unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
       if (FoundLoopLevel) {
-        SSAUpdater.Initialize(DstReg);
-        SSAUpdater.AddAvailableValue(&MBB, DstReg);
+        MachineIDFSSAUpdater SSAUpdater(*DT, *MF, DstReg);
+        SSAUpdater.addUseBlock(&MBB);
+        SSAUpdater.addAvailableValue(&MBB, DstReg);
         LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs);
 
+        SSAUpdater.calculate();
         buildMergeLaneMasks(MBB, MI, DL, DstReg,
-                            SSAUpdater.GetValueInMiddleOfBlock(&MBB), SrcReg);
+                            SSAUpdater.getValueInMiddleOfBlock(&MBB), SrcReg);
         DeadCopies.push_back(&MI);
       }
     }
@@ -660,7 +657,8 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
   return Changed;
 }
 
-bool PhiLoweringHelper::isConstantLaneMask(Register Reg, bool &Val) const {
+bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
+                                                   bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
     MI = MRI->getUniqueVRegDef(Reg);
@@ -677,7 +675,7 @@ bool PhiLoweringHelper::isConstantLaneMask(Register Reg, bool &Val) const {
       return false;
   }
 
-  if (MI->getOpcode() != MovOp)
+  if (MI->getOpcode() != LMC->MovOpc)
     return false;
 
   if (!MI->getOperand(1).isImm())
@@ -713,7 +711,7 @@ static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
 /// Return a point at the end of the given \p MBB to insert SALU instructions
 /// for lane mask calculation. Take terminators and SCC into account.
 MachineBasicBlock::iterator
-PhiLoweringHelper::getSaluInsertionAtEnd(MachineBasicBlock &MBB) const {
+AMDGPU::PhiLoweringHelper::getSaluInsertionAtEnd(MachineBasicBlock &MBB) const {
   auto InsertionPt = MBB.getFirstTerminator();
   bool TerminatorsUseSCC = false;
   for (auto I = InsertionPt, E = MBB.end(); I != E; ++I) {
@@ -755,7 +753,8 @@ void Vreg1LoweringHelper::getCandidatesForLowering(
 }
 
 void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
-    const MachineInstr *MI, SmallVectorImpl<Incoming> &Incomings) const {
+    const MachineInstr *MI,
+    SmallVectorImpl<AMDGPU::Incoming> &Incomings) const {
   for (unsigned i = 1; i < MI->getNumOperands(); i += 2) {
     assert(i + 1 < MI->getNumOperands());
     Register IncomingReg = MI->getOperand(i).getReg();
@@ -795,10 +794,10 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     if (PrevVal == CurVal) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
     } else if (CurVal) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(ExecReg);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(LMC->ExecReg);
     } else {
-      BuildMI(MBB, I, DL, TII->get(XorOp), DstReg)
-          .addReg(ExecReg)
+      BuildMI(MBB, I, DL, TII->get(LMC->XorOpc), DstReg)
+          .addReg(LMC->ExecReg)
           .addImm(-1);
     }
     return;
@@ -810,10 +809,10 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     if (CurConstant && CurVal) {
       PrevMaskedReg = PrevReg;
     } else {
-      PrevMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndN2Op), PrevMaskedReg)
+      PrevMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
+      BuildMI(MBB, I, DL, TII->get(LMC->AndN2Opc), PrevMaskedReg)
           .addReg(PrevReg)
-          .addReg(ExecReg);
+          .addReg(LMC->ExecReg);
     }
   }
   if (!CurConstant) {
@@ -821,10 +820,10 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     if (PrevConstant && PrevVal) {
       CurMaskedReg = CurReg;
     } else {
-      CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndOp), CurMaskedReg)
+      CurMaskedReg = AMDGPU::createLaneMaskReg(MRI, LaneMaskRegAttrs);
+      BuildMI(MBB, I, DL, TII->get(LMC->AndOpc), CurMaskedReg)
           .addReg(CurReg)
-          .addReg(ExecReg);
+          .addReg(LMC->ExecReg);
     }
   }
 
@@ -835,17 +834,17 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg)
         .addReg(PrevMaskedReg);
   } else if (PrevConstant && PrevVal) {
-    BuildMI(MBB, I, DL, TII->get(OrN2Op), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC->OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(ExecReg);
+        .addReg(LMC->ExecReg);
   } else {
-    BuildMI(MBB, I, DL, TII->get(OrOp), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC->OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : ExecReg);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC->ExecReg);
   }
 }
 
-void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}
+void Vreg1LoweringHelper::constrainAsLaneMask(AMDGPU::Incoming &In) {}
 
 /// Lower all instructions that def or use vreg_1 registers.
 ///
@@ -888,9 +887,7 @@ class SILowerI1CopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSILowerI1CopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

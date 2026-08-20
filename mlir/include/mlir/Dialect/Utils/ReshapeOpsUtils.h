@@ -84,15 +84,20 @@ bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
-static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
-                                  ArrayRef<Attribute> operands) {
+OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
+                           ArrayRef<Attribute> operands) {
   // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
 
-  // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
-    return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
+  // Reshape of a constant can be replaced with a new constant, but only when
+  // the result type has a static shape. DenseElementsAttr::reshape requires
+  // a static shape to preserve the element count invariant.
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+    auto resultType = cast<ShapedType>(reshapeOp.getResult().getType());
+    if (resultType.hasStaticShape())
+      return elements.reshape(resultType);
+  }
 
   // Fold if the producer reshape source has the same shape with at most 1
   // dynamic dimension.
@@ -135,8 +140,8 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
-                                            T collapsedType, bool isExpansion) {
+LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
+                                     bool isExpansion) {
 
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
@@ -372,7 +377,8 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (hasNonIdentityLayout(expandOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getSrc().getType()) ||
         hasNonIdentityLayout(collapseOp.getResult().getType())) {
-      if (CastOpTy::areCastCompatible(srcType, resultType)) {
+      if (srcType.hasStaticShape() &&
+          CastOpTy::areCastCompatible(srcType, resultType)) {
         rewriter.replaceOpWithNewOp<CastOpTy>(expandOp, resultType,
                                               collapseOp.getSrc());
         return success();

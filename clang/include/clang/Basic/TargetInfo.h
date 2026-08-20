@@ -138,6 +138,7 @@ struct TransferrableTargetInfo {
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
   unsigned MaxTLSAlign;
+  bool VectorsAreElementAligned;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
@@ -272,6 +273,9 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
+  unsigned HasBuiltinZOSVaList : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
@@ -282,6 +286,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasAMDGPUTypes : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -869,6 +876,9 @@ public:
             llvm::isPowerOf2_64(AtomicSizeInBits / getCharWidth()));
   }
 
+  /// True if vectors are element-aligned for this target.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
+
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
 
@@ -1013,16 +1023,6 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether conversions to and from __fp16 should go through an integer
-  /// bitcast with i16.
-  ///
-  /// FIXME: This function should be removed. The intrinsics / no longer exist,
-  /// and are emulated with bitcast + fp cast. This only exists because of
-  /// misuse in ABI determining contexts.
-  virtual bool useFP16ConversionIntrinsics() const {
-    return true;
-  }
-
   /// Specify if mangling based on address space map should be used or
   /// not for language specific address spaces
   bool useAddressSpaceMapMangling() const {
@@ -1068,9 +1068,17 @@ public:
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
 
+  /// Returns whether or not type \c __builtin_zos_va_list type is
+  /// available on this target.
+  bool hasBuiltinZOSVaList() const { return HasBuiltinZOSVaList; }
+
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
   bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
+
+  /// Returns whether or not the AMDGPU built-in types are
+  /// available on this target.
+  bool hasAMDGPUTypes() const { return HasAMDGPUTypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.
@@ -1320,10 +1328,10 @@ public:
     return Triple;
   }
 
-  /// Returns the target ID if supported.
-  virtual std::optional<std::string> getTargetID() const {
-    return std::nullopt;
-  }
+  /// Returns true if the target's processor is compatible with the processor
+  /// named by \p Name, i.e. \p Name names this target's processor or a
+  /// compatible processor.
+  virtual bool isProcessorName(StringRef Name) const { return false; }
 
   const char *getDataLayoutString() const {
     assert(!DataLayoutString.empty() && "Uninitialized DataLayout!");
@@ -1400,9 +1408,7 @@ public:
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
-  virtual bool setCPU(const std::string &Name) {
-    return false;
-  }
+  virtual bool setCPU(StringRef Name) { return false; }
 
   /// Fill a SmallVectorImpl with the valid values to setCPU.
   virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}
@@ -1567,7 +1573,7 @@ public:
   /// which requires support for cpu_supports and cpu_is functionality.
   bool supportsMultiVersioning() const {
     return getTriple().isX86() || getTriple().isAArch64() ||
-           getTriple().isRISCV();
+           getTriple().isRISCV() || getTriple().isOSAIX();
   }
 
   /// Identify whether this target supports IFuncs.
@@ -1584,6 +1590,13 @@ public:
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());
+  }
+
+  // Default encoding on z/OS is IBM-1047 and UTF-8 otherwise
+  StringRef getDefaultOrdinaryLiteralEncoding() const {
+    if (getTriple().getOS() == llvm::Triple::ZOS)
+      return "IBM-1047";
+    return "UTF-8";
   }
 
   // Identify whether this target supports __builtin_cpu_supports and
@@ -1664,7 +1677,8 @@ public:
   bool isSEHTrySupported() const {
     return getTriple().isOSWindows() &&
            (getTriple().isX86() ||
-            getTriple().getArch() == llvm::Triple::aarch64);
+            getTriple().getArch() == llvm::Triple::aarch64 ||
+            getTriple().isThumb());
   }
 
   /// Return true if {|} are normal characters in the asm string.
@@ -1694,7 +1708,7 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const {
     if (isTargetAddressSpace(AS))
       return toTargetAddressSpace(AS);
-    return getAddressSpaceMap()[(unsigned)AS];
+    return getAddressSpaceMap()[AS];
   }
 
   /// Determine whether the given pointer-authentication key is valid.
@@ -1795,6 +1809,10 @@ public:
   /// with GCC/Itanium ABI, and remains disqualifying for targets that need
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
+
+  /// Returns whether the target's ABI guarantees that a class's vtable has a
+  /// unique address program-wide.
+  virtual VTableUniquenessKind getVTableUniqueness() const;
 
   /// Controls whether global operator delete is called by the deleting
   /// destructor or at the point where ::delete was called. Historically Clang
@@ -1963,6 +1981,8 @@ private:
   // type follow the restrictions given in clause 6.2.6.3 of N1169.
   void CheckFixedPointBits() const;
 };
+
+unsigned Microsoft64BitMinGlobalAlign(uint64_t TypeSize);
 
 namespace targets {
 std::unique_ptr<clang::TargetInfo>

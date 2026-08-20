@@ -63,15 +63,12 @@ static bool hasUAVsAtEveryStage(const DXILResourceMap &DRM,
 
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
-  // case Intrinsic::dx_wave_getlanecount:
-  // case Intrinsic::dx_wave_allequal:
   // case Intrinsic::dx_wave_readfirst:
   // case Intrinsic::dx_wave_reduce.and:
   // case Intrinsic::dx_wave_reduce.or:
   // case Intrinsic::dx_wave_reduce.xor:
   // case Intrinsic::dx_wave_prefixop:
   // case Intrinsic::dx_quad.readat:
-  // case Intrinsic::dx_quad.readacrossx:
   // case Intrinsic::dx_quad.readacrossy:
   // case Intrinsic::dx_quad.readacrossdiagonal:
   // case Intrinsic::dx_wave_prefixballot:
@@ -84,15 +81,22 @@ static bool checkWaveOps(Intrinsic::ID IID) {
     return false;
   case Intrinsic::dx_wave_is_first_lane:
   case Intrinsic::dx_wave_getlaneindex:
+  case Intrinsic::dx_wave_get_lane_count:
   case Intrinsic::dx_wave_any:
+  case Intrinsic::dx_wave_all_equal:
   case Intrinsic::dx_wave_all:
   case Intrinsic::dx_wave_readlane:
   case Intrinsic::dx_wave_active_countbits:
   case Intrinsic::dx_wave_ballot:
   case Intrinsic::dx_wave_prefix_bit_count:
   // Wave Active Op Variants
+  case Intrinsic::dx_wave_reduce_or:
+  case Intrinsic::dx_wave_reduce_xor:
+  case Intrinsic::dx_wave_reduce_and:
   case Intrinsic::dx_wave_reduce_sum:
   case Intrinsic::dx_wave_reduce_usum:
+  case Intrinsic::dx_wave_product:
+  case Intrinsic::dx_wave_uproduct:
   case Intrinsic::dx_wave_reduce_max:
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_min:
@@ -100,8 +104,65 @@ static bool checkWaveOps(Intrinsic::ID IID) {
     // Wave Prefix Op Variants
   case Intrinsic::dx_wave_prefix_sum:
   case Intrinsic::dx_wave_prefix_usum:
+  case Intrinsic::dx_wave_prefix_product:
+  case Intrinsic::dx_wave_prefix_uproduct:
+    // Quad Op Variants
+  case Intrinsic::dx_quad_read_across_x:
+  case Intrinsic::dx_quad_read_across_y:
+  case Intrinsic::dx_quad_read_across_diagonal:
     return true;
   }
+}
+
+static bool checkDoubleExtensionOps(Intrinsic::ID IID) {
+  switch (IID) {
+  default:
+    return false;
+  case Intrinsic::fma:
+    return true;
+  }
+}
+
+/// Texture load and sample operations accept "programmable offsets", i.e.
+/// offsets that are not compile-time constants. Such offsets require the
+/// AdvancedTextureOps shader feature flag. Returns true if \p II is one of
+/// those operations and its offsets operand is not a constant.
+static bool checkAdvancedTextureOps(const IntrinsicInst &II) {
+  // TODO: (#116137) Several other DXIL ops also require this feature flag, but
+  // none of them can be generated yet:
+  //  - SampleCmp, SampleCmpBias, SampleCmpGrad and SampleCmpLevelZero set the
+  //    flag for non-constant offsets, exactly like the ops handled below.
+  //  - SampleCmpLevel, TextureGatherRaw and TextureStoreSample set the flag
+  //    unconditionally, and have no intrinsics yet.
+
+  // The offsets operand index differs between the intrinsics.
+  unsigned OffsetsIdx;
+  switch (II.getIntrinsicID()) {
+  default:
+    return false;
+  case Intrinsic::dx_resource_load_level:
+  case Intrinsic::dx_resource_sample:
+  case Intrinsic::dx_resource_sample_clamp:
+    OffsetsIdx = 3;
+    break;
+  case Intrinsic::dx_resource_samplebias:
+  case Intrinsic::dx_resource_samplebias_clamp:
+  case Intrinsic::dx_resource_samplelevel:
+    OffsetsIdx = 4;
+    break;
+  case Intrinsic::dx_resource_samplegrad:
+  case Intrinsic::dx_resource_samplegrad_clamp:
+    OffsetsIdx = 5;
+    break;
+  }
+  return !isa<Constant>(II.getArgOperand(OffsetsIdx));
+}
+
+static bool isOptimizationDisabled(const Module &M) {
+  const StringRef Key = "dx.disable_optimizations";
+  if (auto *Flag = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key)))
+    return Flag->getValue().getBoolValue();
+  return false;
 }
 
 // Checks to see if the status bit from a load with status
@@ -189,6 +250,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   }
 
   if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    CSF.AdvancedTextureOps |= checkAdvancedTextureOps(*II);
+
     switch (II->getIntrinsicID()) {
     default:
       break;
@@ -214,7 +277,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_load_typedbuffer: {
       dxil::ResourceTypeInfo &RTI =
           DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
-      if (RTI.isTyped())
+      if (RTI.isTyped() && RTI.isUAV())
         CSF.TypedUAVLoadAdditionalFormats |= RTI.getTyped().ElementCount > 1;
       if (!CSF.TiledResources && checkIfStatusIsExtracted(*II))
         CSF.TiledResources = true;
@@ -225,7 +288,28 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
         CSF.TiledResources = true;
       break;
     }
+    case Intrinsic::dx_resource_atomic_binop: {
+      if (II->getType()->isIntegerTy(64)) {
+        dxil::ResourceTypeInfo &RTI =
+            DRTM[cast<TargetExtType>(II->getArgOperand(0)->getType())];
+        if (RTI.isTyped())
+          CSF.AtomicInt64OnTypedResource = true;
+        // TODO(https://github.com/llvm/llvm-project/issues/116152): Set
+        // AtomicInt64OnHeapResource when heap-resource intrinsics are added.
+      }
+      break;
     }
+    }
+  }
+  // 64-bit atomics on groupshared memory (address space 3).
+  if (const auto *ARMW = dyn_cast<AtomicRMWInst>(&I)) {
+    if (ARMW->getValOperand()->getType()->isIntegerTy(64) &&
+        ARMW->getPointerAddressSpace() == 3)
+      CSF.AtomicInt64OnGroupShared = true;
+  } else if (const auto *AXCG = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    if (AXCG->getNewValOperand()->getType()->isIntegerTy(64) &&
+        AXCG->getPointerAddressSpace() == 3)
+      CSF.AtomicInt64OnGroupShared = true;
   }
   // Handle call instructions
   if (auto *CI = dyn_cast<CallInst>(&I)) {
@@ -234,9 +318,8 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     if (FunctionFlags.contains(CF))
       CSF.merge(FunctionFlags[CF]);
 
-    // TODO: Set DX11_1_DoubleExtensions if I is a call to DXIL intrinsic
-    // DXIL::Opcode::Fma https://github.com/llvm/llvm-project/issues/114554
-
+    CSF.DX11_1_DoubleExtensions |=
+        checkDoubleExtensionOps(CI->getIntrinsicID());
     CSF.WaveOps |= checkWaveOps(CI->getIntrinsicID());
   }
 }
@@ -249,28 +332,22 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   ComputedShaderFlags CSF;
 
-  // Set DisableOptimizations flag based on the presence of OptimizeNone
-  // attribute of entry functions.
-  if (MMDI.EntryPropertyVec.size() > 0) {
-    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-        llvm::Attribute::OptimizeNone);
-    // Ensure all entry functions have the same optimization attribute
-    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
-      if (CSF.DisableOptimizations !=
-          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
-  }
+  CSF.DisableOptimizations = isOptimizationDisabled(M);
 
   CSF.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 
   // Set the Max64UAVs flag if the number of UAVs is > 8
   uint32_t NumUAVs = 0;
   for (auto &UAV : DRM.uavs())
-    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6)) {
       NumUAVs++;
-    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
-      NumUAVs += UAV.getBinding().Size;
+    } else { // MMDI.ValidatorVersion >= VersionTuple(1, 6)
+      uint32_t Size = UAV.getBinding().Size;
+      uint32_t NewNum = NumUAVs + (Size == 0 ? ~0U : Size);
+      if (NewNum < NumUAVs)
+        NewNum = ~0U;
+      NumUAVs = NewNum;
+    }
   if (NumUAVs > 8)
     CSF.Max64UAVs = true;
 

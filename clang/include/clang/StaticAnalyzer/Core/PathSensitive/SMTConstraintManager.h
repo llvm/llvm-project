@@ -19,6 +19,9 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include <optional>
 
 typedef llvm::ImmutableSet<
@@ -30,6 +33,7 @@ namespace clang {
 namespace ento {
 
 class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
+  using ConstraintEntry = std::pair<SymbolRef, const llvm::SMTExpr *>;
   mutable llvm::SMTSolverRef Solver = llvm::CreateZ3Solver();
 
 public:
@@ -52,17 +56,19 @@ public:
     QualType RetTy;
     bool hasComparison;
 
-    llvm::SMTExprRef Exp =
-        SMTConv::getExpr(Solver, Ctx, Sym, &RetTy, &hasComparison);
-
+    std::optional<llvm::SMTExprRef> Exp =
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy, &hasComparison);
+    if (!Exp)
+      return assumeSymUnsupported(State, Sym, Assumption);
     // Create zero comparison for implicit boolean cast, with reversed
     // assumption
     if (!hasComparison && !RetTy->isBooleanType())
       return assumeExpr(
           State, Sym,
-          SMTConv::getZeroExpr(Solver, Ctx, Exp, RetTy, !Assumption));
+          SMTConv::getZeroExpr(Solver, Ctx, Exp.value(), RetTy, !Assumption));
 
-    return assumeExpr(State, Sym, Assumption ? Exp : Solver->mkNot(Exp));
+    return assumeExpr(State, Sym,
+                      Assumption ? Exp.value() : Solver->mkNot(Exp.value()));
   }
 
   ProgramStateRef assumeSymInclusiveRange(ProgramStateRef State, SymbolRef Sym,
@@ -70,8 +76,11 @@ public:
                                           const llvm::APSInt &To,
                                           bool InRange) override {
     ASTContext &Ctx = getBasicVals().getContext();
-    return assumeExpr(
-        State, Sym, SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange));
+    std::optional<llvm::SMTExprRef> Expr =
+        SMTConv::getRangeExpr(Solver, Ctx, Sym, From, To, InRange);
+    if (!Expr)
+      return assumeSymUnsupported(State, Sym, false);
+    return assumeExpr(State, Sym, Expr.value());
   }
 
   ProgramStateRef assumeSymUnsupported(ProgramStateRef State, SymbolRef Sym,
@@ -89,13 +98,16 @@ public:
 
     QualType RetTy;
     // The expression may be casted, so we cannot call getZ3DataExpr() directly
-    llvm::SMTExprRef VarExp = SMTConv::getExpr(Solver, Ctx, Sym, &RetTy);
-    llvm::SMTExprRef Exp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/true);
+    std::optional<llvm::SMTExprRef> VarExp =
+        SMTConv::getExpr(Solver, Ctx, Sym, RetTy);
+    if (!VarExp)
+      return ConditionTruthVal();
+    llvm::SMTExprRef Exp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                RetTy, /*Assumption=*/true);
 
     // Negate the constraint
-    llvm::SMTExprRef NotExp =
-        SMTConv::getZeroExpr(Solver, Ctx, VarExp, RetTy, /*Assumption=*/false);
+    llvm::SMTExprRef NotExp = SMTConv::getZeroExpr(Solver, Ctx, VarExp.value(),
+                                                   RetTy, /*Assumption=*/false);
 
     ConditionTruthVal isSat = checkModel(State, Sym, Exp);
     ConditionTruthVal isNotSat = checkModel(State, Sym, NotExp);
@@ -120,7 +132,7 @@ public:
     if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
       QualType Ty = Sym->getType();
       assert(!Ty->isRealFloatingType());
-      llvm::APSInt Value(Ctx.getTypeSize(Ty),
+      llvm::APSInt Value(SMTConv::getSMTBitWidth(Ctx, Ty),
                          !Ty->isSignedIntegerOrEnumerationType());
 
       // TODO: this should call checkModel so we can use the cache, however,
@@ -171,6 +183,14 @@ public:
       return BVF.Convert(SC->getType(), *Value).get();
     }
 
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
+      const llvm::APSInt *Value;
+      if (!(Value = getSymVal(State, USE->getOperand())))
+        return nullptr;
+      std::optional<APSIntPtr> Res = BVF.evalAPSInt(USE->getOpcode(), *Value);
+      return Res ? Res.value().get() : nullptr;
+    }
+
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
@@ -206,12 +226,40 @@ public:
 
   ProgramStateRef removeDeadBindings(ProgramStateRef State,
                                      SymbolReaper &SymReaper) override {
-    auto CZ = State->get<ConstraintSMT>();
-    auto &CZFactory = State->get_context<ConstraintSMT>();
+    ConstraintSMTType CZ = State->get<ConstraintSMT>();
+    ConstraintSMTType::Factory &CZFactory = State->get_context<ConstraintSMT>();
+    llvm::SmallVector<ConstraintEntry> Constraints(CZ.begin(), CZ.end());
+    llvm::DenseMap<SymbolRef, SmallVector<size_t>> ConstraintsBySym;
+    llvm::DenseSet<SymbolRef> TraversedSymbols;
+    llvm::SmallVector<SymbolRef> WorkList;
+    llvm::BitVector RetainedConstraints(Constraints.size());
 
-    for (const auto &Entry : CZ) {
-      if (SymReaper.isDead(Entry.first))
-        CZ = CZFactory.remove(CZ, Entry);
+    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
+      for (auto Symbol : Constraints[Idx].first->symbols()) {
+        if (SymReaper.isLive(Symbol) && TraversedSymbols.insert(Symbol).second)
+          WorkList.push_back(Symbol);
+        ConstraintsBySym[Symbol].push_back(Idx);
+      }
+    }
+
+    while (WorkList.size()) {
+      SymbolRef Item = WorkList.pop_back_val();
+      for (auto Idx : ConstraintsBySym[Item]) {
+        if (RetainedConstraints.test(Idx))
+          continue;
+
+        RetainedConstraints.set(Idx);
+
+        for (auto Symbol : Constraints[Idx].first->symbols()) {
+          if (TraversedSymbols.insert(Symbol).second)
+            WorkList.push_back(Symbol);
+        }
+      }
+    }
+
+    for (size_t Idx = 0; Idx < Constraints.size(); ++Idx) {
+      if (!RetainedConstraints.test(Idx))
+        CZ = CZFactory.remove(CZ, Constraints[Idx]);
     }
 
     return State->set<ConstraintSMT>(CZ);
@@ -281,10 +329,8 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
-    // UnarySymExpr support is not yet implemented in the Z3 wrapper.
-    if (isa<UnarySymExpr>(Sym)) {
-      return false;
-    }
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym))
+      return canReasonAbout(SVB.makeSymbolVal(USE->getOperand()));
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))

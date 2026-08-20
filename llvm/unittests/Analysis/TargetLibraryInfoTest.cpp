@@ -47,8 +47,7 @@ protected:
     if (!FDecl)
       return ::testing::AssertionFailure() << ExpectedLFName << " not found";
 
-    LibFunc F;
-    if (!TLI.getLibFunc(*FDecl, F))
+    if (TLI.getLibFunc(*FDecl) == NotLibFunc)
       return ::testing::AssertionFailure() << ExpectedLFName << " invalid";
 
     return ::testing::AssertionSuccess() << ExpectedLFName << " is LibFunc";
@@ -688,11 +687,7 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare ptr @vec_calloc(i64, i64)\n"
       "declare ptr @vec_malloc(i64)\n"
       "declare ptr @vec_realloc(ptr, i64)\n"
-      "declare void @vec_free(ptr)\n"
-
-      // These functions are OpenMP Offloading allocation / free routines
-      "declare ptr @__kmpc_alloc_shared(i64)\n"
-      "declare void @__kmpc_free_shared(ptr, i64)\n");
+      "declare void @vec_free(ptr)\n");
 
   for (unsigned FI = LibFunc::Begin_LibFunc; FI != LibFunc::End_LibFunc; ++FI) {
     LibFunc LF = (LibFunc)FI;
@@ -725,8 +720,8 @@ protected:
 
   /// Returns the TLI function name for the given \p Opcode and type \p Ty.
   StringRef getScalarName(unsigned int Opcode, Type *Ty) {
-    LibFunc Func;
-    if (!TLI->getLibFunc(Opcode, Ty, Func))
+    LibFunc Func = TLI->getLibFunc(Opcode, Ty);
+    if (Func == NotLibFunc)
       return "";
     return TLI->getName(Func);
   }

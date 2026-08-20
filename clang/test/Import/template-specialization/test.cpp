@@ -1,7 +1,7 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/T.cpp -expression %s | FileCheck %s
 
 // CHECK: |-ClassTemplateSpecializationDecl
-// CHECK-SAME: <line:4:1, line:8:1> line:4:20 struct A
+// CHECK-SAME: <line:4:1, line:8:1> line:4:20 referenced struct A
 
 void expr() {
   A<int>::B b1;

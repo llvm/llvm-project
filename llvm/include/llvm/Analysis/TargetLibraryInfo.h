@@ -100,6 +100,8 @@ class TargetLibraryInfoImpl {
     AvailableArray[F/4] |= State << 2*(F&3);
   }
   AvailabilityState getState(LibFunc F) const {
+    if (F == NotLibFunc)
+      return Unavailable;
     return static_cast<AvailabilityState>((AvailableArray[F/4] >> 2*(F&3)) & 3);
   }
 
@@ -127,22 +129,24 @@ public:
 
   /// Searches for a particular function name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
-  LLVM_ABI bool getLibFunc(StringRef funcName, LibFunc &F) const;
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
+  LLVM_ABI LibFunc getLibFunc(StringRef funcName) const;
 
   /// Searches for a particular function name, also checking that its type is
   /// valid for the library function matching that name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
   ///
   /// FDecl is assumed to have a parent Module when using this function.
-  LLVM_ABI bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+  LLVM_ABI LibFunc getLibFunc(const Function &FDecl) const;
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  LLVM_ABI bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
+  ///
+  /// Returns NotLibFunc if there is no matching library function.
+  LLVM_ABI LibFunc getLibFunc(unsigned int Opcode, Type *Ty) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -230,7 +234,7 @@ public:
     ShouldSignExtI32Return = Val;
   }
 
-  /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
+  /// Returns the size of the wchar_t type in bytes.
   /// This queries the 'wchar_size' metadata.
   LLVM_ABI unsigned getWCharSize(const Module &M) const;
 
@@ -286,7 +290,6 @@ public:
       disableAllFunctions();
     else {
       // Disable individual libc/libm calls in TargetLibraryInfo.
-      LibFunc LF;
       AttributeSet FnAttrs = (*F)->getAttributes().getFnAttrs();
       for (const Attribute &Attr : FnAttrs) {
         if (!Attr.isStringAttribute())
@@ -294,7 +297,7 @@ public:
         auto AttrStr = Attr.getKindAsString();
         if (!AttrStr.consume_front("no-builtin-"))
           continue;
-        if (getLibFunc(AttrStr, LF))
+        if (LibFunc LF = getLibFunc(AttrStr))
           setUnavailable(LF);
       }
     }
@@ -328,27 +331,30 @@ public:
 
   /// Searches for a particular function name.
   ///
-  /// If it is one of the known library functions, return true and set F to the
-  /// corresponding value.
-  bool getLibFunc(StringRef funcName, LibFunc &F) const {
-    return Impl->getLibFunc(funcName, F);
+  /// Returns the corresponding LibFunc if it is one of the known library
+  /// functions, and NotLibFunc otherwise.
+  LibFunc getLibFunc(StringRef funcName) const {
+    return Impl->getLibFunc(funcName);
   }
 
-  bool getLibFunc(const Function &FDecl, LibFunc &F) const {
-    return Impl->getLibFunc(FDecl, F);
+  LibFunc getLibFunc(const Function &FDecl) const {
+    return Impl->getLibFunc(FDecl);
   }
 
-  /// If a callbase does not have the 'nobuiltin' attribute, return if the
-  /// called function is a known library function and set F to that function.
-  bool getLibFunc(const CallBase &CB, LibFunc &F) const {
-    return !CB.isNoBuiltin() && CB.getCalledFunction() &&
-           getLibFunc(*(CB.getCalledFunction()), F);
+  /// If a callbase does not have the 'nobuiltin' attribute, return the library
+  /// function the callee is, and NotLibFunc otherwise.
+  LibFunc getLibFunc(const CallBase &CB) const {
+    if (CB.isNoBuiltin() || !CB.getCalledFunction())
+      return NotLibFunc;
+    return getLibFunc(*CB.getCalledFunction());
   }
 
   /// Searches for a function name using an Instruction \p Opcode.
   /// Currently, only the frem instruction is supported.
-  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
-    return Impl->getLibFunc(Opcode, Ty, F);
+  ///
+  /// Returns NotLibFunc if there is no matching library function.
+  LibFunc getLibFunc(unsigned int Opcode, Type *Ty) const {
+    return Impl->getLibFunc(Opcode, Ty);
   }
 
   /// Disables all builtins.
@@ -416,9 +422,9 @@ public:
                                                    case LibFunc_sqrtl_finite:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
     case LibFunc_strnlen:      case LibFunc_strstr:     case LibFunc_memchr:
-    case LibFunc_mempcpy:      case LibFunc_tan:        case LibFunc_tanf:
-    case LibFunc_tanl:         case LibFunc_tanh:       case LibFunc_tanhf:
-    case LibFunc_tanhl:
+    case LibFunc_memccpy:      case LibFunc_mempcpy:    case LibFunc_tan:
+    case LibFunc_tanf:         case LibFunc_tanl:       case LibFunc_tanh:
+    case LibFunc_tanhf:        case LibFunc_tanhl:
       // clang-format on
       return true;
     }

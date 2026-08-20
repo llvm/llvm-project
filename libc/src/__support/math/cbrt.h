@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-#if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #define LIBC_MATH_CBRT_SKIP_ACCURATE_PASS
 #endif
 
@@ -35,7 +35,7 @@ using namespace fputil;
 // > P = fpminimax(x^(-2/3), 7, [|D...|], [1, 2]);
 // > dirtyinfnorm(P/x^(-2/3) - 1, [1, 2]);
 // 0x1.28...p-21
-LIBC_INLINE static double initial_approximation(double x) {
+LIBC_INLINE double initial_approximation(double x) {
   constexpr double COEFFS[8] = {
       0x1.bc52aedead5c6p1,  -0x1.b52bfebf110b3p2,  0x1.1d8d71d53d126p3,
       -0x1.de2db9e81cf87p2, 0x1.0154ca06153bdp2,   -0x1.5973c66ee6da7p0,
@@ -59,14 +59,14 @@ LIBC_INLINE static double initial_approximation(double x) {
 // Get the error term for Newton iteration:
 //   h(x) = x^3 * a^2 - 1,
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-LIBC_INLINE static double get_error(const DoubleDouble &x_3,
-                                    const DoubleDouble &a_sq) {
+LIBC_INLINE double get_error(const DoubleDouble &x_3,
+                             const DoubleDouble &a_sq) {
   return fputil::multiply_add(x_3.hi, a_sq.hi, -1.0) +
          fputil::multiply_add(x_3.lo, a_sq.hi, x_3.hi * a_sq.lo);
 }
 #else
-LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
-                                              const DoubleDouble &a_sq) {
+LIBC_INLINE constexpr double get_error(const DoubleDouble &x_3,
+                                       const DoubleDouble &a_sq) {
   DoubleDouble x_3_a_sq = fputil::quick_mult(a_sq, x_3);
   return (x_3_a_sq.hi - 1.0) + x_3_a_sq.lo;
 }
@@ -144,7 +144,7 @@ LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
 // exceptional handling, similar to what was done in the CORE-MATH project:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
-LIBC_INLINE static constexpr double cbrt(double x) {
+LIBC_INLINE double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;
@@ -294,31 +294,31 @@ LIBC_INLINE static constexpr double cbrt(double x) {
   if (LIBC_LIKELY(r2_upper == r2_lower))
     return update_exponent(r2_upper);
 
-  using Float128 = fputil::DyadicFloat<128>;
+  using DFloat128 = fputil::DyadicFloat<128>;
 
   // TODO: Investigate removing float128 and just list exceptional cases.
   // Apply another Newton iteration with ~126-bit accuracy.
-  Float128 x2_f128 = fputil::quick_add(Float128(x2.hi), Float128(x2.lo));
+  DFloat128 x2_f128 = fputil::quick_add(DFloat128(x2.hi), DFloat128(x2.lo));
   // x2^3
-  Float128 x2_3 =
+  DFloat128 x2_3 =
       fputil::quick_mul(fputil::quick_mul(x2_f128, x2_f128), x2_f128);
   // a^2
-  Float128 a_sq_f128 = fputil::quick_mul(Float128(a), Float128(a));
+  DFloat128 a_sq_f128 = fputil::quick_mul(DFloat128(a), DFloat128(a));
   // x2^3 * a^2
-  Float128 x2_3_a_sq = fputil::quick_mul(x2_3, a_sq_f128);
+  DFloat128 x2_3_a_sq = fputil::quick_mul(x2_3, a_sq_f128);
   // h2 = x2^3 * a^2 - 1
-  Float128 h2_f128 = fputil::quick_add(x2_3_a_sq, Float128(-1.0));
+  DFloat128 h2_f128 = fputil::quick_add(x2_3_a_sq, DFloat128(-1.0));
   double h2 = static_cast<double>(h2_f128);
   // t2 = 1 - h2 / 3
-  Float128 t2 =
-      fputil::quick_add(Float128(1.0), Float128(h2 * (-0x1.5555555555555p-2)));
+  DFloat128 t2 = fputil::quick_add(DFloat128(1.0),
+                                   DFloat128(h2 * (-0x1.5555555555555p-2)));
   // x3 = x2 * (1 - h2 / 3) ~ a^(-2/3)
-  Float128 x3 = fputil::quick_mul(x2_f128, t2);
+  DFloat128 x3 = fputil::quick_mul(x2_f128, t2);
   // r3 = a * x3 ~ a * a^(-2/3) = a^(1/3)
-  Float128 r3 = fputil::quick_mul(Float128(a), x3);
+  DFloat128 r3 = fputil::quick_mul(DFloat128(a), x3);
 
   // Check for exact cases:
-  Float128::MantissaType rounding_bits =
+  DFloat128::MantissaType rounding_bits =
       r3.mantissa & 0x0000'0000'0000'03FF'FFFF'FFFF'FFFF'FFFF_u128;
 
   double result = static_cast<double>(r3);
@@ -328,9 +328,9 @@ LIBC_INLINE static constexpr double cbrt(double x) {
     r3.mantissa &= 0xFFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFF0_u128;
 
     if (rounding_bits >= 0x0000'0000'0000'03FF'FFFF'FFFF'FFFF'FFF0_u128) {
-      Float128 tmp{r3.sign, r3.exponent - 123,
-                   0x8000'0000'0000'0000'0000'0000'0000'0000_u128};
-      Float128 r4 = fputil::quick_add(r3, tmp);
+      DFloat128 tmp{r3.sign, r3.exponent - 123,
+                    0x8000'0000'0000'0000'0000'0000'0000'0000_u128};
+      DFloat128 r4 = fputil::quick_add(r3, tmp);
       result = static_cast<double>(r4);
     } else {
       result = static_cast<double>(r3);

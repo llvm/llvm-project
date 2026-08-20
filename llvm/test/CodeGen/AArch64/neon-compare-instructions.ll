@@ -738,10 +738,16 @@ define <2 x i64> @cmls2xi64(<2 x i64> %A, <2 x i64> %B) {
 }
 
 define <8 x i8> @cmtst8xi8(<8 x i8> %A, <8 x i8> %B) {
-; CHECK-LABEL: cmtst8xi8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst8xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst8xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i8> %A, %B
   %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
   %tmp5 = sext <8 x i1> %tmp4 to <8 x i8>
@@ -749,10 +755,16 @@ define <8 x i8> @cmtst8xi8(<8 x i8> %A, <8 x i8> %B) {
 }
 
 define <16 x i8> @cmtst16xi8(<16 x i8> %A, <16 x i8> %B) {
-; CHECK-LABEL: cmtst16xi8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst16xi8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst16xi8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <16 x i8> %A, %B
   %tmp4 = icmp ne <16 x i8> %tmp3, zeroinitializer
   %tmp5 = sext <16 x i1> %tmp4 to <16 x i8>
@@ -760,10 +772,16 @@ define <16 x i8> @cmtst16xi8(<16 x i8> %A, <16 x i8> %B) {
 }
 
 define <4 x i16> @cmtst4xi16(<4 x i16> %A, <4 x i16> %B) {
-; CHECK-LABEL: cmtst4xi16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst4xi16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst4xi16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <4 x i16> %A, %B
   %tmp4 = icmp ne <4 x i16> %tmp3, zeroinitializer
   %tmp5 = sext <4 x i1> %tmp4 to <4 x i16>
@@ -771,10 +789,16 @@ define <4 x i16> @cmtst4xi16(<4 x i16> %A, <4 x i16> %B) {
 }
 
 define <8 x i16> @cmtst8xi16(<8 x i16> %A, <8 x i16> %B) {
-; CHECK-LABEL: cmtst8xi16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst8xi16:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst8xi16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <8 x i16> %A, %B
   %tmp4 = icmp ne <8 x i16> %tmp3, zeroinitializer
   %tmp5 = sext <8 x i1> %tmp4 to <8 x i16>
@@ -782,10 +806,16 @@ define <8 x i16> @cmtst8xi16(<8 x i16> %A, <8 x i16> %B) {
 }
 
 define <2 x i32> @cmtst2xi32(<2 x i32> %A, <2 x i32> %B) {
-; CHECK-LABEL: cmtst2xi32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst2xi32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst2xi32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmtst v0.2s, v0.2s, v0.2s
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <2 x i32> %A, %B
   %tmp4 = icmp ne <2 x i32> %tmp3, zeroinitializer
   %tmp5 = sext <2 x i1> %tmp4 to <2 x i32>
@@ -793,10 +823,16 @@ define <2 x i32> @cmtst2xi32(<2 x i32> %A, <2 x i32> %B) {
 }
 
 define <4 x i32> @cmtst4xi32(<4 x i32> %A, <4 x i32> %B) {
-; CHECK-LABEL: cmtst4xi32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst4xi32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst4xi32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <4 x i32> %A, %B
   %tmp4 = icmp ne <4 x i32> %tmp3, zeroinitializer
   %tmp5 = sext <4 x i1> %tmp4 to <4 x i32>
@@ -804,10 +840,16 @@ define <4 x i32> @cmtst4xi32(<4 x i32> %A, <4 x i32> %B) {
 }
 
 define <2 x i64> @cmtst2xi64(<2 x i64> %A, <2 x i64> %B) {
-; CHECK-LABEL: cmtst2xi64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmtst v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cmtst2xi64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmtst v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cmtst2xi64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    cmtst v0.2d, v0.2d, v0.2d
+; CHECK-GI-NEXT:    ret
   %tmp3 = and <2 x i64> %A, %B
   %tmp4 = icmp ne <2 x i64> %tmp3, zeroinitializer
   %tmp5 = sext <2 x i1> %tmp4 to <2 x i64>
@@ -2503,8 +2545,7 @@ define <4 x i32> @fcmal4xfloat(<4 x float> %A, <4 x float> %B) {
 ;
 ; CHECK-GI-LABEL: fcmal4xfloat:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    dup v0.2s, w8
+; CHECK-GI-NEXT:    movi v0.2s, #1
 ; CHECK-GI-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
 ; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
@@ -4218,4 +4259,726 @@ define <8 x i32> @fcmoeq8xfloat(<8 x float> %A, <8 x float> %B) {
   %tmp3 = fcmp oeq <8 x float> %A, %B
   %tmp4 = sext <8 x i1> %tmp3 to <8 x i32>
   ret <8 x i32> %tmp4
+}
+
+
+
+
+
+define <4 x float> @vselect_oeq(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oeq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp oeq <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ogt(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ogt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp ogt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_oge(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp oge <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_olt(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_olt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp olt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ole(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ole:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp ole <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_one(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v4.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp one <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ord(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ord:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp ord <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ueq(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ueq:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmgt v4.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ueq:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp ueq <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ugt(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ugt:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ugt:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp ugt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uge(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uge:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uge:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp uge <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ult(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ult:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ult:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp ult <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ule(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ule:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ule:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp ule <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_une(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_une:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_une:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp une <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uno(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uno:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uno:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp uno <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_oeq_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oeq_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan oeq <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ogt_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ogt_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan ogt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_oge_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oge_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan oge <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_olt_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_olt_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan olt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ole_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ole_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan ole <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_one_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_one_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_one_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan one <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ord_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ord_nnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-NEXT:    ret
+  %c = fcmp nnan ord <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ueq_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ueq_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ueq_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan ueq <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ugt_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ugt_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ugt_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan ugt <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uge_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uge_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uge_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan uge <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ult_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ult_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ult_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan ult <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ule_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ule_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ule_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmgt v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan ule <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_une_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_une_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_une_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan une <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uno_nnan(<4 x float> %a, <4 x float> %b, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uno_nnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uno_nnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fcmge v4.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-GI-NEXT:    ret
+  %c = fcmp nnan uno <4 x float> %a, %b
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+
+
+
+define <4 x float> @vselect_oeq_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oeq_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmeq v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp oeq <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ogt_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ogt_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ogt <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_oge_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_oge_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmge v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp oge <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_olt_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_olt_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp olt <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ole_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-LABEL: vselect_ole_knownnnan:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcmge v0.4s, v3.4s, v0.4s
+; CHECK-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ole <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_one_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_one_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_one_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmgt v4.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp one <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ord_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ord_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ord_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmge v4.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ord <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ueq_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ueq_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ueq_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmgt v4.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ueq <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ugt_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ugt_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmgt v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ugt_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmge v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ugt <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uge_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uge_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmge v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uge_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp uge <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ult_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ult_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ult_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmge v0.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ult <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_ule_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_ule_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmge v0.4s, v3.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_ule_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp ule <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_une_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_une_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v3.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_une_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmeq v0.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp une <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
+}
+
+define <4 x float> @vselect_uno_knownnnan(<4 x i32> %a, <4 x float> %d, <4 x float> %e) {
+; CHECK-SD-LABEL: vselect_uno_knownnnan:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    bsl v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vselect_uno_knownnnan:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov v3.4s, #1.00000000
+; CHECK-GI-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-GI-NEXT:    fcmge v4.4s, v0.4s, v3.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v3.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v4.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %b = sitofp <4 x i32> %a to <4 x float>
+  %c = fcmp uno <4 x float> %b, splat (float 1.0)
+  %r = select <4 x i1> %c, <4 x float> %d, <4 x float> %e
+  ret <4 x float> %r
 }

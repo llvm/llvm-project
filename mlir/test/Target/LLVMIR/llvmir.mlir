@@ -33,6 +33,30 @@ llvm.mlir.global internal @float_global(0.0: f32) : f32
 // CHECK: @float_global_array = internal global [1 x float] [float -5.000000e+00]
 llvm.mlir.global internal @float_global_array(dense<[-5.0]> : vector<1xf32>) : !llvm.array<1 x f32>
 
+// CHECK: @splat_float_global_array = internal global [4 x float] [float 4.200000e+01, float 4.200000e+01, float 4.200000e+01, float 4.200000e+01]
+llvm.mlir.global internal @splat_float_global_array(dense<42.0> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_double_global_array = internal global [3 x double] [double 4.200000e+01, double 4.200000e+01, double 4.200000e+01]
+llvm.mlir.global internal @splat_double_global_array(dense<42.0> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_neg_float_global_array = internal global [4 x float] [float -1.350000e+01, float -1.350000e+01, float -1.350000e+01, float -1.350000e+01]
+llvm.mlir.global internal @splat_neg_float_global_array(dense<-13.5> : tensor<4xf32>) : !llvm.array<4 x f32>
+
+// CHECK: @splat_neg_double_global_array = internal global [3 x double] [double -1.350000e+01, double -1.350000e+01, double -1.350000e+01]
+llvm.mlir.global internal @splat_neg_double_global_array(dense<-13.5> : tensor<3xf64>) : !llvm.array<3 x f64>
+
+// CHECK: @splat_half_global_array = internal global [4 x half] [half 4.200000e+01, half 4.200000e+01, half 4.200000e+01, half 4.200000e+01]
+llvm.mlir.global internal @splat_half_global_array(dense<42.0> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_bfloat_global_array = internal global [3 x bfloat] [bfloat 4.200000e+01, bfloat 4.200000e+01, bfloat 4.200000e+01]
+llvm.mlir.global internal @splat_bfloat_global_array(dense<42.0> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
+// CHECK: @splat_neg_half_global_array = internal global [4 x half] [half -1.350000e+01, half -1.350000e+01, half -1.350000e+01, half -1.350000e+01]
+llvm.mlir.global internal @splat_neg_half_global_array(dense<-13.5> : tensor<4xf16>) : !llvm.array<4 x f16>
+
+// CHECK: @splat_neg_bfloat_global_array = internal global [3 x bfloat] [bfloat -1.350000e+01, bfloat -1.350000e+01, bfloat -1.350000e+01]
+llvm.mlir.global internal @splat_neg_bfloat_global_array(dense<-13.5> : tensor<3xbf16>) : !llvm.array<3 x bf16>
+
 // CHECK: @string_const = internal constant [6 x i8] c"foobar"
 llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 
@@ -74,6 +98,9 @@ llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 
 // CHECK: @f8E8M0FNU_global_as_i8 = internal global i8 127
 llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
+
+// CHECK: @f8E5M3FNU_global_as_i8 = internal global i8 120
+llvm.mlir.global internal @f8E5M3FNU_global_as_i8(1.0 : f8E5M3FNU) : i8
 
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
@@ -187,6 +214,18 @@ llvm.mlir.global @has_dso_local(42 : i64) {dso_local} : i64
 
 llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 // CHECK: @has_thr_local = thread_local global i64 42
+
+llvm.mlir.global thread_local(generaldynamic) @has_thr_local_gd(42 : i64) : i64
+// CHECK: @has_thr_local_gd = thread_local global i64 42
+
+llvm.mlir.global thread_local(localdynamic) @has_thr_local_ld(42 : i64) : i64
+// CHECK: @has_thr_local_ld = thread_local(localdynamic) global i64 42
+
+llvm.mlir.global thread_local(initialexec) @has_thr_local_ie(42 : i64) : i64
+// CHECK: @has_thr_local_ie = thread_local(initialexec) global i64 42
+
+llvm.mlir.global thread_local(localexec) @has_thr_local_le(42 : i64) : i64
+// CHECK: @has_thr_local_le = thread_local(localexec) global i64 42
 
 //
 // Section attribute.
@@ -1227,6 +1266,41 @@ llvm.func @alignstackattr_decl(!llvm.ptr {llvm.alignstack = 32 : i64})
 // CHECK-LABEL: declare void @writeonlyattr_decl(ptr writeonly)
 llvm.func @writeonlyattr_decl(!llvm.ptr {llvm.writeonly})
 
+// CHECK-LABEL: define void @writableattr(ptr writable %
+llvm.func @writableattr(%arg0: !llvm.ptr {llvm.writable}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @writableattr_decl(ptr writable)
+llvm.func @writableattr_decl(!llvm.ptr {llvm.writable})
+
+// CHECK-LABEL: define void @deadonunwindattr(ptr dead_on_unwind %
+llvm.func @deadonunwindattr(%arg0: !llvm.ptr {llvm.dead_on_unwind}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonunwindattr_decl(ptr dead_on_unwind)
+llvm.func @deadonunwindattr_decl(!llvm.ptr {llvm.dead_on_unwind})
+
+// CHECK-LABEL: define void @deadonreturnattr(ptr dead_on_return(8) %
+llvm.func @deadonreturnattr(%arg0: !llvm.ptr {llvm.dead_on_return = 8 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @deadonreturnattr_decl(ptr dead_on_return(8))
+llvm.func @deadonreturnattr_decl(!llvm.ptr {llvm.dead_on_return = 8 : i64})
+
+// CHECK-LABEL: define void @nofpclassattr(float nofpclass(nan inf) %
+llvm.func @nofpclassattr(%arg0: f32 {llvm.nofpclass = 519 : i64}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @nofpclassattr_decl(float nofpclass(nan inf))
+llvm.func @nofpclassattr_decl(f32 {llvm.nofpclass = 519 : i64})
+
+// CHECK-LABEL: declare nofpclass(nan inf) float @nofpclassattr_ret_decl()
+llvm.func @nofpclassattr_ret_decl() -> (f32 {llvm.nofpclass = 519 : i64})
+
 // CHECK-LABEL: declare align 4 ptr @alignattr_ret_decl()
 llvm.func @alignattr_ret_decl() -> (!llvm.ptr {llvm.align = 4})
 
@@ -1281,6 +1355,24 @@ llvm.func @intpointerconversion(%arg0 : i32) -> i32 {
   %1 = llvm.inttoptr %arg0 : i32 to !llvm.ptr
   %2 = llvm.ptrtoint %1 : !llvm.ptr to i32
   llvm.return %2 : i32
+}
+
+// CHECK-LABEL: @addrpointerconversion_scalar
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_scalar(%arg0 : !llvm.ptr) -> i64 {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr ptr %[[ARG0]] to i64
+// CHECK-NEXT: ret i64 %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
+  llvm.return %1 : i64
+}
+
+// CHECK-LABEL: @addrpointerconversion_vector
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+llvm.func @addrpointerconversion_vector(%arg0 : vector<3x!llvm.ptr>) -> vector<3x i64> {
+// CHECK:      %[[PTR:.*]] = ptrtoaddr <3 x ptr> %[[ARG0]] to <3 x i64>
+// CHECK-NEXT: ret <3 x i64> %[[PTR]]
+  %1 = llvm.ptrtoaddr %arg0 : vector<3x!llvm.ptr> to vector<3x i64>
+  llvm.return %1 : vector<3x i64>
 }
 
 llvm.func @fpconversion(%arg0 : i32) -> i32 {
@@ -1453,7 +1545,7 @@ llvm.func @alloca(%size : i64) {
 
 // CHECK-LABEL: @constants
 llvm.func @constants() -> vector<4xf32> {
-  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.{{0*}}e+00, float 0.{{0*}}e+00, float 0.{{0*}}e+00>
+  // CHECK: ret <4 x float> <float 4.2{{0*}}e+01, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00, float 0.0{{0*}}e+00>
   %0 = llvm.mlir.constant(sparse<[0], [4.2e+01]> : vector<4xf32>) : vector<4xf32>
   llvm.return %0 : vector<4xf32>
 }
@@ -1816,12 +1908,62 @@ llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "429496729
 // -----
 
 // CHECK-LABEL: @functionEntryCount
-// CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
-llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
+// CHECK-SAME: !prof ![[PROF_ID:[0-9]+]]
+llvm.func @functionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 4242>
+} {
   llvm.return
 }
 
-// CHECK: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+// CHECK-DAG: ![[PROF_ID]] = !{!"function_entry_count", i64 4242}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCount
+// CHECK-SAME: !prof ![[SYNTH_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7}
+
+// -----
+
+// CHECK-LABEL: @syntheticFunctionEntryCountWithImports
+// CHECK-SAME: !prof ![[SYNTH_IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @syntheticFunctionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, count_type = synthetic, imports = 1234, 4, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[SYNTH_IMPORTS_PROF_ID]] = !{!"synthetic_function_entry_count", i64 7, i64 4, i64 1234}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountWithImports
+// CHECK-SAME: !prof ![[IMPORTS_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountWithImports() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 7, imports = 1234, 4, 18446744073709551615, 1234>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[IMPORTS_PROF_ID]] = !{!"function_entry_count", i64 7, i64 4, i64 1234, i64 -1}
+
+// -----
+
+// CHECK-LABEL: @functionEntryCountNegativeCount
+// CHECK-SAME: !prof ![[NEG_PROF_ID:[0-9]+]]
+llvm.func @functionEntryCountNegativeCount() attributes {
+  function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>
+} {
+  llvm.return
+}
+
+// CHECK-DAG: ![[NEG_PROF_ID]] = !{!"function_entry_count", i64 -1}
 
 // -----
 
@@ -1831,7 +1973,7 @@ llvm.func @constant_bf16() -> bf16 {
   llvm.return %0 : bf16
 }
 
-// CHECK: ret bfloat 0xR4120
+// CHECK: ret bfloat 1.000000e+01
 
 // -----
 
@@ -2155,6 +2297,11 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+
+// CHECK: {{.*}} = fpext nnan float {{.*}} to double
+// CHECK: {{.*}} = fptrunc fast float {{.*}} to half
+  %27 = llvm.fpext %arg0 fastmath<nnan> : f32 to f64
+  %28 = llvm.fptrunc %arg0 fastmath<fast> : f32 to f16
   llvm.return
 }
 
@@ -2376,7 +2523,7 @@ llvm.func @readonly_function(%arg0: !llvm.ptr {llvm.readonly})
 llvm.func @arg_mem_none_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, argmem: none, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2384,7 +2531,7 @@ llvm.func @arg_mem_none_func() attributes {
 llvm.func @readwrite_func() attributes {
   memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 
-// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem0: none, target_mem1: none) }
+// CHECK: attributes #[[ATTR]] = { memory(readwrite, errnomem: none, target_mem: none) }
 
 // -----
 
@@ -2823,6 +2970,230 @@ llvm.func @allocsize_call_2() {
 
 // -----
 
+// CHECK-LABEL: @minsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @minsize() attributes { minsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @minsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @minsize_call() {
+  llvm.call @f() {minsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: minsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optsize() attributes { optsize } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @optsize_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @optsize_call() {
+  llvm.call @f() {optsize} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optsize
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params() attributes { save_reg_params } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @save_reg_params_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @save_reg_params_call() {
+  llvm.call @f() {save_reg_params} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "save-reg-params"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="skip"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_2() attributes { zero_call_used_regs = "all"} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_1
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_1() {
+  llvm.call @f() {zero_call_used_regs="used_gpr_all"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used_gpr_all"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @zero_call_used_regs_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @zero_call_used_regs_call_2() {
+  llvm.call @f() {zero_call_used_regs="used"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "zero-call-used-regs"="used"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @trap_func_name_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @trap_func_name_call() {
+  llvm.call @f() {trap_func_name="whatever"} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "trap-func-name"="whatever"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs() attributes {default_func_attrs={key="value", justKey}} {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @default_func_attrs
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_call() {
+  llvm.call @f() {default_func_attrs={key="value", justKey}} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @default_func_attrs_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @default_func_attrs_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {default_func_attrs={key="value", justKey}} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "justKey"
+// CHECK-SAME: "key"="value"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @builtin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @builtin_call() {
+  llvm.call @f() {builtin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: builtin
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @nobuiltin_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @nobuiltin_call() {
+  llvm.call @f() {nobuiltin} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nobuiltin
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call
@@ -2943,11 +3314,11 @@ llvm.func @mem_effects_call() {
 // CHECK: #[[ATTRS_0]]
 // CHECK-SAME: memory(none)
 // CHECK: #[[ATTRS_1]]
-// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, argmem: none, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_2]]
-// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(read, inaccessiblemem: write, errnomem: none, target_mem: none)
 // CHECK: #[[ATTRS_3]]
-// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem0: none, target_mem1: none)
+// CHECK-SAME: memory(readwrite, argmem: read, errnomem: none, target_mem: none)
 
 // -----
 
@@ -3144,6 +3515,17 @@ llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
 
 // -----
 
+// Test that ArrayAttr of StringAttrs (e.g. "riscv-isa") is exported as an
+// MDTuple of MDStrings for a lossless round-trip.
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "riscv-isa", ["rv64i2p1", "m2p0"]>]
+
+// CHECK: !llvm.module.flags = !{![[#RISCV:]], {{.*}}}
+// CHECK: ![[#RISCV]] = !{i32 1, !"riscv-isa", ![[#ISA:]]}
+// CHECK: ![[#ISA]] = !{!"rv64i2p1", !"m2p0"}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}
@@ -3260,3 +3642,10 @@ llvm.mlir.global external @target_specific_attrs_only() {target_specific_attrs =
 // CHECK: @target_specific_attrs_combined = global i32 2, section "mysection", align 4 #[[ATTRS:[0-9]+]]
 // CHECK: attributes #[[ATTRS]] = { norecurse "bss-section"="my_bss.1" }
 llvm.mlir.global external @target_specific_attrs_combined(2 : i32) {alignment = 4 : i64, section = "mysection", target_specific_attrs = ["norecurse", ["bss-section", "my_bss.1"]]} : i32
+
+// -----
+
+// CHECK-LABEL: define b8 @byte_type(b8 %0)
+llvm.func @byte_type(%arg0: !llvm.byte<8>) -> !llvm.byte<8> {
+  llvm.return %arg0 : !llvm.byte<8>
+}

@@ -13,6 +13,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -48,6 +49,34 @@ static std::string findPassPlugin(const Driver &D,
   return std::string();
 }
 
+// Is the in-tree SPIR-V backend built into this clang?
+static bool isSPIRVBackendAvailable(const llvm::Triple &T) {
+  std::string IgnoredError;
+  return llvm::TargetRegistry::lookupTarget(T, IgnoredError);
+}
+
+// Runs the HipSpvPasses plugin via `opt` on TempFile when the plugin is found.
+// Returns the lowered bitcode path, or TempFile unchanged if no plugin exists.
+static const char *runHipSpvPasses(Compilation &C, const JobAction &JA,
+                                   const Tool &Creator, const ToolChain &TC,
+                                   const InputInfoList &Inputs,
+                                   const InputInfo &Output,
+                                   const llvm::opt::ArgList &Args,
+                                   StringRef Name, const char *TempFile) {
+  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
+  if (PassPluginPath.empty())
+    return TempFile;
+  const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
+  const char *OptOutput = HIP::getTempFile(C, Name.str() + "-lower", "bc");
+  ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
+                        PassPathCStr, "-passes=hip-post-link-passes",
+                        "-o",         OptOutput};
+  const char *Opt = Args.MakeArgString(TC.GetProgramPath("opt"));
+  C.addCommand(std::make_unique<Command>(
+      JA, Creator, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
+  return OptOutput;
+}
+
 void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
@@ -60,7 +89,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   ArgStringList LinkArgs{};
 
   for (auto Input : Inputs)
-    LinkArgs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkArgs.push_back(Input.getFilename());
 
   // Add static device libraries using the common helper function.
   // This handles unbundling archives (.a) containing bitcode bundles.
@@ -72,27 +102,127 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 
-  // Post-link HIP lowering.
+  auto T = getToolChain().getTriple();
 
-  // Run LLVM IR passes to lower/expand/emulate HIP code that does not translate
-  // to SPIR-V (E.g. dynamic shared memory).
-  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
-  if (!PassPluginPath.empty()) {
-    const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-    const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
-    ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
-                          PassPathCStr, "-passes=hip-post-link-passes",
-                          "-o",         OptOutput};
-    const char *Opt = Args.MakeArgString(getToolChain().GetProgramPath("opt"));
+  if (T.getOS() == llvm::Triple::ChipStar) {
+    // chipStar: run HipSpvPasses via opt, then emit SPIR-V with the in-tree
+    // SPIR-V backend by default, or with the external llvm-spirv translator
+    // when -fno-integrated-objemitter is given (or the backend is not built).
+
+    // Run HipSpvPasses plugin via opt (must run on LLVM IR before
+    // the SPIR-V backend lowers to MIR).
+    TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
+                               Args, Name, TempFile);
+
+    // Note that useIntegratedBackend() is consulted first so that an explicit
+    // -f(no-)integrated-objemitter still gets diagnosed against this toolchain.
+    if (!getToolChain().useIntegratedBackend() || !isSPIRVBackendAvailable(T)) {
+      // External translator path: BC -> SPIR-V via llvm-spirv.
+      llvm::opt::ArgStringList TrArgs;
+      if (T.getSubArch() == llvm::Triple::NoSubArch)
+        TrArgs.push_back("--spirv-max-version=1.2");
+      // Keep this extension list in sync with the in-tree backend fallback
+      // below.
+      TrArgs.push_back("--spirv-ext=-all"
+                       ",+SPV_INTEL_function_pointers"
+                       ",+SPV_INTEL_subgroups"
+                       ",+SPV_KHR_bit_instructions"
+                       ",+SPV_EXT_shader_atomic_float_add");
+
+      // Preserve debug info in the NonSemantic.Shader.DebugInfo form (see the
+      // comment on the equivalent block in the non-chipStar path below).
+      // These flags are passed unconditionally instead of gating on -g: in
+      // RDC-mode links this job runs in a clang invoked by
+      // clang-linker-wrapper where the original -g is not visible, but the
+      // debug info itself travels in the bitcode. SPV_KHR_non_semantic_info
+      // and the debug info version only take effect when the bitcode carries
+      // debug info. SPV_INTEL_optnone is not tied to debug info: clang emits
+      // optnone at -O0 even without -g, and the emitter needs the extension
+      // allowed to encode it.
+      TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                       ",+SPV_INTEL_optnone");
+      TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
+
+      InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
+      SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
+      return;
+    }
+
+    // Default: compile the lowered bitcode to SPIR-V with the in-tree backend.
+    // Invoke `clang -cc1` directly rather than the clang driver: the driver
+    // would re-run config-file loading, toolchain detection and argument
+    // translation over an input that is already device-compiled and lowered,
+    // which is both wasteful and fragile. This mirrors how HIPAMD drives its
+    // SPIR-V backend emission (see HIPAMD::constructLinkAndEmitSpirvCommand).
+    // Keep the default -O0 backend pipeline (i.e. no -disable-llvm-optzns) so
+    // the mandatory lowering passes still run, matching the previously
+    // validated driver `-c` behavior.
+    ArgStringList Cc1Args;
+    Cc1Args.push_back("-cc1");
+    Cc1Args.push_back("-triple");
+    Cc1Args.push_back(C.getArgs().MakeArgString(T.getTriple()));
+    Cc1Args.push_back("-emit-obj");
+
+    // SPIR-V extensions the chipStar runtime relies on. Keep in sync with the
+    // llvm-spirv translator path above. SPV_KHR_non_semantic_info and
+    // SPV_INTEL_optnone let the backend emit NonSemantic.Shader.DebugInfo and
+    // the OptNoneINTEL function control when the bitcode carries debug info /
+    // optnone attributes (the backend's debug handler is a no-op otherwise).
+    Cc1Args.push_back("-mllvm");
+    Cc1Args.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
+                      ",+SPV_INTEL_subgroups"
+                      ",+SPV_KHR_bit_instructions"
+                      ",+SPV_EXT_shader_atomic_float_add"
+                      ",+SPV_KHR_non_semantic_info"
+                      ",+SPV_INTEL_optnone");
+
+    Cc1Args.push_back(TempFile);
+    Cc1Args.push_back("-o");
+    Cc1Args.push_back(Output.getFilename());
+
+    const Driver &Drv = C.getDriver();
+    const char *Clang = Drv.getDriverProgramPath();
     C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
-    TempFile = OptOutput;
+        JA, *this, ResponseFileSupport::None(), Clang, Cc1Args, Inputs, Output,
+        Drv.getPrependArg()));
+    return;
   }
 
-  // Emit SPIR-V binary.
+  // Non-chipStar: run HIP passes via opt, then translate with llvm-spirv.
+  TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output, Args,
+                             Name, TempFile);
 
-  llvm::opt::ArgStringList TrArgs{"--spirv-max-version=1.1",
-                                  "--spirv-ext=+all"};
+  // Emit SPIR-V binary via llvm-spirv translator (non-chipStar targets).
+  llvm::opt::ArgStringList TrArgs;
+  if (T.getSubArch() == llvm::Triple::NoSubArch)
+    TrArgs.push_back("--spirv-max-version=1.1");
+  TrArgs.push_back("--spirv-ext=+all");
+
+  // Preserve debug info requested via -g into the emitted SPIR-V using the
+  // NonSemantic.Shader.DebugInfo form. Downstream consumers such as Intel's IGC
+  // and gdb-oneapi use it to map device code back to source lines and local
+  // variables; the translator's default OpenCL.DebugInfo.100 form is not
+  // sufficient for that. Emitting the NonSemantic debug instructions requires
+  // the SPV_KHR_non_semantic_info extension.
+  //
+  // SPV_INTEL_optnone carries the optnone function attribute, which Clang
+  // attaches to every function at -O0, through to the consumer as the
+  // OptNoneEXT function control. Without it the attribute is silently dropped
+  // in translation and the device compiler is free to optimize the kernel, so a
+  // debugger reports arguments and locals as <optimized out> even though the
+  // debug info itself is present. At -O1 and above no optnone attribute exists
+  // and the extension has no effect. It is redundant for the +all list above
+  // but required for the restricted chipStar one.
+  //
+  // The translator accumulates --spirv-ext across occurrences, so this augments
+  // the list set above.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group);
+      A && !A->getOption().matches(options::OPT_g0)) {
+    TrArgs.push_back("--spirv-ext=+SPV_KHR_non_semantic_info"
+                     ",+SPV_INTEL_optnone");
+    TrArgs.push_back("--spirv-debug-info-version=nonsemantic-shader-200");
+  }
+
   InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
   SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
 }
@@ -116,16 +246,37 @@ void HIPSPV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
 HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
                                  const ToolChain &HostTC, const ArgList &Args)
-    : ToolChain(D, Triple, Args), HostTC(HostTC) {
+    : ToolChain(D, Triple, Args), HostTC(&HostTC) {
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
 }
 
+// Non-offloading toolchain. Primaly used by clang-offload-linker.
+HIPSPVToolChain::HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
+                                 const ArgList &Args)
+    : ToolChain(D, Triple, Args), HostTC(nullptr) {
+  // Lookup binaries into the driver directory, this is used to
+  // discover the clang-offload-bundler executable.
+  getProgramPaths().push_back(getDriver().Dir);
+}
+
+bool HIPSPVToolChain::IsIntegratedBackendSupported() const {
+  // The in-tree SPIR-V backend can only be requested when it is built.
+  return isSPIRVBackendAvailable(getTriple());
+}
+
 void HIPSPVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+
+  if (!HostTC) {
+    assert(DeviceOffloadingKind == Action::OFK_None &&
+           "Need host toolchain for offloading!");
+    return;
+  }
+
+  HostTC->addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -145,7 +296,7 @@ void HIPSPVToolChain::addClangTargetOptions(
         {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
   for (const BitCodeLibraryInfo &BCFile :
-       getDeviceLibs(DriverArgs, DeviceOffloadingKind))
+       getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind))
     CC1Args.append(
         {"-mlink-builtin-bitcode", DriverArgs.MakeArgString(BCFile.Path)});
 }
@@ -156,27 +307,37 @@ Tool *HIPSPVToolChain::buildLinker() const {
 }
 
 void HIPSPVToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
-  HostTC.addClangWarningOptions(CC1Args);
+  if (HostTC)
+    HostTC->addClangWarningOptions(CC1Args);
+  ToolChain::addClangWarningOptions(CC1Args);
 }
 
 ToolChain::CXXStdlibType
 HIPSPVToolChain::GetCXXStdlibType(const ArgList &Args) const {
-  return HostTC.GetCXXStdlibType(Args);
+  if (HostTC)
+    return HostTC->GetCXXStdlibType(Args);
+  return ToolChain::GetCXXStdlibType(Args);
 }
 
 void HIPSPVToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                 ArgStringList &CC1Args) const {
-  HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+  if (HostTC)
+    HostTC->AddClangSystemIncludeArgs(DriverArgs, CC1Args);
+  ToolChain::AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 }
 
 void HIPSPVToolChain::AddClangCXXStdlibIncludeArgs(
     const ArgList &Args, ArgStringList &CC1Args) const {
-  HostTC.AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+  if (HostTC)
+    HostTC->AddClangCXXStdlibIncludeArgs(Args, CC1Args);
+  ToolChain::AddClangCXXStdlibIncludeArgs(Args, CC1Args);
 }
 
 void HIPSPVToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
                                           ArgStringList &CC1Args) const {
-  HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
+  if (HostTC)
+    HostTC->AddIAMCUIncludeArgs(Args, CC1Args);
+  ToolChain::AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
 void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
@@ -197,7 +358,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(
-    const llvm::opt::ArgList &DriverArgs,
+    const llvm::opt::ArgList &DriverArgs, BoundArch BA,
     const Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
@@ -260,7 +421,8 @@ HIPSPVToolChain::getDeviceLibs(
   return BCLibs;
 }
 
-SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
+SanitizerMask HIPSPVToolChain::getSupportedSanitizers(
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // The HIPSPVToolChain only supports sanitizers in the sense that it allows
   // sanitizer arguments on the command line if they are supported by the host
   // toolchain. The HIPSPVToolChain will actually ignore any command line
@@ -270,19 +432,41 @@ SanitizerMask HIPSPVToolChain::getSupportedSanitizers() const {
   // This behavior is necessary because the host and device toolchains
   // invocations often share the command line, so the device toolchain must
   // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
+
+  // FIXME: Be accurate and use DeviceOffloadKind.
+  if (HostTC)
+    return HostTC->getSupportedSanitizers(BA, DeviceOffloadKind);
+  return ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 }
 
 VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,
                                                  const ArgList &Args) const {
-  return HostTC.computeMSVCVersion(D, Args);
+  if (HostTC)
+    return HostTC->computeMSVCVersion(D, Args);
+  return ToolChain::computeMSVCVersion(D, Args);
 }
 
 void HIPSPVToolChain::adjustDebugInfoKind(
     llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
     const llvm::opt::ArgList &Args) const {
-  // Debug info generation is disabled for SPIRV-LLVM-Translator
-  // which currently aborts on the presence of DW_OP_LLVM_convert.
-  // TODO: Enable debug info when the SPIR-V backend arrives.
-  DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
+  // Historically device debug info was force-disabled here because the
+  // SPIRV-LLVM-Translator aborted on DW_OP_LLVM_convert debug expressions. The
+  // translator now lowers that operation, so honor the debug level the user
+  // requested (e.g. via -g) and let it flow into the emitted SPIR-V.
+  // constructLinkAndEmitSpirvCommand() enables the NonSemantic.Shader.DebugInfo
+  // form at translation time so downstream tools (e.g. gdb-oneapi) can consume
+  // it. Leaving DebugInfoKind untouched keeps the default (no -g) behavior,
+  // since the driver defaults it to NoDebugInfo.
+  (void)DebugInfoKind;
+  (void)Args;
+}
+
+LTOKind HIPSPVToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                                    Action::OffloadKind Kind) const {
+  // The old offload driver pipeline does not support LTO output types. Only
+  // default to LTO with the new driver.
+  if (!Args.hasFlag(options::OPT_offload_new_driver,
+                    options::OPT_no_offload_new_driver, true))
+    return LTOK_None;
+  return ToolChain::getLTOMode(Args, Kind);
 }

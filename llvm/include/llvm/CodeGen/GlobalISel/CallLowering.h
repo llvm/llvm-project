@@ -280,7 +280,8 @@ public:
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  const CCValAssign &VA) = 0;
+                                  const CCValAssign &VA,
+                                  ISD::ArgFlagsTy Flags) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
@@ -340,7 +341,8 @@ public:
 
     /// Provides a default implementation for argument handling.
     void assignValueToReg(Register ValVReg, Register PhysReg,
-                          const CCValAssign &VA) override;
+                          const CCValAssign &VA,
+                          ISD::ArgFlagsTy Flags = {}) override;
   };
 
   /// Base class for ValueHandlers used for arguments passed to a function call,
@@ -389,7 +391,7 @@ protected:
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, CallingConv::ID CallConv,
-                         SmallVectorImpl<uint64_t> *Offsets = nullptr) const;
+                         SmallVectorImpl<TypeSize> *Offsets = nullptr) const;
 
   /// Analyze the argument list in \p Args, using \p Assigner to populate \p
   /// CCInfo. This will determine the types and locations to use for passed or

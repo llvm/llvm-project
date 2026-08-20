@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class ChangeValueAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -20,7 +22,7 @@ class ChangeValueAPITestCase(TestBase):
         self.end_line = line_number("main.c", "// Set a breakpoint here at the end")
 
     @expectedFlakeyLinux("llvm.org/pr25652")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
+    @skipIfWasm  # Wasm exposes no stack pointer register
     def test_change_value(self):
         """Exercise the SBValue::SetValueFromCString API."""
         d = {"EXE": self.exe_name}
@@ -72,6 +74,19 @@ class ChangeValueAPITestCase(TestBase):
         actual_value = val_value.GetValueAsSigned(error, 0)
         self.assertSuccess(error, "Got a changed value from val")
         self.assertEqual(actual_value, 12345, "Got the right changed value from val")
+
+        # A normal variable backed by memory reports that it can be modified.
+        self.assertTrue(val_value.CanSetValue(), "val can be modified")
+
+        # A constant expression result has no writable storage, so it cannot be
+        # modified and CanSetValue() is False.
+        const_value = frame0.EvaluateExpression("val + 1")
+        self.assertTrue(const_value.IsValid(), "Got a valid expression result")
+        self.assertFalse(const_value.CanSetValue(), "A constant cannot be modified")
+        error.Clear()
+        result = const_value.SetValueFromCString("0", error)
+        self.assertFalse(result, "SetValueFromCString on a constant failed")
+        self.assertIn("constant", error.GetCString())
 
         # Now check that we can set a structure element:
 

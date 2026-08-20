@@ -49,26 +49,21 @@ bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
-      UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
-      WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
-      PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
-      WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+    : AMDGPUMachineFunctionInfo(F, *STI), Mode(F, *STI),
+      GWSResourcePSV(getTM(STI)), UserSGPRInfo(F, *STI), WorkGroupIDX(false),
+      WorkGroupIDY(false), WorkGroupIDZ(false), WorkGroupInfo(false),
+      LDSKernelId(false), PrivateSegmentWaveByteOffset(false),
+      WorkItemIDX(false), WorkItemIDY(false), WorkItemIDZ(false),
+      ImplicitArgPtr(false), GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
       IsWholeWaveFunction(F.getCallingConv() ==
                           CallingConv::AMDGPU_Gfx_WholeWave) {
   const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
-  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  MaxNumWorkGroups = AMDGPU::getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  // Temporarily check both the attribute and the subtarget feature, until the
-  // latter is completely removed.
   DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
-  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
-    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
-
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
 
@@ -93,23 +88,10 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     MinNumAGPRs = MinNumAGPRAttr;
   }
 
-  if (AMDGPU::isChainCC(CC)) {
-    // Chain functions don't receive an SP from their caller, but are free to
-    // set one up. For now, we can use s32 to match what amdgpu_gfx functions
-    // would use if called, but this can be revisited.
-    // FIXME: Only reserve this if we actually need it.
-    StackPtrOffsetReg = AMDGPU::SGPR32;
-
-    ScratchRSrcReg = AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51;
-
-    ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
-
-    ImplicitArgPtr = false;
-  } else if (!isEntryFunction()) {
+  if (!isEntryFunction()) {
     if (CC != CallingConv::AMDGPU_Gfx &&
         CC != CallingConv::AMDGPU_Gfx_WholeWave)
-      ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+      ArgInfo = AMDGPUFunctionArgInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
@@ -117,13 +99,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (!ST.hasFlatScratchEnabled()) {
       // Non-entry functions have no special inputs for now, other registers
       // required for scratch access.
-      ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
+      ScratchRSrcReg = AMDGPU::isChainCC(CC)
+                           ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
+                           : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
 
       ArgInfo.PrivateSegmentBuffer =
-        ArgDescriptor::createRegister(ScratchRSrcReg);
+          ArgDescriptor::createRegister(ScratchRSrcReg);
     }
 
-    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr"))
+    if (!F.hasFnAttribute("amdgpu-no-implicitarg-ptr") &&
+        !AMDGPU::isChainCC(CC))
       ImplicitArgPtr = true;
   } else {
     ImplicitArgPtr = false;
@@ -386,6 +371,9 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
+
+      // For replacing registers used in the CFI instructions.
+      MF.replaceFrameInstRegister(Reg, NewReg);
     }
 
     // The generic `determineCalleeSaves` might have set the old register if it
@@ -573,18 +561,16 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   // otherwise, it could result in an unexpected side effect and bug, in case of
   // any re-mapping of freed frame indices by later pass(es) like "stack slot
   // coloring".
-  for (auto &R : make_early_inc_range(SGPRSpillsToVirtualVGPRLanes)) {
+  for (auto &R : SGPRSpillsToVirtualVGPRLanes)
     MFI.RemoveStackObject(R.first);
-    SGPRSpillsToVirtualVGPRLanes.erase(R.first);
-  }
+  SGPRSpillsToVirtualVGPRLanes.clear();
 
   // Remove the dead frame indices of CSR SGPRs which are spilled to physical
   // VGPR lanes during SILowerSGPRSpills pass.
   if (!ResetSGPRSpillStackIDs) {
-    for (auto &R : make_early_inc_range(SGPRSpillsToPhysicalVGPRLanes)) {
+    for (auto &R : SGPRSpillsToPhysicalVGPRLanes)
       MFI.RemoveStackObject(R.first);
-      SGPRSpillsToPhysicalVGPRLanes.erase(R.first);
-    }
+    SGPRSpillsToPhysicalVGPRLanes.clear();
   }
   bool HaveSGPRToMemory = false;
 
@@ -748,6 +734,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      HasNoWWMPoolSGPRSpillFallback(MFI.hasNoWWMPoolSGPRSpillFallback()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
       NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
@@ -764,7 +751,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
-      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()) {
+      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
+      MinNumAGPRs(MFI.getMinNumAGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -806,11 +794,17 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  HasNoWWMPoolSGPRSpillFallback = YamlMFI.HasNoWWMPoolSGPRSpillFallback;
   NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
   NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  MinNumAGPRs = YamlMFI.MinNumAGPRs;
+  // This can also be set by the function attribute, MFI has higher precedence
+  // though.
+  if (YamlMFI.DynamicVGPRBlockSize != std::nullopt)
+    DynamicVGPRBlockSize = *YamlMFI.DynamicVGPRBlockSize;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 

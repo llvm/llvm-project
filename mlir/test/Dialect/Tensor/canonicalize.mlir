@@ -162,6 +162,26 @@ func.func @infer_concat_return_type(%arg0: tensor<5x12xi32>, %arg1: tensor<?x12x
 
 // -----
 
+// ConcatOp genuinely merges data from multiple operands (unlike a plain
+// shape-refining cast), so `ConcatOp::inferResultType` / `InferConcatOperandTypes`
+// intentionally do NOT try to propagate an operand's encoding onto the
+// refined types
+// CHECK-LABEL: concat_drops_encoding
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<3x?xi32, "abc">
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xi32, "abc">
+//       CHECK:   %[[CAST0:.+]] = tensor.cast %[[ARG0]] : tensor<3x?xi32, "abc"> to tensor<3x?xi32>
+//       CHECK:   %[[CAST1:.+]] = tensor.cast %[[ARG1]] : tensor<?x?xi32, "abc"> to tensor<3x?xi32>
+//       CHECK:   %[[CONCAT:.+]] = tensor.concat dim(1) %[[CAST0]], %[[CAST1]] : (tensor<3x?xi32>, tensor<3x?xi32>) -> tensor<3x?xi32>
+//       CHECK:   tensor.cast %[[CONCAT]] : tensor<3x?xi32> to tensor<3x?xi32, "abc">
+func.func @concat_drops_encoding(
+    %a: tensor<3x?xi32, "abc">, %b: tensor<?x?xi32, "abc">) -> tensor<3x?xi32, "abc"> {
+  %r = tensor.concat dim(1) %a, %b
+      : (tensor<3x?xi32, "abc">, tensor<?x?xi32, "abc">) -> tensor<3x?xi32, "abc">
+  return %r : tensor<3x?xi32, "abc">
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_extract
 func.func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32, complex<f32>, i32) {
   %const_0 = arith.constant 0 : index
@@ -394,6 +414,34 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
   %complex2 = tensor.extract %c2[] : tensor<complex<f32>>
   %tensor = tensor.from_elements %complex1, %complex2, %complex1 : tensor<3xcomplex<f32>>
   return %tensor : tensor<3xcomplex<f32>>
+}
+
+// -----
+
+// Ensure tensor.from_elements with poison values doesn't crash.
+// CHECK-LABEL: func @from_elements_with_poison
+func.func @from_elements_with_poison() -> tensor<1xindex> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[POISON]] : tensor<1xindex>
+  // CHECK: return %[[TENSOR]]
+  %0 = ub.poison : index
+  %1 = tensor.from_elements %0 : tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
+// Ensure tensor.from_elements with a vector element type doesn't crash
+// when the elements fold to constants (DenseElementsAttr does not support
+// non-scalar element types via the Attribute overload).
+// CHECK-LABEL: func @from_elements_with_vector_element_type
+func.func @from_elements_with_vector_element_type() -> tensor<1xvector<1xi1>> {
+  // CHECK: %[[CST:.*]] = arith.constant dense<true> : vector<1xi1>
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[CST]] : tensor<1xvector<1xi1>>
+  // CHECK: return %[[TENSOR]]
+  %0 = vector.constant_mask [1] : vector<1xi1>
+  %1 = tensor.from_elements %0 : tensor<1xvector<1xi1>>
+  return %1 : tensor<1xvector<1xi1>>
 }
 
 // -----
@@ -909,6 +957,80 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
 
 // -----
 
+// Verify that the constant-argument folder for insert_slice preserves the
+// source's encoding on the inserted cast, rather than silently picking up the
+// destination's encoding (which is `none` here) via the shape template used by
+// ExtractSliceOp::inferCanonicalRankReducedResultType.
+// CHECK-LABEL: func @preserve_source_encoding_on_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.insert_slice %[[C]] into %[[DST]]
+func.func @preserve_source_encoding_on_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %ivC = arith.constant 0 : index
+  %ivH = arith.constant 0 : index
+  %r = tensor.insert_slice %src into %dst[0, %ivC, %ivH, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+      : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
+// Same invariant for the parallel_insert_slice variant.
+// CHECK-LABEL: func @preserve_source_encoding_on_parallel_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//   CHECK-NOT:   tensor.cast %{{.*}} : tensor<{{.*}}, "abc"> to tensor<{{[0-9x?]+}}xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, "abc"> to tensor<1x48x16x32xf16, "abc">
+//       CHECK:   tensor.parallel_insert_slice %[[C]] into
+func.func @preserve_source_encoding_on_parallel_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, "abc">,
+    %dst: tensor<1x1280x32x32xf16>,
+    %num_threads: index) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst) -> (tensor<1x1280x32x32xf16>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %src into %o[0, 0, 0, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+          : tensor<1x?x?x32xf16, "abc"> into tensor<1x1280x32x32xf16>
+    }
+  }
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: insert_slice only refines the source shape
+// (dyn -> static), the source rank is unchanged. The sparse encoding's rank
+// invariant still holds on the refined shape, so `propagateEncoding` accepts
+// it and the inserted cast carries the sparse encoding through the folded op.
+#sparse_dense4_is = #sparse_tensor.encoding<{
+    map = (d0, d1, d2, d3) -> (d0 : dense, d1 : dense, d2 : dense, d3 : dense)
+}>
+// CHECK-LABEL: func @preserve_source_sparse_encoding_on_insert_slice_folding
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, #{{[a-z_0-9]+}}>
+//  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
+//       CHECK:   %[[C:.+]] = tensor.cast %[[SRC]] : tensor<1x?x?x32xf16, #{{[a-z_0-9]+}}> to tensor<1x48x16x32xf16, #{{[a-z_0-9]+}}>
+//       CHECK:   tensor.insert_slice %[[C]] into %[[DST]]
+func.func @preserve_source_sparse_encoding_on_insert_slice_folding(
+    %src: tensor<1x?x?x32xf16, #sparse_dense4_is>,
+    %dst: tensor<1x1280x32x32xf16>) -> tensor<1x1280x32x32xf16> {
+  %c16 = arith.constant 16 : index
+  %sz1 = arith.constant 48 : index
+  %ivC = arith.constant 0 : index
+  %ivH = arith.constant 0 : index
+  %r = tensor.insert_slice %src into %dst[0, %ivC, %ivH, 0] [1, %sz1, %c16, 32] [1, 1, 1, 1]
+      : tensor<1x?x?x32xf16, #sparse_dense4_is> into tensor<1x1280x32x32xf16>
+  return %r : tensor<1x1280x32x32xf16>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_tensor_cast_on_insert_slice_src(
 // CHECK-SAME:      %[[arg0:.*]]: tensor<?x5x?xf32>, %[[arg1:.*]]: tensor<?x?x?xf32>
 //      CHECK:    %[[cast:.*]] = tensor.cast %[[arg0]] : tensor<?x5x?xf32> to tensor<64x5x64xf32>
@@ -1059,6 +1181,23 @@ func.func @collapse_of_cast(%t: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
   %0 = tensor.cast %t : tensor<8x12x32xf32> to tensor<?x?x?xf32>
   %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>
   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<?x32xf32>
+  return %2 : tensor<?x32xf32>
+}
+
+// -----
+
+// CollapseShapeOp::inferCollapsedType changes the tensor rank, and (like
+// concat) we can't statically verify an arbitrary encoding still holds on
+// the collapsed shape when dynamic dims are involved, so the encoding is
+// dropped 
+// CHECK-LABEL: func.func @collapse_of_cast_drops_encoding(
+//  CHECK-SAME:     %[[IN:.*]]: tensor<8x12x32xf32, "abc">
+//       CHECK:   %[[COLLAPSE:.*]] = tensor.collapse_shape %[[IN]] {{\[}}[0, 1], [2]] : tensor<8x12x32xf32, "abc"> into tensor<96x32xf32>
+//       CHECK:   tensor.cast %[[COLLAPSE]] : tensor<96x32xf32> to tensor<?x32xf32>
+func.func @collapse_of_cast_drops_encoding(%t: tensor<8x12x32xf32, "abc">) -> tensor<?x32xf32> {
+  %0 = tensor.cast %t : tensor<8x12x32xf32, "abc"> to tensor<?x?x?xf32, "abc">
+  %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32, "abc"> into tensor<?x?xf32, "abc">
+  %2 = tensor.cast %1 : tensor<?x?xf32, "abc"> to tensor<?x32xf32>
   return %2 : tensor<?x32xf32>
 }
 
@@ -1351,7 +1490,7 @@ func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %
 
 func.func @no_compose_collapse_of_expand_dynamic(%arg0 : tensor<?x8x128x?xf16>, %arg1: index) -> tensor<?x128x?xf16> {
   %collapse = tensor.collapse_shape %arg0 [[0, 1, 2, 3]] : tensor<?x8x128x?xf16> into tensor<?xf16>
-  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 8, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
+  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 128, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
   return %expanded_19 : tensor<?x128x?xf16>
 }
 // CHECK-LABEL: func @no_compose_collapse_of_expand_dynamic
@@ -1659,6 +1798,22 @@ func.func @reshape_splat_constant_float64() -> tensor<2x4x2xf64> {
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/177845:
+// tensor.expand_shape of a constant to a dynamic shape must not crash.
+// FoldReshapeWithConstant must not call DenseElementsAttr::getFromRawBuffer
+// when the result type is dynamic (getFromRawBuffer requires static shape).
+
+// CHECK-LABEL: @expand_shape_splat_constant_dynamic_result
+//       CHECK:   arith.constant
+//       CHECK:   tensor.expand_shape
+func.func @expand_shape_splat_constant_dynamic_result(%n: index) -> tensor<?xi32> {
+  %cst = arith.constant dense<1> : tensor<i32>
+  %result = tensor.expand_shape %cst [] output_shape [%n] : tensor<i32> into tensor<?xi32>
+  return %result : tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_rank
 func.func @fold_rank() -> (index) {
   %const_0 = arith.constant dense<[[[1, -2, 1, 36]], [[0, 2, -1, 64]]]>
@@ -1725,6 +1880,52 @@ func.func @pad_nofold_same_static_shape(%arg0: tensor<5x6xf32>, %a: index)
           tensor.yield %cst : f32
   } : tensor<5x6xf32> to tensor<5x6xf32>
   return %0 : tensor<5x6xf32>
+}
+
+// -----
+
+// FoldSourceTensorCast (via PadOp::inferResultType) must preserve the source
+// encoding onto the refined pad result and the inserted result cast.
+// CHECK-LABEL:   func @pad_after_cast_preserves_encoding(
+//  CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32, "abc">
+//       CHECK:     %[[PADDED:.*]] = tensor.pad %[[INPUT]]
+//       CHECK:       : tensor<?x64x?x?xf32, "abc"> to tensor<?x64x?x?xf32, "abc">
+//       CHECK:     %[[CAST:.*]] = tensor.cast %[[PADDED]] : tensor<?x64x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+//       CHECK:     return %[[CAST]]
+func.func @pad_after_cast_preserves_encoding(
+    %arg0: tensor<?x64x?x?xf32, "abc">) -> tensor<?x?x?x?xf32, "abc"> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %dynamic = tensor.cast %arg0
+      : tensor<?x64x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+  %padded = tensor.pad %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%a: index, %b: index, %c: index, %d: index):
+      tensor.yield %cst: f32
+  } : tensor<?x?x?x?xf32, "abc"> to tensor<?x?x?x?xf32, "abc">
+  return %padded: tensor<?x?x?x?xf32, "abc">
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: pad preserves rank, so the sparse encoding
+// stays valid on the refined shape and PadOp::inferResultType keeps it.
+#sparse_dense4b = #sparse_tensor.encoding<{
+    map = (d0, d1, d2, d3) -> (d0 : dense, d1 : dense, d2 : dense, d3 : dense)
+}>
+// CHECK-LABEL:   func @pad_after_cast_preserves_sparse_encoding(
+//  CHECK-SAME:      %[[INPUT:.*]]: tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}>
+//       CHECK:     %[[PADDED:.*]] = tensor.pad %[[INPUT]]
+//       CHECK:       : tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}> to tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}>
+//       CHECK:     tensor.cast %[[PADDED]] : tensor<?x64x?x?xf32, #{{[a-z_0-9]+}}> to tensor<?x?x?x?xf32, #{{[a-z_0-9]+}}>
+func.func @pad_after_cast_preserves_sparse_encoding(
+    %arg0: tensor<?x64x?x?xf32, #sparse_dense4b>) -> tensor<?x?x?x?xf32, #sparse_dense4b> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %dynamic = tensor.cast %arg0
+      : tensor<?x64x?x?xf32, #sparse_dense4b> to tensor<?x?x?x?xf32, #sparse_dense4b>
+  %padded = tensor.pad %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1] {
+    ^bb0(%a: index, %b: index, %c: index, %d: index):
+      tensor.yield %cst: f32
+  } : tensor<?x?x?x?xf32, #sparse_dense4b> to tensor<?x?x?x?xf32, #sparse_dense4b>
+  return %padded: tensor<?x?x?x?xf32, #sparse_dense4b>
 }
 
 // -----
@@ -1873,6 +2074,26 @@ func.func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> te
     } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
 
   return %0 : tensor<2x3x4xf32>
+}
+
+// -----
+
+// FoldStaticPadding must preserve the pad's result encoding on the refined
+// (more-static) pad and the inserted result cast.
+// CHECK-LABEL: func @fold_static_padding_preserves_encoding(
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<8x?xf32, "abc">
+//       CHECK:   %[[PADDED:.*]] = tensor.pad %[[SRC]] low[1, 2] high[1, 2]
+//       CHECK:     : tensor<8x?xf32, "abc"> to tensor<10x?xf32, "abc">
+//       CHECK:   tensor.cast %[[PADDED]] : tensor<10x?xf32, "abc"> to tensor<?x?xf32, "abc">
+func.func @fold_static_padding_preserves_encoding(
+    %arg0: tensor<8x?xf32, "abc">, %pv: f32) -> tensor<?x?xf32, "abc"> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %r = tensor.pad %arg0 low[%c1, %c2] high[%c1, %c2] {
+    ^bb0(%a: index, %b: index):
+      tensor.yield %pv: f32
+  } : tensor<8x?xf32, "abc"> to tensor<?x?xf32, "abc">
+  return %r : tensor<?x?xf32, "abc">
 }
 
 // -----
@@ -2235,6 +2456,19 @@ func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
 
 // -----
 
+func.func @fold_empty_tensor_with_cast_encoding(%arg0 : index)
+    -> tensor<1x12xf32, "foo"> {
+  %0 = tensor.empty(%arg0) : tensor<?x12xf32, "foo">
+  %1 = tensor.cast %0 : tensor<?x12xf32, "foo"> to tensor<1x12xf32, "foo">
+  return %1 : tensor<1x12xf32, "foo">
+}
+// CHECK-LABEL: func @fold_empty_tensor_with_cast_encoding
+//       CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32, "foo">
+//   CHECK-NOT:   tensor.cast
+//       CHECK:   return %[[T0]] : tensor<1x12xf32, "foo">
+
+// -----
+
 func.func private @some_use(%i : index, %j : index)
 
 // CHECK-LABEL: func @empty_tensor_canonicalize
@@ -2584,8 +2818,48 @@ func.func @partial_sink_expand_of_cast(%arg0 : tensor<10x10xf32>, %arg1 : index,
 // CHECK-LABEL:  func.func @partial_sink_expand_of_cast
 //       CHECK:   %[[CAST:.+]] = tensor.cast
 //  CHECK-SAME:     tensor<10x10xf32> to tensor<?x10xf32>
-//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]] 
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape %{{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     output_shape [%{{.*}}, %{{.*}}, 10]
 //       CHECK:   %[[RES:.+]] = tensor.cast %[[EXPAND]]
 //  CHECK-SAME:     tensor<?x?x10xf32> to tensor<?x?x?xf32>
 //       CHECK:   return %[[RES]]
+
+// -----
+
+// ConvertToStaticExpandShape must carry the source's encoding onto the refined
+// cast-target and the (source-side) encoding of the new ExpandShapeOp result.
+// CHECK-LABEL:  func.func @sink_expand_of_cast_preserves_encoding
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
+//  CHECK-SAME:     tensor<64xf32, "abc"> into tensor<8x8xf32, "abc">
+//       CHECK:   tensor.cast %[[EXPAND]] : tensor<8x8xf32, "abc"> to tensor<?x?xf32, "abc">
+func.func @sink_expand_of_cast_preserves_encoding(%t: tensor<64xf32, "abc">) -> tensor<?x?xf32, "abc"> {
+  %c = tensor.cast %t : tensor<64xf32, "abc"> to tensor<?xf32, "abc">
+  %c8 = arith.constant 8 : index
+  %c8b = arith.constant 8 : index
+  %e = tensor.expand_shape %c [[0, 1]] output_shape [%c8, %c8b]
+      : tensor<?xf32, "abc"> into tensor<?x?xf32, "abc">
+  return %e : tensor<?x?xf32, "abc">
+}
+
+// -----
+
+// `VerifiableTensorEncoding` case: expand_shape refined shapes keep the src's
+// and result's ranks respectively, so both sparse encodings pass their
+// (rank-based) `verifyEncoding` and are preserved.
+#sparse_v = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+#sparse_m = #sparse_tensor.encoding<{
+    map = (d0, d1) -> (d0 : compressed, d1 : compressed)
+}>
+// CHECK-LABEL:  func.func @sink_expand_of_cast_preserves_sparse_encoding
+//       CHECK:   %[[EXPAND:.+]] = tensor.expand_shape
+//  CHECK-SAME:     tensor<64xf32, #{{[a-z_0-9]+}}> into tensor<8x8xf32, #{{[a-z_0-9]+}}>
+//       CHECK:   tensor.cast %[[EXPAND]] : tensor<8x8xf32, #{{[a-z_0-9]+}}> to tensor<?x?xf32, #{{[a-z_0-9]+}}>
+func.func @sink_expand_of_cast_preserves_sparse_encoding(
+    %t: tensor<64xf32, #sparse_v>) -> tensor<?x?xf32, #sparse_m> {
+  %c = tensor.cast %t : tensor<64xf32, #sparse_v> to tensor<?xf32, #sparse_v>
+  %c8a = arith.constant 8 : index
+  %c8b = arith.constant 8 : index
+  %e = tensor.expand_shape %c [[0, 1]] output_shape [%c8a, %c8b]
+      : tensor<?xf32, #sparse_v> into tensor<?x?xf32, #sparse_m>
+  return %e : tensor<?x?xf32, #sparse_m>
+}

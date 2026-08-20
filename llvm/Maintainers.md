@@ -39,9 +39,7 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 #### HashRecognize
 
 Ramkumar Ramachandra \
-r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse) \
-Piotr Fusik \
-p.fusik@samsung.com (email), [pfusik](https://github.com/pfusik) (GitHub)
+r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse)
 
 #### InferAddressSpaces
 
@@ -79,6 +77,11 @@ dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
 Arthur Eubanks \
 aeubanks@google.com (email), [aeubanks](https://github.com/aeubanks) (GitHub)
 
+#### LoadStoreVectorizer 
+
+Drew Kersnar \
+dkersnar@nvidia.com (email), [dakersnar](https://github.com/dakersnar) (GitHub)
+
 #### LoopStrengthReduce
 
 Quentin Colombet \
@@ -91,15 +94,34 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub) \
 David Sherwood \
 david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHub)
 
+#### LoopUnroll 
+
+Justin Fargnoli \
+justinfargnoli@gmail.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
+
 #### MemorySSA
 
 Alina Sbirlea \
 asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 
+#### DependenceAnalysis
+
+Ryotaro Kasuga \
+kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub) \
+Ehsan Amiri \
+ehsan.amiri@huawei.com, [amehsan](https://github.com/amehsan) (GitHub)
+
+#### Delinearization, ScalarEvolutionDivision
+
+Ryotaro Kasuga \
+kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
+
 #### LoopInterchange
 
 Madhur Amilkanthwar \
-madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub)
+madhura@nvidia.com (email), [madhur13490](https://github.com/madhur13490) (GitHub) \
+Ryotaro Kasuga \
+kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
 
 #### SandboxVectorizer
 
@@ -245,8 +267,12 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 #### Hexagon backend
 
-Sundeep Kushwaha \
-sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+Brian Cain \
+brian.cain@oss.qualcomm.com (email), [androm3da](https://github.com/androm3da) (GitHub) \
+Ikhlas Ajbar \
+iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar) \
+Ankit Aggarwal \
+aankit@qti.qualcomm.com (email), [aankit-ca](https://github.com/aankit-ca)
 
 #### Lanai backend
 
@@ -497,9 +523,9 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [BOLT maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.md)
 
-[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
+[Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.md)
 
-[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.rst)
+[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.md)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
@@ -507,7 +533,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
-[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.rst)
+[Libc maintainers](https://github.com/llvm/llvm-project/blob/main/libc/Maintainers.md)
 
 [libclc maintainers](https://github.com/llvm/llvm-project/blob/main/libclc/Maintainers.md)
 
@@ -557,7 +583,8 @@ Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigchees
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
 Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
-Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend \
+Sundeep Kushwaha (sundeepk@qti.qualcomm.com, [SundeepKushwaha](https://github.com/SundeepKushwaha)) -- Hexagon backend
 
 ### Former maintainers of removed components
 

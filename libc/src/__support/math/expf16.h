@@ -13,6 +13,7 @@
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "expf16_utils.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -25,13 +26,11 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-#include "expf16_utils.h"
-
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 expf16(float16 x) {
+LIBC_INLINE constexpr float16 expf16(float16 x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr fputil::ExceptValues<float16, 2> EXPF16_EXCEPTS_LO = {{
       // (input, RZ output, RU offset, RD offset, RN offset)
@@ -76,6 +75,11 @@ LIBC_INLINE static constexpr float16 expf16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW);
+      return FPBits::inf().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_UPWARD:
@@ -85,6 +89,7 @@ LIBC_INLINE static constexpr float16 expf16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When x <= -18.
@@ -96,12 +101,16 @@ LIBC_INLINE static constexpr float16 expf16(float16 x) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return FPBits::zero().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
         return FPBits::min_subnormal().get_val();
       default:
         return FPBits::zero().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When 0 < |x| <= 2^(-5).

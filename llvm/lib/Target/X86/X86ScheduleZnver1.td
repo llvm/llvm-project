@@ -201,10 +201,10 @@ defm : ZnWriteResPair<WriteShiftCL,  [ZnALU], 1>;
 defm : ZnWriteResPair<WriteRotate,   [ZnALU], 1>;
 defm : ZnWriteResPair<WriteRotateCL, [ZnALU], 1>;
 
-defm : X86WriteRes<WriteSHDrri, [ZnALU], 1, [1], 1>;
-defm : X86WriteResUnsupported<WriteSHDrrcl>;
-defm : X86WriteResUnsupported<WriteSHDmri>;
-defm : X86WriteResUnsupported<WriteSHDmrcl>;
+defm : X86WriteRes<WriteSHDrri, [ZnALU], 3, [12], 6>;
+defm : X86WriteRes<WriteSHDrrcl, [ZnALU], 3, [12], 7>; 
+defm : X86WriteRes<WriteSHDmri, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 12], 8>;
+defm : X86WriteRes<WriteSHDmrcl, [ZnAGU, ZnALU], !add(Znver1Model.LoadLatency, 3), [1, 12], 8>;
 
 defm : ZnWriteResPair<WriteJump,  [ZnALU], 1>;
 defm : ZnWriteResFpuPair<WriteCRC32, [ZnFPU0], 3>;
@@ -267,10 +267,10 @@ defm : X86WriteRes<WriteFStoreY,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNT,      [ZnAGU,ZnFPU2], 8, [1,1], 1>;
 defm : X86WriteRes<WriteFStoreNTX,     [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteFStoreNTY,     [ZnAGU], 1, [1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteFMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteFMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteFMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteFMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,24], 42>;
+defm : X86WriteRes<WriteFMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteFMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,12], 18>;
 
 defm : X86WriteRes<WriteFMove,         [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteFMoveX,        [ZnFPU], 1, [1], 1>;
@@ -386,10 +386,10 @@ defm : X86WriteRes<WriteVecStoreX,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreY,       [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNT,      [ZnAGU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecStoreNTY,     [ZnAGU], 1, [1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
-defm : X86WriteRes<WriteVecMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,1], 1>;
-defm : X86WriteRes<WriteVecMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,2], 2>;
+defm : X86WriteRes<WriteVecMaskedStore32,  [ZnAGU,ZnFPU01], 4, [1,12], 19>;
+defm : X86WriteRes<WriteVecMaskedStore32Y, [ZnAGU,ZnFPU01], 5, [1,24], 42>;
+defm : X86WriteRes<WriteVecMaskedStore64,  [ZnAGU,ZnFPU01], 4, [1,8], 10>;
+defm : X86WriteRes<WriteVecMaskedStore64Y, [ZnAGU,ZnFPU01], 5, [1,12], 18>;
 defm : X86WriteRes<WriteVecMove,         [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveX,        [ZnFPU], 1, [1], 1>;
 defm : X86WriteRes<WriteVecMoveY,        [ZnFPU], 2, [1], 2>;
@@ -718,16 +718,6 @@ def : InstRW<[WriteMicrocoded], (instregex "RC(R|L)(8|16|32|64)m(1|i|CL)")>;
 // m,i.
 def : InstRW<[WriteShiftLd], (instregex "S(A|H)(R|L)(8|16|32|64)m(i|1)")>;
 
-// SHRD SHLD.
-// m,r
-def : InstRW<[WriteShiftLd], (instregex "SH(R|L)D(16|32|64)mri8")>;
-
-// r,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)rrCL")>;
-
-// m,r,cl.
-def : InstRW<[WriteMicrocoded], (instregex "SH(R|L)D(16|32|64)mrCL")>;
-
 //-- Misc instructions --//
 // CMPXCHG8B.
 def ZnWriteCMPXCHG8B : SchedWriteRes<[ZnAGU, ZnALU]> {
@@ -930,8 +920,6 @@ def : InstRW<[WriteMicrocoded], (instregex "(V?)MASKMOVDQU(64)?")>;
 // ymm
 def : InstRW<[WriteMicrocoded],
                                (instregex "VPMASKMOVD(Y?)rm")>;
-// m, v,v.
-def : InstRW<[WriteMicrocoded], (instregex "VPMASKMOV(D|Q)(Y?)mr")>;
 
 // VPBROADCAST B/W.
 // x, m8/16.

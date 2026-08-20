@@ -11,10 +11,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
@@ -178,33 +181,6 @@ static StringRef getSamplerFeedbackTypeName(SamplerFeedbackType SFT) {
   llvm_unreachable("Unhandled SamplerFeedbackType");
 }
 
-static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
-  // TODO: Handle unorm, snorm, and packed.
-  Ty = Ty->getScalarType();
-
-  if (Ty->isIntegerTy()) {
-    switch (Ty->getIntegerBitWidth()) {
-    case 16:
-      return IsSigned ? ElementType::I16 : ElementType::U16;
-    case 32:
-      return IsSigned ? ElementType::I32 : ElementType::U32;
-    case 64:
-      return IsSigned ? ElementType::I64 : ElementType::U64;
-    case 1:
-    default:
-      return ElementType::Invalid;
-    }
-  } else if (Ty->isFloatTy()) {
-    return ElementType::F32;
-  } else if (Ty->isDoubleTy()) {
-    return ElementType::F64;
-  } else if (Ty->isHalfTy()) {
-    return ElementType::F16;
-  }
-
-  return ElementType::Invalid;
-}
-
 static dxil::ElementType toDXILStorageType(dxil::ElementType ET) {
   if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64 ||
       ET == dxil::ElementType::I64 || ET == dxil::ElementType::SNormF64 ||
@@ -269,7 +245,7 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   }
 
   StringRef ElementName;
-  ElementType ET = toDXILElementType(ContainedType, IsSigned);
+  ElementType ET = hlsl::getDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
     ElementName = getElementTypeNameForTemplate(ET);
   } else {
@@ -575,7 +551,7 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
   assert(isTyped() && "Not typed");
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
-  dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+  dxil::ElementType ET = hlsl::getDXILElementType(ElTy, IsSigned);
   dxil::ElementType DXILStorageTy = toDXILStorageType(ET);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
@@ -686,13 +662,13 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
         Constant::getIntegerValue(I1Ty, APInt(1, V)));
   };
 
-  MDVals.push_back(getIntMD(Binding.RecordID));
+  MDVals.push_back(getIntMD(Binding.BindingID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
   MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
-  MDVals.push_back(getIntMD(Binding.Size));
+  MDVals.push_back(getIntMD(Binding.Size == 0 ? ~0u : Binding.Size));
 
   if (RTI.isCBuffer()) {
     MDVals.push_back(getIntMD(RTI.getCBufferSize(DL)));
@@ -798,12 +774,13 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
   }
 
   OS << "  Binding:\n"
-     << "    Record ID: " << Binding.RecordID << "\n"
+     << "    Binding ID: " << Binding.BindingID << "\n"
      << "    Space: " << Binding.Space << "\n"
      << "    Lower Bound: " << Binding.LowerBound << "\n"
      << "    Size: " << Binding.Size << "\n";
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
+  OS << "  Has Atomic64 Use: " << HasAtomic64Use << "\n";
   OS << "  Counter Direction: ";
 
   switch (CounterDirection) {
@@ -834,10 +811,6 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 }
 
 //===----------------------------------------------------------------------===//
-static bool isUpdateCounterIntrinsic(Function &F) {
-  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
-}
-
 StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
   Value *Op = nullptr;
   switch (CI->getCalledFunction()->getIntrinsicID()) {
@@ -890,8 +863,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
           StringRef Name = getResourceNameFromBindingCall(CI);
 
           ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space,    LowerBound,
-                           Size,           HandleTy, Name};
+              ResourceInfo{Space, LowerBound, Size, HandleTy, Name};
 
           CIToInfos.emplace_back(CI, RI, RTI);
         }
@@ -918,7 +890,7 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   }
 
   unsigned Size = Infos.size();
-  // In DXC, Record ID is unique per resource type. Match that.
+  // In DXC, Binding ID is unique per resource type. Match that.
   FirstUAV = FirstCBuffer = FirstSampler = Size;
   uint32_t NextID = 0;
   for (unsigned I = 0, E = Size; I != E; ++I) {
@@ -945,48 +917,76 @@ void DXILResourceMap::populateResourceInfos(Module &M,
   }
 }
 
-void DXILResourceMap::populateCounterDirections(Module &M) {
+static Value *findResourceHandleFromPointer(Value *Ptr) {
+  Ptr = Ptr->stripPointerCasts();
+  while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand()->stripPointerCasts();
+  auto *II = dyn_cast<IntrinsicInst>(Ptr);
+  if (II && II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
+    return II->getArgOperand(0);
+  return nullptr;
+}
+
+void DXILResourceMap::populateAtomicUses(Instruction &I) {
+  auto MarkFromHandle = [this](Value *Handle) {
+    if (!Handle)
+      return;
+    for (ResourceInfo *RI : findByUse(Handle))
+      RI->HasAtomic64Use = true;
+  };
+
+  // Handles both `atomicrmw`/`cmpxchg` (before `DXILResourceAccess`) and the
+  // lowered `llvm.dx.resource.atomic.binop` intrinsic (after it).
+  if (auto *AI = dyn_cast<AtomicRMWInst>(&I)) {
+    if (AI->getValOperand()->getType()->isIntegerTy(64))
+      MarkFromHandle(findResourceHandleFromPointer(AI->getPointerOperand()));
+    return;
+  }
+  if (auto *CX = dyn_cast<AtomicCmpXchgInst>(&I)) {
+    if (CX->getNewValOperand()->getType()->isIntegerTy(64))
+      MarkFromHandle(findResourceHandleFromPointer(CX->getPointerOperand()));
+    return;
+  }
+  if (auto *CI = dyn_cast<CallInst>(&I)) {
+    if (CI->getIntrinsicID() == Intrinsic::dx_resource_atomic_binop &&
+        CI->getType()->isIntegerTy(64))
+      MarkFromHandle(CI->getArgOperand(0));
+  }
+}
+
+void DXILResourceMap::populateRecordCounterDirection(Instruction &I) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI || CI->getIntrinsicID() != Intrinsic::dx_resource_updatecounter)
+    return;
+  ConstantInt *CountValue = cast<ConstantInt>(CI->getArgOperand(1));
+  int64_t CountLiteral = CountValue->getSExtValue();
+  if (CountLiteral == 0)
+    return;
+  ResourceCounterDirection Direction =
+      CountLiteral > 0 ? ResourceCounterDirection::Increment
+                       : ResourceCounterDirection::Decrement;
+  for (ResourceInfo *RBInfo : findByUse(CI->getArgOperand(0))) {
+    if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
+      RBInfo->CounterDirection = Direction;
+    else if (RBInfo->CounterDirection != Direction) {
+      RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+      HasInvalidDirection = true;
+    }
+  }
+}
+
+void DXILResourceMap::populateFromInstructions(Module &M) {
   for (Function &F : M.functions()) {
-    if (!isUpdateCounterIntrinsic(F))
-      continue;
-
-    LLVM_DEBUG(dbgs() << "Update Counter Function: " << F.getName() << "\n");
-
-    for (const User *U : F.users()) {
-      const CallInst *CI = dyn_cast<CallInst>(U);
-      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
-
-      // Determine if the use is an increment or decrement
-      Value *CountArg = CI->getArgOperand(1);
-      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
-      int64_t CountLiteral = CountValue->getSExtValue();
-
-      // 0 is an unknown direction and shouldn't result in an insert
-      if (CountLiteral == 0)
-        continue;
-
-      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
-      if (CountLiteral > 0)
-        Direction = ResourceCounterDirection::Increment;
-
-      // Collect all potential creation points for the handle arg
-      Value *HandleArg = CI->getArgOperand(0);
-      SmallVector<ResourceInfo *> RBInfos = findByUse(HandleArg);
-      for (ResourceInfo *RBInfo : RBInfos) {
-        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
-          RBInfo->CounterDirection = Direction;
-        else if (RBInfo->CounterDirection != Direction) {
-          RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
-          HasInvalidDirection = true;
-        }
-      }
+    for (Instruction &I : instructions(F)) {
+      populateAtomicUses(I);
+      populateRecordCounterDirection(I);
     }
   }
 }
 
 void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   populateResourceInfos(M, DRTM);
-  populateCounterDirections(M);
+  populateFromInstructions(M);
 }
 
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
@@ -1067,15 +1067,16 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
           uint32_t LowerBound =
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-          int32_t Size =
+          uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
           Value *Name = CI->getArgOperand(4);
 
-          // negative size means unbounded resource array;
+          // 0 size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
-          assert((Size < 0 || (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
+          assert((Size == 0 || (uint64_t)LowerBound + (uint64_t)Size - 1ULL <=
+                                   (uint64_t)UINT32_MAX) &&
                  "upper bound register overflow");
-          uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+          uint32_t UpperBound = Size == 0 ? UINT32_MAX : LowerBound + Size - 1;
           Builder.trackBinding(RTI.getResourceClass(), Space, LowerBound,
                                UpperBound, Name);
         }

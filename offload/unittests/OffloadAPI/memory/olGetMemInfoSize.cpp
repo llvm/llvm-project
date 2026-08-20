@@ -8,7 +8,27 @@
 
 #include <OffloadAPI.h>
 
-#include "../common/Fixtures.hpp"
+#include "../common/Properties.hpp"
+
+struct olGetMemInfoSizeTypesTest : olPropertyTest<ol_mem_info_t> {
+  void *OffsetPtr() { return &reinterpret_cast<char *>(Ptr)[123]; }
+
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(olPropertyTest<ol_mem_info_t>::SetUp());
+    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 0x1024, &Ptr));
+  }
+
+  void TearDown() override {
+    ASSERT_SUCCESS(olMemFree(Ptr));
+    RETURN_ON_FATAL_FAILURE(olPropertyTest<ol_mem_info_t>::TearDown());
+  }
+
+  void *Ptr;
+};
+
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olGetMemInfoSizeTypesTest, MemInfoSizeProperties,
+    defaultPropertyTestPrinter<ol_mem_info_t>);
 
 struct olGetMemInfoSizeTest : OffloadDeviceTest {
   void *OffsetPtr() { return &reinterpret_cast<char *>(Ptr)[123]; }
@@ -25,30 +45,13 @@ struct olGetMemInfoSizeTest : OffloadDeviceTest {
 
   void *Ptr;
 };
+
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetMemInfoSizeTest);
 
-TEST_P(olGetMemInfoSizeTest, SuccessDevice) {
+TEST_P(olGetMemInfoSizeTypesTest, Success) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, OL_MEM_INFO_DEVICE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_device_handle_t));
-}
-
-TEST_P(olGetMemInfoSizeTest, SuccessBase) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, OL_MEM_INFO_BASE, &Size));
-  ASSERT_EQ(Size, sizeof(void *));
-}
-
-TEST_P(olGetMemInfoSizeTest, SuccessSize) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, OL_MEM_INFO_SIZE, &Size));
-  ASSERT_EQ(Size, sizeof(size_t));
-}
-
-TEST_P(olGetMemInfoSizeTest, SuccessType) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, OL_MEM_INFO_TYPE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_alloc_type_t));
+  ASSERT_SUCCESS(olGetMemInfoSize(Ptr, Property, &Size));
+  ASSERT_EQ(Size, PropertySize);
 }
 
 TEST_P(olGetMemInfoSizeTest, InvalidSymbolInfoEnumeration) {

@@ -232,6 +232,9 @@ def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
 def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
 
+def : Pat<(loongarch_brcond (GRLenVT 0), bb:$imm21), (BNEZ R0, bb:$imm21)>;
+def : Pat<(loongarch_brcond (GRLenVT 1), bb:$imm21), (BEQZ R0, bb:$imm21)>;
+
 multiclass PatFPBrcond<CondCode cc, LAInst CmpInst, RegisterClass RegTy> {
   def : Pat<(loongarch_brcond (NotBoolXor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc))),
                               bb:$imm21),

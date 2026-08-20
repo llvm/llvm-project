@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -finclude-default-header -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -finclude-default-header -fexperimental-new-constant-interpreter -verify %s
 
 struct Undefined; // expected-note {{forward declaration of 'Undefined'}}
 _Static_assert(!__builtin_hlsl_is_intangible(Undefined), ""); // expected-error{{incomplete type 'Undefined' used in type trait expression}}
