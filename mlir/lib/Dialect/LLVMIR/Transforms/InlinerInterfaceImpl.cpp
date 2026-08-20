@@ -166,8 +166,11 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   // attribute to make sure that new instances are always created by the
   // uniquer.
   walker.addWalk([&](LLVM::AliasScopeDomainAttr domainAttr) {
+    // The clones of a duplicated access have to stay noalias with each
+    // other, so the clone keeps whether the scopes are disjoint.
     mapping[domainAttr] = LLVM::AliasScopeDomainAttr::get(
-        domainAttr.getContext(), domainAttr.getDescription());
+        domainAttr.getContext(), domainAttr.getDescription(),
+        domainAttr.getDisjointScopes());
   });
 
   walker.addWalk([&](LLVM::AliasScopeAttr scopeAttr) {
