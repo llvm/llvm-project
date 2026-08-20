@@ -468,7 +468,7 @@ bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
 
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
-  addPass(createRISCVZacasABIFixPass());
+  addPass(createRISCVZacasABIFixLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableLoopDataPrefetch)
@@ -517,7 +517,7 @@ void RISCVPassConfig::addCodeGenPrepare() {
 }
 
 bool RISCVPassConfig::addInstSelector() {
-  addPass(createRISCVISelDag(getRISCVTargetMachine(), getOptLevel()));
+  addPass(createRISCVISelDagLegacyPass(getRISCVTargetMachine(), getOptLevel()));
 
   return false;
 }

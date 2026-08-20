@@ -48,8 +48,8 @@ void initializeRISCVIndirectBranchTrackingPass(PassRegistry &);
 FunctionPass *createRISCVLandingPadSetupPass();
 void initializeRISCVLandingPadSetupPass(PassRegistry &);
 
-FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
-                                 CodeGenOptLevel OptLevel);
+FunctionPass *createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
+                                           CodeGenOptLevel OptLevel);
 
 class RISCVISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -118,7 +118,7 @@ public:
   RISCVZacasABIFixPass(const RISCVTargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
-FunctionPass *createRISCVZacasABIFixPass();
+FunctionPass *createRISCVZacasABIFixLegacyPass();
 void initializeRISCVZacasABIFixLegacyPass(PassRegistry &);
 
 InstructionSelector *
