@@ -393,7 +393,10 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   if (RD->isPolymorphic()) {
     const llvm::abi::Type *VtablePointer =
         createPointerTypeForPointee(ASTCtx.VoidPtrTy);
-    Fields.emplace_back(VtablePointer, 0);
+    Fields.emplace_back(VtablePointer, 0, /*IsBitField=*/false,
+                        /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
+                        /*HasNoUniqueAddress=*/false,
+                        /*IsVTablePointer=*/true);
   }
 
   for (const auto &Base : RD->bases()) {
@@ -568,8 +571,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }

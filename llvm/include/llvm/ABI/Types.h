@@ -237,13 +237,18 @@ struct FieldInfo {
   uint64_t BitFieldWidth;
   bool IsBitField;
   bool IsUnnamedBitfield;
+  bool HasNoUniqueAddress;
+  bool IsVTablePointer;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false)
+            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false,
+            bool IsVTablePointer = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
-        IsUnnamedBitfield(IsUnnamedBitField) {}
+        IsUnnamedBitfield(IsUnnamedBitField),
+        HasNoUniqueAddress(HasNoUniqueAddress),
+        IsVTablePointer(IsVTablePointer) {}
 
   LLVM_ABI bool isEmpty() const;
 };
@@ -409,10 +414,9 @@ public:
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
     for (size_t I = 0, E = Fields.size(); I != E; ++I) {
-      const FieldInfo &Field = Fields[I];
-      new (&FieldArray[I])
-          FieldInfo(Field.FieldType, 0, Field.IsBitField, Field.BitFieldWidth,
-                    Field.IsUnnamedBitfield);
+      FieldInfo Field = Fields[I];
+      Field.OffsetInBits = 0;
+      new (&FieldArray[I]) FieldInfo(Field);
     }
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());
