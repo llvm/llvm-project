@@ -120,7 +120,7 @@ add_or_sub(InType x, InType y) {
 #ifdef LIBC_USE_CONSTEXPR
         InType tmp = y;
 #else
-        // This prevents it from declaring Intype as volatile for emulated types
+        // This prevents it from declaring InType as volatile for emulated types
         using InTypeTemp = cpp::conditional_t<cpp::is_class_v<InType>, InType,
                                               volatile InType>;
         InTypeTemp tmp = y;
