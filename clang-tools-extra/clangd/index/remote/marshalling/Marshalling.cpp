@@ -58,17 +58,22 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
                        llvm::StringRef LocalIndexRoot)
     : Strings(Arena) {
   llvm::StringRef PosixSeparator = get_separator(Style::posix);
+  llvm::StringRef WindowsSeparator = get_separator(Style::windows);
+  const bool IsWindows = is_absolute(RemoteIndexRoot, Style::windows);
+  const bool IsPosix = is_absolute(RemoteIndexRoot, Style::posix);
   if (!RemoteIndexRoot.empty()) {
-    assert(is_absolute(RemoteIndexRoot, Style::posix) ||
-           is_absolute(RemoteIndexRoot, Style::windows));
-    this->RemoteIndexRoot = convert_to_slash(RemoteIndexRoot, Style::windows);
+    assert(IsPosix || IsWindows);
+    this->RemoteIndexRoot = RemoteIndexRoot;
     llvm::StringRef Path(this->RemoteIndexRoot);
-    if (!is_separator(this->RemoteIndexRoot.back(), Style::posix))
+    if (IsPosix && !is_separator(this->RemoteIndexRoot.back(), Style::posix))
       this->RemoteIndexRoot += PosixSeparator;
+    else if (IsWindows &&
+             !is_separator(this->RemoteIndexRoot.back(), Style::windows))
+      this->RemoteIndexRoot += WindowsSeparator;
   }
+
   if (!LocalIndexRoot.empty()) {
-    assert(is_absolute(LocalIndexRoot, Style::posix) ||
-           is_absolute(LocalIndexRoot, Style::windows));
+    assert(IsPosix || IsWindows);
     this->LocalIndexRoot = convert_to_slash(LocalIndexRoot, Style::windows);
     llvm::StringRef Path(this->LocalIndexRoot);
     if (!is_separator(this->LocalIndexRoot.back(), Style::posix))
@@ -266,7 +271,7 @@ FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
     llvm::SmallString<256> RelativePath = llvm::StringRef(Path);
     bool IsWindowsIndex = is_absolute(Path.substr(1), Style::windows);
     if (replace_path_prefix(RelativePath, LocalIndexRoot, "",
-                            IsWindowsIndex ? Style::windows : Style::native))
+                            IsWindowsIndex ? Style::windows : Style::posix))
       RPCRequest.add_proximity_paths(
           convert_to_slash(RelativePath, Style::windows));
   }
@@ -402,11 +407,11 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   if (IsWindowsIndex)
     Result = Path.drop_front().str();
   if (!replace_path_prefix(Result, RemoteIndexRoot, "",
-                           IsWindowsIndex ? Style::windows : Style::native))
+                           IsWindowsIndex ? Style::windows : Style::posix))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
                  RemoteIndexRoot);
-  assert(Result == convert_to_slash(Result, Style::windows));
-  return std::string(Result);
+
+  return std::string(convert_to_slash(Result, Style::windows));
 }
 
 clangd::SymbolLocation::Position
