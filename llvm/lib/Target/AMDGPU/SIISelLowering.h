@@ -354,10 +354,6 @@ public:
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
-
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,
                             Type *&AccessTy) const override;

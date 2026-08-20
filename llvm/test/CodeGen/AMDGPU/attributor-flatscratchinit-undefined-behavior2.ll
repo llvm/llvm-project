@@ -657,7 +657,7 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
-  %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
+  %1 = addrspacecast nonnull ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %1, align 4
   ret void
 }
@@ -727,7 +727,7 @@ define void @calls_intrin_ascast(ptr addrspace(3) %ptr) #0 {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
+  %1 = addrspacecast nonnull ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %1, align 4
   ret void
 }

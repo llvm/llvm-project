@@ -2533,17 +2533,12 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
 
-  // MI can either be a G_ADDRSPACE_CAST or a
-  // G_INTRINSIC @llvm.amdgcn.addrspacecast.nonnull
-  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
-         (isa<GIntrinsic>(MI) && cast<GIntrinsic>(MI).getIntrinsicID() ==
-                                     Intrinsic::amdgcn_addrspacecast_nonnull));
+  assert(MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST);
 
   const LLT I32 = LLT::integer(32);
   const LLT I64 = LLT::integer(64);
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
-                                     : MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
   unsigned DestAS = DstTy.getAddressSpace();
@@ -2556,10 +2551,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   const AMDGPUTargetMachine &TM
     = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
-  // The source is known non-null for llvm.amdgcn.addrspacecast.nonnull or a
-  // G_ADDRSPACE_CAST carrying the nonnull flag; otherwise we need to guess.
-  const bool IsNonNull =
-      isa<GIntrinsic>(MI) || MI.getFlag(MachineInstr::MIFlag::NonNull);
+  // The source is known non-null for a G_ADDRSPACE_CAST carrying the nonnull
+  // flag; otherwise we need to guess.
+  const bool IsNonNull = MI.getFlag(MachineInstr::MIFlag::NonNull);
 
   if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
@@ -8326,8 +8320,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
-  case Intrinsic::amdgcn_addrspacecast_nonnull:
-    return legalizeAddrSpaceCast(MI, MRI, B);
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return legalizePointerAsRsrcIntrin(MI, MRI, B);
   case Intrinsic::amdgcn_kernarg_segment_ptr:

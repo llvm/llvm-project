@@ -1600,6 +1600,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         break; // No other 'amdgcn.atomic.*'
       }
 
+      if (Name.starts_with("addrspacecast.nonnull")) {
+        // Replaced with an addrspacecast instruction carrying the nonnull flag,
+        // so there's no new declaration.
+        NewFn = nullptr;
+        return true;
+      }
+
       switch (F->getIntrinsicID()) {
       default:
         break;
@@ -5213,6 +5220,15 @@ static Value *upgradeAMDGCNIntrinsicCall(StringRef Name, CallBase *CI,
     NewCall->copyMetadata(*CI);
     NewCall->takeName(CI);
     return NewCall;
+  }
+
+  if (Name.starts_with("addrspacecast.nonnull")) {
+    if (CI->getNumOperands() < 2) // Malformed bitcode.
+      return nullptr;
+    Value *ASC = Builder.CreateAddrSpaceCast(
+        CI->getArgOperand(0), CI->getType(), "", /*IsNonNull=*/true);
+    ASC->takeName(CI);
+    return ASC;
   }
 
   AtomicRMWInst::BinOp RMWOp =
