@@ -76,6 +76,16 @@ namespace cwg2006 { // cwg2006: 2.7
     (void)typeid(const volatile void);
   }
 
+  void test_traits(){
+    static_assert(!__is_complete_type(const void), "");
+    static_assert(!__is_complete_type(volatile void), "");
+    static_assert(!__is_complete_type(const volatile void), "");
+
+    static_assert(!__is_object(const void), "");
+    static_assert(!__is_object(volatile void), "");
+    static_assert(!__is_object(const volatile void), "");
+  }
+
 #if __cplusplus >= 201103L
   void test_cxx11() {
     decltype(get_const_void()) *p = nullptr;
