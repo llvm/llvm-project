@@ -1624,6 +1624,17 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
         loop.getConstantLowerBound() != 0)
       return failure();
   }
+  // All the loops but the outermost one are erased, and their iteration
+  // arguments are replaced by their initial values. That is only valid when a
+  // loop does not actually carry a value across iterations, i.e. it yields its
+  // iteration arguments unchanged.
+  for (AffineForOp loop : loops.drop_front()) {
+    auto yieldOp = cast<AffineYieldOp>(loop.getBody()->getTerminator());
+    for (auto [iter, yielded] :
+         llvm::zip_equal(loop.getRegionIterArgs(), yieldOp.getOperands()))
+      if (iter != yielded)
+        return failure();
+  }
   SmallVector<Value, 4> upperBoundSymbols;
   SmallVector<Value, 4> ubOperands(ub.getOperands().begin(),
                                    ub.getOperands().end());
@@ -1717,11 +1728,16 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   outermost.getBody()->getOperations().splice(
       Block::iterator(secondOutermostLoop.getOperation()),
       innermost.getBody()->getOperations());
-  for (auto [iter, init] :
-       llvm::zip_equal(secondOutermostLoop.getRegionIterArgs(),
-                       secondOutermostLoop.getInits())) {
-    iter.replaceAllUsesWith(init);
-    iter.dropAllUses();
+  // Erasing the second-outermost loop also destroys every loop nested in it,
+  // so the iteration arguments of all of them may still be used by the
+  // operations that were just moved out. They are loop invariant (checked
+  // above), so replace them by their initial values.
+  for (AffineForOp loop : loops.drop_front()) {
+    for (auto [iter, init] :
+         llvm::zip_equal(loop.getRegionIterArgs(), loop.getInits())) {
+      iter.replaceAllUsesWith(init);
+      iter.dropAllUses();
+    }
   }
   secondOutermostLoop.erase();
   return success();
