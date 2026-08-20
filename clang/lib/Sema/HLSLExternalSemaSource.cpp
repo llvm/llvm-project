@@ -296,6 +296,34 @@ static BuiltinTypeDeclBuilder setupRWTextureType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(false);
 }
 
+/// Set up Texture2DMS (multisampled) type: SRV texture with only operator[]
+/// and sample-indexed Load. It does not support sampling, gather, LOD, or mips.
+static BuiltinTypeDeclBuilder setupMSTextureType(CXXRecordDecl *Decl, Sema &S,
+                                                 bool IsArray,
+                                                 ResourceDimension Dim) {
+  ClassTemplateDecl *CTD = Decl->getDescribedClassTemplate();
+  assert(CTD && "multisampled texture must be a class template");
+
+  // Parameter 1 is the N in Texture2DMS<T, N>.
+  auto *NTTP =
+      cast<NonTypeTemplateParmDecl>(CTD->getTemplateParameters()->getParam(1));
+  Expr *SampleCountExpr =
+      S.BuildDeclRefExpr(NTTP, NTTP->getType(), VK_PRValue, SourceLocation());
+
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(ResourceClass::SRV, /*IsROV=*/false, IsArray, Dim,
+                        SampleCountExpr)
+      .addTextureLoadMSMethods(Dim, IsArray)
+      .addArraySubscriptOperators(Dim, IsArray)
+      // TODO: Add MS-specific GetDimensions (with a NumberOfSamples output);
+      // the generic addGetDimensionsMethods is mip-based and unsuitable here.
+      // https://github.com/llvm/wg-hlsl/issues/347
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
 // Add a partial specialization for a template. The `TextureTemplate` is
 // `Texture<element_type>`, and it will be specialized for vectors:
 // `Texture<vector<element_type, element_count>>`.
@@ -763,6 +791,19 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpecRW2DA, [this](CXXRecordDecl *Decl) {
     setupRWTextureType(Decl, *SemaPtr, /*IsArray=*/true,
+                       ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
+
+  // Texture2DMS — like Texture2D but multisampled, and the element type has no
+  // default argument.
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2DMS")
+             .addMSTextureTemplateParams("element_type", "sample_count",
+                                         TypedBufferConcept)
+             .finalizeForwardDeclaration();
+
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupMSTextureType(Decl, *SemaPtr, /*IsArray=*/false,
                        ResourceDimension::Dim2D)
         .completeDefinition();
   });

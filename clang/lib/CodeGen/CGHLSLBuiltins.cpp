@@ -789,6 +789,25 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getLoadLevelIntrinsic(), Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_load_ms: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *CoordOp = EmitScalarExpr(E->getArg(1));
+    Value *SampleOp = EmitScalarExpr(E->getArg(2));
+    if (SampleOp->getType() != Builder.getInt32Ty())
+      SampleOp = Builder.CreateIntCast(SampleOp, Builder.getInt32Ty(),
+                                       /*isSigned=*/true);
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
+
+    SmallVector<Value *, 4> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(CoordOp);
+    Args.push_back(SampleOp);
+    Args.push_back(emitHlslOffset(*this, E, 3, getOffsetType(CGM, RT)));
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getLoadMSIntrinsic(), Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_sample_cmp: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
