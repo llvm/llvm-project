@@ -307,7 +307,7 @@ protected:
   /// is greater than twice the number of buckets.
   unsigned NumNodes;
 
-  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize = 6);
+  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize);
   LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
   LLVM_ABI FoldingSetBase &operator=(FoldingSetBase &&RHS);
   LLVM_ABI ~FoldingSetBase();
