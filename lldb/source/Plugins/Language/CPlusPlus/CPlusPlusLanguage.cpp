@@ -1972,6 +1972,17 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "std::priority_queue summary provider",
                 "^std::priority_queue<.+>(( )?&)?$", stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_code summary provider",
+                "std::error_code", stl_summary_flags);
+  AddCXXSummary(cpp_category_sp, GenericErrorCodeSummaryProvider,
+                "MSVC STL/libstdc++ std::error_condition summary provider",
+                "std::error_condition", stl_summary_flags);
+  AddCXXSynthetic(cpp_category_sp, GenericErrorCodeSyntheticFrontEndCreator,
+                  "MSVC STL/libstdc++ std::error_code/error_condition "
+                  "synthetic children",
+                  "^std::error_(code|condition)$", stl_synth_flags, true);
 }
 
 static void LoadMsvcStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
