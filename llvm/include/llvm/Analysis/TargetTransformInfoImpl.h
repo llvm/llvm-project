@@ -422,6 +422,14 @@ public:
     return false;
   }
 
+  virtual unsigned getPreferredVFMultipleForMemoryOp(unsigned Opcode,
+                                                     Type *DataType,
+                                                     ElementCount VF,
+                                                     unsigned UF,
+                                                     bool IsMasked) const {
+    return 1;
+  }
+
   virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                             Align Alignment,
                                             unsigned AddrSpace) const {

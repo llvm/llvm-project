@@ -547,6 +547,13 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+unsigned TargetTransformInfo::getPreferredVFMultipleForMemoryOp(
+    unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
+    bool IsMasked) const {
+  return TTIImpl->getPreferredVFMultipleForMemoryOp(Opcode, DataType, VF, UF,
+                                                    IsMasked);
+}
+
 bool TargetTransformInfo::isLegalInterleavedAccessType(
     VectorType *VTy, unsigned Factor, Align Alignment,
     unsigned AddrSpace) const {
